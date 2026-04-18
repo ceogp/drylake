@@ -58,7 +58,7 @@ deploy_staging:
     - >
       ssh "$STAGING_SSH_USER@$STAGING_HOST"
       "chmod +x /tmp/xupra-bootstrap.sh &&
-      APP_DIR=/srv/xupra-drylake
+      sudo APP_DIR=/srv/xupra-drylake
       APP_USER=xupra
       APP_GROUP=xupra
       RELEASE_TAR=/tmp/xupra-release.tar
