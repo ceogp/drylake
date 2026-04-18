@@ -13,11 +13,24 @@ default:
 
 variables:
   NODE_ENV: development
+  DATABASE_PROVIDER: sqlite
+  DATABASE_URL: file:./dev.db
+  APP_BASE_URL: http://localhost:3000
+  APP_ENCRYPTION_KEY: gitlab-ci-dev-only-key-0000000000000000
+  AUTH_MODE: dev
+  DEFAULT_DEV_USER_EMAIL: owner@xupra.local
+  DEFAULT_DEV_USER_NAME: Xupra Owner
+  PLATFORM_ADMIN_EMAILS: owner@xupra.local
+  ARTIFACT_STORAGE_DRIVER: local
+  SECRETS_PROVIDER: env
+  BILLING_ENFORCEMENT_MODE: development
 
 validate:
   stage: validate
   script:
     - npm ci
+    - npx tsx scripts/prisma/render-schema.ts sqlite prisma/schema.runtime.prisma
+    - npx prisma generate --schema prisma/schema.runtime.prisma
     - npm run typecheck
     - npm run lint
     - npm run build
