@@ -44,7 +44,7 @@ cp "$ENV_FILE" "$APP_DIR/shared/.env"
 cp "$ENV_FILE" "$release_dir/.env"
 chown -R "$APP_USER:$APP_GROUP" "$release_dir" "$APP_DIR/shared/.env"
 
-sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci && npx tsx scripts/prisma/render-schema.ts postgresql prisma/schema.runtime.prisma && npx prisma generate --schema prisma/schema.runtime.prisma && npx prisma db push --schema prisma/schema.runtime.prisma && npx tsx prisma/seed.ts && npm run build"
+sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev && npx tsx scripts/prisma/render-schema.ts postgresql prisma/schema.runtime.prisma && npx prisma generate --schema prisma/schema.runtime.prisma && npx prisma db push --schema prisma/schema.runtime.prisma && npx tsx prisma/seed.ts && npm run build"
 
 ln -sfn "$release_dir" "$APP_DIR/current"
 
