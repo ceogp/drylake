@@ -1,31 +1,5 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "@prisma/client";
-import path from "node:path";
-
-function sqlitePathFromUrl(url: string) {
-  if (!url.startsWith("file:")) {
-    throw new Error("Expected a SQLite file: URL for local development");
-  }
-
-  const relativePath = url.replace(/^file:/, "").replace(/^\.?[\\/]/, "");
-
-  return path.join(process.cwd(), relativePath);
-}
-
-const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({
-    url: sqlitePathFromUrl(process.env.DATABASE_URL ?? "file:./dev.db"),
-  }),
-});
-
-function toSlug(input: string) {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
-}
+import { prisma } from "../lib/prisma";
+import { toSlug } from "../lib/utils/slug";
 
 async function main() {
   const email = process.env.DEFAULT_DEV_USER_EMAIL ?? "owner@xupra.local";
