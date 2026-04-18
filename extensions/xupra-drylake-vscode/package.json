@@ -1,0 +1,210 @@
+{
+  "name": "xupra-drylake-vscode",
+  "displayName": "Xupra DryLake",
+  "description": "Transfer agent packages between Codex, Claude Code, Cursor, and Claude Agents from VS Code and Cursor.",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "xupra",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:xupra.projects",
+    "onView:xupra.jobs",
+    "onCommand:xupra.connect",
+    "onCommand:xupra.refreshProjects",
+    "onCommand:xupra.importWorkspace",
+    "onCommand:xupra.checkCompatibility",
+    "onCommand:xupra.exportPreview",
+    "onCommand:xupra.deploy",
+    "onCommand:xupra.pullPackage",
+    "onCommand:xupra.openWebApp"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "Xupra DryLake",
+      "properties": {
+        "xupra.baseUrl": {
+          "type": "string",
+          "default": "http://localhost:3002",
+          "description": "Base URL for the Xupra DryLake backend."
+        },
+        "xupra.devEmail": {
+          "type": "string",
+          "default": "owner@xupra.local",
+          "description": "Development email used before real auth is connected."
+        },
+        "xupra.devDisplayName": {
+          "type": "string",
+          "default": "Xupra Owner",
+          "description": "Development display name used before real auth is connected."
+        },
+        "xupra.autoScanOnOpen": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically scan the current workspace on open."
+        },
+        "xupra.defaultTargetPlatform": {
+          "type": "string",
+          "enum": [
+            "codex",
+            "claude_code",
+            "claude_agents",
+            "cursor"
+          ],
+          "default": "claude_code",
+          "description": "Default target platform for compatibility and export actions."
+        },
+        "xupra.pullGeneratedFilesAfterExport": {
+          "type": "boolean",
+          "default": false,
+          "description": "Pull generated files into the workspace after export preview."
+        },
+        "xupra.logLevel": {
+          "type": "string",
+          "enum": [
+            "error",
+            "info",
+            "debug"
+          ],
+          "default": "info",
+          "description": "Logging verbosity for the extension."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "xupra",
+          "title": "Xupra DryLake",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "xupra": [
+        {
+          "id": "xupra.projects",
+          "name": "Projects"
+        },
+        {
+          "id": "xupra.jobs",
+          "name": "Jobs"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "xupra.connect",
+        "title": "Xupra DryLake: Connect"
+      },
+      {
+        "command": "xupra.openWebApp",
+        "title": "Xupra DryLake: Open Web App"
+      },
+      {
+        "command": "xupra.refreshProjects",
+        "title": "Xupra DryLake: Refresh Projects"
+      },
+      {
+        "command": "xupra.selectProject",
+        "title": "Xupra DryLake: Select Project"
+      },
+      {
+        "command": "xupra.selectPackage",
+        "title": "Xupra DryLake: Select Package"
+      },
+      {
+        "command": "xupra.selectVersion",
+        "title": "Xupra DryLake: Select Version"
+      },
+      {
+        "command": "xupra.scanWorkspace",
+        "title": "Xupra DryLake: Scan Workspace"
+      },
+      {
+        "command": "xupra.importWorkspace",
+        "title": "Xupra DryLake: Import Workspace"
+      },
+      {
+        "command": "xupra.checkCompatibility",
+        "title": "Xupra DryLake: Check Compatibility"
+      },
+      {
+        "command": "xupra.exportPreview",
+        "title": "Xupra DryLake: Export Preview"
+      },
+      {
+        "command": "xupra.pullPackage",
+        "title": "Xupra DryLake: Pull Package Files"
+      },
+      {
+        "command": "xupra.deploy",
+        "title": "Xupra DryLake: Deploy"
+      },
+      {
+        "command": "xupra.showRecentJobs",
+        "title": "Xupra DryLake: Show Recent Jobs"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "xupra.refreshProjects",
+          "when": "view == xupra.projects",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.importWorkspace",
+          "when": "view == xupra.projects",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.deploy",
+          "when": "view == xupra.jobs",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "xupra.selectProject",
+          "when": "view == xupra.projects && viewItem == xupra.project",
+          "group": "inline"
+        },
+        {
+          "command": "xupra.selectPackage",
+          "when": "view == xupra.projects && viewItem == xupra.package",
+          "group": "inline"
+        },
+        {
+          "command": "xupra.selectVersion",
+          "when": "view == xupra.projects && viewItem == xupra.version",
+          "group": "inline"
+        },
+        {
+          "command": "xupra.deploy",
+          "when": "view == xupra.projects && viewItem == xupra.version",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "check:cursor": "node scripts/check-cursor-compatibility.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/vscode": "^1.100.0",
+    "esbuild": "^0.25.3",
+    "typescript": "^5.8.3"
+  }
+}

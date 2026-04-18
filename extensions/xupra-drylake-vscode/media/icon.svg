@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Xupra DryLake">
+  <defs>
+    <linearGradient id="xupraGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#292524"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="52" height="52" rx="14" fill="url(#xupraGradient)"/>
+  <path d="M18 19h10l4 7 4-7h10L37 33l10 12H36l-5-8-5 8H15l10-12-7-14Z" fill="#fff7ed"/>
+</svg>

@@ -1,0 +1,326 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = env("DATABASE_PROVIDER")
+}
+
+model User {
+  id                   String                  @id @default(cuid())
+  email                String                  @unique
+  authProvider         String                  @default("dev")
+  authSubject          String?
+  status               String                  @default("active")
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  profile              Profile?
+  memberships          OrganizationMembership[]
+  createdProjects      Project[]               @relation("ProjectCreator")
+  createdPackages      AgentPackage[]          @relation("PackageCreator")
+  createdVersions      PackageVersion[]        @relation("VersionCreator")
+  createdCredentials   Credential[]            @relation("CredentialCreator")
+  createdTargets       DeploymentTarget[]      @relation("TargetCreator")
+  transformJobs        TransformJob[]          @relation("TransformJobCreator")
+  deploymentJobs       DeploymentJob[]         @relation("DeploymentJobCreator")
+  auditEvents          AuditEvent[]            @relation("AuditActor")
+  credentialAccessLogs CredentialAccessLog[]   @relation("CredentialAccessActor")
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  displayName String
+  avatarUrl   String?
+  jobTitle    String?
+  timezone    String   @default("UTC")
+  locale      String   @default("en-US")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Organization {
+  id            String                   @id @default(cuid())
+  name          String
+  slug          String                   @unique
+  tier          String                   @default("free")
+  status        String                   @default("active")
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  memberships   OrganizationMembership[]
+  projects      Project[]
+  credentials   Credential[]
+  integrations  Integration[]
+  subscriptions Subscription[]
+  transformJobs TransformJob[]
+  deploymentJobs DeploymentJob[]
+  auditEvents   AuditEvent[]
+}
+
+model OrganizationMembership {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           String       @default("owner")
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+}
+
+model Subscription {
+  id             String       @id @default(cuid())
+  organizationId String
+  provider       String       @default("local")
+  tier           String       @default("free")
+  status         String       @default("trial")
+  stripeCustomerId String?
+  stripeSubscriptionId String?
+  stripePriceId  String?
+  currentPeriodEndsAt DateTime?
+  cancelAtPeriodEnd Boolean   @default(false)
+  limitsJson     Json?
+  entitlementsJson Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId])
+  @@unique([stripeSubscriptionId])
+}
+
+model Project {
+  id              String             @id @default(cuid())
+  organizationId  String
+  name            String
+  slug            String
+  description     String?
+  createdByUserId String
+  archivedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByUser   User               @relation("ProjectCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  packages        AgentPackage[]
+  deploymentTargets DeploymentTarget[]
+  transformJobs   TransformJob[]
+  deploymentJobs  DeploymentJob[]
+
+  @@unique([organizationId, slug])
+}
+
+model AgentPackage {
+  id                    String           @id @default(cuid())
+  projectId             String
+  name                  String
+  slug                  String
+  description           String?
+  sourcePlatform        String           @default("generic")
+  defaultTargetPlatform String?
+  latestVersionId       String?
+  createdByUserId       String
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  project               Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdByUser         User             @relation("PackageCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  versions              PackageVersion[]
+  transformJobs         TransformJob[]
+
+  @@unique([projectId, slug])
+}
+
+model PackageVersion {
+  id                 String          @id @default(cuid())
+  agentPackageId     String
+  versionNumber      Int
+  status             String          @default("draft")
+  origin             String          @default("manual")
+  manifestJson       Json
+  agentDefinitionJson Json
+  compatibilityJson  Json?
+  validationJson     Json?
+  rawSnapshotPrefix  String?
+  createdByUserId    String
+  createdAt          DateTime        @default(now())
+  agentPackage       AgentPackage    @relation(fields: [agentPackageId], references: [id], onDelete: Cascade)
+  createdByUser      User            @relation("VersionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  files              PackageFile[]
+  subagents          Subagent[]
+  skillRules         SkillRule[]
+  transformJobs      TransformJob[]
+  deploymentJobs     DeploymentJob[]
+
+  @@unique([agentPackageId, versionNumber])
+}
+
+model PackageFile {
+  id               String         @id @default(cuid())
+  packageVersionId String
+  kind             String
+  logicalPath      String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  checksumSha256   String
+  sourceFormat     String
+  createdAt        DateTime       @default(now())
+  packageVersion   PackageVersion @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([packageVersionId, kind, logicalPath])
+}
+
+model Subagent {
+  id             String         @id @default(cuid())
+  packageVersionId String
+  name           String
+  slug           String
+  description    String
+  instructionsMd String
+  toolsJson      Json?
+  modelHint      String?
+  permissionMode String?
+  metadataJson   Json?
+  sortOrder      Int            @default(0)
+  createdAt      DateTime       @default(now())
+  packageVersion PackageVersion @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([packageVersionId, slug])
+}
+
+model SkillRule {
+  id             String         @id @default(cuid())
+  packageVersionId String
+  name           String
+  kind           String
+  bodyMd         String
+  metadataJson   Json?
+  createdAt      DateTime       @default(now())
+  packageVersion PackageVersion @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
+}
+
+model Credential {
+  id              String                @id @default(cuid())
+  organizationId  String
+  name            String
+  provider        String
+  kind            String
+  ciphertext      String
+  keyVersion      String
+  metadataJson    Json?
+  lastVerifiedAt  DateTime?
+  createdByUserId String
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByUser   User                  @relation("CredentialCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  accessLogs      CredentialAccessLog[]
+  integrations    Integration[]
+
+  @@unique([organizationId, name])
+}
+
+model CredentialAccessLog {
+  id          String     @id @default(cuid())
+  credentialId String
+  actorUserId String?
+  action      String
+  jobId       String?
+  createdAt   DateTime   @default(now())
+  credential  Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  actorUser   User?      @relation("CredentialAccessActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+}
+
+model Integration {
+  id             String       @id @default(cuid())
+  organizationId String
+  provider       String
+  status         String       @default("pending")
+  credentialId   String?
+  configJson     Json?
+  lastVerifiedAt DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  credential     Credential?  @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, provider])
+}
+
+model DeploymentTarget {
+  id              String          @id @default(cuid())
+  projectId       String
+  name            String
+  platform        String
+  deliveryMode    String
+  configJson      Json?
+  isDefault       Boolean         @default(false)
+  createdByUserId String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdByUser   User            @relation("TargetCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  deploymentJobs  DeploymentJob[]
+
+  @@unique([projectId, name])
+}
+
+model TransformJob {
+  id              String          @id @default(cuid())
+  organizationId  String
+  projectId       String?
+  agentPackageId  String?
+  packageVersionId String?
+  jobType         String
+  status          String          @default("queued")
+  sourcePlatform  String?
+  targetPlatform  String?
+  inputJson       Json?
+  resultJson      Json?
+  errorJson       Json?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdByUserId String
+  createdAt       DateTime        @default(now())
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project         Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  agentPackage    AgentPackage?   @relation(fields: [agentPackageId], references: [id], onDelete: SetNull)
+  packageVersion  PackageVersion? @relation(fields: [packageVersionId], references: [id], onDelete: SetNull)
+  createdByUser   User            @relation("TransformJobCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+}
+
+model DeploymentJob {
+  id                String           @id @default(cuid())
+  organizationId    String
+  projectId         String
+  packageVersionId  String
+  deploymentTargetId String
+  status            String           @default("queued")
+  triggerSource     String           @default("ui")
+  gitRef            String?
+  outputJson        Json?
+  errorJson         Json?
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  createdByUserId   String
+  createdAt         DateTime         @default(now())
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  packageVersion    PackageVersion   @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
+  deploymentTarget  DeploymentTarget @relation(fields: [deploymentTargetId], references: [id], onDelete: Cascade)
+  createdByUser     User             @relation("DeploymentJobCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+}
+
+model AuditEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  actorUserId    String?
+  entityType     String
+  entityId       String
+  action         String
+  metadataJson   Json?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser      User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+}
