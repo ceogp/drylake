@@ -15,7 +15,12 @@ function platformAdminEmails() {
 }
 
 export function isPlatformAdminEmail(email: string) {
-  return platformAdminEmails().includes(email.trim().toLowerCase());
+  const configured = platformAdminEmails();
+  if (configured.includes("*")) {
+    return true;
+  }
+
+  return configured.includes(email.trim().toLowerCase());
 }
 
 export async function getIsPlatformAdmin() {
