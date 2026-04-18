@@ -11,6 +11,9 @@
     "validate:local": "tsx scripts/validate-local.ts",
     "worker:once": "tsx scripts/run-worker.ts",
     "worker:smoke": "tsx scripts/smoke-worker.ts",
+    "aws:provision-staging": "tsx scripts/aws/provision-staging.ts",
+    "aws:deploy-staging": "tsx scripts/aws/deploy-staging.ts",
+    "prisma:render:postgres": "tsx scripts/prisma/render-schema.ts postgresql prisma/schema.runtime.prisma",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
@@ -18,8 +21,10 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@aws-sdk/client-ec2": "^3.1032.0",
     "@aws-sdk/client-s3": "^3.1031.0",
     "@aws-sdk/client-secrets-manager": "^3.1032.0",
+    "@aws-sdk/client-sts": "^3.1032.0",
     "@clerk/nextjs": "^7.2.3",
     "@next/env": "^16.2.4",
     "@prisma/adapter-better-sqlite3": "^7.7.0",

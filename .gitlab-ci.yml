@@ -1,0 +1,59 @@
+stages:
+  - validate
+  - deploy
+
+default:
+  image: node:22-bookworm
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+
+variables:
+  NODE_ENV: development
+
+validate:
+  stage: validate
+  script:
+    - npm ci
+    - npm run typecheck
+    - npm run lint
+    - npm run build
+  rules:
+    - if: $CI_COMMIT_BRANCH
+
+deploy_staging:
+  stage: deploy
+  image: debian:bookworm-slim
+  before_script:
+    - apt-get update
+    - apt-get install -y openssh-client git
+    - eval "$(ssh-agent -s)"
+    - mkdir -p ~/.ssh
+    - printf "%s\n" "$STAGING_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
+  script:
+    - git archive --format=tar HEAD -o release.tar
+    - printf "%s" "$STAGING_ENV_FILE" > staging.env
+    - scp release.tar "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-release.tar"
+    - scp staging.env "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-staging.env"
+    - scp scripts/deploy/remote-bootstrap.sh "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-bootstrap.sh"
+    - >
+      ssh "$STAGING_SSH_USER@$STAGING_HOST"
+      "chmod +x /tmp/xupra-bootstrap.sh &&
+      APP_DIR=/srv/xupra-drylake
+      APP_USER=xupra
+      APP_GROUP=xupra
+      RELEASE_TAR=/tmp/xupra-release.tar
+      ENV_FILE=/tmp/xupra-staging.env
+      DB_NAME=$STAGING_DB_NAME
+      DB_USER=$STAGING_DB_USER
+      DB_PASSWORD=$STAGING_DB_PASSWORD
+      bash /tmp/xupra-bootstrap.sh"
+  environment:
+    name: staging
+    url: $STAGING_URL
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "development"'
