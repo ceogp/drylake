@@ -55,6 +55,15 @@ export type JobResult = {
   targetPlatform?: string;
 };
 
+export type TransformJobDetail = {
+  id: Id;
+  status: string;
+  jobType: string;
+  targetPlatform?: string | null;
+  resultJson?: Record<string, unknown> | null;
+  errorJson?: Record<string, unknown> | null;
+};
+
 export type GeneratedExportFile = {
   id?: Id;
   logicalPath: string;

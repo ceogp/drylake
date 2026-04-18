@@ -6,7 +6,8 @@ import type {
   JobResult,
   PackageVersionDetail,
   ProjectDetail,
-  ProjectSummary
+  ProjectSummary,
+  TransformJobDetail
 } from "../types/api";
 
 type JsonValue = Record<string, unknown>;
@@ -153,5 +154,9 @@ export class ApiClient {
     return this.request<{ deploymentJob: { id: string; status: string; outputJson?: JsonValue } }>(
       `/api/v1/deployment-jobs/${jobId}`
     );
+  }
+
+  async getTransformJob(jobId: string) {
+    return this.request<{ transformJob: TransformJobDetail }>(`/api/v1/transform-jobs/${jobId}`);
   }
 }

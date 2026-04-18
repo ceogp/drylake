@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 
 import { ApiClient } from "../services/apiClient";
+import { waitForTransformJob } from "../services/jobPoller";
+import { chooseTargetPlatform, ensureVersionSelection } from "../services/selection";
 import { StateStore } from "../services/stateStore";
 import { JobTreeProvider } from "../views/jobTreeProvider";
 
@@ -10,14 +12,19 @@ export async function checkCompatibilityCommand(
   stateStore: StateStore,
   jobsView: JobTreeProvider
 ) {
-  const selection = stateStore.getSelection();
+  const selection = await ensureVersionSelection(apiClient, stateStore);
 
-  if (!selection.versionId) {
-    void vscode.window.showWarningMessage("Select a package version first.");
+  if (!selection?.versionId) {
     return;
   }
 
-  const targetPlatform = String(configuration.get("defaultTargetPlatform", "claude_code"));
+  const picked = await chooseTargetPlatform(configuration, "Select target platform for compatibility");
+
+  if (!picked) {
+    return;
+  }
+
+  const targetPlatform = picked.value;
   const result = await apiClient.checkCompatibility(selection.versionId, targetPlatform);
 
   jobsView.prepend({
@@ -28,5 +35,6 @@ export async function checkCompatibilityCommand(
     createdAt: new Date().toISOString()
   });
 
-  void vscode.window.showInformationMessage(`Compatibility check queued for ${targetPlatform}.`);
+  const completed = await waitForTransformJob(apiClient, result.job.id);
+  void vscode.window.showInformationMessage(`Compatibility check finished for ${picked.label} with status ${completed.status}.`);
 }

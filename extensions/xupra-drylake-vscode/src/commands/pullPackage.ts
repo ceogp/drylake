@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import { ApiClient } from "../services/apiClient";
 import { writeGeneratedFilesToWorkspace } from "../services/fileSync";
+import { chooseTargetPlatform, ensureVersionSelection } from "../services/selection";
 import { StateStore } from "../services/stateStore";
 
 export async function pullPackageCommand(
@@ -9,26 +10,13 @@ export async function pullPackageCommand(
   configuration: vscode.WorkspaceConfiguration,
   stateStore: StateStore
 ) {
-  const selection = stateStore.getSelection();
+  const selection = await ensureVersionSelection(apiClient, stateStore);
 
-  if (!selection.versionId) {
-    void vscode.window.showWarningMessage("Select a package version first.");
+  if (!selection?.versionId) {
     return;
   }
 
-  const defaultTargetPlatform = String(configuration.get("defaultTargetPlatform", "claude_code"));
-  const picked = await vscode.window.showQuickPick(
-    [
-      { label: "Codex", value: "codex" },
-      { label: "Claude Code", value: "claude_code" },
-      { label: "Claude Agents", value: "claude_agents" },
-      { label: "Cursor", value: "cursor" }
-    ],
-    {
-      title: "Select export target to pull into the workspace",
-      placeHolder: defaultTargetPlatform
-    }
-  );
+  const picked = await chooseTargetPlatform(configuration, "Select export target to pull into the workspace");
 
   if (!picked) {
     return;
@@ -41,6 +29,8 @@ export async function pullPackageCommand(
     return;
   }
 
-  await writeGeneratedFilesToWorkspace(result.generatedFiles);
-  void vscode.window.showInformationMessage(`Pulled ${result.generatedFiles.length} ${picked.label} files into the workspace.`);
+  const writtenCount = await writeGeneratedFilesToWorkspace(result.generatedFiles, {
+    confirmBeforeWrite: configuration.get<boolean>("confirmBeforeWriteback", true)
+  });
+  void vscode.window.showInformationMessage(`Pulled ${writtenCount} ${picked.label} files into the workspace.`);
 }

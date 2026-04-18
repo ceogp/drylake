@@ -1,9 +1,10 @@
 import * as vscode from "vscode";
 
-import type { ConnectionState, SelectedContext } from "../types/package";
+import type { ConnectionState, DetectedWorkspaceFile, SelectedContext } from "../types/package";
 
 const KEY = "xupra.selectedContext";
 const CONNECTION_KEY = "xupra.connection";
+const DETECTED_FILES_KEY = "xupra.detectedFiles";
 
 export class StateStore {
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -34,5 +35,13 @@ export class StateStore {
       ...current,
       ...next
     });
+  }
+
+  getDetectedFiles(): DetectedWorkspaceFile[] {
+    return this.context.workspaceState.get<DetectedWorkspaceFile[]>(DETECTED_FILES_KEY, []);
+  }
+
+  async setDetectedFiles(files: DetectedWorkspaceFile[]) {
+    await this.context.workspaceState.update(DETECTED_FILES_KEY, files);
   }
 }

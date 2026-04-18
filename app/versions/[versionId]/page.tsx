@@ -85,10 +85,10 @@ export default async function VersionPage({ params }: PageProps) {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
-                Package Editor
+                Transfer Center
               </h1>
               <p className="mt-3 max-w-3xl text-lg leading-8 text-stone-700">
-                Edit the transfer-ready package definition, add subagents and rules, upload raw files, then generate outputs for Codex, Claude Code, Cursor, and Claude Agents.
+                This version is the canonical package behind the extension workflow. Import source files, keep them, refine the package, then generate target outputs for Codex, Claude Code, Cursor, and Claude Agents.
               </p>
             </div>
             <div className="rounded-[1.5rem] border border-stone-200 bg-white px-5 py-4 shadow-sm">
@@ -99,6 +99,27 @@ export default async function VersionPage({ params }: PageProps) {
             </div>
           </div>
         </div>
+
+        <section className="grid gap-4 xl:grid-cols-3">
+          <article className="rounded-[1.75rem] border border-stone-200 bg-white p-5 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">1. Import</p>
+            <p className="mt-3 text-sm leading-7 text-stone-700">
+              Raw files come in from the extension or the web app and stay preserved in this version.
+            </p>
+          </article>
+          <article className="rounded-[1.75rem] border border-stone-200 bg-white p-5 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">2. Canonicalize</p>
+            <p className="mt-3 text-sm leading-7 text-stone-700">
+              Instructions, subagents, rules, and package metadata become the source of truth here.
+            </p>
+          </article>
+          <article className="rounded-[1.75rem] border border-stone-200 bg-white p-5 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">3. Export Or Deploy</p>
+            <p className="mt-3 text-sm leading-7 text-stone-700">
+              Use compatibility checks, export previews, and deployment targets to move the package into the next environment.
+            </p>
+          </article>
+        </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <form action={updateVersionAction} className="grid gap-6 rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
@@ -226,10 +247,10 @@ export default async function VersionPage({ params }: PageProps) {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-                  Rules and Imported Fragments
+                  Skills, Rules, and Imported Fragments
                 </h2>
                 <p className="mt-2 text-sm leading-7 text-stone-700">
-                  Store reusable rules, imported Cursor `.mdc` content, and prompt fragments that support target-specific exports.
+                  Store reusable skills, imported Cursor `.mdc` content, rules, and prompt fragments that support target-specific exports.
                 </p>
               </div>
               <span className="rounded-full bg-orange-100 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-orange-900">

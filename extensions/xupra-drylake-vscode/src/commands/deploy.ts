@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import { ApiClient } from "../services/apiClient";
 import { waitForDeploymentJob } from "../services/jobPoller";
+import { ensureProjectAndVersionSelection } from "../services/selection";
 import { StateStore } from "../services/stateStore";
 import { JobTreeProvider } from "../views/jobTreeProvider";
 
@@ -10,10 +11,9 @@ export async function deployCommand(
   stateStore: StateStore,
   jobsView: JobTreeProvider
 ) {
-  const selection = stateStore.getSelection();
+  const selection = await ensureProjectAndVersionSelection(apiClient, stateStore);
 
-  if (!selection.projectId || !selection.versionId) {
-    void vscode.window.showWarningMessage("Select a project and package version first.");
+  if (!selection?.projectId || !selection.versionId) {
     return;
   }
 

@@ -17,14 +17,20 @@
     "onStartupFinished",
     "onView:xupra.projects",
     "onView:xupra.jobs",
+    "onView:xupra.help",
     "onCommand:xupra.connect",
+    "onCommand:xupra.scanWorkspace",
     "onCommand:xupra.refreshProjects",
     "onCommand:xupra.importWorkspace",
     "onCommand:xupra.checkCompatibility",
     "onCommand:xupra.exportPreview",
     "onCommand:xupra.deploy",
     "onCommand:xupra.pullPackage",
-    "onCommand:xupra.openWebApp"
+    "onCommand:xupra.openWebApp",
+    "onCommand:xupra.openSettings",
+    "onCommand:xupra.openAccountSettings",
+    "onCommand:xupra.openBilling",
+    "onCommand:xupra.openInstallGuide"
   ],
   "contributes": {
     "configuration": {
@@ -50,6 +56,11 @@
           "default": false,
           "description": "Automatically scan the current workspace on open."
         },
+        "xupra.openDashboardAfterConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the Xupra dashboard in your browser after a successful connection."
+        },
         "xupra.defaultTargetPlatform": {
           "type": "string",
           "enum": [
@@ -65,6 +76,11 @@
           "type": "boolean",
           "default": false,
           "description": "Pull generated files into the workspace after export preview."
+        },
+        "xupra.confirmBeforeWriteback": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask for confirmation before writing generated files into the current workspace."
         },
         "xupra.logLevel": {
           "type": "string",
@@ -91,11 +107,15 @@
       "xupra": [
         {
           "id": "xupra.projects",
-          "name": "Projects"
+          "name": "Workspace"
         },
         {
           "id": "xupra.jobs",
           "name": "Jobs"
+        },
+        {
+          "id": "xupra.help",
+          "name": "Help"
         }
       ]
     },
@@ -111,6 +131,10 @@
       {
         "command": "xupra.refreshProjects",
         "title": "Xupra DryLake: Refresh Projects"
+      },
+      {
+        "command": "xupra.scanWorkspace",
+        "title": "Xupra DryLake: Scan Workspace"
       },
       {
         "command": "xupra.selectProject",
@@ -151,6 +175,22 @@
       {
         "command": "xupra.showRecentJobs",
         "title": "Xupra DryLake: Show Recent Jobs"
+      },
+      {
+        "command": "xupra.openSettings",
+        "title": "Xupra DryLake: Open Extension Settings"
+      },
+      {
+        "command": "xupra.openAccountSettings",
+        "title": "Xupra DryLake: Open Account Settings"
+      },
+      {
+        "command": "xupra.openBilling",
+        "title": "Xupra DryLake: Open Billing"
+      },
+      {
+        "command": "xupra.openInstallGuide",
+        "title": "Xupra DryLake: Open Install Guide"
       }
     ],
     "menus": {
@@ -166,8 +206,18 @@
           "group": "navigation"
         },
         {
+          "command": "xupra.scanWorkspace",
+          "when": "view == xupra.projects",
+          "group": "navigation"
+        },
+        {
           "command": "xupra.deploy",
           "when": "view == xupra.jobs",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.openSettings",
+          "when": "view == xupra.help",
           "group": "navigation"
         }
       ],

@@ -2,6 +2,8 @@ import * as vscode from "vscode";
 
 import { ApiClient } from "../services/apiClient";
 import { uploadWorkspaceFiles } from "../services/fileUploader";
+import { waitForTransformJob } from "../services/jobPoller";
+import { ensureVersionSelection } from "../services/selection";
 import { StateStore } from "../services/stateStore";
 import { scanWorkspaceFiles } from "../services/workspaceScanner";
 import { JobTreeProvider } from "../views/jobTreeProvider";
@@ -11,14 +13,14 @@ export async function importWorkspaceCommand(
   stateStore: StateStore,
   jobsView: JobTreeProvider
 ) {
-  const selection = stateStore.getSelection();
+  const selection = await ensureVersionSelection(apiClient, stateStore);
 
-  if (!selection.versionId) {
-    void vscode.window.showWarningMessage("Select a package version first.");
+  if (!selection?.versionId) {
     return;
   }
 
   const files = await scanWorkspaceFiles();
+  await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
 
   if (files.length === 0) {
     void vscode.window.showWarningMessage("No supported workspace files were found.");
@@ -36,8 +38,9 @@ export async function importWorkspaceCommand(
     createdAt: new Date().toISOString()
   });
 
+  const completed = await waitForTransformJob(apiClient, result.job.id);
   const warningSuffix = result.warnings.length > 0 ? ` ${result.warnings[0]}` : "";
   void vscode.window.showInformationMessage(
-    `Imported ${files.length} files into the selected version.${warningSuffix}`
+    `Imported ${files.length} files into the selected version. Status: ${completed.status}.${warningSuffix}`
   );
 }

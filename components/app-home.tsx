@@ -88,12 +88,11 @@ export async function AppHome() {
           <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr]">
             <div className="space-y-5">
               <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950 sm:text-6xl">
-                Run agent transfer operations from one branded control surface.
+                Your transfer workspace for the extension-led workflow.
               </h1>
               <p className="max-w-3xl text-lg leading-8 text-stone-700">
-                Create projects, manage canonical package versions, upload native files,
-                run compatibility checks, and generate transfer-ready outputs for Codex,
-                Claude Code, Cursor, and Claude Agents.
+                The extension is where users import repos, preview portability, and pull generated files back into the editor.
+                This workspace is where you manage projects, credentials, billing, reports, and the canonical package model underneath that flow.
               </p>
             </div>
             <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_18px_45px_rgba(120,53,15,0.08)]">
@@ -113,6 +112,41 @@ export async function AppHome() {
             </div>
           </div>
         </div>
+
+        <section className="grid gap-6 lg:grid-cols-[1fr_1fr_1fr]">
+          <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Extension workflow</p>
+            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
+              Start in VS Code or Cursor
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-stone-700">
+              Connect the extension, scan the repo, import source files, and generate exports where the code already lives.
+            </p>
+            <Link className="mt-5 inline-flex rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/install">
+              Open install flow
+            </Link>
+          </article>
+
+          <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Canonical model</p>
+            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
+              Keep one package definition
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-stone-700">
+              Xupra stores the imported files, normalizes them into one package version, and regenerates target-native outputs when needed.
+            </p>
+          </article>
+
+          <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Web control plane</p>
+            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
+              Manage the system here
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-stone-700">
+              Use the website for projects, credentials, billing, reports, and the deeper package management that sits behind the extension workflow.
+            </p>
+          </article>
+        </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
           <div className="grid gap-5">
