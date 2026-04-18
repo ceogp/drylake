@@ -31,6 +31,8 @@ validate:
     - npm ci
     - npx tsx scripts/prisma/render-schema.ts sqlite prisma/schema.runtime.prisma
     - npx prisma generate --schema prisma/schema.runtime.prisma
+    - npx prisma db push --schema prisma/schema.runtime.prisma
+    - npx tsx prisma/seed.ts
     - npm run typecheck
     - npm run lint
     - npm run build
