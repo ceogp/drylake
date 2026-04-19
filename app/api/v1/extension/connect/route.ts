@@ -4,10 +4,13 @@ import { created, forbidden, fromZodError, internalError, unauthorized } from "@
 import { getAuthSessionSummary, getAuthSetup } from "@/lib/services/auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { ensureDevSession } from "@/lib/services/dev-session";
+import { verifyExtensionAccessToken } from "@/lib/services/extension-tokens";
+import { prisma } from "@/lib/prisma";
 
 const payloadSchema = z.object({
   email: z.email().optional(),
   displayName: z.string().trim().min(1).optional(),
+  accessToken: z.string().trim().min(1).optional(),
   editor: z.enum(["vscode", "cursor"]).default("vscode"),
 });
 
@@ -22,6 +25,57 @@ export async function POST(request: Request) {
 
     const auth = await getAuthSessionSummary();
     const authSetup = getAuthSetup();
+
+    if (parsed.data.accessToken) {
+      const extensionSession = await verifyExtensionAccessToken(parsed.data.accessToken);
+
+      if (!extensionSession) {
+        return unauthorized("The extension token is invalid or expired. Generate a new one from the website.");
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: extensionSession.userId },
+        include: {
+          memberships: {
+            include: {
+              organization: true,
+            },
+          },
+        },
+      });
+      const membership = user?.memberships.find(
+        (item) => item.organizationId === extensionSession.organizationId,
+      );
+
+      if (!user || !membership) {
+        return unauthorized("The extension token no longer maps to an active workspace.");
+      }
+
+      return created({
+        editor: parsed.data.editor,
+        auth: {
+          ...auth,
+          session: {
+            status: "active",
+            user: {
+              id: user.id,
+              email: user.email,
+            },
+            organizationId: membership.organizationId,
+          },
+        },
+        user: {
+          id: user.id,
+          email: user.email,
+        },
+        organization: {
+          id: membership.organization.id,
+          name: membership.organization.name,
+          slug: membership.organization.slug,
+          tier: membership.organization.tier,
+        },
+      });
+    }
 
     if (auth.session.status === "active") {
       const appContext = await getCurrentAppContext();

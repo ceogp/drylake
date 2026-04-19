@@ -13,6 +13,8 @@ import type {
 type JsonValue = Record<string, unknown>;
 
 export class ApiClient {
+  private accessToken?: string;
+
   constructor(private readonly configuration: vscode.WorkspaceConfiguration) {}
 
   get baseUrl() {
@@ -23,8 +25,21 @@ export class ApiClient {
     return vscode.Uri.parse(`${this.baseUrl}${pathname}`);
   }
 
+  setAccessToken(token?: string) {
+    this.accessToken = token;
+  }
+
   private async request<T>(pathname: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${pathname}`, init);
+    const headers = new Headers(init?.headers);
+
+    if (this.accessToken) {
+      headers.set("x-xupra-extension-token", this.accessToken);
+    }
+
+    const response = await fetch(`${this.baseUrl}${pathname}`, {
+      ...init,
+      headers,
+    });
     const payload = (await response.json()) as { ok?: boolean; error?: { message?: string } } & T;
 
     if (!response.ok || payload.ok === false) {
@@ -34,7 +49,7 @@ export class ApiClient {
     return payload;
   }
 
-  async connect(email?: string, displayName?: string) {
+  async connect(email?: string, displayName?: string, accessToken?: string) {
     return this.request<ExtensionConnection>(
       "/api/v1/extension/connect",
       {
@@ -43,6 +58,7 @@ export class ApiClient {
         body: JSON.stringify({
           ...(email ? { email } : {}),
           ...(displayName ? { displayName } : {}),
+          ...(accessToken ? { accessToken } : {}),
           editor: "vscode"
         })
       }

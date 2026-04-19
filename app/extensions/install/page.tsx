@@ -68,6 +68,9 @@ export default function ExtensionInstallPage() {
               <Link className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700" href="/get-started">
                 Create Workspace First
               </Link>
+              <Link className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/connect">
+                Connect Extension
+              </Link>
               <Link className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/app">
                 Open App
               </Link>

@@ -5,6 +5,7 @@ import type { ConnectionState, DetectedWorkspaceFile, SelectedContext } from "..
 const KEY = "xupra.selectedContext";
 const CONNECTION_KEY = "xupra.connection";
 const DETECTED_FILES_KEY = "xupra.detectedFiles";
+const ACCESS_TOKEN_KEY = "xupra.extensionAccessToken";
 
 export class StateStore {
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -43,5 +44,17 @@ export class StateStore {
 
   async setDetectedFiles(files: DetectedWorkspaceFile[]) {
     await this.context.workspaceState.update(DETECTED_FILES_KEY, files);
+  }
+
+  async getAccessToken() {
+    return this.context.secrets.get(ACCESS_TOKEN_KEY);
+  }
+
+  async setAccessToken(token: string) {
+    await this.context.secrets.store(ACCESS_TOKEN_KEY, token);
+  }
+
+  async clearAccessToken() {
+    await this.context.secrets.delete(ACCESS_TOKEN_KEY);
   }
 }

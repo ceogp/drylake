@@ -22,6 +22,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const configuration = vscode.workspace.getConfiguration("xupra");
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
+  apiClient.setAccessToken(await stateStore.getAccessToken());
   const projectsView = new ProjectTreeProvider();
   const jobsView = new JobTreeProvider();
   const helpView = new HelpTreeProvider();
@@ -203,6 +204,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("xupra.openInstallGuide", async () => {
     await vscode.env.openExternal(apiClient.openWebUrl("/extensions/install"));
+  });
+
+  register("xupra.openConnectPage", async () => {
+    await vscode.env.openExternal(apiClient.openWebUrl("/extensions/connect"));
   });
 
   register("xupra.openGetStarted", async () => {

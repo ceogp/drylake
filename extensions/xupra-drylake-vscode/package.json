@@ -31,6 +31,7 @@
     "onCommand:xupra.openAccountSettings",
     "onCommand:xupra.openBilling",
     "onCommand:xupra.openInstallGuide",
+    "onCommand:xupra.openConnectPage",
     "onCommand:xupra.openGetStarted"
   ],
   "contributes": {
@@ -200,6 +201,10 @@
       {
         "command": "xupra.openInstallGuide",
         "title": "Xupra DryLake: Open Install Guide"
+      },
+      {
+        "command": "xupra.openConnectPage",
+        "title": "Xupra DryLake: Open Extension Connect Page"
       },
       {
         "command": "xupra.openGetStarted",

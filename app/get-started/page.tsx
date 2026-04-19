@@ -165,6 +165,12 @@ export default async function GetStartedPage() {
               </Link>
               <Link
                 className="rounded-[1.35rem] border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50"
+                href="/extensions/connect"
+              >
+                Extension connect page
+              </Link>
+              <Link
+                className="rounded-[1.35rem] border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50"
                 href="/billing"
               >
                 Billing and plans

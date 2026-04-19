@@ -43,6 +43,11 @@ export class HelpTreeProvider implements vscode.TreeDataProvider<HelpItem> {
         command: "xupra.openInstallGuide"
       },
       {
+        label: "Connect Extension",
+        description: "Open the website page that generates an extension token",
+        command: "xupra.openConnectPage"
+      },
+      {
         label: "Open Dashboard",
         description: "Open the Xupra workspace in your browser",
         command: "xupra.openWebApp"

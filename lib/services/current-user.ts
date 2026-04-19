@@ -1,11 +1,16 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Organization, Profile, User } from "@prisma/client";
 
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { ensureAppSession } from "@/lib/services/dev-session";
+import {
+  EXTENSION_TOKEN_HEADER,
+  verifyExtensionAccessToken,
+} from "@/lib/services/extension-tokens";
 
 export const ACTIVE_ORGANIZATION_COOKIE = "xupra_active_organization_id";
 
@@ -34,6 +39,20 @@ function shouldUseClerk() {
 async function loadUserByEmail(email: string) {
   return prisma.user.findUnique({
     where: { email },
+    include: {
+      memberships: {
+        include: {
+          organization: true,
+        },
+      },
+      profile: true,
+    },
+  }) as Promise<SessionUser | null>;
+}
+
+async function loadUserById(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
     include: {
       memberships: {
         include: {
@@ -81,19 +100,45 @@ async function getClerkBackedUser() {
   return session.user;
 }
 
+async function getExtensionTokenSession() {
+  const headerStore = await headers();
+  const token = headerStore.get(EXTENSION_TOKEN_HEADER);
+
+  if (!token) {
+    return null;
+  }
+
+  return verifyExtensionAccessToken(token);
+}
+
+async function getExtensionBackedUser() {
+  const session = await getExtensionTokenSession();
+
+  if (!session) {
+    return null;
+  }
+
+  return loadUserById(session.userId);
+}
+
 async function getDevFallbackUser() {
   return loadUserByEmail(env.DEFAULT_DEV_USER_EMAIL);
 }
 
-async function pickActiveMembership(user: SessionUser) {
+async function pickActiveMembership(user: SessionUser, preferredOrganizationId?: string | null) {
   if (user.memberships.length === 0) {
     throw new Error("Current user does not belong to an organization.");
   }
 
-  const cookieStore = await cookies();
-  const preferredOrganizationId = cookieStore.get(ACTIVE_ORGANIZATION_COOKIE)?.value;
+  let selectedOrganizationId = preferredOrganizationId;
+
+  if (!selectedOrganizationId) {
+    const cookieStore = await cookies();
+    selectedOrganizationId = cookieStore.get(ACTIVE_ORGANIZATION_COOKIE)?.value;
+  }
+
   const activeMembership =
-    user.memberships.find((membership) => membership.organizationId === preferredOrganizationId) ??
+    user.memberships.find((membership) => membership.organizationId === selectedOrganizationId) ??
     user.memberships[0];
 
   return activeMembership;
@@ -106,6 +151,12 @@ export async function getCurrentUser(options?: {
 
   if (clerkUser) {
     return clerkUser;
+  }
+
+  const extensionUser = await getExtensionBackedUser();
+
+  if (extensionUser) {
+    return extensionUser;
   }
 
   if (options?.allowDevFallback ?? !shouldUseClerk()) {
@@ -136,7 +187,8 @@ export async function getCurrentAppContext(options?: {
     return null;
   }
 
-  const activeMembership = await pickActiveMembership(user);
+  const extensionSession = await getExtensionTokenSession();
+  const activeMembership = await pickActiveMembership(user, extensionSession?.organizationId);
 
   return {
     user,
