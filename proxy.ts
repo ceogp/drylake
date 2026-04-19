@@ -1,10 +1,26 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
-export default clerkMiddleware();
+import { getConfiguredAppUrlForPath, isConfiguredMarketingHost } from "./lib/site-hosts";
+
+export function proxy(request: NextRequest) {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+
+  if (!isConfiguredMarketingHost(host)) {
+    return NextResponse.next();
+  }
+
+  if (request.nextUrl.pathname === "/") {
+    return NextResponse.next();
+  }
+
+  return NextResponse.redirect(
+    getConfiguredAppUrlForPath(request.nextUrl.pathname, request.nextUrl.search),
+  );
+}
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.[^/]+$).*)",
   ],
 };

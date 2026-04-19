@@ -58,7 +58,8 @@ export async function getSetupStatus() {
     auth.mode === "clerk" &&
       auth.configured &&
       env.CLERK_SECRET_KEY &&
-      env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+      env.CLERK_WEBHOOK_SIGNING_SECRET,
   );
   const billingConfigured = env.BILLING_PROVIDER === "clerk" ? clerkConfigured : stripeConfigured;
 
@@ -78,6 +79,7 @@ export async function getSetupStatus() {
           ? [
               !env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" : null,
               !env.CLERK_SECRET_KEY ? "CLERK_SECRET_KEY" : null,
+              !env.CLERK_WEBHOOK_SIGNING_SECRET ? "CLERK_WEBHOOK_SIGNING_SECRET" : null,
             ].filter(Boolean)
           : [
               !env.STRIPE_SECRET_KEY ? "STRIPE_SECRET_KEY" : null,

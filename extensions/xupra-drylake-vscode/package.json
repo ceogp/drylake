@@ -8,7 +8,7 @@
   "license": "UNLICENSED",
   "preview": true,
   "icon": "media/icon.png",
-  "homepage": "http://52.196.86.96/extensions",
+  "homepage": "https://drylake.xupracorp.com/extensions",
   "bugs": {
     "url": "https://gitlab.com/xupraplatform/drylake/-/issues"
   },
@@ -68,7 +68,7 @@
       "properties": {
         "xupra.baseUrl": {
           "type": "string",
-          "default": "http://52.196.86.96",
+          "default": "https://drylake.xupracorp.com",
           "description": "Base URL for the Xupra DryLake backend."
         },
         "xupra.devEmail": {

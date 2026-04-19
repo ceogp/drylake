@@ -44,6 +44,18 @@ cp "$ENV_FILE" "$APP_DIR/shared/.env"
 cp "$ENV_FILE" "$release_dir/.env"
 chown -R "$APP_USER:$APP_GROUP" "$release_dir" "$APP_DIR/shared/.env"
 
+set -a
+source "$APP_DIR/shared/.env"
+set +a
+
+app_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); process.stdout.write(url.host);")"
+marketing_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); const host = url.host; process.stdout.write(host.startsWith('drylake.') ? host.slice('drylake.'.length) : '');")"
+server_names="$app_host"
+
+if [ -n "$marketing_host" ]; then
+  server_names="$server_names $marketing_host www.$marketing_host"
+fi
+
 sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev && npx tsx scripts/prisma/render-schema.ts postgresql prisma/schema.runtime.prisma && npx prisma generate --schema prisma/schema.runtime.prisma && npx prisma db push --schema prisma/schema.runtime.prisma && npx tsx prisma/seed.ts && npm run build"
 
 ln -sfn "$release_dir" "$APP_DIR/current"
@@ -68,10 +80,10 @@ RestartSec=5
 WantedBy=multi-user.target
 SERVICE
 
-cat >/etc/nginx/sites-available/xupra-drylake <<'NGINX'
+cat >/etc/nginx/sites-available/xupra-drylake <<NGINX
 server {
   listen 80 default_server;
-  server_name _;
+  server_name $server_names;
 
   location / {
     proxy_pass http://127.0.0.1:3000;

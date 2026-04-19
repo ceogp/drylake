@@ -56,7 +56,7 @@ function requireEnv(name: string) {
 }
 
 async function writeStagingEnv(manifest: Manifest) {
-  const baseUrl = `http://${manifest.publicIp}`;
+  const baseUrl = process.env.APP_BASE_URL || `http://${manifest.publicIp}`;
   const envFilePath = path.join(workDir, "staging.env");
 
   const values: Record<string, string> = {
@@ -72,6 +72,7 @@ async function writeStagingEnv(manifest: Manifest) {
       process.env.PLATFORM_ADMIN_EMAILS || "*",
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "",
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY || "",
+    CLERK_WEBHOOK_SIGNING_SECRET: process.env.CLERK_WEBHOOK_SIGNING_SECRET || "",
     CLERK_SIGN_IN_URL: process.env.CLERK_SIGN_IN_URL || "/",
     CLERK_SIGN_UP_URL: process.env.CLERK_SIGN_UP_URL || "/",
     ARTIFACT_STORAGE_DRIVER: "local",
@@ -83,10 +84,12 @@ async function writeStagingEnv(manifest: Manifest) {
     AWS_SECRETS_PREFIX: process.env.AWS_SECRETS_PREFIX || "xupra-drylake",
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
     OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-5.4-mini",
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
     STRIPE_PRO_PRICE_ID: process.env.STRIPE_PRO_PRICE_ID || "",
     STRIPE_ENTERPRISE_PRICE_ID: process.env.STRIPE_ENTERPRISE_PRICE_ID || "",
+    BILLING_PROVIDER: process.env.BILLING_PROVIDER || "stripe",
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || "",

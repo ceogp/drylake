@@ -12,6 +12,7 @@ const serverEnvSchema = z.object({
   PLATFORM_ADMIN_EMAILS: z.string().default(""),
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().optional(),
   CLERK_SECRET_KEY: z.string().optional(),
+  CLERK_WEBHOOK_SIGNING_SECRET: z.string().optional(),
   CLERK_SIGN_IN_URL: z.string().optional(),
   CLERK_SIGN_UP_URL: z.string().optional(),
   ARTIFACT_STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
