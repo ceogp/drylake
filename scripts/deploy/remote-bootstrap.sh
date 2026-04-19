@@ -41,12 +41,8 @@ release_dir="$APP_DIR/releases/$release_name"
 mkdir -p "$release_dir"
 tar -xf "$RELEASE_TAR" -C "$release_dir"
 
-cp "$ENV_FILE" "$APP_DIR/shared/.env"
-cp "$ENV_FILE" "$release_dir/.env"
-chown -R "$APP_USER:$APP_GROUP" "$release_dir" "$APP_DIR/shared/.env"
-
 set -a
-source "$APP_DIR/shared/.env"
+source "$ENV_FILE"
 set +a
 
 app_base_url="${APP_BASE_URL:-}"
@@ -75,6 +71,10 @@ if node -e "const host = process.argv[1] || ''; process.exit(/^\\d{1,3}(\\.\\d{1
   echo "APP_BASE_URL must use a domain host, not a raw IP ($app_base_url_hostname)." >&2
   exit 1
 fi
+
+cp "$ENV_FILE" "$APP_DIR/shared/.env"
+cp "$ENV_FILE" "$release_dir/.env"
+chown -R "$APP_USER:$APP_GROUP" "$release_dir" "$APP_DIR/shared/.env"
 
 app_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); process.stdout.write(url.host);")"
 marketing_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); const host = url.host; process.stdout.write(host.startsWith('drylake.') ? host.slice('drylake.'.length) : '');")"
