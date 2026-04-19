@@ -6,6 +6,10 @@ import { getAuthSetup } from "@/lib/services/auth";
 export async function GET() {
   const db = await prisma.$queryRawUnsafe("SELECT 1 as ok").then(() => "ok").catch(() => "error");
   const auth = getAuthSetup();
+  const clerkConfigured = Boolean(env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && env.CLERK_SECRET_KEY);
+  const stripeConfigured = Boolean(env.STRIPE_SECRET_KEY);
+  const billingProvider = env.BILLING_PROVIDER;
+  const billingConfigured = billingProvider === "clerk" ? clerkConfigured : stripeConfigured;
 
   return ok({
     service: "xupra-drylake",
@@ -16,7 +20,10 @@ export async function GET() {
       authMode: auth.mode,
       authConfigured: auth.configured,
       artifactStorage: env.ARTIFACT_STORAGE_DRIVER,
-      stripeConfigured: Boolean(env.STRIPE_SECRET_KEY),
+      billingProvider,
+      billingConfigured,
+      clerkConfigured,
+      stripeConfigured,
       openaiConfigured: Boolean(env.OPENAI_API_KEY),
       storageConfigured:
         env.ARTIFACT_STORAGE_DRIVER === "local"
