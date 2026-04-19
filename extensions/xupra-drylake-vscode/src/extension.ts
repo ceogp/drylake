@@ -19,9 +19,71 @@ import { JobTreeProvider } from "./views/jobTreeProvider";
 import { createStatusBar } from "./views/statusBar";
 import { getLogger } from "./utils/logging";
 
+const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
+const LEGACY_BASE_URL_HOSTS = new Set(["52.196.86.96"]);
+
+function isLegacyBaseUrl(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  const candidate = trimmed.includes("://") ? trimmed : `http://${trimmed}`;
+
+  try {
+    const parsed = new URL(candidate);
+    return LEGACY_BASE_URL_HOSTS.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+async function migrateLegacyBaseUrl(configuration: vscode.WorkspaceConfiguration) {
+  const inspected = configuration.inspect<string>("baseUrl");
+
+  if (!inspected) {
+    return false;
+  }
+
+  let migrated = false;
+
+  if (typeof inspected.globalValue === "string" && isLegacyBaseUrl(inspected.globalValue)) {
+    await configuration.update("baseUrl", DEFAULT_BASE_URL, vscode.ConfigurationTarget.Global);
+    migrated = true;
+  }
+
+  if (typeof inspected.workspaceValue === "string" && isLegacyBaseUrl(inspected.workspaceValue)) {
+    await configuration.update("baseUrl", DEFAULT_BASE_URL, vscode.ConfigurationTarget.Workspace);
+    migrated = true;
+  }
+
+  if (
+    typeof inspected.workspaceFolderValue === "string" &&
+    isLegacyBaseUrl(inspected.workspaceFolderValue) &&
+    vscode.workspace.workspaceFolders &&
+    vscode.workspace.workspaceFolders.length > 0
+  ) {
+    await configuration.update("baseUrl", DEFAULT_BASE_URL, vscode.ConfigurationTarget.WorkspaceFolder);
+    migrated = true;
+  }
+
+  if (migrated) {
+    void vscode.window.showInformationMessage(
+      `Xupra updated xupra.baseUrl to ${DEFAULT_BASE_URL} from a legacy IP value.`,
+    );
+  }
+
+  return migrated;
+}
+
 export async function activate(context: vscode.ExtensionContext) {
   const WALKTHROUGH_STATE_KEY = "xupra.walkthroughOpened";
-  const configuration = vscode.workspace.getConfiguration("xupra");
+  let configuration = vscode.workspace.getConfiguration("xupra");
+  const migratedBaseUrl = await migrateLegacyBaseUrl(configuration);
+  if (migratedBaseUrl) {
+    configuration = vscode.workspace.getConfiguration("xupra");
+  }
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
   apiClient.setAccessToken(await stateStore.getAccessToken());
