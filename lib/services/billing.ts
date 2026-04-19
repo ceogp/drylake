@@ -101,6 +101,51 @@ async function upsertSubscriptionFromStripe(params: {
   });
 }
 
+async function upsertSubscriptionForOrganization(params: {
+  organizationId: string;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  stripePriceId?: string | null;
+  status: string;
+  currentPeriodEndsAt?: Date | null;
+  cancelAtPeriodEnd?: boolean;
+}) {
+  const tier =
+    params.stripePriceId && params.stripePriceId === env.STRIPE_ENTERPRISE_PRICE_ID
+      ? "enterprise"
+      : params.stripePriceId && params.stripePriceId === env.STRIPE_PRO_PRICE_ID
+        ? "pro"
+        : "free";
+
+  return prisma.subscription.upsert({
+    where: { organizationId: params.organizationId },
+    update: {
+      provider: "stripe",
+      tier,
+      status: params.status,
+      stripeCustomerId: params.stripeCustomerId ?? undefined,
+      stripeSubscriptionId: params.stripeSubscriptionId ?? undefined,
+      stripePriceId: params.stripePriceId ?? undefined,
+      currentPeriodEndsAt: params.currentPeriodEndsAt ?? undefined,
+      cancelAtPeriodEnd: Boolean(params.cancelAtPeriodEnd),
+      entitlementsJson: entitlementsForTier(tier),
+    },
+    create: {
+      organizationId: params.organizationId,
+      provider: "stripe",
+      tier,
+      status: params.status,
+      stripeCustomerId: params.stripeCustomerId ?? null,
+      stripeSubscriptionId: params.stripeSubscriptionId ?? null,
+      stripePriceId: params.stripePriceId ?? null,
+      currentPeriodEndsAt: params.currentPeriodEndsAt ?? null,
+      cancelAtPeriodEnd: Boolean(params.cancelAtPeriodEnd),
+      entitlementsJson: entitlementsForTier(tier),
+      limitsJson: {},
+    },
+  });
+}
+
 export async function createCheckoutSession(params: {
   organizationId: string;
   userEmail: string;
@@ -191,22 +236,32 @@ export async function handleStripeWebhook(rawBody: string, signature: string) {
       const organizationId = session.metadata?.organizationId;
 
       if (organizationId && session.customer) {
-        await prisma.subscription.upsert({
-          where: { organizationId },
-          update: {
-            provider: "stripe",
-            stripeCustomerId: String(session.customer),
-          },
-          create: {
+        const stripeCustomerId = String(session.customer);
+        const stripeSubscriptionId =
+          typeof session.subscription === "string" ? session.subscription : session.subscription?.id ?? null;
+
+        if (stripeSubscriptionId) {
+          const stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+          const priceId = stripeSubscription.items.data[0]?.price?.id ?? null;
+
+          await upsertSubscriptionForOrganization({
             organizationId,
-            provider: "stripe",
-            tier: "free",
+            stripeCustomerId,
+            stripeSubscriptionId,
+            stripePriceId: priceId,
+            status: stripeSubscription.status,
+            currentPeriodEndsAt: stripeSubscription.items.data[0]?.current_period_end
+              ? new Date(stripeSubscription.items.data[0].current_period_end * 1000)
+              : null,
+            cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+          });
+        } else {
+          await upsertSubscriptionForOrganization({
+            organizationId,
+            stripeCustomerId,
             status: "trial",
-            stripeCustomerId: String(session.customer),
-            limitsJson: {},
-            entitlementsJson: entitlementsForTier("free"),
-          },
-        });
+          });
+        }
       }
       break;
     }
