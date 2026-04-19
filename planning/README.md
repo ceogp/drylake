@@ -5,5 +5,6 @@
 - [product plan](C:/Users/gp/Desktop/agenttransfer/docs/xupra-drylake-plan.md)
 - [v1 spec](C:/Users/gp/Desktop/agenttransfer/docs/xupra-drylake-v1-spec.md)
 - [extension plan](C:/Users/gp/Desktop/agenttransfer/docs/xupra-drylake-extension-plan.md)
+- [aws internal admin setup](C:/Users/gp/Desktop/agenttransfer/planning/aws-internal-admin.md)
 
 This directory is the stable planning entrypoint. `architecture.md` is the current source of truth for the system shape. Older docs remain in `docs/` until they are folded in or replaced.

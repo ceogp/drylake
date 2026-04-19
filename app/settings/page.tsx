@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getConfiguredAdminInternalOrigin } from "@/lib/site-hosts";
 import { getIsPlatformAdmin } from "@/lib/services/access";
 import { getAuthSessionSummary } from "@/lib/services/auth";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
@@ -23,6 +24,7 @@ export default async function SettingsPage() {
   const appContext = await requireCurrentAppContextForPage();
   const auth = await getAuthSessionSummary();
   const isPlatformAdmin = await getIsPlatformAdmin();
+  const adminInternalOrigin = getConfiguredAdminInternalOrigin();
   const profile = appContext.user.profile;
 
   return (
@@ -45,10 +47,13 @@ export default async function SettingsPage() {
             <Link className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/billing">
               Billing
             </Link>
-            {isPlatformAdmin ? (
-              <Link className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800" href="/admin">
-                Open Admin
-              </Link>
+            {isPlatformAdmin && adminInternalOrigin ? (
+              <a
+                className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+                href={`${adminInternalOrigin}/admin`}
+              >
+                Open Internal Admin
+              </a>
             ) : null}
           </div>
         </div>

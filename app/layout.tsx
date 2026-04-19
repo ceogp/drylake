@@ -8,8 +8,10 @@ import { setActiveOrganizationAction } from "@/app/actions";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
+  getConfiguredAdminInternalOrigin,
   getConfiguredAppOrigin,
   getConfiguredMarketingOrigin,
+  isConfiguredAdminInternalHost,
   isConfiguredMarketingHost,
   normalizeHost,
 } from "@/lib/site-hosts";
@@ -44,17 +46,19 @@ export default async function RootLayout({
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
   );
   const marketingHostRequest = isConfiguredMarketingHost(requestHost);
+  const adminInternalHostRequest = isConfiguredAdminInternalHost(requestHost);
   const authSetup = getAuthSetup();
   const allowDevFallback = authSetup.mode === "dev";
-  const useClerkUi = authSetup.mode === "clerk" && authSetup.configured;
-  const appContext = marketingHostRequest
+  const useClerkUi = !adminInternalHostRequest && authSetup.mode === "clerk" && authSetup.configured;
+  const appContext = marketingHostRequest || adminInternalHostRequest
     ? null
     : await getCurrentAppContext({ allowDevFallback });
-  const isPlatformAdmin = marketingHostRequest
+  const isPlatformAdmin = marketingHostRequest || adminInternalHostRequest
     ? false
     : await getIsPlatformAdmin({ allowDevFallback });
   const marketingOrigin = getConfiguredMarketingOrigin();
   const dryLakeOrigin = getConfiguredAppOrigin();
+  const adminInternalOrigin = getConfiguredAdminInternalOrigin();
 
   const shell = marketingHostRequest ? (
     <>
@@ -83,6 +87,32 @@ export default async function RootLayout({
               Pricing
             </a>
           </nav>
+        </div>
+      </div>
+      {children}
+    </>
+  ) : adminInternalHostRequest ? (
+    <>
+      <div className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/92 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 md:px-10">
+          <Link className="flex items-center gap-3" href="/admin">
+            <Image
+              alt="Xupra logo"
+              className="h-11 w-11 rounded-2xl shadow-[0_12px_32px_rgba(249,115,22,0.18)]"
+              height={44}
+              src="/xupra-logo.svg"
+              width={44}
+            />
+            <div className="rounded-full border border-stone-300/70 bg-stone-50 px-4 py-2 font-mono text-xs uppercase tracking-[0.24em] text-stone-900">
+              Xupra Internal Admin
+            </div>
+          </Link>
+          <a
+            className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+            href={dryLakeOrigin}
+          >
+            Open Customer App
+          </a>
         </div>
       </div>
       {children}
@@ -120,10 +150,10 @@ export default async function RootLayout({
               <Link className="transition hover:text-stone-950" href="/billing">
                 Billing
               </Link>
-              {isPlatformAdmin ? (
-                <Link className="transition hover:text-stone-950" href="/admin">
-                  Admin
-                </Link>
+              {isPlatformAdmin && adminInternalOrigin ? (
+                <a className="transition hover:text-stone-950" href={`${adminInternalOrigin}/admin`}>
+                  Internal Admin
+                </a>
               ) : null}
             </nav>
           </div>

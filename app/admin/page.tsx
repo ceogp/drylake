@@ -1,10 +1,8 @@
-import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 
-import { getAuthSetup } from "@/lib/services/auth";
+import { getConfiguredAppOrigin, isConfiguredAdminInternalHost } from "@/lib/site-hosts";
 import { prisma } from "@/lib/prisma";
-import { isPlatformAdminEmail } from "@/lib/services/access";
-import { getCurrentAppContext } from "@/lib/services/current-user";
 import { getSetupStatus } from "@/lib/services/setup";
 
 function MetricCard({
@@ -28,17 +26,14 @@ function MetricCard({
 }
 
 export default async function AdminPage() {
-  const authSetup = getAuthSetup();
-  const adminContext = await getCurrentAppContext();
+  const requestHeaders = await headers();
+  const requestHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
 
-  if (!adminContext) {
-    redirect(authSetup.signInUrl ?? "/");
-  }
-
-  if (!isPlatformAdminEmail(adminContext.user.email)) {
+  if (!isConfiguredAdminInternalHost(requestHost)) {
     notFound();
   }
 
+  const appOrigin = getConfiguredAppOrigin();
   const setup = await getSetupStatus();
 
   const [users, organizations, projectCount, packageCount, versionCount, credentialCount, transformJobs, deploymentJobs] =
@@ -104,12 +99,12 @@ export default async function AdminPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link className="rounded-full border border-stone-600 bg-stone-900/60 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800" href="/settings">
+            <a className="rounded-full border border-stone-600 bg-stone-900/60 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800" href={`${appOrigin}/settings`}>
               User Settings
-            </Link>
-            <Link className="rounded-full border border-stone-600 bg-stone-900/60 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800" href="/app">
+            </a>
+            <a className="rounded-full border border-stone-600 bg-stone-900/60 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800" href={`${appOrigin}/app`}>
               App
-            </Link>
+            </a>
           </div>
         </div>
 
@@ -130,7 +125,7 @@ export default async function AdminPage() {
                 </h2>
               </div>
               <p className="rounded-full bg-stone-100 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-stone-600">
-                admin: {adminContext.user.email}
+                admin: internal access granted
               </p>
             </div>
             <div className="mt-6 overflow-x-auto">
