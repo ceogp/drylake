@@ -12,13 +12,36 @@ import type {
 
 type JsonValue = Record<string, unknown>;
 
+const LEGACY_HOSTS = new Set(["52.196.86.96"]);
+const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
+
+function normalizeBaseUrl(rawValue: string) {
+  const trimmed = rawValue.trim().replace(/\/+$/, "");
+
+  if (!trimmed) {
+    return DEFAULT_BASE_URL;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+
+    if (LEGACY_HOSTS.has(parsed.hostname)) {
+      return DEFAULT_BASE_URL;
+    }
+
+    return parsed.toString().replace(/\/+$/, "");
+  } catch {
+    return trimmed;
+  }
+}
+
 export class ApiClient {
   private accessToken?: string;
 
   constructor(private readonly configuration: vscode.WorkspaceConfiguration) {}
 
   get baseUrl() {
-    return String(this.configuration.get("baseUrl", "https://drylake.xupracorp.com")).replace(/\/+$/, "");
+    return normalizeBaseUrl(String(this.configuration.get("baseUrl", DEFAULT_BASE_URL)));
   }
 
   openWebUrl(pathname = "/app") {
@@ -36,10 +59,21 @@ export class ApiClient {
       headers.set("x-xupra-extension-token", this.accessToken);
     }
 
-    const response = await fetch(`${this.baseUrl}${pathname}`, {
-      ...init,
-      headers,
-    });
+    const requestUrl = `${this.baseUrl}${pathname}`;
+    let response: Response;
+
+    try {
+      response = await fetch(requestUrl, {
+        ...init,
+        headers,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Network request failed for ${pathname}. Check xupra.baseUrl (currently ${this.baseUrl}). ${message}`,
+      );
+    }
+
     const payload = (await response.json()) as { ok?: boolean; error?: { message?: string } } & T;
 
     if (!response.ok || payload.ok === false) {
@@ -160,7 +194,17 @@ export class ApiClient {
       url.searchParams.set("ensureGenerated", "true");
     }
 
-    const response = await fetch(url);
+    let response: Response;
+
+    try {
+      response = await fetch(url);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Network request failed for ${url.pathname}. Check xupra.baseUrl (currently ${this.baseUrl}). ${message}`,
+      );
+    }
+
     const payload = (await response.json()) as {
       ok?: boolean;
       error?: { message?: string };

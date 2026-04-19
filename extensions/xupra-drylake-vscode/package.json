@@ -2,7 +2,7 @@
   "name": "xupra-drylake-vscode",
   "displayName": "Xupra DryLake",
   "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "publisher": "xupra",
   "license": "UNLICENSED",

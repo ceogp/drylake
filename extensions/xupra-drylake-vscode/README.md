@@ -73,6 +73,10 @@ Key settings:
 - `xupra.pullGeneratedFilesAfterExport`
 - `xupra.openDashboardAfterConnect`
 
+If you tested an older build that pointed to `52.196.86.96`, change `xupra.baseUrl` back to:
+
+- `https://drylake.xupracorp.com`
+
 ## Local testing
 
 1. Open `extensions/xupra-drylake-vscode` in VS Code.
