@@ -51,10 +51,16 @@ set +a
 app_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); process.stdout.write(url.host);")"
 marketing_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); const host = url.host; process.stdout.write(host.startsWith('drylake.') ? host.slice('drylake.'.length) : '');")"
 server_names="$app_host"
+certificate_name="$app_host"
 
 if [ -n "$marketing_host" ]; then
   server_names="$server_names $marketing_host www.$marketing_host"
+  certificate_name="$marketing_host"
 fi
+
+certificate_dir="/etc/letsencrypt/live/$certificate_name"
+certificate_fullchain="$certificate_dir/fullchain.pem"
+certificate_privkey="$certificate_dir/privkey.pem"
 
 sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev && npx tsx scripts/prisma/render-schema.ts postgresql prisma/schema.runtime.prisma && npx prisma generate --schema prisma/schema.runtime.prisma && npx prisma db push --schema prisma/schema.runtime.prisma && npx tsx prisma/seed.ts && npm run build"
 
@@ -80,6 +86,35 @@ RestartSec=5
 WantedBy=multi-user.target
 SERVICE
 
+if [ -f "$certificate_fullchain" ] && [ -f "$certificate_privkey" ]; then
+cat >/etc/nginx/sites-available/xupra-drylake <<NGINX
+server {
+  listen 80 default_server;
+  server_name $server_names;
+
+  return 301 https://\$host\$request_uri;
+}
+
+server {
+  listen 443 ssl http2;
+  server_name $server_names;
+
+  ssl_certificate $certificate_fullchain;
+  ssl_certificate_key $certificate_privkey;
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}
+NGINX
+else
 cat >/etc/nginx/sites-available/xupra-drylake <<NGINX
 server {
   listen 80 default_server;
@@ -97,6 +132,7 @@ server {
   }
 }
 NGINX
+fi
 
 ln -sfn /etc/nginx/sites-available/xupra-drylake /etc/nginx/sites-enabled/xupra-drylake
 rm -f /etc/nginx/sites-enabled/default
