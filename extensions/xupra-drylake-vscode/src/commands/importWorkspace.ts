@@ -19,7 +19,7 @@ export async function importWorkspaceCommand(
     return;
   }
 
-  const files = await scanWorkspaceFiles();
+  const files = await scanWorkspaceFiles(vscode.workspace.getConfiguration("xupra"));
   await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
 
   if (files.length === 0) {

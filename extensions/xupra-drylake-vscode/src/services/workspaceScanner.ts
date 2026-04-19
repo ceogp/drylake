@@ -18,11 +18,17 @@ const PATTERNS = [
 
 const EXCLUDE_PATTERN = "**/{node_modules,.git,.next,dist,build,out,coverage}/**";
 
-export async function scanWorkspaceFiles() {
+function getConfiguredPatterns(configuration?: vscode.WorkspaceConfiguration) {
+  const configuredPatterns = configuration?.get<string[]>("additionalScanPatterns", []) ?? [];
+
+  return [...new Set([...PATTERNS, ...configuredPatterns.map((pattern) => pattern.trim()).filter(Boolean)])];
+}
+
+export async function scanWorkspaceFiles(configuration?: vscode.WorkspaceConfiguration) {
   const seen = new Set<string>();
   const results: Array<{ logicalPath: string; content: string; category: DetectedWorkspaceFile["category"] }> = [];
 
-  for (const pattern of PATTERNS) {
+  for (const pattern of getConfiguredPatterns(configuration)) {
     const files = await vscode.workspace.findFiles(pattern, EXCLUDE_PATTERN, 200);
 
     for (const file of files) {

@@ -1,0 +1,184 @@
+import Link from "next/link";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
+
+import { getAuthSessionSummary } from "@/lib/services/auth";
+
+const steps = [
+  {
+    eyebrow: "Step 1",
+    title: "Create your Xupra workspace",
+    body: "Sign up with any email. Xupra automatically creates your personal workspace so you can start alone and invite teammates later.",
+  },
+  {
+    eyebrow: "Step 2",
+    title: "Start on free, upgrade when you need the heavy lifting",
+    body: "Free gets you into the system. Paid is where deployment, deeper automation, and the more expensive transfer work should open up.",
+  },
+  {
+    eyebrow: "Step 3",
+    title: "Go back to VS Code or Cursor and connect",
+    body: "Install the extension, sign in, scan the repo, import what you already have, and only add external credentials when a specific deploy target actually needs them.",
+  },
+];
+
+const notes = [
+  "You do not need to sign into every external service on day one.",
+  "Default agent directories are scanned automatically.",
+  "If your files live somewhere custom, add extra scan patterns in extension settings.",
+  "Xupra stores the source files, builds the canonical package, and generates the target format after that.",
+];
+
+export default async function GetStartedPage() {
+  const auth = await getAuthSessionSummary();
+  const isSignedIn = auth.session.status === "active";
+  const useClerkUi = auth.mode === "clerk" && auth.configured;
+
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(234,88,12,0.18),_transparent_28%),linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_45%,_#ffffff_100%)]">
+      <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16 md:px-10 lg:py-24">
+        <section className="rounded-[2.5rem] border border-orange-200/80 bg-white/90 px-7 py-8 shadow-[0_24px_60px_rgba(120,53,15,0.10)] md:px-10 md:py-10">
+          <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="space-y-5">
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">
+                Get Started
+              </p>
+              <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.06em] text-stone-950 sm:text-6xl">
+                Sign up on the website. Finish the real work in the editor.
+              </h1>
+              <p className="max-w-3xl text-lg leading-8 text-stone-700">
+                Xupra DryLake should feel simple on day one: create an account, land in your own
+                workspace, then go back to VS Code or Cursor to import the repo you already have.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {isSignedIn ? (
+                  <>
+                    <Link
+                      className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
+                      href="/extensions/install"
+                    >
+                      Install The Extension
+                    </Link>
+                    <Link
+                      className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
+                      href="/app"
+                    >
+                      Open Workspace
+                    </Link>
+                  </>
+                ) : useClerkUi ? (
+                  <>
+                    <SignUpButton mode="modal">
+                      <button className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700">
+                        Create Workspace
+                      </button>
+                    </SignUpButton>
+                    <SignInButton mode="modal">
+                      <button className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100">
+                        Sign In
+                      </button>
+                    </SignInButton>
+                  </>
+                ) : (
+                  <Link
+                    className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
+                    href="/app"
+                  >
+                    Open Development Workspace
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-stone-200 bg-stone-950 p-6 text-white shadow-[0_18px_45px_rgba(28,25,23,0.20)]">
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-300">
+                What happens after sign up
+              </p>
+              <div className="mt-5 space-y-4 text-sm leading-7 text-stone-200">
+                <p>
+                  Workspace creation:{" "}
+                  <span className="text-white">automatic for every new user</span>
+                </p>
+                <p>
+                  First plan: <span className="text-white">free by default</span>
+                </p>
+                <p>
+                  External credentials: <span className="text-white">only when needed</span>
+                </p>
+                <p>
+                  Source detection: <span className="text-white">defaults first, custom patterns supported</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-3">
+          {steps.map((step) => (
+            <article
+              key={step.title}
+              className="rounded-[1.8rem] border border-stone-200 bg-white p-6 shadow-sm"
+            >
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">
+                {step.eyebrow}
+              </p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
+                {step.title}
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-stone-700">{step.body}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <article className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
+              Before you connect providers
+            </p>
+            <div className="mt-5 grid gap-3">
+              {notes.map((note) => (
+                <div
+                  key={note}
+                  className="rounded-[1.35rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-7 text-stone-700"
+                >
+                  {note}
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
+              Next pages
+            </p>
+            <div className="mt-5 grid gap-3 text-sm">
+              <Link
+                className="rounded-[1.35rem] border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50"
+                href="/extensions/install"
+              >
+                Extension install guide
+              </Link>
+              <Link
+                className="rounded-[1.35rem] border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50"
+                href="/extensions"
+              >
+                Extension product page
+              </Link>
+              <Link
+                className="rounded-[1.35rem] border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50"
+                href="/billing"
+              >
+                Billing and plans
+              </Link>
+              <Link
+                className="rounded-[1.35rem] border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50"
+                href="/app"
+              >
+                Open workspace
+              </Link>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
+  );
+}

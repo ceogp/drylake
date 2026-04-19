@@ -47,15 +47,15 @@ export default function ExtensionsPage() {
             <div className="flex flex-wrap gap-4">
               <Link
                 className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
-                href="/extensions/install"
+                href="/get-started"
               >
-                Install Flow
+                Get Started
               </Link>
               <Link
                 className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
-                href="/app"
+                href="/extensions/install"
               >
-                Open App
+                Install Flow
               </Link>
             </div>
           </div>

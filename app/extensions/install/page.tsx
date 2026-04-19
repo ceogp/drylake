@@ -1,9 +1,12 @@
 import Link from "next/link";
 
 const steps = [
+  "Create your Xupra workspace on the website first.",
+  "Start on the free path now and upgrade later when you need heavier automation or deployment.",
   "Install the Xupra DryLake extension in VS Code or Cursor.",
   "Click Connect and complete sign-in in the browser.",
   "Open a repo with agent files like AGENTS.md, CLAUDE.md, skills, rules, or subagents.",
+  "If the repo does not use standard directories, add custom scan patterns in extension settings.",
   "Import the workspace into an existing or new Xupra package version.",
   "Run compatibility checks and generate export previews for the target platform.",
   "Pull generated files back into the repo or deploy from the selected version."
@@ -60,6 +63,34 @@ export default function ExtensionInstallPage() {
                   {item}
                 </div>
               ))}
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700" href="/get-started">
+                Create Workspace First
+              </Link>
+              <Link className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/app">
+                Open App
+              </Link>
+              <Link className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions">
+                Back To Extension Page
+              </Link>
+            </div>
+          </article>
+
+          <article className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
+              Service connections
+            </p>
+            <div className="mt-5 grid gap-3 text-sm leading-7 text-stone-700">
+              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 px-5 py-4">
+                Your Xupra account is the only thing you need to connect first.
+              </div>
+              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 px-5 py-4">
+                Add Git, deploy, or provider credentials later when a target actually needs them.
+              </div>
+              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 px-5 py-4">
+                Standard directories are scanned automatically, and custom patterns cover unusual repo layouts.
+              </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700" href="/app">

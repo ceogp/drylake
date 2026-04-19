@@ -4,7 +4,7 @@
 /node_modules
 /extensions/*/node_modules
 /extensions/*/dist
-.vsix
+*.vsix
 /.pnp
 .pnp.*
 .yarn/*
@@ -47,6 +47,7 @@ next-env.d.ts
 /dev.db
 /dev.db-journal
 /storage/
+/prisma/schema.runtime.prisma
 /.tmp-smoke/
 /.tmp-start.log
 /.next-dev-*.log

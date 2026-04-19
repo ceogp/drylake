@@ -33,6 +33,11 @@ export class HelpTreeProvider implements vscode.TreeDataProvider<HelpItem> {
   getChildren() {
     return [
       {
+        label: "Get Started",
+        description: "Open website onboarding",
+        command: "xupra.openGetStarted"
+      },
+      {
         label: "Install Guide",
         description: "Open extension onboarding",
         command: "xupra.openInstallGuide"

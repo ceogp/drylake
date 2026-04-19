@@ -54,6 +54,9 @@ export default async function RootLayout({
               </div>
             </Link>
             <nav className="hidden items-center gap-4 text-sm text-stone-600 md:flex">
+              <Link className="transition hover:text-stone-950" href="/get-started">
+                Get Started
+              </Link>
               <Link className="transition hover:text-stone-950" href="/extensions">
                 Extension
               </Link>

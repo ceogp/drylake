@@ -30,7 +30,8 @@
     "onCommand:xupra.openSettings",
     "onCommand:xupra.openAccountSettings",
     "onCommand:xupra.openBilling",
-    "onCommand:xupra.openInstallGuide"
+    "onCommand:xupra.openInstallGuide",
+    "onCommand:xupra.openGetStarted"
   ],
   "contributes": {
     "configuration": {
@@ -55,6 +56,14 @@
           "type": "boolean",
           "default": false,
           "description": "Automatically scan the current workspace on open."
+        },
+        "xupra.additionalScanPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional glob patterns to scan when your agent files live outside the default directories."
         },
         "xupra.openDashboardAfterConnect": {
           "type": "boolean",
@@ -191,6 +200,10 @@
       {
         "command": "xupra.openInstallGuide",
         "title": "Xupra DryLake: Open Install Guide"
+      },
+      {
+        "command": "xupra.openGetStarted",
+        "title": "Xupra DryLake: Open Get Started Page"
       }
     ],
     "menus": {
@@ -249,11 +262,14 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
-    "check:cursor": "node scripts/check-cursor-compatibility.mjs"
+    "check:cursor": "node scripts/check-cursor-compatibility.mjs",
+    "prepackage": "npm run build",
+    "package:vsix": "npx @vscode/vsce package --allow-star-activation"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
     "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.9.1",
     "esbuild": "^0.25.3",
     "typescript": "^5.8.3"
   }

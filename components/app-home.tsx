@@ -113,6 +113,38 @@ export async function AppHome() {
           </div>
         </div>
 
+        <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <article className="rounded-[1.85rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">First run</p>
+            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
+              Website first. Extension second. Repo import after that.
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-stone-700">
+              Your workspace is ready. The next move is to install the extension, connect it to Xupra,
+              scan the repo, and import the files that already exist.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700" href="/extensions/install">
+                Extension install flow
+              </Link>
+              <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/get-started">
+                Onboarding page
+              </Link>
+            </div>
+          </article>
+
+          <article className="rounded-[1.85rem] border border-stone-200 bg-stone-950 p-6 text-white shadow-[0_18px_45px_rgba(28,25,23,0.20)]">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-300">Plan state</p>
+            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-white">
+              {workspace.organization.tier === "free" ? "Free workspace active" : `${workspace.organization.tier} workspace active`}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-stone-200">
+              Keep onboarding simple: sign up, land in the workspace, then upgrade only when the
+              heavier transfer and deployment workflow needs it.
+            </p>
+          </article>
+        </section>
+
         <section className="grid gap-6 lg:grid-cols-[1fr_1fr_1fr]">
           <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Extension workflow</p>

@@ -82,7 +82,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.scanWorkspace", async () => {
-    const files = await scanWorkspaceFiles();
+    const files = await scanWorkspaceFiles(configuration);
     await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
     await syncWorkspaceView();
     void vscode.window.showInformationMessage(
@@ -205,8 +205,12 @@ export async function activate(context: vscode.ExtensionContext) {
     await vscode.env.openExternal(apiClient.openWebUrl("/extensions/install"));
   });
 
+  register("xupra.openGetStarted", async () => {
+    await vscode.env.openExternal(apiClient.openWebUrl("/get-started"));
+  });
+
   try {
-    const files = await scanWorkspaceFiles();
+    const files = await scanWorkspaceFiles(configuration);
     await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
     const projects = await refreshProjectsCommand(apiClient, projectsView);
     await syncWorkspaceView(projects);
