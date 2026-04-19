@@ -52,6 +52,34 @@ deploy_staging:
   script:
     - git archive --format=tar HEAD -o release.tar
     - printf "%s" "$STAGING_ENV_FILE" > staging.env
+    - |
+      app_base_url="${STAGING_URL:-}"
+      if [ -z "$app_base_url" ]; then
+        app_base_url="$(grep -E '^APP_BASE_URL=' staging.env | tail -n 1 | cut -d'=' -f2-)"
+      fi
+
+      if [ -z "$app_base_url" ]; then
+        echo "APP_BASE_URL is required in STAGING_ENV_FILE or STAGING_URL." >&2
+        exit 1
+      fi
+
+      if ! printf '%s' "$app_base_url" | grep -Eq '^https://'; then
+        echo "APP_BASE_URL must use https. Set STAGING_URL to an https domain URL." >&2
+        exit 1
+      fi
+
+      app_host="$(printf '%s' "$app_base_url" | sed -E 's#^https://([^/]+).*$#\1#')"
+      app_host_no_port="${app_host%%:*}"
+      if printf '%s' "$app_host_no_port" | grep -Eq '^[0-9]{1,3}(\\.[0-9]{1,3}){3}$'; then
+        echo "APP_BASE_URL must use a domain host, not a raw IP ($app_host_no_port)." >&2
+        exit 1
+      fi
+
+      if grep -Eq '^APP_BASE_URL=' staging.env; then
+        sed -i "s#^APP_BASE_URL=.*#APP_BASE_URL=$app_base_url#" staging.env
+      else
+        printf '\nAPP_BASE_URL=%s\n' "$app_base_url" >> staging.env
+      fi
     - scp release.tar "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-release.tar"
     - scp staging.env "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-staging.env"
     - scp scripts/deploy/remote-bootstrap.sh "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-bootstrap.sh"
