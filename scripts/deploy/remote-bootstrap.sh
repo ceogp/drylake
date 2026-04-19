@@ -9,6 +9,7 @@ ENV_FILE="${ENV_FILE:?ENV_FILE is required}"
 DB_NAME="${DB_NAME:?DB_NAME is required}"
 DB_USER="${DB_USER:?DB_USER is required}"
 DB_PASSWORD="${DB_PASSWORD:?DB_PASSWORD is required}"
+LEGACY_IP_HOST="${LEGACY_IP_HOST:-}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -114,6 +115,27 @@ server {
   }
 }
 NGINX
+
+if [ -n "$LEGACY_IP_HOST" ]; then
+cat >>/etc/nginx/sites-available/xupra-drylake <<NGINX
+
+server {
+  listen 80;
+  server_name $LEGACY_IP_HOST;
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}
+NGINX
+fi
 else
 cat >/etc/nginx/sites-available/xupra-drylake <<NGINX
 server {

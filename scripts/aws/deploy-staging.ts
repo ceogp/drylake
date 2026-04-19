@@ -161,7 +161,7 @@ async function main() {
   await run("ssh", [
     ...sshArgs,
     remoteHost,
-    `chmod +x ${remoteBootstrapPath} && sudo APP_DIR=/srv/xupra-drylake APP_USER=xupra APP_GROUP=xupra RELEASE_TAR=${remoteReleasePath} ENV_FILE=${remoteEnvPath} DB_NAME=${manifest.database.name} DB_USER=${manifest.database.user} DB_PASSWORD=${manifest.database.password} bash ${remoteBootstrapPath}`,
+    `chmod +x ${remoteBootstrapPath} && sudo APP_DIR=/srv/xupra-drylake APP_USER=xupra APP_GROUP=xupra RELEASE_TAR=${remoteReleasePath} ENV_FILE=${remoteEnvPath} DB_NAME=${manifest.database.name} DB_USER=${manifest.database.user} DB_PASSWORD=${manifest.database.password} LEGACY_IP_HOST=${manifest.publicIp} bash ${remoteBootstrapPath}`,
   ]);
 
   console.log(`Staging deployment completed: ${baseUrl}`);
