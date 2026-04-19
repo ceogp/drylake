@@ -31,6 +31,18 @@ export async function activate(context: vscode.ExtensionContext) {
   const logger = getLogger();
   const statusBar = createStatusBar();
 
+  const syncContexts = async (input: {
+    connected: boolean;
+    hasDetectedFiles: boolean;
+    hasProjects: boolean;
+    hasVersionSelection: boolean;
+  }) => {
+    await vscode.commands.executeCommand("setContext", "xupra.connected", input.connected);
+    await vscode.commands.executeCommand("setContext", "xupra.hasDetectedFiles", input.hasDetectedFiles);
+    await vscode.commands.executeCommand("setContext", "xupra.hasProjects", input.hasProjects);
+    await vscode.commands.executeCommand("setContext", "xupra.hasVersionSelection", input.hasVersionSelection);
+  };
+
   const syncWorkspaceView = async (projects?: Awaited<ReturnType<typeof refreshProjectsCommand>>) => {
     const detectedFiles = stateStore.getDetectedFiles();
     const selection = stateStore.getSelection();
@@ -54,6 +66,13 @@ export async function activate(context: vscode.ExtensionContext) {
       organizationSlug: connection.organizationSlug,
       versionLabel: selectedVersion ? `v${selectedVersion.versionNumber} ${selectedPackage?.name ?? ""}`.trim() : undefined
     });
+
+    await syncContexts({
+      connected: Boolean(connection.userEmail),
+      hasDetectedFiles: detectedFiles.length > 0,
+      hasProjects: projectList.length > 0,
+      hasVersionSelection: Boolean(selection.versionId),
+    });
   };
 
   context.subscriptions.push(statusBar);
@@ -61,6 +80,13 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.projects", projectsView));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.jobs", jobsView));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.help", helpView));
+
+  await syncContexts({
+    connected: false,
+    hasDetectedFiles: false,
+    hasProjects: false,
+    hasVersionSelection: false,
+  });
 
   const register = (command: string, callback: (...args: unknown[]) => unknown) => {
     context.subscriptions.push(vscode.commands.registerCommand(command, callback));

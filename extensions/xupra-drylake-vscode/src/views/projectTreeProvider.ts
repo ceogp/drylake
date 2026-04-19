@@ -114,7 +114,15 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
   }
 
   getChildren(element?: ProjectTreeItem) {
+    const shouldShowWelcome =
+      !this.state.connection.userEmail ||
+      (!this.state.detectedFiles.length && !this.state.projects.length);
+
     if (!element) {
+      if (shouldShowWelcome) {
+        return [];
+      }
+
       return [
         {
           kind: "section",

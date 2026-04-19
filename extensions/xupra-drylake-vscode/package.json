@@ -157,6 +157,85 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "xupra.projects",
+        "contents": "Move agents, skills, rules, and configs between platforms from one place inside VS Code.\n\n[Connect Xupra](command:xupra.connect)\n[See Install Guide](command:xupra.openInstallGuide)",
+        "when": "!xupra.connected"
+      },
+      {
+        "view": "xupra.projects",
+        "contents": "You are connected. Xupra can scan the default agent file locations in this repo and prepare the workspace for import.\n\n[Scan Workspace](command:xupra.scanWorkspace)\n[Open Xupra App](command:xupra.openWebApp)",
+        "when": "xupra.connected && !xupra.hasDetectedFiles && !xupra.hasProjects"
+      },
+      {
+        "view": "xupra.projects",
+        "contents": "You are connected, but no supported files were found yet. If this repo uses custom paths, add extra patterns in extension settings.\n\n[Open Extension Settings](command:xupra.openSettings)\n[Scan Workspace Again](command:xupra.scanWorkspace)",
+        "when": "xupra.connected && !xupra.hasDetectedFiles && xupra.hasProjects"
+      },
+      {
+        "view": "xupra.jobs",
+        "contents": "Imports, compatibility checks, exports, and deploys show up here.\n\n[Import Workspace](command:xupra.importWorkspace)\n[Export Preview](command:xupra.exportPreview)",
+        "when": "!xupra.hasDetectedFiles"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "xupra.getStarted",
+        "title": "Get Started With Xupra DryLake",
+        "description": "Install, connect, return to VS Code, and move your first agent package without rebuilding it by hand.",
+        "steps": [
+          {
+            "id": "xupra.connect",
+            "title": "Connect Xupra",
+            "description": "Start in VS Code. Click the button below and Xupra opens your browser for sign-in or sign-up.\n\n[Connect Xupra](command:xupra.connect)",
+            "media": {
+              "image": "media/readme-connect.svg",
+              "altText": "Connect Xupra from VS Code and continue in the browser."
+            },
+            "completionEvents": [
+              "onCommand:xupra.connect"
+            ]
+          },
+          {
+            "id": "xupra.return",
+            "title": "Return To VS Code Signed In",
+            "description": "After browser sign-in, Xupra returns directly to VS Code or Cursor and stores the extension session automatically.",
+            "media": {
+              "image": "media/readme-connect.svg",
+              "altText": "Browser sign-in returns directly to VS Code."
+            },
+            "completionEvents": [
+              "onContext:xupra.connected"
+            ]
+          },
+          {
+            "id": "xupra.scan",
+            "title": "Scan The Repo",
+            "description": "Xupra looks for default files such as `AGENTS.md`, `CLAUDE.md`, skills, rules, and subagents.\n\n[Scan Workspace](command:xupra.scanWorkspace)",
+            "media": {
+              "image": "media/readme-workflow.svg",
+              "altText": "Scan the repo and detect source files."
+            },
+            "completionEvents": [
+              "onContext:xupra.hasDetectedFiles"
+            ]
+          },
+          {
+            "id": "xupra.import",
+            "title": "Import Into A Package",
+            "description": "Once files are detected, import them into a Xupra package version and continue with compatibility checks or exports.\n\n[Import Workspace](command:xupra.importWorkspace)",
+            "media": {
+              "image": "media/readme-workflow.svg",
+              "altText": "Import detected files into a canonical Xupra package."
+            },
+            "completionEvents": [
+              "onCommand:xupra.importWorkspace"
+            ]
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "xupra.connect",
