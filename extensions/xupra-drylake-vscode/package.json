@@ -165,18 +165,23 @@
       },
       {
         "view": "xupra.projects",
-        "contents": "You are connected. Xupra can scan the default agent file locations in this repo and prepare the workspace for import.\n\n[Scan Workspace](command:xupra.scanWorkspace)\n[Open Xupra App](command:xupra.openWebApp)",
-        "when": "xupra.connected && !xupra.hasDetectedFiles && !xupra.hasProjects"
+        "contents": "You are connected. Xupra can scan the default agent file locations in this repo and prepare the workspace for import.\n\n[Scan Workspace](command:xupra.scanWorkspace)\n[Open Extension Settings](command:xupra.openSettings)",
+        "when": "xupra.connected && !xupra.hasDetectedFiles"
       },
       {
         "view": "xupra.projects",
-        "contents": "You are connected, but no supported files were found yet. If this repo uses custom paths, add extra patterns in extension settings.\n\n[Open Extension Settings](command:xupra.openSettings)\n[Scan Workspace Again](command:xupra.scanWorkspace)",
-        "when": "xupra.connected && !xupra.hasDetectedFiles && xupra.hasProjects"
+        "contents": "Files were detected. The next step is to import them into a Xupra package version.\n\n[Import Workspace](command:xupra.importWorkspace)\n[Open Xupra App](command:xupra.openWebApp)",
+        "when": "xupra.connected && xupra.hasDetectedFiles && !xupra.hasVersionSelection"
+      },
+      {
+        "view": "xupra.projects",
+        "contents": "A package version is selected. Import files, run compatibility checks, or generate export previews from here.\n\n[Import Workspace](command:xupra.importWorkspace)\n[Export Preview](command:xupra.exportPreview)",
+        "when": "xupra.connected && xupra.hasDetectedFiles && xupra.hasVersionSelection"
       },
       {
         "view": "xupra.jobs",
-        "contents": "Imports, compatibility checks, exports, and deploys show up here.\n\n[Import Workspace](command:xupra.importWorkspace)\n[Export Preview](command:xupra.exportPreview)",
-        "when": "!xupra.hasDetectedFiles"
+        "contents": "Imports, compatibility checks, exports, and deploys show up here.\n\n[Import Workspace](command:xupra.importWorkspace)\n[Check Compatibility](command:xupra.checkCompatibility)",
+        "when": "true"
       }
     ],
     "walkthroughs": [
@@ -316,6 +321,10 @@
       {
         "command": "xupra.openGetStarted",
         "title": "Xupra DryLake: Open Get Started Page"
+      },
+      {
+        "command": "xupra.openWalkthrough",
+        "title": "Xupra DryLake: Open Walkthrough"
       }
     ],
     "menus": {

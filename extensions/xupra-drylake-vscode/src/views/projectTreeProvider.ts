@@ -4,8 +4,9 @@ import type { ProjectDetail, ProjectSummary } from "../types/api";
 import type { ConnectionState, DetectedWorkspaceFile, SelectedContext } from "../types/package";
 
 export type ProjectTreeItem =
-  | { kind: "section"; id: "workspace" | "files" | "projects" | "targets"; label: string; description?: string }
+  | { kind: "section"; id: "next_actions" | "workspace" | "files" | "projects" | "targets"; label: string; description?: string }
   | { kind: "status"; label: string; description?: string }
+  | { kind: "action"; label: string; description?: string; command: string }
   | { kind: "detected_file"; file: DetectedWorkspaceFile }
   | { kind: "project"; project: ProjectSummary | ProjectDetail }
   | { kind: "package"; projectId: string; packageId: string; name: string; selected?: boolean }
@@ -66,6 +67,16 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
       return item;
     }
 
+    if (element.kind === "action") {
+      const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
+      item.description = element.description;
+      item.command = {
+        command: element.command,
+        title: element.label,
+      };
+      return item;
+    }
+
     if (element.kind === "detected_file") {
       const item = new vscode.TreeItem(element.file.logicalPath, vscode.TreeItemCollapsibleState.None);
       item.description = element.file.category.replace("_", " ");
@@ -114,9 +125,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
   }
 
   getChildren(element?: ProjectTreeItem) {
-    const shouldShowWelcome =
-      !this.state.connection.userEmail ||
-      (!this.state.detectedFiles.length && !this.state.projects.length);
+    const shouldShowWelcome = !this.state.connection.userEmail;
 
     if (!element) {
       if (shouldShowWelcome) {
@@ -124,6 +133,12 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
       }
 
       return [
+        {
+          kind: "section",
+          id: "next_actions",
+          label: "Next Actions",
+          description: this.state.selection.versionId ? "Ready to import and export" : "Connect the next step"
+        },
         {
           kind: "section",
           id: "workspace",
@@ -148,6 +163,75 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           label: "Targets",
           description: TARGET_LABELS[this.state.defaultTargetPlatform] ?? this.state.defaultTargetPlatform
         }
+      ] satisfies ProjectTreeItem[];
+    }
+
+    if (element.kind === "section" && element.id === "next_actions") {
+      if (!this.state.detectedFiles.length) {
+        return [
+          {
+            kind: "action",
+            label: "Scan Workspace",
+            description: "Look for AGENTS, CLAUDE, skills, rules, and subagents",
+            command: "xupra.scanWorkspace",
+          },
+          {
+            kind: "action",
+            label: "Open Extension Settings",
+            description: "Add custom scan patterns if your files live in non-standard paths",
+            command: "xupra.openSettings",
+          },
+          {
+            kind: "action",
+            label: "Open Xupra App",
+            description: "Manage projects, packages, billing, and credentials",
+            command: "xupra.openWebApp",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
+      if (!this.state.selection.versionId) {
+        return [
+          {
+            kind: "action",
+            label: "Import Workspace",
+            description: "Upload detected files and choose a Xupra package version",
+            command: "xupra.importWorkspace",
+          },
+          {
+            kind: "action",
+            label: "Select Version",
+            description: "Choose the package version this repo should map into",
+            command: "xupra.selectVersion",
+          },
+          {
+            kind: "action",
+            label: "Open Xupra App",
+            description: "Create or inspect projects and package versions",
+            command: "xupra.openWebApp",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
+      return [
+        {
+          kind: "action",
+          label: "Import Workspace",
+          description: "Upload detected files into the selected package version",
+          command: "xupra.importWorkspace",
+        },
+        {
+          kind: "action",
+          label: "Check Compatibility",
+          description: "See how this package fits Codex, Claude Code, Cursor, or Claude Agents",
+          command: "xupra.checkCompatibility",
+        },
+        {
+          kind: "action",
+          label: "Export Preview",
+          description: "Generate target-native output files before deployment",
+          command: "xupra.exportPreview",
+        },
       ] satisfies ProjectTreeItem[];
     }
 
@@ -181,8 +265,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         : ([
             {
               kind: "status",
-              label: "No supported files detected",
-              description: "Run Import Workspace or Scan Workspace"
+              label: "No supported files detected yet",
+              description: "Use Scan Workspace or add custom scan patterns"
             }
           ] satisfies ProjectTreeItem[]);
     }

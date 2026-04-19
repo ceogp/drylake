@@ -23,6 +23,9 @@ export default async function ReportsPage() {
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
             Usage, deployment health, and audit history.
           </h1>
+          <p className="max-w-3xl text-lg leading-8 text-stone-700">
+            The extension is where the user does the work. Reports exist here so operators and admins can measure what happened after the flow starts getting real usage.
+          </p>
         </div>
 
         <section className="grid gap-4 sm:grid-cols-3">

@@ -30,10 +30,12 @@ export default async function IntegrationsPage() {
         <div className="space-y-4">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">Integrations</p>
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
-            Connect Slack and WhatsApp control surfaces.
+            Add provider connections after the extension flow is working.
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            These integrations receive deployment and transfer notifications now. They are also the control points for status, export, and deployment actions.
+            These are secondary control surfaces. The core product path is still extension to browser
+            sign-in to repo scan to import to export. Add integrations only when that path is already
+            working for the customer.
           </p>
         </div>
 

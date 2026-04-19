@@ -20,6 +20,7 @@ import { createStatusBar } from "./views/statusBar";
 import { getLogger } from "./utils/logging";
 
 export async function activate(context: vscode.ExtensionContext) {
+  const WALKTHROUGH_STATE_KEY = "xupra.walkthroughOpened";
   const configuration = vscode.workspace.getConfiguration("xupra");
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
@@ -92,7 +93,12 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand(command, callback));
   };
 
+  register("xupra.openWalkthrough", async () => {
+    await vscode.commands.executeCommand("workbench.action.openWalkthrough", `${context.extension.id}#xupra.getStarted`, false);
+  });
+
   register("xupra.connect", async () => {
+    await vscode.commands.executeCommand("xupra.projects.focus");
     const connected = await connectCommand(apiClient, configuration, stateStore, browserConnect);
 
     if (!connected) {
@@ -103,6 +109,12 @@ export async function activate(context: vscode.ExtensionContext) {
     await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
     const projects = await refreshProjectsCommand(apiClient, projectsView);
     await syncWorkspaceView(projects);
+
+    void vscode.window.showInformationMessage(
+      files.length > 0
+        ? `Connected. Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} in this repo.`
+        : "Connected. Xupra did not find supported files yet, so the next step is to scan or add custom scan patterns.",
+    );
 
     if (configuration.get<boolean>("openDashboardAfterConnect", true)) {
       await openWebAppCommand(apiClient);
@@ -257,6 +269,12 @@ export async function activate(context: vscode.ExtensionContext) {
     await syncWorkspaceView(projects);
   } catch (error) {
     logger.error(`Failed to load initial projects: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  if (!context.globalState.get<boolean>(WALKTHROUGH_STATE_KEY)) {
+    await context.globalState.update(WALKTHROUGH_STATE_KEY, true);
+    await vscode.commands.executeCommand("xupra.projects.focus");
+    await vscode.commands.executeCommand("workbench.action.openWalkthrough", `${context.extension.id}#xupra.getStarted`, false);
   }
 
   if (configuration.get<boolean>("autoScanOnOpen")) {

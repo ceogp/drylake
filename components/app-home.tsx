@@ -114,15 +114,15 @@ export async function AppHome() {
         </div>
 
         <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <article className="rounded-[1.85rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">First run</p>
-            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-              Website first. Extension second. Repo import after that.
-            </h2>
-            <p className="mt-3 text-sm leading-7 text-stone-700">
-              Your workspace is ready. The next move is to install the extension, connect it to Xupra,
-              scan the repo, and import the files that already exist.
-            </p>
+            <article className="rounded-[1.85rem] border border-stone-200 bg-white p-6 shadow-sm">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">First run</p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
+              Extension first. Website behind it.
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-stone-700">
+              Your workspace is ready. Users should discover Xupra in VS Code or Cursor, connect there,
+              return from the browser, scan the repo, and import the files that already exist.
+              </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700" href="/extensions/install">
                 Extension install flow
@@ -146,8 +146,8 @@ export async function AppHome() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1fr_1fr_1fr]">
-          <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Extension workflow</p>
+            <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Extension workflow</p>
             <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
               Start in VS Code or Cursor
             </h2>
@@ -169,15 +169,15 @@ export async function AppHome() {
             </p>
           </article>
 
-          <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Web control plane</p>
-            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-              Manage the system here
-            </h2>
-            <p className="mt-3 text-sm leading-7 text-stone-700">
-              Use the website for projects, credentials, billing, reports, and the deeper package management that sits behind the extension workflow.
-            </p>
-          </article>
+            <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Web control plane</p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
+              Manage the account layer here
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-stone-700">
+              Use the website for projects, credentials, billing, reports, admin, and deeper package management that sits behind the extension workflow.
+              </p>
+            </article>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">

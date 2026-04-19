@@ -34,12 +34,12 @@ export class HelpTreeProvider implements vscode.TreeDataProvider<HelpItem> {
     return [
       {
         label: "Get Started",
-        description: "Open website onboarding",
-        command: "xupra.openGetStarted"
+        description: "Open the Xupra walkthrough in VS Code",
+        command: "xupra.openWalkthrough"
       },
       {
         label: "Install Guide",
-        description: "Open extension onboarding",
+        description: "Open the browser install page",
         command: "xupra.openInstallGuide"
       },
       {

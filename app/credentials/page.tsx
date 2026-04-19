@@ -22,7 +22,7 @@ export default async function CredentialsPage() {
             Store deployment and integration credentials centrally.
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            Secrets are encrypted before they hit the database. Verification runs against supported providers without exposing the raw value back to the UI.
+            The extension gets users in the door. This page is for the credentials they only need once they are ready to export, deploy, or connect external systems.
           </p>
         </div>
 

@@ -24,10 +24,10 @@ export default async function BillingPage() {
         <div className="space-y-4">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">Billing</p>
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
-            Subscription, entitlements, and upgrade flow.
+            Billing behind the extension workflow.
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            Stripe drives plan lifecycle. The app mirrors subscription state locally and resolves feature access through entitlements.
+            Users should discover Xupra in the editor first. This page exists to manage plans, checkout, and feature access once the product is already in use.
           </p>
         </div>
 
@@ -97,10 +97,10 @@ export default async function BillingPage() {
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Tier Model</p>
             <div className="mt-4 grid gap-3">
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
-                Free: import, edit, compatibility, manual export
+                Free: connect, import, organize, and explore the workflow
               </div>
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
-                Pro: deployment jobs, credential vault, Slack controls
+                Pro: deployment jobs, credential vault, and heavier automation
               </div>
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
                 Enterprise: advanced reporting and deeper org controls
