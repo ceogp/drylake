@@ -200,6 +200,20 @@ async function getClerkBillingSnapshot() {
 
   try {
     const authState = await auth();
+    const client = await clerkClient();
+
+    try {
+      await client.billing.getPlanList({
+        payerType: "user",
+        limit: 1,
+      });
+    } catch {
+      return {
+        configured: false,
+        paid: false,
+        tier: "free" as const,
+      };
+    }
 
     if (!authState.userId) {
       return {
@@ -209,8 +223,26 @@ async function getClerkBillingSnapshot() {
       };
     }
 
-    const client = await clerkClient();
-    const subscription = await client.billing.getUserBillingSubscription(authState.userId);
+    let subscription: Awaited<ReturnType<typeof client.billing.getUserBillingSubscription>> | null = null;
+
+    try {
+      subscription = await client.billing.getUserBillingSubscription(authState.userId);
+    } catch {
+      return {
+        configured: true,
+        paid: false,
+        tier: "free" as const,
+      };
+    }
+
+    if (!subscription) {
+      return {
+        configured: true,
+        paid: false,
+        tier: "free" as const,
+      };
+    }
+
     const normalized = {
       status: subscription.status,
       subscriptionItems: subscription.subscriptionItems.map((item) => ({
