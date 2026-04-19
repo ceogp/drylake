@@ -96,6 +96,30 @@ Expected health response should report:
 - `billingConfigured: true`
 - `clerkConfigured: true`
 
+## AWS Edge
+
+If you want to move the public HTTPS endpoint off the EC2 box and onto AWS-managed edge services:
+
+1. Run `npm run aws:provision-edge`
+2. Open `storage/staging/edge-manifest.json`
+3. Add the ACM validation CNAME records in Cloudflare
+4. Re-run `npm run aws:provision-edge` until the certificate status is `ISSUED`
+5. Change Cloudflare DNS:
+   - `xupracorp.com` -> proxied `CNAME` to the ALB DNS name
+   - `drylake.xupracorp.com` -> proxied `CNAME` to the same ALB DNS name
+   - `www.xupracorp.com` -> proxied `CNAME` to `xupracorp.com`
+
+This keeps the current EC2 app deployment, but moves public TLS and host routing to AWS ACM + ALB.
+
+## App Email
+
+Do not build new mailbox email on Amazon WorkMail. AWS has announced:
+
+- no new WorkMail customers after `April 30, 2026`
+- end of support on `March 31, 2027`
+
+For AWS-native sending instead, run `npm run aws:setup-ses-domain` and publish the DNS records from `storage/staging/email-manifest.json`.
+
 ## Final User Test
 
 1. Install the VSIX.
