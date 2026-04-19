@@ -1,13 +1,14 @@
 import * as vscode from "vscode";
 
 import { ApiClient } from "./apiClient";
+import { BrowserConnectCoordinator } from "./browserConnect";
 import { StateStore } from "./stateStore";
 
 async function promptForAccessToken(apiClient: ApiClient) {
   const openConnectPage = "Open Connect Page";
   const pasteToken = "Paste Token";
   const selection = await vscode.window.showInformationMessage(
-    "Sign in on the Xupra website first, then generate an extension token.",
+    "If the browser handoff does not work, open the connect page and use the manual token fallback.",
     openConnectPage,
     pasteToken,
   );
@@ -35,6 +36,7 @@ export async function connectSession(
   apiClient: ApiClient,
   configuration: vscode.WorkspaceConfiguration,
   stateStore: StateStore,
+  browserConnect: BrowserConnectCoordinator,
 ) {
   const storedToken = await stateStore.getAccessToken();
 
@@ -56,6 +58,20 @@ export async function connectSession(
     return apiClient.connect();
   }
 
+  const browserResult = await browserConnect.start();
+
+  if (browserResult?.kind === "success") {
+    const exchanged = await apiClient.exchangeBrowserConnectCode(browserResult.code);
+    apiClient.setAccessToken(exchanged.token.token);
+    await stateStore.setAccessToken(exchanged.token.token);
+    const result = await apiClient.connect(undefined, undefined, exchanged.token.token);
+    return result;
+  }
+
+  if (browserResult?.kind === "error") {
+    void vscode.window.showWarningMessage(browserResult.message);
+  }
+
   const accessToken = await promptForAccessToken(apiClient);
 
   if (accessToken) {
@@ -67,7 +83,7 @@ export async function connectSession(
   }
 
   if (authSession.auth.mode !== "dev") {
-    throw new Error("Generate an extension token from the website before connecting this editor.");
+    throw new Error("The browser sign-in did not complete. Use the manual token fallback if needed.");
   }
 
   const email = String(configuration.get("devEmail", "owner@xupra.local"));

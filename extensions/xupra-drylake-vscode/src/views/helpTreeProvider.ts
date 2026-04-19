@@ -44,7 +44,7 @@ export class HelpTreeProvider implements vscode.TreeDataProvider<HelpItem> {
       },
       {
         label: "Connect Extension",
-        description: "Open the website page that generates an extension token",
+        description: "Open the browser connect page or fallback flow",
         command: "xupra.openConnectPage"
       },
       {

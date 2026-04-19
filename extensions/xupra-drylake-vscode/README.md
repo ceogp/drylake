@@ -1,55 +1,103 @@
-# Xupra DryLake VS Code Extension
+# Xupra DryLake for VS Code
 
-Editor-first workflow for Xupra DryLake.
+Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.
 
-## What it does
+Install the extension, click Connect, sign up in the browser, and return straight to VS Code or Cursor with default agent files ready to scan.
+
+![Xupra workflow](./media/readme-workflow.svg)
+
+## What Xupra does
+
+Xupra DryLake is an extension-first workflow for agent portability.
 
 From VS Code or Cursor, the extension can:
 
-- connect to your Xupra workspace
-- detect supported agent files in the current repo
-- import the workspace into a package version
-- run compatibility checks
+- connect your editor to your Xupra workspace
+- detect default agent files automatically
+- import repo files into a canonical package
+- check compatibility for a target platform
 - generate export previews
 - pull generated files back into the repo
-- trigger deployment jobs
+- trigger deployment jobs when a target is ready
 
-## Test In VS Code Extension Host
+## Default file discovery
+
+The extension scans the default locations automatically, including:
+
+- `AGENTS.md`
+- `CLAUDE.md`
+- `.agents/skills/**/SKILL.md`
+- `.codex/agents/*.toml`
+- `.claude/skills/**/SKILL.md`
+- `.claude/agents/**/*.md`
+- `.cursor/skills/**/SKILL.md`
+- `.cursor/rules/**/*.mdc`
+
+It also scans loose `*.md` and `*.py` files.
+
+If your repo uses custom locations, add glob patterns in:
+
+- `xupra.additionalScanPatterns`
+
+## Customer flow
+
+![Xupra connect flow](./media/readme-connect.svg)
+
+1. Install the extension from the Marketplace or a `.vsix`.
+2. Run `Xupra DryLake: Connect`.
+3. The extension opens your browser.
+4. Sign up or sign in to Xupra.
+5. Xupra creates your workspace and returns directly to VS Code or Cursor.
+6. Scan, import, and continue in the editor.
+
+Manual token fallback still exists, but it is only for cases where the browser handoff fails.
+
+## Commands
+
+- `Xupra DryLake: Connect`
+- `Xupra DryLake: Scan Workspace`
+- `Xupra DryLake: Import Workspace`
+- `Xupra DryLake: Check Compatibility`
+- `Xupra DryLake: Export Preview`
+- `Xupra DryLake: Pull Package Files`
+- `Xupra DryLake: Deploy`
+
+## Settings
+
+Key settings:
+
+- `xupra.baseUrl`
+- `xupra.additionalScanPatterns`
+- `xupra.defaultTargetPlatform`
+- `xupra.confirmBeforeWriteback`
+- `xupra.pullGeneratedFilesAfterExport`
+- `xupra.openDashboardAfterConnect`
+
+## Local testing
 
 1. Open `extensions/xupra-drylake-vscode` in VS Code.
 2. Run `npm install`.
 3. Press `F5`.
 4. Choose `Run Xupra Extension`.
 5. In the Extension Development Host, open the `Xupra` activity bar.
-6. Open `Settings` and set:
-   - `xupra.baseUrl`
-   - local backend: `http://localhost:3005`
-   - staging backend: `http://52.196.86.96`
+6. Set `xupra.baseUrl`:
+   - local: `http://localhost:3005`
+   - staging: `http://52.196.86.96`
 
-Recommended settings:
-
-- `xupra.defaultTargetPlatform`
-- `xupra.confirmBeforeWriteback`
-- `xupra.openDashboardAfterConnect`
-
-## Package For Install Testing
-
-Build a `.vsix`:
+## Package for install testing
 
 ```bash
 npm run package:vsix
 ```
 
-Then install it in VS Code with:
+Then install with:
 
 - `Extensions: Install from VSIX...`
 
-## Cursor Compatibility
+## Cursor compatibility
 
-The extension stays within standard VS Code APIs and includes:
+The extension stays within standard VS Code APIs.
 
 ```bash
 npm run check:cursor
 ```
-
-Use the same packaged `.vsix` for Cursor testing when compatible.

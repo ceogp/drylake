@@ -9,6 +9,7 @@ import { openWebAppCommand } from "./commands/openWebApp";
 import { pullPackageCommand } from "./commands/pullPackage";
 import { refreshProjectsCommand } from "./commands/refreshProjects";
 import { ApiClient } from "./services/apiClient";
+import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { selectPackageWithPrompt, selectProjectWithPrompt, selectVersionWithPrompt } from "./services/selection";
 import { StateStore } from "./services/stateStore";
 import { getWorkspaceDisplayName, scanWorkspaceFiles } from "./services/workspaceScanner";
@@ -23,6 +24,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
   apiClient.setAccessToken(await stateStore.getAccessToken());
+  const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const projectsView = new ProjectTreeProvider();
   const jobsView = new JobTreeProvider();
   const helpView = new HelpTreeProvider();
@@ -55,6 +57,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   context.subscriptions.push(statusBar);
+  context.subscriptions.push(browserConnect.register());
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.projects", projectsView));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.jobs", jobsView));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.help", helpView));
@@ -64,7 +67,14 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   register("xupra.connect", async () => {
-    await connectCommand(apiClient, configuration, stateStore);
+    const connected = await connectCommand(apiClient, configuration, stateStore, browserConnect);
+
+    if (!connected) {
+      return;
+    }
+
+    const files = await scanWorkspaceFiles(configuration);
+    await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
     const projects = await refreshProjectsCommand(apiClient, projectsView);
     await syncWorkspaceView(projects);
 

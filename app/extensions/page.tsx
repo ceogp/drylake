@@ -32,16 +32,16 @@ export default function ExtensionsPage() {
                   VS Code Extension
                 </p>
                 <h1 className="font-[family-name:var(--font-heading)] text-4xl font-semibold tracking-[-0.05em] text-stone-950 md:text-5xl">
-                  Xupra DryLake lives where developers already work.
+                  Xupra DryLake starts inside the editor, not on a random website.
                 </h1>
               </div>
             </div>
 
             <p className="max-w-4xl text-lg leading-8 text-stone-700">
-              The extension is the main workflow for importing repos, checking portability,
-              generating target files, and moving agents between Codex, Claude Code, Cursor,
-              and Claude Agents. The website stays in the loop for auth, billing, credentials,
-              reports, and admin.
+              The extension is the front door. Users install it, click Connect, sign up in the
+              browser, return to VS Code or Cursor, and immediately start scanning agent files,
+              checking portability, generating exports, and moving systems between Codex, Claude
+              Code, Cursor, and Claude Agents.
             </p>
 
             <div className="flex flex-wrap gap-4">

@@ -25,6 +25,7 @@ model User {
   deploymentJobs       DeploymentJob[]         @relation("DeploymentJobCreator")
   auditEvents          AuditEvent[]            @relation("AuditActor")
   credentialAccessLogs CredentialAccessLog[]   @relation("CredentialAccessActor")
+  extensionAuthRequests ExtensionAuthRequest[]
 }
 
 model Profile {
@@ -56,6 +57,7 @@ model Organization {
   transformJobs TransformJob[]
   deploymentJobs DeploymentJob[]
   auditEvents   AuditEvent[]
+  extensionAuthRequests ExtensionAuthRequest[]
 }
 
 model OrganizationMembership {
@@ -323,4 +325,17 @@ model AuditEvent {
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   actorUser      User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+}
+
+model ExtensionAuthRequest {
+  id             String       @id @default(cuid())
+  code           String       @unique
+  organizationId String
+  userId         String
+  editor         String
+  expiresAt      DateTime
+  exchangedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

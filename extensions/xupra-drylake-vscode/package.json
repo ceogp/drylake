@@ -1,20 +1,48 @@
 {
   "name": "xupra-drylake-vscode",
   "displayName": "Xupra DryLake",
-  "description": "Transfer agent packages between Codex, Claude Code, Cursor, and Claude Agents from VS Code and Cursor.",
+  "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
   "version": "0.0.1",
   "private": true,
   "publisher": "xupra",
   "license": "UNLICENSED",
+  "preview": true,
+  "icon": "media/icon.png",
+  "homepage": "http://52.196.86.96/extensions",
+  "bugs": {
+    "url": "https://gitlab.com/xupraplatform/drylake/-/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/xupraplatform/drylake.git",
+    "directory": "extensions/xupra-drylake-vscode"
+  },
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Productivity",
+    "Machine Learning"
   ],
+  "keywords": [
+    "agents",
+    "skills",
+    "codex",
+    "cursor",
+    "claude code",
+    "claude agents",
+    "prompt portability",
+    "agent transfer"
+  ],
+  "galleryBanner": {
+    "color": "#fff7ed",
+    "theme": "light"
+  },
   "main": "./dist/extension.js",
   "activationEvents": [
     "onStartupFinished",
+    "onUri",
     "onView:xupra.projects",
     "onView:xupra.jobs",
     "onView:xupra.help",
@@ -40,7 +68,7 @@
       "properties": {
         "xupra.baseUrl": {
           "type": "string",
-          "default": "http://localhost:3002",
+          "default": "http://localhost:3005",
           "description": "Base URL for the Xupra DryLake backend."
         },
         "xupra.devEmail": {

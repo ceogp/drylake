@@ -18,7 +18,7 @@ export class ApiClient {
   constructor(private readonly configuration: vscode.WorkspaceConfiguration) {}
 
   get baseUrl() {
-    return String(this.configuration.get("baseUrl", "http://localhost:3002")).replace(/\/+$/, "");
+    return String(this.configuration.get("baseUrl", "http://localhost:3005")).replace(/\/+$/, "");
   }
 
   openWebUrl(pathname = "/app") {
@@ -63,6 +63,30 @@ export class ApiClient {
         })
       }
     );
+  }
+
+  async exchangeBrowserConnectCode(code: string) {
+    return this.request<{
+      token: {
+        token: string;
+        expiresAt: string;
+      };
+      user: {
+        id: string;
+        email: string;
+      };
+      organization: {
+        id: string;
+        name: string;
+        slug: string;
+        tier: string;
+      };
+      editor: "vscode" | "cursor";
+    }>("/api/v1/extension/connect/exchange", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
   }
 
   async getAuthSession() {

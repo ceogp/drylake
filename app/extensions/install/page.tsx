@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const steps = [
-  "Create your Xupra workspace on the website first.",
-  "Start on the free path now and upgrade later when you need heavier automation or deployment.",
   "Install the Xupra DryLake extension in VS Code or Cursor.",
-  "Click Connect and complete sign-in in the browser.",
+  "Click Connect inside the extension.",
+  "The browser opens Xupra so the user can sign up or sign in there.",
+  "Xupra creates the personal workspace automatically, then returns the user straight to the editor.",
   "Open a repo with agent files like AGENTS.md, CLAUDE.md, skills, rules, or subagents.",
   "If the repo does not use standard directories, add custom scan patterns in extension settings.",
   "Import the workspace into an existing or new Xupra package version.",
@@ -31,8 +31,8 @@ export default function ExtensionInstallPage() {
             Start in the extension. Use the website for control-plane work.
           </h1>
           <p className="max-w-4xl text-lg leading-8 text-stone-700">
-            Xupra is designed so the repo workflow happens in VS Code or Cursor while the website handles account,
-            billing, credentials, reporting, and admin.
+            Xupra is designed so discovery and daily repo work happen in VS Code or Cursor while the website handles
+            the account, billing, credentials, reporting, and admin surfaces behind that workflow.
           </p>
         </div>
 
@@ -66,7 +66,7 @@ export default function ExtensionInstallPage() {
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700" href="/get-started">
-                Create Workspace First
+                Sign Up In Browser
               </Link>
               <Link className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/connect">
                 Connect Extension

@@ -1,0 +1,42 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="48" fill="#FFF7ED"/>
+  <rect x="56" y="56" width="1088" height="608" rx="36" fill="white" stroke="#FED7AA" stroke-width="2"/>
+  <rect x="88" y="88" width="248" height="544" rx="28" fill="#111827"/>
+  <rect x="112" y="120" width="200" height="52" rx="18" fill="#1F2937"/>
+  <rect x="112" y="194" width="200" height="108" rx="20" fill="#F97316" fill-opacity="0.16"/>
+  <rect x="132" y="220" width="120" height="14" rx="7" fill="#FDBA74"/>
+  <rect x="132" y="244" width="154" height="12" rx="6" fill="#FED7AA"/>
+  <rect x="132" y="266" width="94" height="12" rx="6" fill="#FED7AA"/>
+  <rect x="112" y="320" width="200" height="92" rx="20" fill="#1F2937"/>
+  <rect x="132" y="346" width="102" height="14" rx="7" fill="#E5E7EB"/>
+  <rect x="132" y="370" width="146" height="12" rx="6" fill="#9CA3AF"/>
+  <rect x="112" y="430" width="200" height="168" rx="20" fill="#1F2937"/>
+  <rect x="132" y="456" width="74" height="14" rx="7" fill="#E5E7EB"/>
+  <rect x="132" y="482" width="152" height="12" rx="6" fill="#9CA3AF"/>
+  <rect x="132" y="508" width="132" height="12" rx="6" fill="#9CA3AF"/>
+  <rect x="132" y="534" width="120" height="12" rx="6" fill="#9CA3AF"/>
+  <rect x="368" y="96" width="736" height="152" rx="30" fill="#111827"/>
+  <rect x="408" y="134" width="132" height="18" rx="9" fill="#FDBA74"/>
+  <rect x="408" y="168" width="410" height="18" rx="9" fill="#FFFFFF"/>
+  <rect x="408" y="200" width="508" height="14" rx="7" fill="#D1D5DB"/>
+  <rect x="368" y="276" width="352" height="316" rx="30" fill="#FFF7ED" stroke="#FED7AA" stroke-width="2"/>
+  <rect x="408" y="314" width="120" height="16" rx="8" fill="#C2410C"/>
+  <rect x="408" y="350" width="224" height="72" rx="18" fill="#FFFFFF"/>
+  <rect x="430" y="374" width="94" height="12" rx="6" fill="#111827"/>
+  <rect x="430" y="396" width="170" height="10" rx="5" fill="#6B7280"/>
+  <rect x="408" y="444" width="224" height="72" rx="18" fill="#FFFFFF"/>
+  <rect x="430" y="468" width="118" height="12" rx="6" fill="#111827"/>
+  <rect x="430" y="490" width="174" height="10" rx="5" fill="#6B7280"/>
+  <rect x="752" y="276" width="352" height="316" rx="30" fill="#111827"/>
+  <rect x="792" y="314" width="176" height="16" rx="8" fill="#FDBA74"/>
+  <rect x="792" y="354" width="272" height="44" rx="18" fill="#1F2937"/>
+  <rect x="816" y="370" width="84" height="12" rx="6" fill="#FFFFFF"/>
+  <rect x="916" y="370" width="124" height="12" rx="6" fill="#9CA3AF"/>
+  <rect x="792" y="418" width="272" height="44" rx="18" fill="#1F2937"/>
+  <rect x="816" y="434" width="98" height="12" rx="6" fill="#FFFFFF"/>
+  <rect x="930" y="434" width="110" height="12" rx="6" fill="#9CA3AF"/>
+  <rect x="792" y="482" width="272" height="44" rx="18" fill="#1F2937"/>
+  <rect x="816" y="498" width="88" height="12" rx="6" fill="#FFFFFF"/>
+  <rect x="920" y="498" width="120" height="12" rx="6" fill="#9CA3AF"/>
+  <text x="408" y="612" fill="#111827" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700">Import → Canonicalize → Export</text>
+</svg>

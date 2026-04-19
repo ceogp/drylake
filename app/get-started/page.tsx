@@ -17,7 +17,7 @@ const steps = [
   {
     eyebrow: "Step 3",
     title: "Go back to VS Code or Cursor and connect",
-    body: "Install the extension, sign in, scan the repo, import what you already have, and only add external credentials when a specific deploy target actually needs them.",
+    body: "Install the extension, let the browser handoff return you to the editor, scan the repo, import what you already have, and only add external credentials when a specific deploy target actually needs them.",
   },
 ];
 

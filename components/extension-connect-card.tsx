@@ -61,14 +61,14 @@ export function ExtensionConnectCard() {
   return (
     <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
-        Connect Extension
+        Manual Fallback
       </p>
       <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-        Generate a connection token for VS Code or Cursor
+        Generate a fallback token for VS Code or Cursor
       </h2>
       <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
-        This creates a workspace-scoped token for your signed-in account. Paste it into the extension
-        when Xupra asks for it. The extension stores it locally and uses it for future requests.
+        The normal flow returns to the editor automatically. Use this only when the browser callback
+        does not reopen VS Code or Cursor.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-3">
