@@ -1,9 +1,9 @@
-import type { NextRequest } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 import { getConfiguredAppUrlForPath, isConfiguredMarketingHost } from "./lib/site-hosts";
 
-export function proxy(request: NextRequest) {
+export default clerkMiddleware((auth, request) => {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
 
   if (!isConfiguredMarketingHost(host)) {
@@ -17,7 +17,7 @@ export function proxy(request: NextRequest) {
   return NextResponse.redirect(
     getConfiguredAppUrlForPath(request.nextUrl.pathname, request.nextUrl.search),
   );
-}
+});
 
 export const config = {
   matcher: [
