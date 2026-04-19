@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 
+import { getAuthSetup } from "@/lib/services/auth";
 import { prisma } from "@/lib/prisma";
-import { requirePlatformAdmin } from "@/lib/services/access";
+import { isPlatformAdminEmail } from "@/lib/services/access";
+import { getCurrentAppContext } from "@/lib/services/current-user";
 import { getSetupStatus } from "@/lib/services/setup";
 
 function MetricCard({
@@ -25,7 +28,17 @@ function MetricCard({
 }
 
 export default async function AdminPage() {
-  const adminContext = await requirePlatformAdmin();
+  const authSetup = getAuthSetup();
+  const adminContext = await getCurrentAppContext();
+
+  if (!adminContext) {
+    redirect(authSetup.signInUrl ?? "/");
+  }
+
+  if (!isPlatformAdminEmail(adminContext.user.email)) {
+    notFound();
+  }
+
   const setup = await getSetupStatus();
 
   const [users, organizations, projectCount, packageCount, versionCount, credentialCount, transformJobs, deploymentJobs] =

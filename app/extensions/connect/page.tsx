@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { PricingTable, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { PricingTable } from "@clerk/nextjs";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 
 import { createCheckoutAction } from "@/app/actions";
+import { ExtensionConnectAuthButtons } from "@/components/extension-connect-auth-buttons";
 import { ExtensionBrowserReturn } from "@/components/extension-browser-return";
 import { ExtensionConnectCard } from "@/components/extension-connect-card";
 import { env } from "@/lib/env";
@@ -295,18 +296,6 @@ export default async function ExtensionConnectPage({
   const enterprisePlanConfigured = Boolean(env.STRIPE_ENTERPRISE_PRICE_ID);
   const reconnectPath = buildReconnectPath(callback, editor);
   const continueWithoutBillingPath = buildConnectPath(callback, editor, { skipBilling: true });
-  const signInRedirectProps = {
-    forceRedirectUrl: reconnectPath,
-    fallbackRedirectUrl: reconnectPath,
-    signUpForceRedirectUrl: reconnectPath,
-    signUpFallbackRedirectUrl: reconnectPath,
-  };
-  const signUpRedirectProps = {
-    forceRedirectUrl: reconnectPath,
-    fallbackRedirectUrl: reconnectPath,
-    signInForceRedirectUrl: reconnectPath,
-    signInFallbackRedirectUrl: reconnectPath,
-  };
   const manualFallbackPath = buildManualFallbackPath(callback, editor);
   const authSummary = await getAuthSessionSummary();
   const context = authSummary.session.status === "active" ? await getCurrentAppContext() : null;
@@ -556,18 +545,7 @@ export default async function ExtensionConnectPage({
                 Use any email. Xupra will create your personal workspace automatically, then return
                 you to VS Code or Cursor to keep going.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <SignUpButton mode="modal" {...signUpRedirectProps}>
-                  <button className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700">
-                    Sign Up
-                  </button>
-                </SignUpButton>
-                <SignInButton mode="modal" {...signInRedirectProps}>
-                  <button className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100">
-                    Sign In
-                  </button>
-                </SignInButton>
-              </div>
+              <ExtensionConnectAuthButtons reconnectPath={reconnectPath} />
               <p className="mt-4 text-xs leading-6 text-stone-500">
                 If the browser return does not work later, manual token fallback is still available.
               </p>

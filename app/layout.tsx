@@ -45,11 +45,14 @@ export default async function RootLayout({
   );
   const marketingHostRequest = isConfiguredMarketingHost(requestHost);
   const authSetup = getAuthSetup();
+  const allowDevFallback = authSetup.mode === "dev";
   const useClerkUi = authSetup.mode === "clerk" && authSetup.configured;
   const appContext = marketingHostRequest
     ? null
-    : await getCurrentAppContext({ allowDevFallback: true });
-  const isPlatformAdmin = marketingHostRequest ? false : await getIsPlatformAdmin();
+    : await getCurrentAppContext({ allowDevFallback });
+  const isPlatformAdmin = marketingHostRequest
+    ? false
+    : await getIsPlatformAdmin({ allowDevFallback });
   const marketingOrigin = getConfiguredMarketingOrigin();
   const dryLakeOrigin = getConfiguredAppOrigin();
 

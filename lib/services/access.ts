@@ -7,6 +7,15 @@ function platformAdminEmails() {
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
 
+  if (configured.includes("*")) {
+    if (env.NODE_ENV !== "production") {
+      return ["*"];
+    }
+
+    // Never allow wildcard admins in production.
+    return [];
+  }
+
   if (configured.length > 0) {
     return configured;
   }
@@ -23,13 +32,17 @@ export function isPlatformAdminEmail(email: string) {
   return configured.includes(email.trim().toLowerCase());
 }
 
-export async function getIsPlatformAdmin() {
-  const user = await getCurrentUser({ allowDevFallback: true });
+export async function getIsPlatformAdmin(options?: {
+  allowDevFallback?: boolean;
+}) {
+  const user = await getCurrentUser({ allowDevFallback: options?.allowDevFallback });
   return user ? isPlatformAdminEmail(user.email) : false;
 }
 
-export async function requirePlatformAdmin() {
-  const context = await requireCurrentAppContext({ allowDevFallback: true });
+export async function requirePlatformAdmin(options?: {
+  allowDevFallback?: boolean;
+}) {
+  const context = await requireCurrentAppContext({ allowDevFallback: options?.allowDevFallback });
 
   if (!isPlatformAdminEmail(context.user.email)) {
     throw new Error("Forbidden");

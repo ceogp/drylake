@@ -91,7 +91,7 @@ async function writeStagingEnv(manifest: Manifest) {
     DEFAULT_DEV_USER_EMAIL: process.env.DEFAULT_DEV_USER_EMAIL || "owner@xupra.local",
     DEFAULT_DEV_USER_NAME: process.env.DEFAULT_DEV_USER_NAME || "Xupra Owner",
     PLATFORM_ADMIN_EMAILS:
-      process.env.PLATFORM_ADMIN_EMAILS || "*",
+      process.env.PLATFORM_ADMIN_EMAILS || process.env.DEFAULT_DEV_USER_EMAIL || "owner@xupra.local",
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "",
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY || "",
     CLERK_WEBHOOK_SIGNING_SECRET: process.env.CLERK_WEBHOOK_SIGNING_SECRET || "",
