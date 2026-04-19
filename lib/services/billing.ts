@@ -20,7 +20,7 @@ function entitlementsForTier(tier: string) {
         deployment_jobs: true,
         credential_vault: true,
         slack_controls: true,
-        advanced_reporting: false,
+        advanced_reporting: true,
       };
     case "enterprise":
       return {
@@ -32,7 +32,7 @@ function entitlementsForTier(tier: string) {
       };
     default:
       return {
-        manual_export: true,
+        manual_export: false,
         deployment_jobs: false,
         credential_vault: false,
         slack_controls: false,

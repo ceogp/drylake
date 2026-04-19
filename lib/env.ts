@@ -24,10 +24,12 @@ const serverEnvSchema = z.object({
   AWS_KMS_KEY_ID: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default("gpt-5.4-mini"),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRO_PRICE_ID: z.string().optional(),
   STRIPE_ENTERPRISE_PRICE_ID: z.string().optional(),
+  BILLING_PROVIDER: z.enum(["stripe", "clerk"]).default("stripe"),
   BILLING_ENFORCEMENT_MODE: z.enum(["development", "strict"]).default("development"),
 });
 

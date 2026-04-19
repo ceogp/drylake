@@ -169,7 +169,7 @@ export async function ensureAppSession(input: AppSessionInput): Promise<{
         maxPackagesPerProject: 10,
       },
       entitlementsJson: {
-        manual_export: true,
+        manual_export: false,
         deployment_jobs: false,
         credential_vault: false,
         slack_controls: false,
@@ -186,7 +186,7 @@ export async function ensureAppSession(input: AppSessionInput): Promise<{
         maxPackagesPerProject: 10,
       },
       entitlementsJson: {
-        manual_export: true,
+        manual_export: false,
         deployment_jobs: false,
         credential_vault: false,
         slack_controls: false,

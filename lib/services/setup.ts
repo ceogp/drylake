@@ -49,25 +49,41 @@ export async function getSetupStatus() {
 
   const slackCredentialCount = credentials.filter((item) => item.provider === "slack").length;
   const twilioCredentialCount = credentials.filter((item) => item.provider === "twilio").length;
+  const stripeConfigured = Boolean(
+    env.STRIPE_SECRET_KEY &&
+      env.STRIPE_WEBHOOK_SECRET &&
+      env.STRIPE_PRO_PRICE_ID,
+  );
+  const clerkConfigured = Boolean(
+    auth.mode === "clerk" &&
+      auth.configured &&
+      env.CLERK_SECRET_KEY &&
+      env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+  );
+  const billingConfigured = env.BILLING_PROVIDER === "clerk" ? clerkConfigured : stripeConfigured;
 
   return {
     auth,
     billing: {
-      configured: Boolean(
-        env.STRIPE_SECRET_KEY &&
-          env.STRIPE_WEBHOOK_SECRET &&
-          env.STRIPE_PRO_PRICE_ID &&
-          env.STRIPE_ENTERPRISE_PRICE_ID,
-      ),
-      portalReady: Boolean(env.STRIPE_SECRET_KEY && subscription?.stripeCustomerId),
+      provider: env.BILLING_PROVIDER,
+      configured: billingConfigured,
+      portalReady:
+        env.BILLING_PROVIDER === "clerk"
+          ? clerkConfigured
+          : Boolean(env.STRIPE_SECRET_KEY && subscription?.stripeCustomerId),
       activeTier: subscription?.tier ?? "free",
-      webhookPath: "/api/stripe/webhook",
-      missing: [
-        !env.STRIPE_SECRET_KEY ? "STRIPE_SECRET_KEY" : null,
-        !env.STRIPE_WEBHOOK_SECRET ? "STRIPE_WEBHOOK_SECRET" : null,
-        !env.STRIPE_PRO_PRICE_ID ? "STRIPE_PRO_PRICE_ID" : null,
-        !env.STRIPE_ENTERPRISE_PRICE_ID ? "STRIPE_ENTERPRISE_PRICE_ID" : null,
-      ].filter(Boolean),
+      webhookPath: env.BILLING_PROVIDER === "clerk" ? "/api/clerk/webhook" : "/api/stripe/webhook",
+      missing:
+        env.BILLING_PROVIDER === "clerk"
+          ? [
+              !env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" : null,
+              !env.CLERK_SECRET_KEY ? "CLERK_SECRET_KEY" : null,
+            ].filter(Boolean)
+          : [
+              !env.STRIPE_SECRET_KEY ? "STRIPE_SECRET_KEY" : null,
+              !env.STRIPE_WEBHOOK_SECRET ? "STRIPE_WEBHOOK_SECRET" : null,
+              !env.STRIPE_PRO_PRICE_ID ? "STRIPE_PRO_PRICE_ID" : null,
+            ].filter(Boolean),
     },
     openai: {
       configured: Boolean(env.OPENAI_API_KEY),

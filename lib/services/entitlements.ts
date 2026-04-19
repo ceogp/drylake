@@ -12,7 +12,7 @@ export type EntitlementMap = Record<EntitlementKey, boolean>;
 
 const DEFAULT_ENTITLEMENTS: Record<string, EntitlementMap> = {
   free: {
-    manual_export: true,
+    manual_export: false,
     deployment_jobs: false,
     credential_vault: false,
     slack_controls: false,
@@ -23,7 +23,7 @@ const DEFAULT_ENTITLEMENTS: Record<string, EntitlementMap> = {
     deployment_jobs: true,
     credential_vault: true,
     slack_controls: true,
-    advanced_reporting: false,
+    advanced_reporting: true,
   },
   enterprise: {
     manual_export: true,
