@@ -49,6 +49,33 @@ set -a
 source "$APP_DIR/shared/.env"
 set +a
 
+app_base_url="${APP_BASE_URL:-}"
+
+if [ -z "$app_base_url" ]; then
+  echo "APP_BASE_URL is required in ENV_FILE." >&2
+  exit 1
+fi
+
+if ! app_base_url_protocol="$(node -e "const input = process.env.APP_BASE_URL || ''; const url = new URL(input); process.stdout.write(url.protocol);" 2>/dev/null)"; then
+  echo "APP_BASE_URL must be a valid URL. Received: $app_base_url" >&2
+  exit 1
+fi
+
+if ! app_base_url_hostname="$(node -e "const input = process.env.APP_BASE_URL || ''; const url = new URL(input); process.stdout.write(url.hostname);" 2>/dev/null)"; then
+  echo "APP_BASE_URL must be a valid URL. Received: $app_base_url" >&2
+  exit 1
+fi
+
+if [ "$app_base_url_protocol" != "https:" ]; then
+  echo "APP_BASE_URL must use https. Received protocol: $app_base_url_protocol" >&2
+  exit 1
+fi
+
+if node -e "const host = process.argv[1] || ''; process.exit(/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(host) ? 0 : 1);" "$app_base_url_hostname"; then
+  echo "APP_BASE_URL must use a domain host, not a raw IP ($app_base_url_hostname)." >&2
+  exit 1
+fi
+
 app_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); process.stdout.write(url.host);")"
 marketing_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); const host = url.host; process.stdout.write(host.startsWith('drylake.') ? host.slice('drylake.'.length) : '');")"
 server_names="$app_host"
