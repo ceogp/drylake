@@ -18,7 +18,7 @@ export class ApiClient {
   constructor(private readonly configuration: vscode.WorkspaceConfiguration) {}
 
   get baseUrl() {
-    return String(this.configuration.get("baseUrl", "http://localhost:3005")).replace(/\/+$/, "");
+    return String(this.configuration.get("baseUrl", "http://52.196.86.96")).replace(/\/+$/, "");
   }
 
   openWebUrl(pathname = "/app") {

@@ -81,8 +81,8 @@ Key settings:
 4. Choose `Run Xupra Extension`.
 5. In the Extension Development Host, open the `Xupra` activity bar.
 6. Set `xupra.baseUrl`:
-   - local: `http://localhost:3005`
    - staging: `http://52.196.86.96`
+   - local override only when you are intentionally testing local development: `http://localhost:3005`
 
 ## Package for install testing
 
