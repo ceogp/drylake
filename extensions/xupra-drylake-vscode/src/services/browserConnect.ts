@@ -15,6 +15,12 @@ type BrowserConnectResult =
       message: string;
     };
 
+type PendingRequest = {
+  state: string;
+  resolve: (result: BrowserConnectResult | null) => void;
+  timeout: NodeJS.Timeout;
+};
+
 const CONNECT_TIMEOUT_MS = 1000 * 60 * 3;
 
 function buildExternalConnectUrl(apiClient: ApiClient, callbackUri: vscode.Uri) {
@@ -25,13 +31,7 @@ function buildExternalConnectUrl(apiClient: ApiClient, callbackUri: vscode.Uri) 
 }
 
 export class BrowserConnectCoordinator implements vscode.UriHandler {
-  private pending:
-    | {
-        state: string;
-        resolve: (result: BrowserConnectResult | null) => void;
-        timeout: NodeJS.Timeout;
-      }
-    | undefined;
+  private pending: PendingRequest | undefined;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -104,6 +104,8 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       `${vscode.env.uriScheme}://${this.context.extension.id}/auth-complete?state=${encodeURIComponent(state)}`,
     );
     const externalCallbackUri = await vscode.env.asExternalUri(internalCallbackUri);
+    const connectUrl = buildExternalConnectUrl(this.apiClient, externalCallbackUri);
+    let pendingRequest: PendingRequest | undefined;
 
     const resultPromise = new Promise<BrowserConnectResult | null>((resolve) => {
       const timeout = setTimeout(() => {
@@ -113,14 +115,43 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
         }
       }, CONNECT_TIMEOUT_MS);
 
-      this.pending = {
+      pendingRequest = {
         state,
         resolve,
         timeout,
       };
+      this.pending = pendingRequest;
     });
 
-    await vscode.env.openExternal(buildExternalConnectUrl(this.apiClient, externalCallbackUri));
+    try {
+      const opened = await vscode.env.openExternal(connectUrl);
+
+      if (!opened && pendingRequest?.state === state) {
+        clearTimeout(pendingRequest.timeout);
+        pendingRequest.resolve({
+          kind: "error",
+          message: `Xupra could not open your browser automatically. Open ${this.apiClient.baseUrl}/extensions/connect and continue from there.`,
+        });
+        if (this.pending === pendingRequest) {
+          this.pending = undefined;
+        }
+      }
+    } catch (error) {
+      if (pendingRequest?.state === state) {
+        clearTimeout(pendingRequest.timeout);
+        pendingRequest.resolve({
+          kind: "error",
+          message:
+            error instanceof Error
+              ? `Xupra could not open your browser: ${error.message}`
+              : "Xupra could not open your browser automatically.",
+        });
+        if (this.pending === pendingRequest) {
+          this.pending = undefined;
+        }
+      }
+    }
+
     return resultPromise;
   }
 }

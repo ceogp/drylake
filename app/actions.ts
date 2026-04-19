@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { createBillingPortalSession, createCheckoutSession } from "@/lib/services/billing";
 import {
@@ -394,6 +395,27 @@ export async function sendTestIntegrationAction(formData: FormData) {
   revalidatePath("/integrations");
 }
 
+function getSafeReturnPath(rawValue: FormDataEntryValue | null) {
+  const rawPath = String(rawValue ?? "").trim();
+
+  if (!rawPath || !rawPath.startsWith("/") || rawPath.startsWith("//")) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(rawPath, "http://xupra.local");
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return null;
+  }
+}
+
+function withQueryValue(path: string, key: string, value: string) {
+  const parsed = new URL(path, "http://xupra.local");
+  parsed.searchParams.set(key, value);
+  return `${parsed.pathname}${parsed.search}`;
+}
+
 export async function createCheckoutAction(formData: FormData) {
   const requestedOrganizationId = String(formData.get("organizationId") ?? "").trim();
   const context = await requireOrganizationRole(
@@ -402,6 +424,7 @@ export async function createCheckoutAction(formData: FormData) {
   );
   const organizationId = requestedOrganizationId || context.organization.id;
   const plan = String(formData.get("plan") ?? "pro").trim() as "pro" | "enterprise";
+  const returnPath = getSafeReturnPath(formData.get("returnPath"));
 
   if (!organizationId) {
     return;
@@ -411,10 +434,16 @@ export async function createCheckoutAction(formData: FormData) {
     organizationId,
     userEmail: context.user.email,
     priceLookup: plan,
+    successUrl: returnPath ? `${env.APP_BASE_URL}${withQueryValue(returnPath, "billing", "success")}` : undefined,
+    cancelUrl: returnPath ? `${env.APP_BASE_URL}${withQueryValue(returnPath, "billing", "canceled")}` : undefined,
   });
 
   if (session.configured && session.url) {
     redirect(session.url);
+  }
+
+  if (returnPath) {
+    redirect(withQueryValue(returnPath, "billing", "unavailable"));
   }
 
   revalidatePath("/billing");

@@ -2,7 +2,7 @@
   "name": "xupra-drylake-vscode",
   "displayName": "Xupra DryLake",
   "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "publisher": "xupra",
   "license": "UNLICENSED",
@@ -269,10 +269,6 @@
       {
         "command": "xupra.selectVersion",
         "title": "Xupra DryLake: Select Version"
-      },
-      {
-        "command": "xupra.scanWorkspace",
-        "title": "Xupra DryLake: Scan Workspace"
       },
       {
         "command": "xupra.importWorkspace",

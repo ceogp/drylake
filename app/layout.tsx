@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import { setActiveOrganizationAction } from "@/app/actions";
+import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import { getIsPlatformAdmin } from "@/lib/services/access";
 import { getAuthSetup } from "@/lib/services/auth";
@@ -89,23 +90,7 @@ export default async function RootLayout({
               />
             ) : null}
             {useClerkUi ? (
-              <>
-                <Show when="signed-out">
-                  <SignInButton mode="modal">
-                    <button className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100">
-                      Sign In
-                    </button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <button className="rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800">
-                      Sign Up
-                    </button>
-                  </SignUpButton>
-                </Show>
-                <Show when="signed-in">
-                  <UserButton />
-                </Show>
-              </>
+              <HeaderAuthControls />
             ) : (
               <div className="rounded-full border border-stone-300 bg-white px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-stone-600">
                 Dev Auth

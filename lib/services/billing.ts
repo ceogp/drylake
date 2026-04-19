@@ -105,6 +105,8 @@ export async function createCheckoutSession(params: {
   organizationId: string;
   userEmail: string;
   priceLookup: "pro" | "enterprise";
+  successUrl?: string;
+  cancelUrl?: string;
 }) {
   const stripe = getStripeClient();
 
@@ -132,8 +134,8 @@ export async function createCheckoutSession(params: {
       },
     ],
     customer_email: params.userEmail,
-    success_url: `${env.APP_BASE_URL}/billing?success=1`,
-    cancel_url: `${env.APP_BASE_URL}/billing?canceled=1`,
+    success_url: params.successUrl ?? `${env.APP_BASE_URL}/billing?success=1`,
+    cancel_url: params.cancelUrl ?? `${env.APP_BASE_URL}/billing?canceled=1`,
     metadata: {
       organizationId: params.organizationId,
     },
