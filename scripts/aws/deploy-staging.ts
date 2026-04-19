@@ -55,8 +55,30 @@ function requireEnv(name: string) {
   return value;
 }
 
+function isIpv4Hostname(hostname: string) {
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+}
+
 async function writeStagingEnv(manifest: Manifest) {
-  const baseUrl = process.env.APP_BASE_URL || `http://${manifest.publicIp}`;
+  const baseUrl = requireEnv("APP_BASE_URL");
+  let parsedBaseUrl: URL;
+
+  try {
+    parsedBaseUrl = new URL(baseUrl);
+  } catch {
+    throw new Error(`APP_BASE_URL must be a valid URL. Received: ${baseUrl}`);
+  }
+
+  if (isIpv4Hostname(parsedBaseUrl.hostname)) {
+    throw new Error(
+      `APP_BASE_URL must use your domain host, not a raw IP (${parsedBaseUrl.hostname}).`,
+    );
+  }
+
+  if (parsedBaseUrl.protocol !== "https:") {
+    throw new Error(`APP_BASE_URL must use https. Received protocol: ${parsedBaseUrl.protocol}`);
+  }
+
   const envFilePath = path.join(workDir, "staging.env");
 
   const values: Record<string, string> = {
