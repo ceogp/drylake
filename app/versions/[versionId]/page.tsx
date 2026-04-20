@@ -180,61 +180,16 @@ export default async function VersionPage({ params }: PageProps) {
           </article>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <form action={updateVersionAction} className="grid gap-6 rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <input name="versionId" type="hidden" value={version.id} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Manifest name
-                <input
-                  className="rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                  defaultValue={typeof manifest.name === "string" ? manifest.name : version.agentPackage.name}
-                  name="manifestName"
-                />
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Target platforms
-                <input
-                  className="rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                  defaultValue={targetPlatforms.join(", ")}
-                  name="targetPlatforms"
-                  placeholder="codex, claude_code, cursor"
-                />
-              </label>
-            </div>
-            <label className="grid gap-2 text-sm font-medium text-stone-900">
-              Package description
-              <input
-                className="rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                defaultValue={typeof agentDefinition.description === "string" ? agentDefinition.description : ""}
-                name="description"
-                placeholder="What this package should do"
-              />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-stone-900">
-              Tool list
-              <input
-                className="rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                defaultValue={tools.join(", ")}
-                name="tools"
-                placeholder="Read, Grep, Glob"
-              />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-stone-900">
-              Instructions
-              <textarea
-                className="min-h-72 rounded-[1.5rem] border border-stone-300 px-4 py-4 text-sm leading-7"
-                defaultValue={typeof agentDefinition.instructions === "string" ? agentDefinition.instructions : ""}
-                name="instructions"
-                placeholder="Primary system instructions for the canonical package"
-              />
-            </label>
-            <button className="w-fit rounded-full bg-orange-600 px-5 py-3 font-medium text-white transition hover:bg-orange-700" type="submit">
-              Save Version
-            </button>
-          </form>
-
+        <section className="space-y-6">
           <VersionTools
+            currentSummary={{
+              rawFiles: version.files.filter((file) => file.kind === "raw_source").length,
+              subagents: version.subagents.length,
+              skillRules: version.skillRules.length,
+              transformJobs: version.transformJobs.length,
+              lastImportedAt:
+                typeof manifest.lastImportedAt === "string" ? manifest.lastImportedAt : null,
+            }}
             versionId={version.id}
             deploymentTargets={version.agentPackage.project.deploymentTargets.map((target) => ({
               id: target.id,
@@ -243,6 +198,81 @@ export default async function VersionPage({ params }: PageProps) {
               deliveryMode: target.deliveryMode,
             }))}
           />
+
+          <details className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <summary className="cursor-pointer list-none">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
+                    Advanced Package Editing
+                  </p>
+                  <h2 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
+                    Manifest, instructions, and tool configuration
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-7 text-stone-700">
+                    Use this only after the import flow is working. The normal customer path is:
+                    upload files, import them, confirm they appear, then refine the canonical package.
+                  </p>
+                </div>
+                <span className="rounded-full border border-stone-300 bg-stone-50 px-4 py-2 text-xs font-medium uppercase tracking-[0.16em] text-stone-700">
+                  Open advanced controls
+                </span>
+              </div>
+            </summary>
+
+            <form action={updateVersionAction} className="mt-6 grid gap-6 border-t border-stone-200 pt-6">
+              <input name="versionId" type="hidden" value={version.id} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Manifest name
+                  <input
+                    className="rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                    defaultValue={typeof manifest.name === "string" ? manifest.name : version.agentPackage.name}
+                    name="manifestName"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Target platforms
+                  <input
+                    className="rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                    defaultValue={targetPlatforms.join(", ")}
+                    name="targetPlatforms"
+                    placeholder="codex, claude_code, cursor"
+                  />
+                </label>
+              </div>
+              <label className="grid gap-2 text-sm font-medium text-stone-900">
+                Package description
+                <input
+                  className="rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                  defaultValue={typeof agentDefinition.description === "string" ? agentDefinition.description : ""}
+                  name="description"
+                  placeholder="What this package should do"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium text-stone-900">
+                Tool list
+                <input
+                  className="rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                  defaultValue={tools.join(", ")}
+                  name="tools"
+                  placeholder="Read, Grep, Glob"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium text-stone-900">
+                Instructions
+                <textarea
+                  className="min-h-72 rounded-[1.5rem] border border-stone-300 px-4 py-4 text-sm leading-7"
+                  defaultValue={typeof agentDefinition.instructions === "string" ? agentDefinition.instructions : ""}
+                  name="instructions"
+                  placeholder="Primary system instructions for the canonical package"
+                />
+              </label>
+              <button className="w-fit rounded-full bg-orange-600 px-5 py-3 font-medium text-white transition hover:bg-orange-700" type="submit">
+                Save Version
+              </button>
+            </form>
+          </details>
         </section>
 
         <section className="grid gap-6 xl:grid-cols-2">

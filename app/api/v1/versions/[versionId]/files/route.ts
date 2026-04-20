@@ -30,6 +30,11 @@ function parseLimit(rawValue: string | null) {
   return Math.min(parsed, 100);
 }
 
+function normalizeLogicalPath(rawValue: string) {
+  const normalized = rawValue.replace(/\\/g, "/").replace(/^\/+/, "").trim();
+  return normalized || path.basename(rawValue);
+}
+
 function canReadTextPreview(file: { mimeType: string; logicalPath: string }) {
   if (file.mimeType.startsWith("text/")) {
     return true;
@@ -158,6 +163,10 @@ export async function POST(request: Request, context: Context) {
     const { context: appContext, version } = await requireVersionAccess(versionId);
 
     const formData = await request.formData();
+    const requestedPaths = formData
+      .getAll("paths")
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter(Boolean);
     const files = formData
       .getAll("files")
       .filter((value): value is File => value instanceof File && value.size > 0);
@@ -168,8 +177,10 @@ export async function POST(request: Request, context: Context) {
 
     const storedFiles = [];
 
-    for (const file of files) {
-      const logicalPath = file.webkitRelativePath || file.name || path.basename(file.name);
+    for (const [index, file] of files.entries()) {
+      const logicalPath = normalizeLogicalPath(
+        requestedPaths[index] || file.webkitRelativePath || file.name || path.basename(file.name),
+      );
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const artifact = await saveArtifactBuffer({

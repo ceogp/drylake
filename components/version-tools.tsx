@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const TARGETS = [
   { value: "codex", label: "Codex" },
@@ -18,6 +18,13 @@ type VersionToolsProps = {
     platform: string;
     deliveryMode: string;
   }>;
+  currentSummary: {
+    rawFiles: number;
+    subagents: number;
+    skillRules: number;
+    transformJobs: number;
+    lastImportedAt: string | null;
+  };
 };
 
 type JobResponse = {
@@ -73,6 +80,12 @@ type FileListResponse = {
   };
 };
 
+type PendingBrowserFile = {
+  file: File;
+  logicalPath: string;
+  category: "instruction" | "subagent" | "skill" | "rule" | "source";
+};
+
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes < 0) {
     return "0 B";
@@ -89,7 +102,11 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatTimestamp(timestamp: string) {
+function formatTimestamp(timestamp: string | null) {
+  if (!timestamp) {
+    return "Never";
+  }
+
   const date = new Date(timestamp);
 
   if (Number.isNaN(date.getTime())) {
@@ -99,16 +116,114 @@ function formatTimestamp(timestamp: string) {
   return date.toLocaleString();
 }
 
-export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps) {
+function normalizeLogicalPath(rawValue: string) {
+  return rawValue.replace(/\\/g, "/").replace(/^\/+/, "").trim();
+}
+
+function isIgnoredPath(logicalPath: string) {
+  return /(^|\/)(node_modules|\.git|\.next|dist|build|out|coverage)(\/|$)/i.test(logicalPath);
+}
+
+function classifySupportedPath(logicalPath: string): PendingBrowserFile["category"] | null {
+  const normalized = normalizeLogicalPath(logicalPath);
+
+  if (!normalized || isIgnoredPath(normalized)) {
+    return null;
+  }
+
+  if (normalized === "AGENTS.md" || normalized === "CLAUDE.md") {
+    return "instruction";
+  }
+
+  if (/^\.claude\/agents\/.+\.md$/i.test(normalized)) {
+    return "subagent";
+  }
+
+  if (/^\.codex\/agents\/.+\.toml$/i.test(normalized)) {
+    return "subagent";
+  }
+
+  if (/^(\.agents\/skills|\.claude\/skills|\.cursor\/skills)\/.+\/SKILL\.md$/i.test(normalized)) {
+    return "skill";
+  }
+
+  if (/^\.cursor\/rules\/.+\.mdc$/i.test(normalized)) {
+    return "rule";
+  }
+
+  if (/\.md$/i.test(normalized) || /\.py$/i.test(normalized)) {
+    return "source";
+  }
+
+  return null;
+}
+
+function toPendingBrowserFiles(fileList: FileList | File[] | null) {
+  if (!fileList) {
+    return [];
+  }
+
+  return Array.from(fileList)
+    .map((file) => {
+      const logicalPath = normalizeLogicalPath(file.webkitRelativePath || file.name);
+      const category = classifySupportedPath(logicalPath);
+
+      if (!category) {
+        return null;
+      }
+
+      return {
+        file,
+        logicalPath,
+        category,
+      } satisfies PendingBrowserFile;
+    })
+    .filter((file): file is PendingBrowserFile => Boolean(file));
+}
+
+function describePendingFiles(files: PendingBrowserFile[]) {
+  const counts = {
+    instruction: 0,
+    subagent: 0,
+    skill: 0,
+    rule: 0,
+    source: 0,
+  };
+
+  for (const file of files) {
+    counts[file.category] += 1;
+  }
+
+  return [
+    `${files.length} matched file${files.length === 1 ? "" : "s"}`,
+    counts.instruction ? `${counts.instruction} instructions` : null,
+    counts.subagent ? `${counts.subagent} agents` : null,
+    counts.skill ? `${counts.skill} skills` : null,
+    counts.rule ? `${counts.rule} rules` : null,
+    counts.source ? `${counts.source} markdown/python` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export function VersionTools({ versionId, deploymentTargets, currentSummary }: VersionToolsProps) {
   const router = useRouter();
+  const manualInputRef = useRef<HTMLInputElement | null>(null);
+  const directoryInputRef = useRef<HTMLInputElement | null>(null);
   const [targetPlatform, setTargetPlatform] = useState<(typeof TARGETS)[number]["value"]>("claude_code");
   const [deploymentTargetId, setDeploymentTargetId] = useState<string>(deploymentTargets[0]?.id ?? "");
-  const [statusMessage, setStatusMessage] = useState("No job has been run yet.");
+  const [statusMessage, setStatusMessage] = useState(
+    currentSummary.rawFiles > 0
+      ? `This version already has ${currentSummary.rawFiles} raw files in storage.`
+      : "Choose a repo folder or selected files, then upload and import them here.",
+  );
   const [latestPreview, setLatestPreview] = useState<Array<{ logicalPath: string; preview: string }>>([]);
   const [importedFiles, setImportedFiles] = useState<ImportedFileRecord[]>([]);
   const [importedFilesSource, setImportedFilesSource] = useState("postgres_package_file");
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [pendingFolderFiles, setPendingFolderFiles] = useState<PendingBrowserFile[]>([]);
+  const [pendingManualFiles, setPendingManualFiles] = useState<PendingBrowserFile[]>([]);
 
   const loadImportedFiles = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -146,6 +261,26 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
     [versionId],
   );
 
+  useEffect(() => {
+    if (!directoryInputRef.current) {
+      return;
+    }
+
+    directoryInputRef.current.setAttribute("webkitdirectory", "");
+    directoryInputRef.current.setAttribute("directory", "");
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadImportedFiles({ silent: true });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [loadImportedFiles]);
+
+  const folderSummary = useMemo(() => describePendingFiles(pendingFolderFiles), [pendingFolderFiles]);
+  const manualSummary = useMemo(() => describePendingFiles(pendingManualFiles), [pendingManualFiles]);
+
   async function runJsonPost(url: string, body?: Record<string, unknown>) {
     setIsBusy(true);
 
@@ -162,7 +297,7 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
 
       if (!response.ok || !payload.ok) {
         setStatusMessage(payload.error?.message ?? "Request failed.");
-        return;
+        return false;
       }
 
       if (payload.generatedFiles) {
@@ -185,9 +320,9 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
         );
       } else if (payload.imported) {
         setStatusMessage(
-          `Imported ${payload.imported.rawFiles} files, ${payload.imported.subagents} subagents, ${payload.imported.skills} skills, ${payload.imported.rules} rules.`,
+          `Imported ${payload.imported.rawFiles} files, ${payload.imported.subagents} agents, ${payload.imported.skills} skills, ${payload.imported.rules} rules.`,
         );
-        await loadImportedFiles();
+        await loadImportedFiles({ silent: true });
       } else if (payload.job) {
         setStatusMessage(
           payload.job.status === "queued" || payload.job.status === "running"
@@ -199,19 +334,28 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
       }
 
       router.refresh();
+      return true;
     } finally {
       setIsBusy(false);
     }
   }
 
-  async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
+  async function uploadPendingFiles(files: PendingBrowserFile[], options?: { autoImport?: boolean }) {
+    if (files.length === 0) {
+      setStatusMessage("Choose a repo folder or selected files first.");
+      return;
+    }
 
     setIsBusy(true);
 
     try {
+      const formData = new FormData();
+
+      for (const item of files) {
+        formData.append("paths", item.logicalPath);
+        formData.append("files", item.file, item.file.name);
+      }
+
       const response = await fetch(`/api/v1/versions/${versionId}/files`, {
         method: "POST",
         body: formData,
@@ -227,13 +371,53 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
       }
 
       const uploadedFiles = payload.files ?? [];
-      const uploadedNames = uploadedFiles.slice(0, 3).map((file) => file.logicalPath);
-      const uploadedSuffix = uploadedFiles.length > uploadedNames.length ? ", ..." : "";
-      const uploadedNameList = uploadedNames.length > 0 ? ` (${uploadedNames.join(", ")}${uploadedSuffix})` : "";
+      const uploadedPreview = uploadedFiles
+        .slice(0, 4)
+        .map((file) => file.logicalPath)
+        .join(", ");
 
-      setStatusMessage(`Uploaded ${uploadedFiles.length} file(s)${uploadedNameList}.`);
-      form.reset();
-      await loadImportedFiles();
+      setStatusMessage(
+        `Uploaded ${uploadedFiles.length} file(s)${uploadedPreview ? `: ${uploadedPreview}${uploadedFiles.length > 4 ? ", ..." : ""}` : ""}`,
+      );
+
+      if (options?.autoImport) {
+        const importResponse = await fetch(`/api/v1/versions/${versionId}/import`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ mode: "auto" }),
+        });
+        const importPayload = (await importResponse.json()) as JobResponse;
+
+        if (!importResponse.ok || !importPayload.ok) {
+          setStatusMessage(importPayload.error?.message ?? "Upload succeeded, but import failed.");
+          return;
+        }
+
+        if (importPayload.imported) {
+          setStatusMessage(
+            `Imported ${importPayload.imported.rawFiles} files, ${importPayload.imported.subagents} agents, ${importPayload.imported.skills} skills, ${importPayload.imported.rules} rules.`,
+          );
+        } else if (importPayload.job) {
+          setStatusMessage(`Upload finished. Import job ${importPayload.job.id} is ${importPayload.job.status}.`);
+        } else {
+          setStatusMessage("Upload finished and import started.");
+        }
+      }
+
+      setPendingFolderFiles([]);
+      setPendingManualFiles([]);
+
+      if (manualInputRef.current) {
+        manualInputRef.current.value = "";
+      }
+
+      if (directoryInputRef.current) {
+        directoryInputRef.current.value = "";
+      }
+
+      await loadImportedFiles({ silent: true });
       router.refresh();
     } finally {
       setIsBusy(false);
@@ -242,13 +426,14 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
 
   return (
     <div className="space-y-6 rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-            Import, Compatibility, and Export
+            Import Workspace
           </h2>
-          <p className="mt-2 text-sm leading-7 text-stone-700">
-            Upload source files, normalize them into the canonical package, then run target-specific compatibility and export preview jobs.
+          <p className="mt-2 max-w-3xl text-sm leading-7 text-stone-700">
+            This is the real ingest path. Upload a repo folder or selected files, store them as raw
+            source records, then turn them into agents, skills, rules, and canonical instructions.
           </p>
         </div>
         <p className="max-w-sm rounded-2xl bg-stone-100 px-4 py-3 font-mono text-xs leading-6 text-stone-700">
@@ -256,25 +441,128 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
         </p>
       </div>
 
-      <form className="grid gap-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5" onSubmit={handleUpload}>
-        <label className="text-sm font-medium text-stone-900" htmlFor="version-upload">
-          Upload raw package files
+      <div className="grid gap-4 md:grid-cols-4">
+        <article className="rounded-[1.35rem] border border-stone-200 bg-stone-50 p-4">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Raw Files</p>
+          <p className="mt-3 text-3xl font-semibold text-stone-950">{currentSummary.rawFiles}</p>
+          <p className="mt-2 text-xs leading-6 text-stone-600">Rows stored in `PackageFile` for this version.</p>
+        </article>
+        <article className="rounded-[1.35rem] border border-stone-200 bg-stone-50 p-4">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Agents</p>
+          <p className="mt-3 text-3xl font-semibold text-stone-950">{currentSummary.subagents}</p>
+          <p className="mt-2 text-xs leading-6 text-stone-600">Canonical subagents extracted from imported files.</p>
+        </article>
+        <article className="rounded-[1.35rem] border border-stone-200 bg-stone-50 p-4">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Skills And Rules</p>
+          <p className="mt-3 text-3xl font-semibold text-stone-950">{currentSummary.skillRules}</p>
+          <p className="mt-2 text-xs leading-6 text-stone-600">Reusable skills, rules, and prompt fragments.</p>
+        </article>
+        <article className="rounded-[1.35rem] border border-stone-200 bg-stone-50 p-4">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Last Import</p>
+          <p className="mt-3 text-base font-semibold text-stone-950">{formatTimestamp(currentSummary.lastImportedAt)}</p>
+          <p className="mt-2 text-xs leading-6 text-stone-600">{currentSummary.transformJobs} recent transform job(s) tracked.</p>
+        </article>
+      </div>
+
+      <section className="grid gap-4 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-emerald-700">Fastest Path</p>
+          <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
+            Choose the repo folder once, then import everything
+          </h3>
+          <p className="mt-3 text-sm leading-7 text-stone-700">
+            This scans the selected folder in your browser, keeps only supported files, uploads them
+            into Postgres-backed raw storage, and immediately runs import.
+          </p>
+          <p className="mt-3 text-xs leading-6 text-stone-600">
+            Supported paths: `AGENTS.md`, `CLAUDE.md`, `.claude/agents`, `.codex/agents`,
+            skill folders, Cursor rules, plus markdown and python source files.
+          </p>
+        </div>
+        <div className="rounded-[1.35rem] border border-emerald-200 bg-white p-4">
+          <input
+            ref={directoryInputRef}
+            className="hidden"
+            multiple
+            type="file"
+            onChange={(event) => setPendingFolderFiles(toPendingBrowserFiles(event.target.files))}
+          />
+          <div className="flex flex-wrap gap-3">
+            <button
+              className="rounded-full border border-emerald-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isBusy}
+              onClick={() => directoryInputRef.current?.click()}
+              type="button"
+            >
+              Choose Repo Folder
+            </button>
+            <button
+              className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              disabled={isBusy || pendingFolderFiles.length === 0}
+              onClick={() => void uploadPendingFiles(pendingFolderFiles, { autoImport: true })}
+              type="button"
+            >
+              {isBusy ? "Working..." : "Upload Folder And Import"}
+            </button>
+            <a
+              className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+              href="/extensions/install"
+            >
+              Connect Extension
+            </a>
+          </div>
+          <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
+            {pendingFolderFiles.length > 0 ? folderSummary : "No repo folder selected yet."}
+          </div>
+          {pendingFolderFiles.length > 0 ? (
+            <div className="mt-3 grid gap-2">
+              {pendingFolderFiles.slice(0, 8).map((file) => (
+                <div key={file.logicalPath} className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-700">
+                  <span className="font-mono text-stone-900">{file.logicalPath}</span>
+                  <span className="ml-2 text-stone-500">({file.category})</span>
+                </div>
+              ))}
+              {pendingFolderFiles.length > 8 ? (
+                <p className="text-xs text-stone-500">+ {pendingFolderFiles.length - 8} more supported files queued</p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="grid gap-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
+        <label className="grid gap-2 text-sm font-medium text-stone-900">
+          Manual file upload
+          <input
+            ref={manualInputRef}
+            multiple
+            type="file"
+            className="rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-700"
+            onChange={(event) => setPendingManualFiles(toPendingBrowserFiles(event.target.files))}
+          />
         </label>
-        <input
-          id="version-upload"
-          name="files"
-          multiple
-          type="file"
-          className="rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-700"
-        />
-        <button
-          className="w-fit rounded-full bg-orange-600 px-5 py-3 font-medium text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-orange-300"
-          disabled={isBusy}
-          type="submit"
-        >
-          {isBusy ? "Working..." : "Upload Files"}
-        </button>
-      </form>
+        <div className="flex flex-wrap gap-3">
+          <button
+            className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isBusy || pendingManualFiles.length === 0}
+            onClick={() => void uploadPendingFiles(pendingManualFiles)}
+            type="button"
+          >
+            Upload Selected Files
+          </button>
+          <button
+            className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-orange-300"
+            disabled={isBusy || pendingManualFiles.length === 0}
+            onClick={() => void uploadPendingFiles(pendingManualFiles, { autoImport: true })}
+            type="button"
+          >
+            Upload And Import
+          </button>
+        </div>
+        <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 lg:col-span-2">
+          {pendingManualFiles.length > 0 ? manualSummary : "Choose files if you do not want to upload the full repo folder."}
+        </div>
+      </section>
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-end">
         <label className="grid gap-2 text-sm font-medium text-stone-900">
@@ -294,16 +582,16 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
         <button
           className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={isBusy}
-          onClick={() => runJsonPost(`/api/v1/versions/${versionId}/import`, { mode: "auto" })}
+          onClick={() => void runJsonPost(`/api/v1/versions/${versionId}/import`, { mode: "auto" })}
           type="button"
         >
-          Import Files
+          Import Existing Raw Files
         </button>
         <button
           className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={isBusy}
           onClick={() =>
-            runJsonPost(`/api/v1/versions/${versionId}/compatibility`, {
+            void runJsonPost(`/api/v1/versions/${versionId}/compatibility`, {
               targetPlatform,
             })
           }
@@ -315,7 +603,7 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
           className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
           disabled={isBusy}
           onClick={() =>
-            runJsonPost(`/api/v1/versions/${versionId}/export-preview`, {
+            void runJsonPost(`/api/v1/versions/${versionId}/export-preview`, {
               targetPlatform,
             })
           }
@@ -326,21 +614,21 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
       </div>
 
       <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-7 text-stone-700">
-        Compatibility checks tell you whether the current version has enough instructions, skills,
-        rules, or subagents for the selected target. They do not change files, export artifacts, or
-        deploy anything.
-      </div>
-
-      <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-7 text-stone-700">
-        Upload, import, and compatibility checks stay available on free. Export preview and deploy
-        unlock on paid plans.
+        Compatibility checks only tell you whether the canonical package is ready for a target.
+        They do not upload source files, export artifacts, or deploy anything.
       </div>
 
       <section className="space-y-4 rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
-            Imported Source Files
-          </h3>
+          <div>
+            <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
+              Imported Source Files
+            </h3>
+            <p className="mt-2 text-sm leading-7 text-stone-700">
+              These rows come from `PackageFile` and prove whether raw files actually reached the
+              backend for this version.
+            </p>
+          </div>
           <button
             className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.16em] text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isBusy || isLoadingFiles}
@@ -350,10 +638,6 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
             {isLoadingFiles ? "Refreshing..." : "Refresh"}
           </button>
         </div>
-        <p className="text-sm leading-7 text-stone-700">
-          These records are read from Postgres table <span className="font-mono text-xs">PackageFile</span>.
-          Preview text is loaded via each row&apos;s <span className="font-mono text-xs">storageKey</span> from artifact storage.
-        </p>
         <p className="text-xs leading-6 text-stone-500">
           Source: <span className="font-mono">{importedFilesSource}</span>
         </p>
@@ -387,8 +671,8 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
           </div>
         ) : (
           <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700">
-            No raw source files are currently loaded in this panel. Click Refresh to read existing
-            Postgres records, or upload files first and then run import.
+            No raw source files are loaded for this version yet. Upload a repo folder or selected
+            files above, then this panel should populate automatically.
           </div>
         )}
       </section>
@@ -399,7 +683,7 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
             Deploy Version
           </h3>
           <p className="mt-2 text-sm leading-7 text-stone-700">
-            Run a deployment job against a configured target. Local repository path mirroring works now; remote automation will attach to the same target records.
+            Run a deployment job against a configured target after import and compatibility are in shape.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
@@ -422,7 +706,7 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
             className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-orange-300"
             disabled={isBusy || !deploymentTargetId}
             onClick={() =>
-              runJsonPost(`/api/v1/versions/${versionId}/deploy`, {
+              void runJsonPost(`/api/v1/versions/${versionId}/deploy`, {
                 deploymentTargetId,
                 triggerSource: "ui",
               })
@@ -437,7 +721,7 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
       {latestPreview.length > 0 ? (
         <div className="space-y-4">
           <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
-            Latest generated files
+            Latest Generated Files
           </h3>
           <div className="grid gap-4">
             {latestPreview.map((file) => (
