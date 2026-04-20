@@ -13,12 +13,10 @@ const steps = [
 ];
 
 const webControls = [
-  "Account and personal settings",
+  "Import workspace and file review",
   "Billing and subscription management",
-  "Credential vault",
-  "Integrations",
-  "Reports",
-  "Platform admin"
+  "Account and personal settings",
+  "Advanced deploy controls when needed"
 ];
 
 export default function ExtensionInstallPage() {
@@ -32,7 +30,7 @@ export default function ExtensionInstallPage() {
           </h1>
           <p className="max-w-4xl text-lg leading-8 text-stone-700">
             Xupra is designed so discovery and daily repo work happen in VS Code or Cursor while the website handles
-            the account, billing, credentials, reporting, and admin surfaces behind that workflow.
+            the import workspace, account, and billing surfaces behind that workflow.
           </p>
         </div>
 

@@ -148,12 +148,6 @@ export default async function VersionPage({ params }: PageProps) {
                 >
                   Connect Extension
                 </Link>
-                <Link
-                  className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
-                  href="/settings"
-                >
-                  Profile And Settings
-                </Link>
               </div>
             </div>
           </section>
@@ -291,45 +285,68 @@ export default async function VersionPage({ params }: PageProps) {
               </span>
             </div>
             <div className="grid gap-4">
-              {version.subagents.map((subagent) => (
-                <article key={subagent.id} className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="font-[family-name:var(--font-heading)] text-xl font-semibold text-stone-950">
-                        {subagent.name}
-                      </h3>
-                      <p className="mt-2 text-sm leading-7 text-stone-700">{subagent.description}</p>
+              {version.subagents.length > 0 ? (
+                version.subagents.map((subagent) => (
+                  <article key={subagent.id} className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="font-[family-name:var(--font-heading)] text-xl font-semibold text-stone-950">
+                          {subagent.name}
+                        </h3>
+                        <p className="mt-2 text-sm leading-7 text-stone-700">{subagent.description}</p>
+                      </div>
+                      <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{subagent.slug}</span>
                     </div>
-                    <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{subagent.slug}</span>
-                  </div>
-                  <pre className="mt-4 overflow-x-auto rounded-2xl bg-stone-950 px-4 py-4 font-mono text-xs leading-6 text-stone-100">
-                    {subagent.instructionsMd}
-                  </pre>
-                </article>
-              ))}
+                    <pre className="mt-4 overflow-x-auto rounded-2xl bg-stone-950 px-4 py-4 font-mono text-xs leading-6 text-stone-100">
+                      {subagent.instructionsMd}
+                    </pre>
+                  </article>
+                ))
+              ) : (
+                <div className="rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5 text-sm leading-7 text-stone-700">
+                  No subagents have been extracted yet. Import a repo first, then imported agents
+                  will appear here automatically.
+                </div>
+              )}
             </div>
-            <form action={addSubagentAction} className="grid gap-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5">
-              <input name="versionId" type="hidden" value={version.id} />
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Subagent name
-                <input className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="name" placeholder="Migration Reviewer" required />
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Description
-                <input className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="description" placeholder="When this subagent should be used" />
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Tools
-                <input className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="tools" placeholder="Read, Grep, Glob" />
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Instructions
-                <textarea className="min-h-40 rounded-[1.5rem] border border-stone-300 px-4 py-4 text-sm leading-7" name="instructions" placeholder="Focused system prompt for the subagent" required />
-              </label>
-              <button className="w-fit rounded-full bg-stone-950 px-5 py-3 font-medium text-white transition hover:bg-stone-800" type="submit">
-                Add Subagent
-              </button>
-            </form>
+            <details className="rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5">
+              <summary className="cursor-pointer list-none">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Manual override</p>
+                    <h3 className="mt-2 text-lg font-semibold text-stone-950">Add a subagent by hand</h3>
+                    <p className="mt-2 text-sm leading-7 text-stone-700">
+                      Use this only when import missed something. It stays out of the first-run path.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.16em] text-stone-700">
+                    Open form
+                  </span>
+                </div>
+              </summary>
+              <form action={addSubagentAction} className="mt-5 grid gap-4 border-t border-stone-200 pt-5">
+                <input name="versionId" type="hidden" value={version.id} />
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Subagent name
+                  <input className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="name" placeholder="Migration Reviewer" required />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Description
+                  <input className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="description" placeholder="When this subagent should be used" />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Tools
+                  <input className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="tools" placeholder="Read, Grep, Glob" />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Instructions
+                  <textarea className="min-h-40 rounded-[1.5rem] border border-stone-300 px-4 py-4 text-sm leading-7" name="instructions" placeholder="Focused system prompt for the subagent" required />
+                </label>
+                <button className="w-fit rounded-full bg-stone-950 px-5 py-3 font-medium text-white transition hover:bg-stone-800" type="submit">
+                  Add Subagent
+                </button>
+              </form>
+            </details>
           </div>
 
           <div className="space-y-6 rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
@@ -347,42 +364,65 @@ export default async function VersionPage({ params }: PageProps) {
               </span>
             </div>
             <div className="grid gap-4">
-              {version.skillRules.map((rule) => (
-                <article key={rule.id} className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="font-[family-name:var(--font-heading)] text-xl font-semibold text-stone-950">
-                      {rule.name}
-                    </h3>
-                    <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{rule.kind}</span>
-                  </div>
-                  <pre className="mt-4 overflow-x-auto rounded-2xl bg-stone-950 px-4 py-4 font-mono text-xs leading-6 text-stone-100">
-                    {rule.bodyMd}
-                  </pre>
-                </article>
-              ))}
+              {version.skillRules.length > 0 ? (
+                version.skillRules.map((rule) => (
+                  <article key={rule.id} className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <h3 className="font-[family-name:var(--font-heading)] text-xl font-semibold text-stone-950">
+                        {rule.name}
+                      </h3>
+                      <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{rule.kind}</span>
+                    </div>
+                    <pre className="mt-4 overflow-x-auto rounded-2xl bg-stone-950 px-4 py-4 font-mono text-xs leading-6 text-stone-100">
+                      {rule.bodyMd}
+                    </pre>
+                  </article>
+                ))
+              ) : (
+                <div className="rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5 text-sm leading-7 text-stone-700">
+                  No skills or rules have been extracted yet. Import a repo first, then imported
+                  skills, rules, and fragments will show up here.
+                </div>
+              )}
             </div>
-            <form action={addSkillRuleAction} className="grid gap-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5">
-              <input name="versionId" type="hidden" value={version.id} />
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Rule name
-                <input className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="name" placeholder="SQL safety rules" required />
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Kind
-                <select className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" defaultValue="rule" name="kind">
-                  <option value="rule">Rule</option>
-                  <option value="skill">Skill</option>
-                  <option value="prompt_fragment">Prompt Fragment</option>
-                </select>
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Body
-                <textarea className="min-h-40 rounded-[1.5rem] border border-stone-300 px-4 py-4 text-sm leading-7" name="body" placeholder="Reusable guidance text" required />
-              </label>
-              <button className="w-fit rounded-full bg-stone-950 px-5 py-3 font-medium text-white transition hover:bg-stone-800" type="submit">
-                Add Rule
-              </button>
-            </form>
+            <details className="rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5">
+              <summary className="cursor-pointer list-none">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Manual override</p>
+                    <h3 className="mt-2 text-lg font-semibold text-stone-950">Add a rule by hand</h3>
+                    <p className="mt-2 text-sm leading-7 text-stone-700">
+                      Use this only after import if you need to patch the canonical package manually.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.16em] text-stone-700">
+                    Open form
+                  </span>
+                </div>
+              </summary>
+              <form action={addSkillRuleAction} className="mt-5 grid gap-4 border-t border-stone-200 pt-5">
+                <input name="versionId" type="hidden" value={version.id} />
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Rule name
+                  <input className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="name" placeholder="SQL safety rules" required />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Kind
+                  <select className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" defaultValue="rule" name="kind">
+                    <option value="rule">Rule</option>
+                    <option value="skill">Skill</option>
+                    <option value="prompt_fragment">Prompt Fragment</option>
+                  </select>
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Body
+                  <textarea className="min-h-40 rounded-[1.5rem] border border-stone-300 px-4 py-4 text-sm leading-7" name="body" placeholder="Reusable guidance text" required />
+                </label>
+                <button className="w-fit rounded-full bg-stone-950 px-5 py-3 font-medium text-white transition hover:bg-stone-800" type="submit">
+                  Add Rule
+                </button>
+              </form>
+            </details>
           </div>
         </section>
 

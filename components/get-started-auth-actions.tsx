@@ -51,12 +51,6 @@ export function GetStartedAuthActions({
             </Link>
             <Link
               className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
-              href="/settings"
-            >
-              Profile And Settings
-            </Link>
-            <Link
-              className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
               href="/extensions/install"
             >
               Install The Extension

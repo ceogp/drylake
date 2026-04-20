@@ -48,28 +48,16 @@ export async function AppHome() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
+                className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700"
+                href="/extensions/install"
+              >
+                Import With Extension
+              </Link>
+              <Link
                 className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
                 href="/billing"
               >
                 Billing
-              </Link>
-              <Link
-                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
-                href="/integrations"
-              >
-                Integrations
-              </Link>
-              <Link
-                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
-                href="/reports"
-              >
-                Reports
-              </Link>
-              <Link
-                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
-                href="/credentials"
-              >
-                Credential Vault
               </Link>
               <Link
                 className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
@@ -92,7 +80,8 @@ export async function AppHome() {
               </h1>
               <p className="max-w-3xl text-lg leading-8 text-stone-700">
                 The extension is where users import repos, preview portability, and pull generated files back into the editor.
-                This workspace is where you manage projects, credentials, billing, reports, and the canonical package model underneath that flow.
+                This workspace is where you review imports, organize projects, and manage the account
+                layer behind that flow once onboarding is already working.
               </p>
             </div>
             <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_18px_45px_rgba(120,53,15,0.08)]">
@@ -175,7 +164,8 @@ export async function AppHome() {
               Manage the account layer here
               </h2>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-              Use the website for projects, credentials, billing, reports, admin, and deeper package management that sits behind the extension workflow.
+              Use the website for project structure, billing, and account settings after users can
+              already see imported files.
               </p>
             </article>
         </section>

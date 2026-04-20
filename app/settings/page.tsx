@@ -122,20 +122,21 @@ export default async function SettingsPage() {
           <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Workspace Links</p>
             <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-              Product controls
+              Recommended next steps
             </h2>
+            <p className="mt-3 text-sm leading-7 text-stone-700">
+              Keep the first run focused on import. Billing and account settings are fine here, but
+              credential and integration setup stay out of the normal onboarding path.
+            </p>
             <div className="mt-5 grid gap-3 text-sm">
-              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/credentials">
-                Credential vault
-              </Link>
-              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/integrations">
-                Integrations
-              </Link>
-              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/reports">
-                Reports
-              </Link>
               <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/app">
-                Open workspace
+                Open import workspace
+              </Link>
+              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/extensions/install">
+                Install or reconnect extension
+              </Link>
+              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/billing">
+                Billing and plan
               </Link>
             </div>
           </article>
