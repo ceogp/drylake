@@ -4,18 +4,24 @@ import type { ProjectDetail, ProjectSummary } from "../types/api";
 import type {
   ConnectionState,
   DetectedWorkspaceFile,
+  ImportedWorkspaceSnapshot,
   LastImportSummary,
   SelectedContext,
 } from "../types/package";
 
 export type ProjectTreeItem =
-  | { kind: "section"; id: "next_actions" | "workspace" | "last_import" | "files" | "projects" | "targets"; label: string; description?: string }
+  | { kind: "section"; id: "next_actions" | "workspace" | "last_import" | "imported_workspace" | "files" | "projects" | "targets"; label: string; description?: string }
   | { kind: "status"; label: string; description?: string }
   | { kind: "action"; label: string; description?: string; command: string }
   | { kind: "detected_file"; file: DetectedWorkspaceFile }
   | { kind: "project"; project: ProjectSummary | ProjectDetail }
   | { kind: "package"; projectId: string; packageId: string; name: string; selected?: boolean }
   | { kind: "version"; projectId: string; packageId: string; versionId: string; label: string; selected?: boolean }
+  | { kind: "import_group"; groupId: "raw_files" | "subagents" | "skills_rules" | "systems"; label: string; description?: string }
+  | { kind: "import_source"; sourcePlatform: string; label: string; description?: string }
+  | { kind: "import_file"; logicalPath: string; kindLabel: string; sourceFormat: string; sourcePlatform: string }
+  | { kind: "import_subagent"; name: string; slug: string; sourcePlatform: string; sourcePath?: string }
+  | { kind: "import_skill_rule"; name: string; ruleKind: string; sourcePlatform: string; sourcePath?: string }
   | { kind: "target"; label: string; description: string };
 
 type TreeState = {
@@ -24,6 +30,7 @@ type TreeState = {
   selection: SelectedContext;
   connection: ConnectionState;
   lastImport: LastImportSummary | null;
+  importedWorkspace: ImportedWorkspaceSnapshot | null;
   workspaceName: string;
   defaultTargetPlatform: string;
 };
@@ -35,6 +42,35 @@ const TARGET_LABELS: Record<string, string> = {
   cursor: "Cursor"
 };
 
+const SOURCE_LABELS: Record<string, string> = {
+  ai_normalization: "AI Normalization",
+  claude: "Claude Code",
+  claude_agents: "Claude Agents",
+  claude_code: "Claude Code",
+  codex: "Codex",
+  cursor: "Cursor",
+  generic: "Generic",
+};
+
+const MAX_VISIBLE_IMPORT_ITEMS = 80;
+
+function getSourceLabel(sourcePlatform: string) {
+  return SOURCE_LABELS[sourcePlatform] ?? sourcePlatform;
+}
+
+function withLimit<T>(items: T[]) {
+  const limited = items.slice(0, MAX_VISIBLE_IMPORT_ITEMS);
+
+  return {
+    items: limited,
+    remaining: Math.max(0, items.length - limited.length),
+  };
+}
+
+function normalizeRuleKind(kind: string) {
+  return kind.replace(/_/g, " ");
+}
+
 export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeItem> {
   private readonly emitter = new vscode.EventEmitter<ProjectTreeItem | undefined | null | void>();
   readonly onDidChangeTreeData = this.emitter.event;
@@ -45,6 +81,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     selection: {},
     connection: {},
     lastImport: null,
+    importedWorkspace: null,
     workspaceName: "No workspace",
     defaultTargetPlatform: "claude_code"
   };
@@ -126,6 +163,43 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
       return item;
     }
 
+    if (element.kind === "import_group") {
+      const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.Collapsed);
+      item.description = element.description;
+      return item;
+    }
+
+    if (element.kind === "import_source") {
+      const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.Collapsed);
+      item.description = element.description;
+      return item;
+    }
+
+    if (element.kind === "import_file") {
+      const item = new vscode.TreeItem(element.logicalPath, vscode.TreeItemCollapsibleState.None);
+      item.description = `${element.kindLabel} · ${getSourceLabel(element.sourcePlatform)}`;
+      item.tooltip = `${element.logicalPath}\n${element.sourceFormat}`;
+      return item;
+    }
+
+    if (element.kind === "import_subagent") {
+      const item = new vscode.TreeItem(element.name, vscode.TreeItemCollapsibleState.None);
+      item.description = `${element.slug} · ${getSourceLabel(element.sourcePlatform)}`;
+      item.tooltip = element.sourcePath
+        ? `${element.name}\n${element.sourcePath}`
+        : `${element.name}\nSource: ${getSourceLabel(element.sourcePlatform)}`;
+      return item;
+    }
+
+    if (element.kind === "import_skill_rule") {
+      const item = new vscode.TreeItem(element.name, vscode.TreeItemCollapsibleState.None);
+      item.description = `${normalizeRuleKind(element.ruleKind)} · ${getSourceLabel(element.sourcePlatform)}`;
+      item.tooltip = element.sourcePath
+        ? `${element.name}\n${element.sourcePath}`
+        : `${element.name}\nSource: ${getSourceLabel(element.sourcePlatform)}`;
+      return item;
+    }
+
     const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
     item.description = element.description;
     return item;
@@ -158,6 +232,16 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         },
         {
           kind: "section",
+          id: "imported_workspace",
+          label: "Imported Workspace",
+          description: !this.state.selection.versionId
+            ? "Select a version"
+            : this.state.importedWorkspace
+              ? `${this.state.importedWorkspace.files.length + this.state.importedWorkspace.subagents.length + this.state.importedWorkspace.skillRules.length} artifacts`
+              : "unavailable",
+        },
+        {
+          kind: "section",
           id: "files",
           label: "Detected Files",
           description: `${this.state.detectedFiles.length}`
@@ -174,6 +258,89 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           label: "Targets",
           description: TARGET_LABELS[this.state.defaultTargetPlatform] ?? this.state.defaultTargetPlatform
         }
+      ] satisfies ProjectTreeItem[];
+    }
+
+    if (element.kind === "section" && element.id === "imported_workspace") {
+      if (!this.state.connection.userEmail) {
+        return [
+          {
+            kind: "status",
+            label: "Connect first to load imported workspace data",
+            description: "Use Connect Xupra in Next Actions",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
+      if (!this.state.selection.versionId) {
+        return [
+          {
+            kind: "status",
+            label: "No version selected",
+            description: "Select Version, then import workspace files",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
+      const snapshot = this.state.importedWorkspace;
+
+      if (!snapshot || snapshot.versionId !== this.state.selection.versionId) {
+        return [
+          {
+            kind: "status",
+            label: "Imported workspace not loaded yet",
+            description: "Refresh Projects to load file, skill, and agent details",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
+      const sourcePlatforms = new Set<string>();
+      snapshot.files.forEach((file) => sourcePlatforms.add(file.sourcePlatform));
+      snapshot.subagents.forEach((subagent) => sourcePlatforms.add(subagent.sourcePlatform));
+      snapshot.skillRules.forEach((rule) => sourcePlatforms.add(rule.sourcePlatform));
+
+      const totalArtifacts = snapshot.files.length + snapshot.subagents.length + snapshot.skillRules.length;
+
+      if (totalArtifacts === 0) {
+        return [
+          {
+            kind: "status",
+            label: "No imported artifacts in this version yet",
+            description: "Run Import Workspace to populate files, skills, and agents",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
+      return [
+        {
+          kind: "status",
+          label: `Version: ${snapshot.versionId}`,
+          description: `${totalArtifacts} artifacts in this package version`,
+        },
+        {
+          kind: "import_group",
+          groupId: "raw_files",
+          label: "Raw Files",
+          description: `${snapshot.files.length}`,
+        },
+        {
+          kind: "import_group",
+          groupId: "subagents",
+          label: "Agents",
+          description: `${snapshot.subagents.length}`,
+        },
+        {
+          kind: "import_group",
+          groupId: "skills_rules",
+          label: "Skills And Rules",
+          description: `${snapshot.skillRules.length}`,
+        },
+        {
+          kind: "import_group",
+          groupId: "systems",
+          label: "By Source System",
+          description: `${sourcePlatforms.size}`,
+        },
       ] satisfies ProjectTreeItem[];
     }
 
@@ -309,10 +476,229 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
       ] satisfies ProjectTreeItem[];
     }
 
+    if (element.kind === "import_group") {
+      const snapshot = this.state.importedWorkspace;
+
+      if (!snapshot) {
+        return [];
+      }
+
+      if (element.groupId === "raw_files") {
+        if (snapshot.files.length === 0) {
+          return [
+            {
+              kind: "status",
+              label: "No raw files uploaded yet",
+              description: "Import Workspace uploads files into raw_source storage",
+            },
+          ] satisfies ProjectTreeItem[];
+        }
+
+        const sortedFiles = [...snapshot.files].sort((a, b) => a.logicalPath.localeCompare(b.logicalPath));
+        const limited = withLimit(sortedFiles);
+        const rows: ProjectTreeItem[] = limited.items.map(
+          (file) =>
+            ({
+              kind: "import_file",
+              logicalPath: file.logicalPath,
+              kindLabel: normalizeRuleKind(file.kind),
+              sourceFormat: file.sourceFormat,
+              sourcePlatform: file.sourcePlatform,
+            }) satisfies ProjectTreeItem,
+        );
+
+        if (limited.remaining > 0) {
+          rows.push({
+            kind: "status",
+            label: `... ${limited.remaining} more files not shown`,
+            description: "Open web workspace for the full list",
+          });
+        }
+
+        return rows;
+      }
+
+      if (element.groupId === "subagents") {
+        if (snapshot.subagents.length === 0) {
+          return [
+            {
+              kind: "status",
+              label: "No imported agents yet",
+              description: "Import files from .claude/agents or .codex/agents",
+            },
+          ] satisfies ProjectTreeItem[];
+        }
+
+        const sortedSubagents = [...snapshot.subagents].sort((a, b) => a.name.localeCompare(b.name));
+        const limited = withLimit(sortedSubagents);
+        const rows: ProjectTreeItem[] = limited.items.map(
+          (subagent) =>
+            ({
+              kind: "import_subagent",
+              name: subagent.name,
+              slug: subagent.slug,
+              sourcePlatform: subagent.sourcePlatform,
+              sourcePath: subagent.sourcePath,
+            }) satisfies ProjectTreeItem,
+        );
+
+        if (limited.remaining > 0) {
+          rows.push({
+            kind: "status",
+            label: `... ${limited.remaining} more agents not shown`,
+            description: "Open web workspace for the full list",
+          });
+        }
+
+        return rows;
+      }
+
+      if (element.groupId === "skills_rules") {
+        if (snapshot.skillRules.length === 0) {
+          return [
+            {
+              kind: "status",
+              label: "No imported skills or rules yet",
+              description: "Import files from .agents/.claude/.cursor skill and rule folders",
+            },
+          ] satisfies ProjectTreeItem[];
+        }
+
+        const sortedRules = [...snapshot.skillRules].sort((a, b) => a.name.localeCompare(b.name));
+        const limited = withLimit(sortedRules);
+        const rows: ProjectTreeItem[] = limited.items.map(
+          (rule) =>
+            ({
+              kind: "import_skill_rule",
+              name: rule.name,
+              ruleKind: rule.kind,
+              sourcePlatform: rule.sourcePlatform,
+              sourcePath: rule.sourcePath,
+            }) satisfies ProjectTreeItem,
+        );
+
+        if (limited.remaining > 0) {
+          rows.push({
+            kind: "status",
+            label: `... ${limited.remaining} more rules not shown`,
+            description: "Open web workspace for the full list",
+          });
+        }
+
+        return rows;
+      }
+
+      const bySource = new Map<string, { files: number; subagents: number; skillsRules: number }>();
+
+      for (const file of snapshot.files) {
+        const current = bySource.get(file.sourcePlatform) ?? { files: 0, subagents: 0, skillsRules: 0 };
+        current.files += 1;
+        bySource.set(file.sourcePlatform, current);
+      }
+
+      for (const subagent of snapshot.subagents) {
+        const current = bySource.get(subagent.sourcePlatform) ?? { files: 0, subagents: 0, skillsRules: 0 };
+        current.subagents += 1;
+        bySource.set(subagent.sourcePlatform, current);
+      }
+
+      for (const rule of snapshot.skillRules) {
+        const current = bySource.get(rule.sourcePlatform) ?? { files: 0, subagents: 0, skillsRules: 0 };
+        current.skillsRules += 1;
+        bySource.set(rule.sourcePlatform, current);
+      }
+
+      if (bySource.size === 0) {
+        return [
+          {
+            kind: "status",
+            label: "No source system metadata available",
+            description: "Import files first so systems can be inferred",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
+      return [...bySource.entries()]
+        .sort(([a], [b]) => getSourceLabel(a).localeCompare(getSourceLabel(b)))
+        .map(
+          ([platform, counts]) =>
+            ({
+              kind: "import_source",
+              sourcePlatform: platform,
+              label: getSourceLabel(platform),
+              description: `${counts.files} files, ${counts.subagents} agents, ${counts.skillsRules} skills/rules`,
+            }) satisfies ProjectTreeItem,
+        );
+    }
+
+    if (element.kind === "import_source") {
+      const snapshot = this.state.importedWorkspace;
+
+      if (!snapshot) {
+        return [];
+      }
+
+      const sourceFiles = snapshot.files.filter((file) => file.sourcePlatform === element.sourcePlatform);
+      const sourceSubagents = snapshot.subagents.filter((subagent) => subagent.sourcePlatform === element.sourcePlatform);
+      const sourceRules = snapshot.skillRules.filter((rule) => rule.sourcePlatform === element.sourcePlatform);
+      const rows: ProjectTreeItem[] = [
+        {
+          kind: "status",
+          label: `Files: ${sourceFiles.length}`,
+          description: `Agents: ${sourceSubagents.length}, Skills/Rules: ${sourceRules.length}`,
+        },
+      ];
+
+      rows.push(
+        ...sourceFiles.slice(0, 20).map(
+          (file) =>
+            ({
+              kind: "import_file",
+              logicalPath: file.logicalPath,
+              kindLabel: normalizeRuleKind(file.kind),
+              sourceFormat: file.sourceFormat,
+              sourcePlatform: file.sourcePlatform,
+            }) satisfies ProjectTreeItem,
+        ),
+      );
+
+      rows.push(
+        ...sourceSubagents.slice(0, 20).map(
+          (subagent) =>
+            ({
+              kind: "import_subagent",
+              name: subagent.name,
+              slug: subagent.slug,
+              sourcePlatform: subagent.sourcePlatform,
+              sourcePath: subagent.sourcePath,
+            }) satisfies ProjectTreeItem,
+        ),
+      );
+
+      rows.push(
+        ...sourceRules.slice(0, 20).map(
+          (rule) =>
+            ({
+              kind: "import_skill_rule",
+              name: rule.name,
+              ruleKind: rule.kind,
+              sourcePlatform: rule.sourcePlatform,
+              sourcePath: rule.sourcePath,
+            }) satisfies ProjectTreeItem,
+        ),
+      );
+
+      return rows;
+    }
+
     if (element.kind === "section" && element.id === "workspace") {
       const selectedProject = this.state.projects.find((project) => project.id === this.state.selection.projectId);
       const selectedPackage = selectedProject?.packages.find((agentPackage) => agentPackage.id === this.state.selection.packageId);
       const selectedVersion = selectedPackage?.versions.find((version) => version.id === this.state.selection.versionId);
+      const importedWorkspace = this.state.importedWorkspace;
+      const importedArtifacts = importedWorkspace
+        ? importedWorkspace.files.length + importedWorkspace.subagents.length + importedWorkspace.skillRules.length
+        : 0;
 
       return [
         {
@@ -334,6 +720,13 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           kind: "status",
           label: selectedVersion ? `Version: ${selectedVersion.versionNumber}` : "Version: none selected",
           description: selectedVersion?.status ?? "Use Select Version"
+        },
+        {
+          kind: "status",
+          label: `Imported artifacts: ${importedArtifacts}`,
+          description: importedWorkspace
+            ? `${importedWorkspace.files.length} files, ${importedWorkspace.subagents.length} agents, ${importedWorkspace.skillRules.length} skills/rules`
+            : "Select a version to load imported workspace data",
         }
       ] satisfies ProjectTreeItem[];
     }

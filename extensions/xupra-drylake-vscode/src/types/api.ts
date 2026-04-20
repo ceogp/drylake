@@ -41,6 +41,27 @@ export type PackageVersionDetail = {
   versionNumber: number;
   status: string;
   agentPackageId: Id;
+  files?: Array<{
+    id: Id;
+    kind: string;
+    logicalPath: string;
+    sourceFormat: string;
+    createdAt: string;
+  }>;
+  subagents?: Array<{
+    id: Id;
+    name: string;
+    slug: string;
+    metadataJson?: Record<string, unknown> | null;
+    createdAt: string;
+  }>;
+  skillRules?: Array<{
+    id: Id;
+    name: string;
+    kind: string;
+    metadataJson?: Record<string, unknown> | null;
+    createdAt: string;
+  }>;
   transformJobs?: Array<{
     id: Id;
     status: string;

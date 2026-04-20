@@ -37,3 +37,34 @@ export type LastImportSummary = {
   warnings: string[];
   uploadedPaths: string[];
 };
+
+export type ImportedWorkspaceFile = {
+  id: string;
+  logicalPath: string;
+  kind: string;
+  sourceFormat: string;
+  sourcePlatform: string;
+};
+
+export type ImportedWorkspaceSubagent = {
+  id: string;
+  name: string;
+  slug: string;
+  sourcePlatform: string;
+  sourcePath?: string;
+};
+
+export type ImportedWorkspaceSkillRule = {
+  id: string;
+  name: string;
+  kind: string;
+  sourcePlatform: string;
+  sourcePath?: string;
+};
+
+export type ImportedWorkspaceSnapshot = {
+  versionId: string;
+  files: ImportedWorkspaceFile[];
+  subagents: ImportedWorkspaceSubagent[];
+  skillRules: ImportedWorkspaceSkillRule[];
+};

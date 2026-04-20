@@ -13,6 +13,8 @@ import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { selectPackageWithPrompt, selectProjectWithPrompt, selectVersionWithPrompt } from "./services/selection";
 import { StateStore } from "./services/stateStore";
 import { getWorkspaceDisplayName, scanWorkspaceFiles } from "./services/workspaceScanner";
+import type { PackageVersionDetail } from "./types/api";
+import type { ImportedWorkspaceSnapshot } from "./types/package";
 import { HelpTreeProvider } from "./views/helpTreeProvider";
 import { ProjectTreeItem, ProjectTreeProvider } from "./views/projectTreeProvider";
 import { JobTreeProvider } from "./views/jobTreeProvider";
@@ -21,6 +23,83 @@ import { getLogger } from "./utils/logging";
 
 const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
 const LEGACY_BASE_URL_HOSTS = new Set(["52.196.86.96"]);
+const SOURCE_PLATFORM_ALIASES: Record<string, string> = {
+  claude: "claude_code",
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function inferSourcePlatformFromPath(logicalPath?: string) {
+  if (!logicalPath) {
+    return "generic";
+  }
+
+  const normalized = logicalPath.replace(/\\/g, "/").toLowerCase();
+
+  if (normalized === "claude.md" || normalized.startsWith(".claude/")) {
+    return "claude_code";
+  }
+
+  if (normalized === "agents.md" || normalized.startsWith(".codex/") || normalized.startsWith(".agents/")) {
+    return "codex";
+  }
+
+  if (normalized.startsWith(".cursor/")) {
+    return "cursor";
+  }
+
+  return "generic";
+}
+
+function normalizeSourcePlatform(platform: unknown, sourcePath?: string) {
+  if (typeof platform === "string" && platform.trim()) {
+    const normalized = platform.trim().toLowerCase();
+    return SOURCE_PLATFORM_ALIASES[normalized] ?? normalized;
+  }
+
+  return inferSourcePlatformFromPath(sourcePath);
+}
+
+function mapImportedWorkspace(version: PackageVersionDetail): ImportedWorkspaceSnapshot {
+  return {
+    versionId: version.id,
+    files: (version.files ?? []).map((file) => ({
+      id: file.id,
+      logicalPath: file.logicalPath,
+      kind: file.kind,
+      sourceFormat: file.sourceFormat,
+      sourcePlatform: inferSourcePlatformFromPath(file.logicalPath),
+    })),
+    subagents: (version.subagents ?? []).map((subagent) => {
+      const metadata = asRecord(subagent.metadataJson);
+      const sourcePath = typeof metadata?.sourcePath === "string" ? metadata.sourcePath : undefined;
+      return {
+        id: subagent.id,
+        name: subagent.name,
+        slug: subagent.slug,
+        sourcePlatform: normalizeSourcePlatform(metadata?.sourcePlatform, sourcePath),
+        sourcePath,
+      };
+    }),
+    skillRules: (version.skillRules ?? []).map((rule) => {
+      const metadata = asRecord(rule.metadataJson);
+      const sourcePath = typeof metadata?.sourcePath === "string" ? metadata.sourcePath : undefined;
+      return {
+        id: rule.id,
+        name: rule.name,
+        kind: rule.kind,
+        sourcePlatform: normalizeSourcePlatform(metadata?.sourcePlatform, sourcePath),
+        sourcePath,
+      };
+    }),
+  };
+}
 
 function isLegacyBaseUrl(value: string) {
   const trimmed = value.trim();
@@ -115,6 +194,18 @@ export async function activate(context: vscode.ExtensionContext) {
     const selectedProject = projectList.find((project) => project.id === selection.projectId);
     const selectedPackage = selectedProject?.packages.find((agentPackage) => agentPackage.id === selection.packageId);
     const selectedVersion = selectedPackage?.versions.find((version) => version.id === selection.versionId);
+    let importedWorkspace: ImportedWorkspaceSnapshot | null = null;
+
+    if (connection.userEmail && selection.versionId) {
+      try {
+        const versionResponse = await apiClient.getVersion(selection.versionId);
+        importedWorkspace = mapImportedWorkspace(versionResponse.version);
+      } catch (error) {
+        logger.error(
+          `Failed to load imported workspace snapshot for ${selection.versionId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
 
     projectsView.setState({
       projects: projectList,
@@ -122,6 +213,7 @@ export async function activate(context: vscode.ExtensionContext) {
       selection,
       connection,
       lastImport,
+      importedWorkspace,
       workspaceName: getWorkspaceDisplayName(),
       defaultTargetPlatform: String(configuration.get("defaultTargetPlatform", "claude_code"))
     });
