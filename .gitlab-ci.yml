@@ -54,13 +54,28 @@ deploy_staging:
     - eval "$(ssh-agent -s)"
     - mkdir -p ~/.ssh
     - |
+      key_path=~/.ssh/staging_deploy_key
+
       if [ -f "$STAGING_SSH_PRIVATE_KEY" ]; then
         chmod 600 "$STAGING_SSH_PRIVATE_KEY"
         ssh-add "$STAGING_SSH_PRIVATE_KEY"
       else
-        printf "%b" "$STAGING_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/staging_deploy_key
-        chmod 600 ~/.ssh/staging_deploy_key
-        ssh-add ~/.ssh/staging_deploy_key
+        key_value="$(printf '%s' "$STAGING_SSH_PRIVATE_KEY" | tr -d '\r')"
+        key_value="${key_value#\"}"
+        key_value="${key_value%\"}"
+
+        if printf '%s' "$key_value" | grep -q 'BEGIN .* PRIVATE KEY'; then
+          printf '%s\n' "$key_value" > "$key_path"
+        elif printf '%s' "$key_value" | grep -q '\\n'; then
+          printf '%b' "$key_value" > "$key_path"
+        elif printf '%s' "$key_value" | base64 -d > "$key_path" 2>/dev/null; then
+          :
+        else
+          printf '%s\n' "$key_value" > "$key_path"
+        fi
+
+        chmod 600 "$key_path"
+        ssh-add "$key_path"
       fi
     - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
   script:
