@@ -381,7 +381,10 @@
     "typecheck": "tsc --noEmit",
     "check:cursor": "node scripts/check-cursor-compatibility.mjs",
     "prepackage": "npm run build",
-    "package:vsix": "npx @vscode/vsce package --allow-star-activation"
+    "package:vsix": "npx @vscode/vsce package --allow-star-activation",
+    "install:vsix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-vsix.ps1",
+    "reinstall:vsix": "npm run package:vsix && npm run install:vsix",
+    "uninstall:vscode": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-vscode-extension.ps1"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",

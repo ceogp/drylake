@@ -98,6 +98,34 @@ Then install with:
 
 - `Extensions: Install from VSIX...`
 
+## Quick local update (no manual uninstall needed)
+
+From `extensions/xupra-drylake-vscode` run:
+
+```bash
+npm run reinstall:vsix
+```
+
+This packages the latest VSIX and force-installs it over the current install.
+
+Then in VS Code run:
+
+- `Developer: Reload Window`
+
+## Uninstall options
+
+From `extensions/xupra-drylake-vscode` run:
+
+```bash
+npm run uninstall:vscode
+```
+
+Or in VS Code:
+
+- Open Extensions panel
+- Search `xupra.xupra-drylake-vscode`
+- Click the gear icon and choose `Uninstall`
+
 ## Cursor compatibility
 
 The extension stays within standard VS Code APIs.
