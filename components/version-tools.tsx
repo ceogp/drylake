@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 const TARGETS = [
   { value: "codex", label: "Codex" },
@@ -49,13 +49,102 @@ type JobResponse = {
   };
 };
 
+type ImportedFileRecord = {
+  dbId: string;
+  logicalPath: string;
+  kind: string;
+  sourceFormat: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksumSha256: string;
+  storageKey: string;
+  createdAt: string;
+  previewText: string | null;
+  previewTruncated: boolean;
+  previewError: string | null;
+};
+
+type FileListResponse = {
+  ok: boolean;
+  source?: string;
+  files?: ImportedFileRecord[];
+  error?: {
+    message?: string;
+  };
+};
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return "0 B";
+  }
+
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatTimestamp(timestamp: string) {
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) {
+    return timestamp;
+  }
+
+  return date.toLocaleString();
+}
+
 export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps) {
   const router = useRouter();
   const [targetPlatform, setTargetPlatform] = useState<(typeof TARGETS)[number]["value"]>("claude_code");
   const [deploymentTargetId, setDeploymentTargetId] = useState<string>(deploymentTargets[0]?.id ?? "");
   const [statusMessage, setStatusMessage] = useState("No job has been run yet.");
   const [latestPreview, setLatestPreview] = useState<Array<{ logicalPath: string; preview: string }>>([]);
+  const [importedFiles, setImportedFiles] = useState<ImportedFileRecord[]>([]);
+  const [importedFilesSource, setImportedFilesSource] = useState("postgres_package_file");
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+
+  const loadImportedFiles = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!options?.silent) {
+        setIsLoadingFiles(true);
+      }
+
+      try {
+        const response = await fetch(
+          `/api/v1/versions/${versionId}/files?kind=raw_source&preview=1&limit=30`,
+          {
+            method: "GET",
+            cache: "no-store",
+          },
+        );
+        const payload = (await response.json()) as FileListResponse;
+
+        if (!response.ok || !payload.ok) {
+          if (!options?.silent) {
+            setStatusMessage(payload.error?.message ?? "Failed to load imported files.");
+          }
+          return;
+        }
+
+        setImportedFiles(payload.files ?? []);
+        setImportedFilesSource(payload.source ?? "postgres_package_file");
+      } catch (error) {
+        if (!options?.silent) {
+          setStatusMessage(error instanceof Error ? error.message : "Failed to load imported files.");
+        }
+      } finally {
+        setIsLoadingFiles(false);
+      }
+    },
+    [versionId],
+  );
 
   async function runJsonPost(url: string, body?: Record<string, unknown>) {
     setIsBusy(true);
@@ -98,6 +187,7 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
         setStatusMessage(
           `Imported ${payload.imported.rawFiles} files, ${payload.imported.subagents} subagents, ${payload.imported.skills} skills, ${payload.imported.rules} rules.`,
         );
+        await loadImportedFiles();
       } else if (payload.job) {
         setStatusMessage(
           payload.job.status === "queued" || payload.job.status === "running"
@@ -136,8 +226,14 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
         return;
       }
 
-      setStatusMessage(`Uploaded ${payload.files?.length ?? 0} file(s).`);
+      const uploadedFiles = payload.files ?? [];
+      const uploadedNames = uploadedFiles.slice(0, 3).map((file) => file.logicalPath);
+      const uploadedSuffix = uploadedFiles.length > uploadedNames.length ? ", ..." : "";
+      const uploadedNameList = uploadedNames.length > 0 ? ` (${uploadedNames.join(", ")}${uploadedSuffix})` : "";
+
+      setStatusMessage(`Uploaded ${uploadedFiles.length} file(s)${uploadedNameList}.`);
       form.reset();
+      await loadImportedFiles();
       router.refresh();
     } finally {
       setIsBusy(false);
@@ -239,6 +335,63 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
         Upload, import, and compatibility checks stay available on free. Export preview and deploy
         unlock on paid plans.
       </div>
+
+      <section className="space-y-4 rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
+            Imported Source Files
+          </h3>
+          <button
+            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.16em] text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isBusy || isLoadingFiles}
+            onClick={() => void loadImportedFiles()}
+            type="button"
+          >
+            {isLoadingFiles ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+        <p className="text-sm leading-7 text-stone-700">
+          These records are read from Postgres table <span className="font-mono text-xs">PackageFile</span>.
+          Preview text is loaded via each row&apos;s <span className="font-mono text-xs">storageKey</span> from artifact storage.
+        </p>
+        <p className="text-xs leading-6 text-stone-500">
+          Source: <span className="font-mono">{importedFilesSource}</span>
+        </p>
+        {importedFiles.length > 0 ? (
+          <div className="grid gap-3">
+            {importedFiles.map((file) => (
+              <article key={file.dbId} className="overflow-hidden rounded-[1.25rem] border border-stone-200 bg-white">
+                <div className="border-b border-stone-200 bg-stone-50 px-4 py-3">
+                  <p className="font-mono text-xs uppercase tracking-[0.16em] text-stone-500">
+                    {file.logicalPath}
+                  </p>
+                  <p className="mt-1 text-xs text-stone-600">
+                    dbId {file.dbId} · {file.sourceFormat} · {formatBytes(file.sizeBytes)} · uploaded{" "}
+                    {formatTimestamp(file.createdAt)} · checksum {file.checksumSha256.slice(0, 12)}
+                  </p>
+                </div>
+                {file.previewText ? (
+                  <pre className="max-h-56 overflow-auto bg-stone-950 px-4 py-4 font-mono text-xs leading-6 text-stone-100">
+                    {file.previewText}
+                    {file.previewTruncated ? "\n\n[preview truncated]" : ""}
+                  </pre>
+                ) : (
+                  <div className="px-4 py-4 text-xs leading-6 text-stone-600">
+                    {file.previewError
+                      ? `Preview unavailable: ${file.previewError}`
+                      : "No text preview available for this file type."}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700">
+            No raw source files are currently loaded in this panel. Click Refresh to read existing
+            Postgres records, or upload files first and then run import.
+          </div>
+        )}
+      </section>
 
       <div className="grid gap-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5">
         <div>

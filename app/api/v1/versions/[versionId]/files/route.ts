@@ -1,8 +1,9 @@
 import path from "node:path";
 
-import { created, badRequest, forbidden, internalError, unauthorized } from "@/lib/api/http";
+import { ok, created, badRequest, forbidden, internalError, unauthorized } from "@/lib/api/http";
 import { prisma } from "@/lib/prisma";
 import { requireVersionAccess } from "@/lib/services/access";
+import { readArtifactText } from "@/lib/storage/artifacts";
 import { saveArtifactBuffer } from "@/lib/storage/artifacts";
 
 export const runtime = "nodejs";
@@ -12,6 +13,144 @@ type Context = {
     versionId: string;
   }>;
 };
+
+function parseLimit(rawValue: string | null) {
+  const fallback = 25;
+
+  if (!rawValue) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(rawValue, 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.min(parsed, 100);
+}
+
+function canReadTextPreview(file: { mimeType: string; logicalPath: string }) {
+  if (file.mimeType.startsWith("text/")) {
+    return true;
+  }
+
+  const lowerPath = file.logicalPath.toLowerCase();
+  return (
+    lowerPath.endsWith(".md") ||
+    lowerPath.endsWith(".mdc") ||
+    lowerPath.endsWith(".txt") ||
+    lowerPath.endsWith(".json") ||
+    lowerPath.endsWith(".json5") ||
+    lowerPath.endsWith(".yaml") ||
+    lowerPath.endsWith(".yml") ||
+    lowerPath.endsWith(".toml") ||
+    lowerPath.endsWith(".py")
+  );
+}
+
+function toPreviewText(text: string) {
+  const maxChars = 1600;
+  const trimmed = text.slice(0, maxChars);
+
+  return {
+    text: trimmed,
+    truncated: text.length > trimmed.length,
+  };
+}
+
+export async function GET(request: Request, context: Context) {
+  try {
+    const { versionId } = await context.params;
+    await requireVersionAccess(versionId);
+
+    const url = new URL(request.url);
+    const kind = url.searchParams.get("kind")?.trim() || "raw_source";
+    const includePreview = url.searchParams.get("preview") === "1";
+    const limit = parseLimit(url.searchParams.get("limit"));
+
+    const files = await prisma.packageFile.findMany({
+      where: {
+        packageVersionId: versionId,
+        kind,
+      },
+      orderBy: [{ createdAt: "desc" }, { logicalPath: "asc" }],
+      take: limit,
+    });
+
+    const records = await Promise.all(
+      files.map(async (file) => {
+        if (!includePreview || !canReadTextPreview(file)) {
+          return {
+            dbId: file.id,
+            logicalPath: file.logicalPath,
+            kind: file.kind,
+            sourceFormat: file.sourceFormat,
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+            checksumSha256: file.checksumSha256,
+            storageKey: file.storageKey,
+            createdAt: file.createdAt.toISOString(),
+            previewText: null,
+            previewTruncated: false,
+            previewError: null,
+          };
+        }
+
+        try {
+          const text = await readArtifactText(file.storageKey);
+          const preview = toPreviewText(text);
+
+          return {
+            dbId: file.id,
+            logicalPath: file.logicalPath,
+            kind: file.kind,
+            sourceFormat: file.sourceFormat,
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+            checksumSha256: file.checksumSha256,
+            storageKey: file.storageKey,
+            createdAt: file.createdAt.toISOString(),
+            previewText: preview.text,
+            previewTruncated: preview.truncated,
+            previewError: null,
+          };
+        } catch (error) {
+          return {
+            dbId: file.id,
+            logicalPath: file.logicalPath,
+            kind: file.kind,
+            sourceFormat: file.sourceFormat,
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+            checksumSha256: file.checksumSha256,
+            storageKey: file.storageKey,
+            createdAt: file.createdAt.toISOString(),
+            previewText: null,
+            previewTruncated: false,
+            previewError: error instanceof Error ? error.message : "Preview unavailable",
+          };
+        }
+      }),
+    );
+
+    return ok({
+      source: "postgres_package_file",
+      files: records,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Authentication required") {
+      return unauthorized();
+    }
+
+    if (error instanceof Error && error.message === "Forbidden") {
+      return forbidden("You do not have access to that package version.");
+    }
+
+    console.error(error);
+    return internalError("Failed to load package files");
+  }
+}
 
 export async function POST(request: Request, context: Context) {
   try {
