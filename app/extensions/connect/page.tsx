@@ -3,8 +3,10 @@ import Link from "next/link";
 import { ExtensionConnectAuthButtons } from "@/components/extension-connect-auth-buttons";
 import { ExtensionBrowserReturn } from "@/components/extension-browser-return";
 import { ExtensionConnectCard } from "@/components/extension-connect-card";
+import { ConnectedWorkspaceCard } from "@/components/connected-workspace-card";
 import { createExtensionAuthRequest } from "@/lib/services/extension-auth-requests";
 import { getCurrentAppContext } from "@/lib/services/current-user";
+import { getImportWorkspacePath } from "@/lib/services/workspace";
 
 const allowedCallbackProtocols = new Set(["vscode:", "vscode-insiders:", "cursor:"]);
 
@@ -95,6 +97,8 @@ export default async function ExtensionConnectPage({
   const reconnectPath = buildReconnectPath(callback, editor);
   const manualFallbackPath = buildManualFallbackPath(callback, editor);
   const context = await getCurrentAppContext();
+  const workspaceHref = context ? (await getImportWorkspacePath()) ?? "/app" : "/app";
+  const signedInLabel = context?.user.profile?.displayName ?? context?.user.email ?? "";
   const browserRequest =
     callback && context && !manualMode
       ? await createExtensionAuthRequest({
@@ -131,9 +135,9 @@ export default async function ExtensionConnectPage({
             </Link>
             <Link
               className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
-              href="/app"
+              href={workspaceHref}
             >
-              Open App
+              Open Import Workspace
             </Link>
           </div>
         </div>
@@ -144,6 +148,7 @@ export default async function ExtensionConnectPage({
               callback={callback}
               code={browserRequest.code}
               manualFallbackHref={manualFallbackPath}
+              workspaceHref={workspaceHref}
             />
           ) : callback && !manualMode ? (
             <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
@@ -167,7 +172,15 @@ export default async function ExtensionConnectPage({
           )}
 
           <article className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
+            {context ? (
+              <ConnectedWorkspaceCard
+                organizationName={context.organization.name}
+                signedInLabel={signedInLabel}
+                workspaceHref={workspaceHref}
+              />
+            ) : null}
+
+            <p className={`font-mono text-xs uppercase tracking-[0.2em] text-orange-700 ${context ? "mt-6" : ""}`}>
               What to do
             </p>
             <div className="mt-5 grid gap-4">
@@ -185,9 +198,9 @@ export default async function ExtensionConnectPage({
             </div>
 
             <div className="mt-6 rounded-[1.5rem] border border-dashed border-stone-300 bg-white p-4 text-sm leading-7 text-stone-700">
-              Upload, import, and compatibility checks are available on free. Upgrade later from{" "}
-              <span className="font-mono text-xs">/billing</span> when you want export preview,
-              credential vault, or deployment workflow.
+              Upload, import, and compatibility checks are available on free. Compatibility only
+              checks whether a target is ready. Upgrade later from <span className="font-mono text-xs">/billing</span>{" "}
+              when you want export preview, credential vault, or deployment workflow.
             </div>
 
             <div className="mt-4 rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">

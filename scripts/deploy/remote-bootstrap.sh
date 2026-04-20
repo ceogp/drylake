@@ -13,6 +13,53 @@ LEGACY_IP_HOST="${LEGACY_IP_HOST:-}"
 
 export DEBIAN_FRONTEND=noninteractive
 
+prune_release_directories() {
+  local keep_latest_count="${1:-2}"
+  local current_target=""
+  local release_dir_path=""
+  local keep_dir=""
+  local should_keep=""
+  local -a release_dirs=()
+  local -a keep_dirs=()
+
+  if [ -L "$APP_DIR/current" ]; then
+    current_target="$(readlink -f "$APP_DIR/current" || true)"
+  fi
+
+  if [ -n "$current_target" ] && [[ "$current_target" == "$APP_DIR/releases/"* ]]; then
+    keep_dirs+=("$current_target")
+  fi
+
+  mapfile -t release_dirs < <(find "$APP_DIR/releases" -mindepth 1 -maxdepth 1 -type d | sort)
+
+  while [ "${#release_dirs[@]}" -gt 0 ] && [ "${#keep_dirs[@]}" -lt $((keep_latest_count + 1)) ]; do
+    keep_dirs+=("${release_dirs[-1]}")
+    unset 'release_dirs[-1]'
+  done
+
+  mapfile -t release_dirs < <(find "$APP_DIR/releases" -mindepth 1 -maxdepth 1 -type d | sort)
+
+  for release_dir_path in "${release_dirs[@]}"; do
+    should_keep="0"
+
+    for keep_dir in "${keep_dirs[@]}"; do
+      if [ "$release_dir_path" = "$keep_dir" ]; then
+        should_keep="1"
+        break
+      fi
+    done
+
+    if [ "$should_keep" = "0" ] && [[ "$release_dir_path" == "$APP_DIR/releases/"* ]]; then
+      rm -rf -- "$release_dir_path"
+    fi
+  done
+}
+
+cleanup_npm_cache() {
+  sudo -u "$APP_USER" npm cache clean --force >/dev/null 2>&1 || true
+  rm -rf -- "/home/$APP_USER/.npm/_cacache" 2>/dev/null || true
+}
+
 apt-get update
 apt-get install -y ca-certificates curl git build-essential nginx postgresql postgresql-contrib
 
@@ -24,6 +71,9 @@ fi
 id -u "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash "$APP_USER"
 mkdir -p "$APP_DIR/releases" "$APP_DIR/shared"
 chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
+
+prune_release_directories 1
+cleanup_npm_cache
 
 systemctl enable postgresql
 systemctl start postgresql
@@ -38,6 +88,16 @@ fi
 
 release_name="$(date +%Y%m%d%H%M%S)"
 release_dir="$APP_DIR/releases/$release_name"
+release_activated="0"
+
+cleanup_incomplete_release() {
+  if [ "$release_activated" != "1" ] && [ -n "${release_dir:-}" ] && [ -d "$release_dir" ] && [[ "$release_dir" == "$APP_DIR/releases/"* ]]; then
+    rm -rf -- "$release_dir"
+  fi
+}
+
+trap cleanup_incomplete_release EXIT
+
 mkdir -p "$release_dir"
 tar -xf "$RELEASE_TAR" -C "$release_dir"
 
@@ -93,6 +153,10 @@ certificate_privkey="$certificate_dir/privkey.pem"
 sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev && npx tsx scripts/prisma/render-schema.ts postgresql prisma/schema.runtime.prisma && npx prisma generate --schema prisma/schema.runtime.prisma && npx prisma db push --schema prisma/schema.runtime.prisma && npx tsx prisma/seed.ts && npm run build"
 
 ln -sfn "$release_dir" "$APP_DIR/current"
+release_activated="1"
+prune_release_directories 2
+cleanup_npm_cache
+rm -f -- "$RELEASE_TAR" "$ENV_FILE"
 
 cat >/etc/systemd/system/xupra-drylake.service <<SERVICE
 [Unit]
@@ -192,3 +256,4 @@ systemctl enable nginx
 systemctl restart nginx
 systemctl enable xupra-drylake
 systemctl restart xupra-drylake
+trap - EXIT

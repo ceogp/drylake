@@ -99,3 +99,33 @@ export async function getStarterWorkspaceRedirectPath() {
 
   return `/versions/${starterVersion.id}`;
 }
+
+export async function getImportWorkspacePath() {
+  const context = await getCurrentAppContext();
+
+  if (!context) {
+    return null;
+  }
+
+  const starterVersion = await prisma.packageVersion.findFirst({
+    where: {
+      origin: STARTER_VERSION_ORIGIN,
+      agentPackage: {
+        project: {
+          organizationId: context.organization.id,
+          archivedAt: null,
+        },
+      },
+    },
+    orderBy: [{ versionNumber: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+    },
+  });
+
+  if (!starterVersion) {
+    return null;
+  }
+
+  return `/versions/${starterVersion.id}`;
+}

@@ -5,6 +5,7 @@ import { addSkillRuleAction, addSubagentAction, updateVersionAction } from "@/ap
 import { VersionTools } from "@/components/version-tools";
 import { requireVersionAccess } from "@/lib/services/access";
 import { prisma } from "@/lib/prisma";
+import { STARTER_VERSION_ORIGIN } from "@/lib/services/dev-session";
 
 type PageProps = {
   params: Promise<{
@@ -68,6 +69,10 @@ export default async function VersionPage({ params }: PageProps) {
     ? (manifest.targetPlatforms as string[])
     : [];
   const tools = Array.isArray(agentDefinition.tools) ? (agentDefinition.tools as string[]) : [];
+  const isStarterWorkspace = version.origin === STARTER_VERSION_ORIGIN;
+  const isStarterWorkspaceEmpty =
+    version.files.length === 0 && version.subagents.length === 0 && version.skillRules.length === 0;
+  const signedInLabel = access.context.user.profile?.displayName ?? access.context.user.email;
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_48%,_#ffffff_100%)]">
@@ -91,14 +96,68 @@ export default async function VersionPage({ params }: PageProps) {
                 This version is the canonical package behind the extension workflow. Import source files, keep them, refine the package, then generate target outputs for Codex, Claude Code, Cursor, and Claude Agents.
               </p>
             </div>
-            <div className="rounded-[1.5rem] border border-stone-200 bg-white px-5 py-4 shadow-sm">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Status</p>
-              <p className="mt-2 text-sm text-stone-700">
-                {version.status} · created {version.createdAt.toLocaleString()}
-              </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                href="/settings"
+              >
+                Profile And Settings
+              </Link>
+              <Link
+                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                href="/billing"
+              >
+                Billing
+              </Link>
+              <div className="rounded-[1.5rem] border border-stone-200 bg-white px-5 py-4 shadow-sm">
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Status</p>
+                <p className="mt-2 text-sm text-stone-700">
+                  {version.status} · created {version.createdAt.toLocaleString()}
+                </p>
+              </div>
             </div>
           </div>
         </div>
+
+        {isStarterWorkspace ? (
+          <section className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-700">
+                  Connected
+                </p>
+                <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+                  {isStarterWorkspaceEmpty ? "Your import workspace is ready." : "Your import workspace is active."}
+                </h2>
+                <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
+                  Signed in as {signedInLabel}. Upload files here or reconnect the editor extension
+                  and let it scan the repo. Compatibility checks only verify whether this version is
+                  ready for a target. They do not export or deploy anything.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-700"
+                  href="#version-upload"
+                >
+                  Upload Files
+                </a>
+                <Link
+                  className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                  href="/extensions/install"
+                >
+                  Connect Extension
+                </Link>
+                <Link
+                  className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                  href="/settings"
+                >
+                  Profile And Settings
+                </Link>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <section className="grid gap-4 xl:grid-cols-3">
           <article className="rounded-[1.75rem] border border-stone-200 bg-white p-5 shadow-sm">

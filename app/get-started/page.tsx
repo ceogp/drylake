@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
 
-import { getAuthSessionSummary } from "@/lib/services/auth";
+import { GetStartedAuthActions } from "@/components/get-started-auth-actions";
+import { getAuthSetup } from "@/lib/services/auth";
 
 const steps = [
   {
@@ -28,9 +28,8 @@ const notes = [
   "Xupra stores the source files, builds the canonical package, and generates the target format after that.",
 ];
 
-export default async function GetStartedPage() {
-  const auth = await getAuthSessionSummary();
-  const isSignedIn = auth.session.status === "active";
+export default function GetStartedPage() {
+  const auth = getAuthSetup();
   const useClerkUi = auth.mode === "clerk" && auth.configured;
 
   return (
@@ -50,34 +49,8 @@ export default async function GetStartedPage() {
                 workspace, then go back to VS Code or Cursor to import the repo you already have.
               </p>
               <div className="flex flex-wrap gap-3">
-                {isSignedIn ? (
-                  <>
-                    <Link
-                      className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
-                      href="/extensions/install"
-                    >
-                      Install The Extension
-                    </Link>
-                    <Link
-                      className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
-                      href="/app"
-                    >
-                      Open Starter Workspace
-                    </Link>
-                  </>
-                ) : useClerkUi ? (
-                  <>
-                    <SignUpButton mode="modal">
-                      <button className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700">
-                        Create Workspace
-                      </button>
-                    </SignUpButton>
-                    <SignInButton mode="modal">
-                      <button className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100">
-                        Sign In
-                      </button>
-                    </SignInButton>
-                  </>
+                {useClerkUi ? (
+                  <GetStartedAuthActions workspaceHref="/app" />
                 ) : (
                   <Link
                     className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
@@ -97,6 +70,9 @@ export default async function GetStartedPage() {
                 <p>
                   Workspace creation:{" "}
                   <span className="text-white">automatic, including a starter import version</span>
+                </p>
+                <p>
+                  After sign in: <span className="text-white">the page flips to Connected and the import workspace button becomes available</span>
                 </p>
                 <p>
                   First plan: <span className="text-white">free by default</span>

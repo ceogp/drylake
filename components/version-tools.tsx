@@ -81,10 +81,18 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
       }
 
       if (payload.result?.status) {
+        const detailParts: string[] = [];
+
+        if (payload.result.unsupported?.length) {
+          detailParts.push(`blocked: ${payload.result.unsupported.join("; ")}`);
+        }
+
+        if (payload.result.warnings?.length) {
+          detailParts.push(`warnings: ${payload.result.warnings.join("; ")}`);
+        }
+
         setStatusMessage(
-          `Compatibility: ${payload.result.status}${
-            payload.result.warnings?.length ? ` | warnings: ${payload.result.warnings.join("; ")}` : ""
-          }`,
+          `Compatibility: ${payload.result.status}${detailParts.length ? ` | ${detailParts.join(" | ")}` : ""}`,
         );
       } else if (payload.imported) {
         setStatusMessage(
@@ -205,7 +213,7 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
           }
           type="button"
         >
-          Compatibility Check
+          Check Compatibility
         </button>
         <button
           className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
@@ -219,6 +227,12 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
         >
           Export Preview
         </button>
+      </div>
+
+      <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-7 text-stone-700">
+        Compatibility checks tell you whether the current version has enough instructions, skills,
+        rules, or subagents for the selected target. They do not change files, export artifacts, or
+        deploy anything.
       </div>
 
       <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-7 text-stone-700">
