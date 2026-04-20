@@ -57,26 +57,45 @@ deploy_staging:
       key_path=~/.ssh/staging_deploy_key
 
       if [ -f "$STAGING_SSH_PRIVATE_KEY" ]; then
-        chmod 600 "$STAGING_SSH_PRIVATE_KEY"
-        ssh-add "$STAGING_SSH_PRIVATE_KEY"
+        cp "$STAGING_SSH_PRIVATE_KEY" "$key_path"
       else
         key_value="$(printf '%s' "$STAGING_SSH_PRIVATE_KEY" | tr -d '\r')"
         key_value="${key_value#\"}"
         key_value="${key_value%\"}"
+        raw_candidate="${key_path}.raw"
+        escaped_candidate="${key_path}.escaped"
+        b64_candidate="${key_path}.b64"
+        selected_key=""
 
-        if printf '%s' "$key_value" | grep -q 'BEGIN .* PRIVATE KEY'; then
-          printf '%s\n' "$key_value" > "$key_path"
-        elif printf '%s' "$key_value" | grep -q '\\n'; then
-          printf '%b' "$key_value" > "$key_path"
-        elif printf '%s' "$key_value" | base64 -d > "$key_path" 2>/dev/null; then
-          :
-        else
-          printf '%s\n' "$key_value" > "$key_path"
+        # Try the most common formats in order: raw multiline, escaped newline text, and base64.
+        printf '%s\n' "$key_value" > "$raw_candidate"
+        printf '%b' "$key_value" > "$escaped_candidate"
+        if ! printf '%s' "$key_value" | base64 -d > "$b64_candidate" 2>/dev/null; then
+          rm -f "$b64_candidate"
         fi
 
-        chmod 600 "$key_path"
-        ssh-add "$key_path"
+        for candidate in "$raw_candidate" "$escaped_candidate" "$b64_candidate"; do
+          if [ -s "$candidate" ] && ssh-keygen -y -f "$candidate" >/dev/null 2>&1; then
+            selected_key="$candidate"
+            break
+          fi
+        done
+
+        if [ -z "$selected_key" ]; then
+          echo "Unable to parse STAGING_SSH_PRIVATE_KEY. Use file-type, raw OpenSSH text, escaped newlines, or base64." >&2
+          exit 1
+        fi
+
+        cp "$selected_key" "$key_path"
+        rm -f "$raw_candidate" "$escaped_candidate" "$b64_candidate"
       fi
+
+      chmod 600 "$key_path"
+      if ! ssh-keygen -y -f "$key_path" >/dev/null 2>&1; then
+        echo "STAGING_SSH_PRIVATE_KEY is present but not a valid private key." >&2
+        exit 1
+      fi
+      ssh-add "$key_path"
     - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
   script:
     - ': "${STAGING_HOST:?STAGING_HOST is required}"'

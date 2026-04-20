@@ -93,16 +93,11 @@ export default async function VersionPage({ params }: PageProps) {
                 Transfer Center
               </h1>
               <p className="mt-3 max-w-3xl text-lg leading-8 text-stone-700">
-                This version is the canonical package behind the extension workflow. Import source files, keep them, refine the package, then generate target outputs for Codex, Claude Code, Cursor, and Claude Agents.
+                This is your import workspace. Bring in source files from the extension or browser,
+                confirm they landed, and generate target outputs for Codex, Claude Code, Cursor, and Claude Agents.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link
-                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
-                href="/settings"
-              >
-                Profile And Settings
-              </Link>
               <Link
                 className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
                 href="/billing"
@@ -131,8 +126,8 @@ export default async function VersionPage({ params }: PageProps) {
                 </h2>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
                   Signed in as {signedInLabel}. Upload files here or reconnect the editor extension
-                  and let it scan the repo. Compatibility checks only verify whether this version is
-                  ready for a target. They do not export or deploy anything.
+                  and let it scan the repo. Start by importing files and checking that they appear in
+                  Imported Source Files below.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
