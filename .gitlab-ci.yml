@@ -60,9 +60,6 @@ deploy_staging:
     - ': "${STAGING_SSH_USER:?STAGING_SSH_USER is required}"'
     - ': "${STAGING_SSH_PRIVATE_KEY:?STAGING_SSH_PRIVATE_KEY is required}"'
     - ': "${STAGING_ENV_FILE:?STAGING_ENV_FILE is required}"'
-    - ': "${STAGING_DB_NAME:?STAGING_DB_NAME is required}"'
-    - ': "${STAGING_DB_USER:?STAGING_DB_USER is required}"'
-    - ': "${STAGING_DB_PASSWORD:?STAGING_DB_PASSWORD is required}"'
     - git archive --format=tar HEAD -o release.tar
     - printf "%s" "$STAGING_ENV_FILE" > staging.env
     - |
@@ -132,9 +129,6 @@ deploy_staging:
           APP_GROUP=xupra \
           RELEASE_TAR=/tmp/xupra-release.tar \
           ENV_FILE=/tmp/xupra-staging.env \
-          DB_NAME=$STAGING_DB_NAME \
-          DB_USER=$STAGING_DB_USER \
-          DB_PASSWORD=$STAGING_DB_PASSWORD \
           bash /tmp/xupra-bootstrap.sh"; then
           break
         fi

@@ -6,12 +6,15 @@ APP_USER="${APP_USER:-xupra}"
 APP_GROUP="${APP_GROUP:-xupra}"
 RELEASE_TAR="${RELEASE_TAR:?RELEASE_TAR is required}"
 ENV_FILE="${ENV_FILE:?ENV_FILE is required}"
-DB_NAME="${DB_NAME:?DB_NAME is required}"
-DB_USER="${DB_USER:?DB_USER is required}"
-DB_PASSWORD="${DB_PASSWORD:?DB_PASSWORD is required}"
+DB_NAME="${DB_NAME:-}"
+DB_USER="${DB_USER:-}"
+DB_PASSWORD="${DB_PASSWORD:-}"
 LEGACY_IP_HOST="${LEGACY_IP_HOST:-}"
 
 export DEBIAN_FRONTEND=noninteractive
+set -a
+source "$ENV_FILE"
+set +a
 
 install_node_runtime() {
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
@@ -78,6 +81,35 @@ else
   fi
 fi
 
+if [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ]; then
+  if [ -z "${DATABASE_URL:-}" ]; then
+    echo "DATABASE_URL is required when DB_NAME, DB_USER, or DB_PASSWORD is not provided." >&2
+    exit 1
+  fi
+
+  mapfile -t db_parts < <(node -e "
+const input = process.env.DATABASE_URL || '';
+const parsed = new URL(input);
+if (!parsed.protocol.startsWith('postgres')) process.exit(2);
+const dbName = decodeURIComponent(parsed.pathname.replace(/^\\/+/, ''));
+const dbUser = decodeURIComponent(parsed.username || '');
+const dbPassword = decodeURIComponent(parsed.password || '');
+if (!dbName || !dbUser || !dbPassword) process.exit(3);
+console.log(dbName);
+console.log(dbUser);
+console.log(dbPassword);
+")
+
+  if [ "${#db_parts[@]}" -lt 3 ]; then
+    echo "Failed to parse DB_NAME, DB_USER, and DB_PASSWORD from DATABASE_URL." >&2
+    exit 1
+  fi
+
+  DB_NAME="${DB_NAME:-${db_parts[0]}}"
+  DB_USER="${DB_USER:-${db_parts[1]}}"
+  DB_PASSWORD="${DB_PASSWORD:-${db_parts[2]}}"
+fi
+
 id -u "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash "$APP_USER"
 mkdir -p "$APP_DIR/releases" "$APP_DIR/shared"
 chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
@@ -88,12 +120,22 @@ cleanup_npm_cache
 systemctl enable postgresql
 systemctl start postgresql
 
-if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$DB_USER'" | grep -q 1; then
-  sudo -u postgres psql -c "CREATE ROLE $DB_USER LOGIN PASSWORD '$DB_PASSWORD';"
+if ! sudo -u postgres psql -v db_user="$DB_USER" -tAc "SELECT 1 FROM pg_roles WHERE rolname = :'db_user'" | grep -q 1; then
+  sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_user="$DB_USER" --set=db_password="$DB_PASSWORD" <<'SQL'
+DO $$
+BEGIN
+  EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', :'db_user', :'db_password');
+END $$;
+SQL
 fi
 
-if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1; then
-  sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+if ! sudo -u postgres psql -v db_name="$DB_NAME" -tAc "SELECT 1 FROM pg_database WHERE datname = :'db_name'" | grep -q 1; then
+  sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_name="$DB_NAME" --set=db_user="$DB_USER" <<'SQL'
+DO $$
+BEGIN
+  EXECUTE format('CREATE DATABASE %I OWNER %I', :'db_name', :'db_user');
+END $$;
+SQL
 fi
 
 release_name="$(date +%Y%m%d%H%M%S)"
@@ -110,10 +152,6 @@ trap cleanup_incomplete_release EXIT
 
 mkdir -p "$release_dir"
 tar -xf "$RELEASE_TAR" -C "$release_dir"
-
-set -a
-source "$ENV_FILE"
-set +a
 
 app_base_url="${APP_BASE_URL:-}"
 
