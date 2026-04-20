@@ -3,6 +3,17 @@ import type { Organization, Profile, User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/utils/slug";
 
+export const STARTER_PROJECT_SLUG = "agent-library";
+export const STARTER_PACKAGE_SLUG = "imported-agents";
+export const STARTER_VERSION_ORIGIN = "starter";
+
+const starterProjectName = "Agent Library";
+const starterProjectDescription =
+  "Starter library for your imported skills, rules, and agent files.";
+const starterPackageName = "Imported Agents";
+const starterPackageDescription =
+  "Upload source files here first, then import them into the canonical package.";
+
 type DevSessionInput = {
   email: string;
   displayName: string;
@@ -49,6 +60,94 @@ async function finalizeSessionUser(email: string) {
 function buildOrgSlug(displayName: string, email: string) {
   const base = toSlug(displayName || email.split("@")[0]) || "xupra";
   return `${base}-org`;
+}
+
+async function ensureStarterWorkspace(input: {
+  organizationId: string;
+  userId: string;
+}) {
+  const project = await prisma.project.upsert({
+    where: {
+      organizationId_slug: {
+        organizationId: input.organizationId,
+        slug: STARTER_PROJECT_SLUG,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: input.organizationId,
+      createdByUserId: input.userId,
+      name: starterProjectName,
+      slug: STARTER_PROJECT_SLUG,
+      description: starterProjectDescription,
+    },
+  });
+
+  const agentPackage = await prisma.agentPackage.upsert({
+    where: {
+      projectId_slug: {
+        projectId: project.id,
+        slug: STARTER_PACKAGE_SLUG,
+      },
+    },
+    update: {},
+    create: {
+      projectId: project.id,
+      createdByUserId: input.userId,
+      name: starterPackageName,
+      slug: STARTER_PACKAGE_SLUG,
+      description: starterPackageDescription,
+      sourcePlatform: "generic",
+      defaultTargetPlatform: "claude_code",
+    },
+  });
+
+  const existingVersion = await prisma.packageVersion.findUnique({
+    where: {
+      agentPackageId_versionNumber: {
+        agentPackageId: agentPackage.id,
+        versionNumber: 1,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const version =
+    existingVersion ??
+    (await prisma.packageVersion.create({
+      data: {
+        agentPackageId: agentPackage.id,
+        versionNumber: 1,
+        status: "draft",
+        origin: STARTER_VERSION_ORIGIN,
+        manifestJson: {
+          name: starterPackageName,
+          targetPlatforms: ["codex", "claude_code", "claude_agents", "cursor"],
+          starterTemplate: true,
+        },
+        agentDefinitionJson: {
+          description: "Starter import package for your existing agent files.",
+          instructions: "",
+          tools: [],
+        },
+        validationJson: {
+          issues: [],
+          warnings: [],
+        },
+        createdByUserId: input.userId,
+      },
+    }));
+
+  if (!agentPackage.latestVersionId) {
+    await prisma.agentPackage.update({
+      where: { id: agentPackage.id },
+      data: {
+        latestVersionId: version.id,
+      },
+    });
+  }
 }
 
 export async function ensureDevSession(input: DevSessionInput): Promise<{
@@ -193,6 +292,11 @@ export async function ensureAppSession(input: AppSessionInput): Promise<{
         advanced_reporting: false,
       },
     },
+  });
+
+  await ensureStarterWorkspace({
+    organizationId: organization.id,
+    userId: user.id,
   });
 
   const refreshed = await finalizeSessionUser(input.email);

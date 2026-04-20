@@ -40,8 +40,9 @@ export default function ExtensionsPage() {
             <p className="max-w-4xl text-lg leading-8 text-stone-700">
               The extension is the front door. Users install it, click Connect, sign up in the
               browser, return to VS Code or Cursor, and immediately start scanning agent files,
-              checking portability, generating exports, and moving systems between Codex, Claude
-              Code, Cursor, and Claude Agents.
+              importing them into the starter workspace, checking portability, and only upgrading
+              later when they want export and deployment across Codex, Claude Code, Cursor, and
+              Claude Agents.
             </p>
 
             <div className="flex flex-wrap gap-4">
@@ -69,9 +70,9 @@ export default function ExtensionsPage() {
             <div className="mt-4 grid gap-4 text-sm leading-7 text-stone-700">
               <p>1. Connect your Xupra account from VS Code or Cursor.</p>
               <p>2. Scan the current repo and detect supported agent files.</p>
-              <p>3. Import those files into a canonical Xupra package version.</p>
-              <p>4. Run compatibility checks and generate export previews.</p>
-              <p>5. Pull generated files back into the repo or deploy when ready.</p>
+              <p>3. Import those files into the starter Xupra package version.</p>
+              <p>4. Run compatibility checks before worrying about billing.</p>
+              <p>5. Upgrade only when the user wants export or deploy.</p>
             </div>
           </article>
 

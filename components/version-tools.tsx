@@ -221,6 +221,11 @@ export function VersionTools({ versionId, deploymentTargets }: VersionToolsProps
         </button>
       </div>
 
+      <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-7 text-stone-700">
+        Upload, import, and compatibility checks stay available on free. Export preview and deploy
+        unlock on paid plans.
+      </div>
+
       <div className="grid gap-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5">
         <div>
           <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">

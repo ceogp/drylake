@@ -7,12 +7,12 @@ const steps = [
   {
     eyebrow: "Step 1",
     title: "Create your Xupra workspace",
-    body: "Sign up with any email. Xupra automatically creates your personal workspace so you can start alone and invite teammates later.",
+    body: "Sign up with any email. Xupra automatically creates your personal workspace, starter project, starter package, and first import version.",
   },
   {
     eyebrow: "Step 2",
-    title: "Start on free, upgrade when you need the heavy lifting",
-    body: "Free gets you into the system. Paid is where deployment, deeper automation, and the more expensive transfer work should open up.",
+    title: "Import first on free, upgrade when you need export or deploy",
+    body: "Free gets users into the system fast. Paid should unlock export preview, deployment, deeper automation, and the heavier transfer workflow after they have already seen their data inside Xupra.",
   },
   {
     eyebrow: "Step 3",
@@ -62,7 +62,7 @@ export default async function GetStartedPage() {
                       className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
                       href="/app"
                     >
-                      Open Workspace
+                      Open Starter Workspace
                     </Link>
                   </>
                 ) : useClerkUi ? (
@@ -96,13 +96,13 @@ export default async function GetStartedPage() {
               <div className="mt-5 space-y-4 text-sm leading-7 text-stone-200">
                 <p>
                   Workspace creation:{" "}
-                  <span className="text-white">automatic for every new user</span>
+                  <span className="text-white">automatic, including a starter import version</span>
                 </p>
                 <p>
                   First plan: <span className="text-white">free by default</span>
                 </p>
                 <p>
-                  External credentials: <span className="text-white">only when needed</span>
+                  External credentials: <span className="text-white">only when needed later</span>
                 </p>
                 <p>
                   Source detection: <span className="text-white">defaults first, custom patterns supported</span>

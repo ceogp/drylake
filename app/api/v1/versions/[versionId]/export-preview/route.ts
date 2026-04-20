@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { created, forbidden, fromZodError, internalError, unauthorized } from "@/lib/api/http";
 import { requireVersionAccess } from "@/lib/services/access";
+import { assertEntitlement } from "@/lib/services/entitlements";
 import { requestExportPreview } from "@/lib/services/import-export";
 
 type Context = {
@@ -25,6 +26,7 @@ export async function POST(request: Request, context: Context) {
     }
 
     const { context: appContext } = await requireVersionAccess(versionId);
+    await assertEntitlement(appContext.organization.id, "manual_export");
 
     const result = await requestExportPreview({
       versionId,
@@ -54,6 +56,10 @@ export async function POST(request: Request, context: Context) {
 
     if (error instanceof Error && error.message === "Forbidden") {
       return forbidden("You do not have access to that package version.");
+    }
+
+    if (error instanceof Error && error.message === "Organization is not entitled to use manual_export") {
+      return forbidden("Manual export requires a paid plan.");
     }
 
     console.error(error);

@@ -4,12 +4,12 @@ const steps = [
   "Install the Xupra DryLake extension in VS Code or Cursor.",
   "Click Connect inside the extension.",
   "The browser opens Xupra so the user can sign up or sign in there.",
-  "Xupra creates the personal workspace automatically, then returns the user straight to the editor.",
+  "Xupra creates the personal workspace and starter import version automatically, then returns the user straight to the editor.",
   "Open a repo with agent files like AGENTS.md, CLAUDE.md, skills, rules, or subagents.",
   "If the repo does not use standard directories, add custom scan patterns in extension settings.",
-  "Import the workspace into an existing or new Xupra package version.",
-  "Run compatibility checks and generate export previews for the target platform.",
-  "Pull generated files back into the repo or deploy from the selected version."
+  "Import the repo into the starter version first, then reorganize later only if needed.",
+  "Run compatibility checks while the user is still on free, then upgrade when they want export preview or deploy.",
+  "Pull generated files back into the repo or deploy from the selected version once the plan allows it."
 ];
 
 const webControls = [

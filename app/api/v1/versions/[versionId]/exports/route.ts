@@ -3,6 +3,7 @@ import { z } from "zod";
 import { forbidden, fromZodError, internalError, ok, unauthorized } from "@/lib/api/http";
 import { prisma } from "@/lib/prisma";
 import { requireVersionAccess } from "@/lib/services/access";
+import { assertEntitlement } from "@/lib/services/entitlements";
 import { requestExportPreview } from "@/lib/services/import-export";
 import { readArtifactText } from "@/lib/storage/artifacts";
 
@@ -33,16 +34,16 @@ export async function GET(request: Request, context: Context) {
       return fromZodError(parsed.error);
     }
 
+    const access = await requireVersionAccess(versionId);
+    await assertEntitlement(access.context.organization.id, "manual_export");
+
     if (parsed.data.ensureGenerated) {
-      const { context: appContext } = await requireVersionAccess(versionId);
       await requestExportPreview({
         versionId,
         targetPlatform: parsed.data.targetPlatform,
-        createdByUserId: appContext.user.id,
+        createdByUserId: access.context.user.id,
       });
     }
-
-    await requireVersionAccess(versionId);
 
     const prefix = `${parsed.data.targetPlatform}/`;
     const files = (
@@ -79,6 +80,10 @@ export async function GET(request: Request, context: Context) {
 
     if (error instanceof Error && error.message === "Forbidden") {
       return forbidden("You do not have access to that package version.");
+    }
+
+    if (error instanceof Error && error.message === "Organization is not entitled to use manual_export") {
+      return forbidden("Manual export requires a paid plan.");
     }
 
     console.error(error);
