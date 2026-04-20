@@ -435,8 +435,10 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
       const statusRows: ProjectTreeItem[] = [
         {
           kind: "status",
-          label: this.state.connection.userEmail ? `Connected: ${this.state.connection.userEmail}` : "Not connected",
-          description: this.state.connection.organizationSlug ?? "Connect to Xupra to continue",
+          label: this.state.connection.userEmail ? `Connected: ${this.state.connection.userEmail}` : "Step 1: Connect",
+          description: this.state.connection.userEmail
+            ? this.state.connection.organizationSlug
+            : "Click 'Connect Xupra' below",
         },
         {
           kind: "status",
@@ -781,7 +783,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         {
           kind: "status",
           label: this.state.connection.userEmail ? `Connected: ${this.state.connection.userEmail}` : "Not connected",
-          description: this.state.connection.organizationSlug ?? "Connect to Xupra"
+          description: this.state.connection.organizationSlug ?? "Use 'Connect Xupra' in Next Actions"
         },
         {
           kind: "status",
