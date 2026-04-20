@@ -53,7 +53,15 @@ deploy_staging:
     - apt-get install -y openssh-client git
     - eval "$(ssh-agent -s)"
     - mkdir -p ~/.ssh
-    - printf "%s\n" "$STAGING_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - |
+      if [ -f "$STAGING_SSH_PRIVATE_KEY" ]; then
+        chmod 600 "$STAGING_SSH_PRIVATE_KEY"
+        ssh-add "$STAGING_SSH_PRIVATE_KEY"
+      else
+        printf "%b" "$STAGING_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/staging_deploy_key
+        chmod 600 ~/.ssh/staging_deploy_key
+        ssh-add ~/.ssh/staging_deploy_key
+      fi
     - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
   script:
     - ': "${STAGING_HOST:?STAGING_HOST is required}"'
