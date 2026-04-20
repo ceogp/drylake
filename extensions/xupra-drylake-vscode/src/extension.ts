@@ -280,6 +280,69 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  register("xupra.pasteToken", async () => {
+    await vscode.commands.executeCommand("xupra.projects.focus");
+
+    const accessToken = await vscode.window.showInputBox({
+      title: "Paste Xupra Extension Token",
+      prompt: "Paste the token from the extension connect page.",
+      ignoreFocusOut: true,
+      password: true,
+      validateInput(value) {
+        return value.trim().length > 20 ? null : "Paste the full token from the website.";
+      },
+    });
+
+    if (!accessToken) {
+      return;
+    }
+
+    const trimmedToken = accessToken.trim();
+
+    try {
+      apiClient.setAccessToken(trimmedToken);
+      const result = await apiClient.connect(undefined, undefined, trimmedToken);
+      await stateStore.setAccessToken(trimmedToken);
+      await stateStore.setConnection({
+        organizationId: result.organization?.id ?? result.auth.session.organizationId ?? undefined,
+        organizationSlug: result.organization?.slug,
+        userEmail: result.user?.email ?? undefined,
+        authMode: result.auth.mode
+      });
+      await stateStore.clearLastImport();
+
+      if (!result.auth.configured) {
+        void vscode.window.showWarningMessage(
+          `Xupra DryLake auth is set to ${result.auth.mode}, but it still needs ${result.auth.pendingKeys.join(", ")}.`
+        );
+        await syncWorkspaceView();
+        return;
+      }
+
+      const files = await scanWorkspaceFiles(configuration);
+      await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
+      const projects = await refreshProjectsCommand(apiClient, projectsView);
+      await syncWorkspaceView(projects);
+
+      void vscode.window.showInformationMessage(
+        files.length > 0
+          ? `Connected. Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} in this repo.`
+          : "Connected. Xupra did not find supported files yet, so the next step is to scan or add custom scan patterns.",
+      );
+
+      if (configuration.get<boolean>("openDashboardAfterConnect", true)) {
+        await openWebAppCommand(apiClient);
+      }
+    } catch (error) {
+      apiClient.setAccessToken(undefined);
+      await stateStore.clearAccessToken();
+      void vscode.window.showErrorMessage(
+        error instanceof Error ? error.message : "Failed to connect with extension token."
+      );
+      await syncWorkspaceView();
+    }
+  });
+
   register("xupra.openWebApp", async () => {
     await openWebAppCommand(apiClient);
   });

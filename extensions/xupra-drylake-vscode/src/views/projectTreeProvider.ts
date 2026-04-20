@@ -463,6 +463,12 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           },
           {
             kind: "action",
+            label: "Paste Extension Token",
+            description: "Use manual token fallback from the connect page",
+            command: "xupra.pasteToken",
+          },
+          {
+            kind: "action",
             label: "Open Connect Page",
             description: "Open browser connect flow manually",
             command: "xupra.openConnectPage",

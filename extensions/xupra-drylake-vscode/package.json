@@ -2,7 +2,7 @@
   "name": "xupra-drylake-vscode",
   "displayName": "Xupra DryLake",
   "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": true,
   "publisher": "xupra",
   "license": "UNLICENSED",
@@ -47,6 +47,7 @@
     "onView:xupra.jobs",
     "onView:xupra.help",
     "onCommand:xupra.connect",
+    "onCommand:xupra.pasteToken",
     "onCommand:xupra.scanWorkspace",
     "onCommand:xupra.refreshProjects",
     "onCommand:xupra.importWorkspace",
@@ -245,6 +246,10 @@
       {
         "command": "xupra.connect",
         "title": "Xupra DryLake: Connect"
+      },
+      {
+        "command": "xupra.pasteToken",
+        "title": "Xupra DryLake: Paste Extension Token"
       },
       {
         "command": "xupra.openWebApp",
