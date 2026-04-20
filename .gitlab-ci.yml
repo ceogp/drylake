@@ -55,12 +55,17 @@ deploy_staging:
     - mkdir -p ~/.ssh
     - |
       key_path=~/.ssh/staging_deploy_key
+      if [ -z "${STAGING_SSH_PRIVATE_KEY:-}" ]; then
+        echo "STAGING_SSH_PRIVATE_KEY is empty or undefined in CI variables." >&2
+        exit 1
+      fi
 
       if [ -f "$STAGING_SSH_PRIVATE_KEY" ]; then
         cp "$STAGING_SSH_PRIVATE_KEY" "$key_path"
         chmod 600 "$key_path"
         if ! ssh-add "$key_path" >/dev/null 2>&1; then
-          echo "Unable to load file-based STAGING_SSH_PRIVATE_KEY into ssh-agent." >&2
+          bytes="$(wc -c < "$key_path" | tr -d ' ')"
+          echo "Unable to load file-based STAGING_SSH_PRIVATE_KEY into ssh-agent (bytes=$bytes)." >&2
           exit 1
         fi
       else
@@ -93,7 +98,15 @@ deploy_staging:
         done
 
         if [ -z "$selected_key" ]; then
-          echo "Unable to load STAGING_SSH_PRIVATE_KEY. Use file-type, raw OpenSSH text, escaped newlines, or base64." >&2
+          has_begin_marker="no"
+          has_escaped_newlines="no"
+          if printf '%s' "$key_value" | grep -q 'BEGIN .* PRIVATE KEY'; then
+            has_begin_marker="yes"
+          fi
+          if printf '%s' "$key_value" | grep -q '\\n'; then
+            has_escaped_newlines="yes"
+          fi
+          echo "Unable to load STAGING_SSH_PRIVATE_KEY (length=${#key_value}, begin_marker=$has_begin_marker, escaped_newlines=$has_escaped_newlines)." >&2
           exit 1
         fi
 
