@@ -31,6 +31,9 @@ export async function importWorkspaceCommand(
   const selection = await ensureVersionSelection(apiClient, stateStore);
 
   if (!selection?.versionId) {
+    void vscode.window.showWarningMessage(
+      "Import canceled because no package version is selected. Select a version, then run Import Workspace again.",
+    );
     return;
   }
 
