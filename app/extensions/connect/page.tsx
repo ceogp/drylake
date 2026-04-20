@@ -167,6 +167,25 @@ export default async function ExtensionConnectPage({
                 If the browser return does not work later, manual token fallback is still available.
               </p>
             </section>
+          ) : !context ? (
+            <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
+                Sign In Required
+              </p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+                Sign in first, then generate a fallback token
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-stone-700">
+                Manual token fallback only works after you are signed in on this site. Once signed in,
+                this page will show the token generator and your workspace details.
+              </p>
+              <ExtensionConnectAuthButtons reconnectPath={reconnectPath} />
+              <p className="mt-4 text-xs leading-6 text-stone-500">
+                After sign in: click <span className="font-medium text-stone-800">Generate Token</span>,
+                then in VS Code run <span className="font-mono">Connect Xupra</span> and choose
+                <span className="font-medium text-stone-800"> Paste Token</span> if browser return still fails.
+              </p>
+            </section>
           ) : (
             <ExtensionConnectCard />
           )}
