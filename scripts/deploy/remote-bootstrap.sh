@@ -13,6 +13,11 @@ LEGACY_IP_HOST="${LEGACY_IP_HOST:-}"
 
 export DEBIAN_FRONTEND=noninteractive
 
+install_node_runtime() {
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  apt-get install -y nodejs
+}
+
 prune_release_directories() {
   local keep_latest_count="${1:-2}"
   local current_target=""
@@ -64,8 +69,13 @@ apt-get update
 apt-get install -y ca-certificates curl git build-essential nginx postgresql postgresql-contrib
 
 if ! command -v node >/dev/null 2>&1; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  apt-get install -y nodejs
+  install_node_runtime
+else
+  node_major_version="$(node -p "Number(process.versions.node.split('.')[0])" 2>/dev/null || echo 0)"
+
+  if [ "$node_major_version" -lt 22 ]; then
+    install_node_runtime
+  fi
 fi
 
 id -u "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash "$APP_USER"

@@ -41,6 +41,12 @@ validate:
 
 deploy_staging:
   stage: deploy
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+      - script_failure
   image: debian:bookworm-slim
   before_script:
     - apt-get update
@@ -50,6 +56,13 @@ deploy_staging:
     - printf "%s\n" "$STAGING_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
   script:
+    - ': "${STAGING_HOST:?STAGING_HOST is required}"'
+    - ': "${STAGING_SSH_USER:?STAGING_SSH_USER is required}"'
+    - ': "${STAGING_SSH_PRIVATE_KEY:?STAGING_SSH_PRIVATE_KEY is required}"'
+    - ': "${STAGING_ENV_FILE:?STAGING_ENV_FILE is required}"'
+    - ': "${STAGING_DB_NAME:?STAGING_DB_NAME is required}"'
+    - ': "${STAGING_DB_USER:?STAGING_DB_USER is required}"'
+    - ': "${STAGING_DB_PASSWORD:?STAGING_DB_PASSWORD is required}"'
     - git archive --format=tar HEAD -o release.tar
     - printf "%s" "$STAGING_ENV_FILE" > staging.env
     - |
@@ -80,21 +93,56 @@ deploy_staging:
       else
         printf '\nAPP_BASE_URL=%s\n' "$app_base_url" >> staging.env
       fi
-    - scp release.tar "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-release.tar"
-    - scp staging.env "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-staging.env"
-    - scp scripts/deploy/remote-bootstrap.sh "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-bootstrap.sh"
-    - >
-      ssh "$STAGING_SSH_USER@$STAGING_HOST"
-      "chmod +x /tmp/xupra-bootstrap.sh &&
-      sudo APP_DIR=/srv/xupra-drylake
-      APP_USER=xupra
-      APP_GROUP=xupra
-      RELEASE_TAR=/tmp/xupra-release.tar
-      ENV_FILE=/tmp/xupra-staging.env
-      DB_NAME=$STAGING_DB_NAME
-      DB_USER=$STAGING_DB_USER
-      DB_PASSWORD=$STAGING_DB_PASSWORD
-      bash /tmp/xupra-bootstrap.sh"
+    - |
+      for attempt in 1 2 3; do
+        if scp release.tar "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-release.tar"; then
+          break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+          exit 1
+        fi
+        sleep 5
+      done
+    - |
+      for attempt in 1 2 3; do
+        if scp staging.env "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-staging.env"; then
+          break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+          exit 1
+        fi
+        sleep 5
+      done
+    - |
+      for attempt in 1 2 3; do
+        if scp scripts/deploy/remote-bootstrap.sh "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-bootstrap.sh"; then
+          break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+          exit 1
+        fi
+        sleep 5
+      done
+    - |
+      for attempt in 1 2 3; do
+        if ssh "$STAGING_SSH_USER@$STAGING_HOST" \
+          "chmod +x /tmp/xupra-bootstrap.sh && \
+          sudo APP_DIR=/srv/xupra-drylake \
+          APP_USER=xupra \
+          APP_GROUP=xupra \
+          RELEASE_TAR=/tmp/xupra-release.tar \
+          ENV_FILE=/tmp/xupra-staging.env \
+          DB_NAME=$STAGING_DB_NAME \
+          DB_USER=$STAGING_DB_USER \
+          DB_PASSWORD=$STAGING_DB_PASSWORD \
+          bash /tmp/xupra-bootstrap.sh"; then
+          break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+          exit 1
+        fi
+        sleep 10
+      done
   environment:
     name: staging
     url: $STAGING_URL
