@@ -2,6 +2,29 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { STARTER_VERSION_ORIGIN } from "@/lib/services/dev-session";
 
+async function getLatestWorkspaceVersionPath(organizationId: string) {
+  const latestVersion = await prisma.packageVersion.findFirst({
+    where: {
+      agentPackage: {
+        project: {
+          organizationId,
+          archivedAt: null,
+        },
+      },
+    },
+    orderBy: [{ createdAt: "desc" }, { versionNumber: "desc" }],
+    select: {
+      id: true,
+    },
+  });
+
+  if (!latestVersion) {
+    return null;
+  }
+
+  return `/versions/${latestVersion.id}`;
+}
+
 export async function getActiveWorkspace() {
   const context = await getCurrentAppContext();
 
@@ -124,7 +147,7 @@ export async function getImportWorkspacePath() {
   });
 
   if (!starterVersion) {
-    return null;
+    return getLatestWorkspaceVersionPath(context.organization.id);
   }
 
   return `/versions/${starterVersion.id}`;
@@ -156,5 +179,11 @@ export async function getPrimaryWorkspacePath() {
     return `/versions/${latestImportedVersion.packageVersionId}`;
   }
 
-  return getImportWorkspacePath();
+  const importWorkspacePath = await getImportWorkspacePath();
+
+  if (importWorkspacePath) {
+    return importWorkspacePath;
+  }
+
+  return getLatestWorkspaceVersionPath(context.organization.id);
 }

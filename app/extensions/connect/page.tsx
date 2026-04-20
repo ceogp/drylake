@@ -6,7 +6,7 @@ import { ExtensionConnectCard } from "@/components/extension-connect-card";
 import { ConnectedWorkspaceCard } from "@/components/connected-workspace-card";
 import { createExtensionAuthRequest } from "@/lib/services/extension-auth-requests";
 import { getCurrentAppContext } from "@/lib/services/current-user";
-import { getImportWorkspacePath } from "@/lib/services/workspace";
+import { getPrimaryWorkspacePath } from "@/lib/services/workspace";
 
 const allowedCallbackProtocols = new Set(["vscode:", "vscode-insiders:", "cursor:"]);
 
@@ -97,7 +97,7 @@ export default async function ExtensionConnectPage({
   const reconnectPath = buildReconnectPath(callback, editor);
   const manualFallbackPath = buildManualFallbackPath(callback, editor);
   const context = await getCurrentAppContext();
-  const workspaceHref = context ? (await getImportWorkspacePath()) ?? "/app" : "/app";
+  const workspaceHref = context ? (await getPrimaryWorkspacePath()) ?? "/app" : "/app";
   const signedInLabel = context?.user.profile?.displayName ?? context?.user.email ?? "";
   const browserRequest =
     callback && context && !manualMode
