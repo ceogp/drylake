@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentAppContext } from "@/lib/services/current-user";
-import { STARTER_VERSION_ORIGIN } from "@/lib/services/dev-session";
+import { ensureStarterWorkspace, STARTER_VERSION_ORIGIN } from "@/lib/services/dev-session";
 
 async function getLatestWorkspaceVersionPath(organizationId: string) {
   const latestVersion = await prisma.packageVersion.findFirst({
@@ -146,11 +146,38 @@ export async function getImportWorkspacePath() {
     },
   });
 
-  if (!starterVersion) {
-    return getLatestWorkspaceVersionPath(context.organization.id);
+  if (starterVersion) {
+    return `/versions/${starterVersion.id}`;
   }
 
-  return `/versions/${starterVersion.id}`;
+  const latestWorkspaceVersionPath = await getLatestWorkspaceVersionPath(context.organization.id);
+
+  if (latestWorkspaceVersionPath) {
+    return latestWorkspaceVersionPath;
+  }
+
+  await ensureStarterWorkspace({
+    organizationId: context.organization.id,
+    userId: context.user.id,
+  });
+
+  const ensuredStarterVersion = await prisma.packageVersion.findFirst({
+    where: {
+      origin: STARTER_VERSION_ORIGIN,
+      agentPackage: {
+        project: {
+          organizationId: context.organization.id,
+          archivedAt: null,
+        },
+      },
+    },
+    orderBy: [{ versionNumber: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+    },
+  });
+
+  return ensuredStarterVersion ? `/versions/${ensuredStarterVersion.id}` : null;
 }
 
 export async function getPrimaryWorkspacePath() {

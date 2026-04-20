@@ -62,7 +62,7 @@ function buildOrgSlug(displayName: string, email: string) {
   return `${base}-org`;
 }
 
-async function ensureStarterWorkspace(input: {
+export async function ensureStarterWorkspace(input: {
   organizationId: string;
   userId: string;
 }) {
