@@ -8,6 +8,21 @@ import { StateStore } from "../services/stateStore";
 import { scanWorkspaceFiles } from "../services/workspaceScanner";
 import { JobTreeProvider } from "../views/jobTreeProvider";
 
+function asImportedCounts(rawValue: unknown) {
+  const value = (rawValue && typeof rawValue === "object" ? rawValue : {}) as Record<string, unknown>;
+
+  const asNumber = (next: unknown) => (typeof next === "number" && Number.isFinite(next) ? next : 0);
+  const asBoolean = (next: unknown) => next === true;
+
+  return {
+    rawFiles: asNumber(value.rawFiles),
+    subagents: asNumber(value.subagents),
+    skills: asNumber(value.skills),
+    rules: asNumber(value.rules),
+    updatedInstructions: asBoolean(value.updatedInstructions),
+  };
+}
+
 export async function importWorkspaceCommand(
   apiClient: ApiClient,
   stateStore: StateStore,
@@ -27,8 +42,10 @@ export async function importWorkspaceCommand(
     return;
   }
 
-  await uploadWorkspaceFiles(apiClient, selection.versionId, files);
+  const uploadResult = await uploadWorkspaceFiles(apiClient, selection.versionId, files);
   const result = await apiClient.importVersion(selection.versionId);
+  const imported = asImportedCounts(result.imported);
+  const warnings = result.warnings ?? [];
 
   jobsView.prepend({
     id: result.job.id,
@@ -39,8 +56,18 @@ export async function importWorkspaceCommand(
   });
 
   const completed = await waitForTransformJob(apiClient, result.job.id);
-  const warningSuffix = result.warnings.length > 0 ? ` ${result.warnings[0]}` : "";
+  await stateStore.setLastImport({
+    jobId: result.job.id,
+    versionId: selection.versionId,
+    status: completed.status,
+    completedAt: new Date().toISOString(),
+    imported,
+    warnings,
+    uploadedPaths: uploadResult.files.map((file) => file.logicalPath),
+  });
+
+  const warningSuffix = warnings.length > 0 ? ` Warning: ${warnings[0]}` : "";
   void vscode.window.showInformationMessage(
-    `Imported ${files.length} files into the selected version. Status: ${completed.status}.${warningSuffix}`
+    `Imported ${imported.rawFiles || files.length} files, ${imported.skills} skills, ${imported.subagents} agents, ${imported.rules} rules. Status: ${completed.status}.${warningSuffix}`
   );
 }

@@ -19,6 +19,7 @@ export async function connectCommand(
       userEmail: result.user?.email ?? undefined,
       authMode: result.auth.mode
     });
+    await stateStore.clearLastImport();
 
     if (!result.auth.configured) {
       void vscode.window.showWarningMessage(

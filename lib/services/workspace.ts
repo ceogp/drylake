@@ -129,3 +129,32 @@ export async function getImportWorkspacePath() {
 
   return `/versions/${starterVersion.id}`;
 }
+
+export async function getPrimaryWorkspacePath() {
+  const context = await getCurrentAppContext();
+
+  if (!context) {
+    return null;
+  }
+
+  const latestImportedVersion = await prisma.transformJob.findFirst({
+    where: {
+      organizationId: context.organization.id,
+      jobType: "import_parse",
+      status: "succeeded",
+      packageVersionId: {
+        not: null,
+      },
+    },
+    orderBy: [{ finishedAt: "desc" }, { createdAt: "desc" }],
+    select: {
+      packageVersionId: true,
+    },
+  });
+
+  if (latestImportedVersion?.packageVersionId) {
+    return `/versions/${latestImportedVersion.packageVersionId}`;
+  }
+
+  return getImportWorkspacePath();
+}

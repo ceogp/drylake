@@ -110,6 +110,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const detectedFiles = stateStore.getDetectedFiles();
     const selection = stateStore.getSelection();
     const connection = stateStore.getConnection();
+    const lastImport = stateStore.getLastImport();
     const projectList = projects ?? (await apiClient.listProjects()).projects;
     const selectedProject = projectList.find((project) => project.id === selection.projectId);
     const selectedPackage = selectedProject?.packages.find((agentPackage) => agentPackage.id === selection.packageId);
@@ -120,6 +121,7 @@ export async function activate(context: vscode.ExtensionContext) {
       detectedFiles,
       selection,
       connection,
+      lastImport,
       workspaceName: getWorkspaceDisplayName(),
       defaultTargetPlatform: String(configuration.get("defaultTargetPlatform", "claude_code"))
     });

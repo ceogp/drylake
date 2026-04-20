@@ -121,6 +121,27 @@ export async function ensureVersionSelection(apiClient: ApiClient, stateStore: S
     return selected;
   }
 
+  const projects = (await apiClient.listProjects()).projects;
+  const versions = projects.flatMap((project) =>
+    project.packages.flatMap((agentPackage) =>
+      agentPackage.versions.map((version) => ({
+        projectId: project.id,
+        packageId: agentPackage.id,
+        versionId: version.id,
+      })),
+    ),
+  );
+
+  if (versions.length === 1) {
+    const only = versions[0];
+    await stateStore.setSelection({
+      projectId: only.projectId,
+      packageId: only.packageId,
+      versionId: only.versionId,
+    });
+    return stateStore.getSelection();
+  }
+
   const picked = await selectVersionWithPrompt(apiClient, stateStore);
 
   if (!picked) {

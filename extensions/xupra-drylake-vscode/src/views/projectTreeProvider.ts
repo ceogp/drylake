@@ -1,10 +1,15 @@
 import * as vscode from "vscode";
 
 import type { ProjectDetail, ProjectSummary } from "../types/api";
-import type { ConnectionState, DetectedWorkspaceFile, SelectedContext } from "../types/package";
+import type {
+  ConnectionState,
+  DetectedWorkspaceFile,
+  LastImportSummary,
+  SelectedContext,
+} from "../types/package";
 
 export type ProjectTreeItem =
-  | { kind: "section"; id: "next_actions" | "workspace" | "files" | "projects" | "targets"; label: string; description?: string }
+  | { kind: "section"; id: "next_actions" | "workspace" | "last_import" | "files" | "projects" | "targets"; label: string; description?: string }
   | { kind: "status"; label: string; description?: string }
   | { kind: "action"; label: string; description?: string; command: string }
   | { kind: "detected_file"; file: DetectedWorkspaceFile }
@@ -18,6 +23,7 @@ type TreeState = {
   detectedFiles: DetectedWorkspaceFile[];
   selection: SelectedContext;
   connection: ConnectionState;
+  lastImport: LastImportSummary | null;
   workspaceName: string;
   defaultTargetPlatform: string;
 };
@@ -38,6 +44,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     detectedFiles: [],
     selection: {},
     connection: {},
+    lastImport: null,
     workspaceName: "No workspace",
     defaultTargetPlatform: "claude_code"
   };
@@ -147,6 +154,12 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         },
         {
           kind: "section",
+          id: "last_import",
+          label: "Last Import",
+          description: this.state.lastImport ? this.state.lastImport.status : "none",
+        },
+        {
+          kind: "section",
           id: "files",
           label: "Detected Files",
           description: `${this.state.detectedFiles.length}`
@@ -163,6 +176,46 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           label: "Targets",
           description: TARGET_LABELS[this.state.defaultTargetPlatform] ?? this.state.defaultTargetPlatform
         }
+      ] satisfies ProjectTreeItem[];
+    }
+
+    if (element.kind === "section" && element.id === "last_import") {
+      const summary = this.state.lastImport;
+
+      if (!summary) {
+        return [
+          {
+            kind: "status",
+            label: "No import has run in this workspace yet",
+            description: "Run Import Workspace after selecting a version",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
+      return [
+        {
+          kind: "status",
+          label: `Job: ${summary.jobId}`,
+          description: `${summary.status} at ${new Date(summary.completedAt).toLocaleString()}`,
+        },
+        {
+          kind: "status",
+          label: `Imported: ${summary.imported?.rawFiles ?? summary.uploadedPaths.length} files`,
+          description: `${summary.imported?.skills ?? 0} skills, ${summary.imported?.subagents ?? 0} agents, ${summary.imported?.rules ?? 0} rules`,
+        },
+        {
+          kind: "status",
+          label: `Version: ${summary.versionId}`,
+          description: summary.imported?.updatedInstructions ? "instructions updated" : "instructions unchanged",
+        },
+        {
+          kind: "status",
+          label:
+            summary.uploadedPaths.length > 0
+              ? `Files: ${summary.uploadedPaths.slice(0, 3).join(", ")}${summary.uploadedPaths.length > 3 ? ", ..." : ""}`
+              : "Files: none uploaded",
+          description: summary.warnings.length > 0 ? `Warning: ${summary.warnings[0]}` : "No warnings",
+        },
       ] satisfies ProjectTreeItem[];
     }
 

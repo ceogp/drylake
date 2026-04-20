@@ -19,10 +19,11 @@ export default async function CredentialsPage() {
         <div className="space-y-4">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">Credential Vault</p>
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
-            Store deployment and integration credentials centrally.
+            Optional credential storage for deploy and integrations.
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            The extension gets users in the door. This page is for the credentials they only need once they are ready to export, deploy, or connect external systems.
+            You do not need this for first import. Use it only when you are ready to connect external
+            systems, export with remote APIs, or deploy through the control plane.
           </p>
         </div>
 

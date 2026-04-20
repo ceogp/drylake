@@ -1,11 +1,17 @@
 import * as vscode from "vscode";
 
-import type { ConnectionState, DetectedWorkspaceFile, SelectedContext } from "../types/package";
+import type {
+  ConnectionState,
+  DetectedWorkspaceFile,
+  LastImportSummary,
+  SelectedContext,
+} from "../types/package";
 
 const KEY = "xupra.selectedContext";
 const CONNECTION_KEY = "xupra.connection";
 const DETECTED_FILES_KEY = "xupra.detectedFiles";
 const ACCESS_TOKEN_KEY = "xupra.extensionAccessToken";
+const LAST_IMPORT_KEY = "xupra.lastImport";
 
 export class StateStore {
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -44,6 +50,18 @@ export class StateStore {
 
   async setDetectedFiles(files: DetectedWorkspaceFile[]) {
     await this.context.workspaceState.update(DETECTED_FILES_KEY, files);
+  }
+
+  getLastImport(): LastImportSummary | null {
+    return this.context.workspaceState.get<LastImportSummary | null>(LAST_IMPORT_KEY, null);
+  }
+
+  async setLastImport(summary: LastImportSummary) {
+    await this.context.workspaceState.update(LAST_IMPORT_KEY, summary);
+  }
+
+  async clearLastImport() {
+    await this.context.workspaceState.update(LAST_IMPORT_KEY, null);
   }
 
   async getAccessToken() {

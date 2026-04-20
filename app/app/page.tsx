@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 
 import { AppHome } from "@/components/app-home";
-import { getStarterWorkspaceRedirectPath } from "@/lib/services/workspace";
+import { getPrimaryWorkspacePath } from "@/lib/services/workspace";
 
 export default async function AppPage() {
-  const starterWorkspacePath = await getStarterWorkspaceRedirectPath();
+  const workspacePath = await getPrimaryWorkspacePath();
 
-  if (starterWorkspacePath) {
-    redirect(starterWorkspacePath);
+  if (workspacePath) {
+    redirect(workspacePath);
   }
 
   return <AppHome />;

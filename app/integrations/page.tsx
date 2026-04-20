@@ -30,12 +30,12 @@ export default async function IntegrationsPage() {
         <div className="space-y-4">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">Integrations</p>
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
-            Add provider connections after the extension flow is working.
+            Optional provider connections after import flow is working.
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            These are secondary control surfaces. The core product path is still extension to browser
-            sign-in to repo scan to import to export. Add integrations only when that path is already
-            working for the customer.
+            Integrations are advanced surfaces. The primary path is extension connect, repo scan,
+            upload/import, and version review. If you are not actively wiring Slack or Twilio yet,
+            skip this page.
           </p>
         </div>
 
@@ -98,7 +98,8 @@ export default async function IntegrationsPage() {
               Add Integration
             </h2>
             <p className="mt-3 text-sm leading-7 text-stone-700">
-              Slack uses a bot token credential. WhatsApp uses a Twilio credential bundle with `accountSid` and `authToken`.
+              Slack uses a bot token credential. Twilio WhatsApp uses a Twilio credential bundle with
+              `accountSid` and `authToken`.
             </p>
             <form action={createIntegrationAction} className="mt-6 grid gap-4">
               <input name="organizationId" type="hidden" value={organizationId} />
@@ -126,9 +127,9 @@ export default async function IntegrationsPage() {
                   className="min-h-40 rounded-[1.5rem] border border-stone-300 px-4 py-4 text-sm leading-7"
                   defaultValue={JSON.stringify(
                     {
-                      channelId: "C12345678",
-                      fromNumber: "whatsapp:+14155238886",
-                      toNumber: "whatsapp:+15551234567",
+                      channelId: "",
+                      fromNumber: "",
+                      toNumber: "",
                     },
                     null,
                     2,

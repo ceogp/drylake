@@ -154,7 +154,7 @@ export class ApiClient {
   }
 
   async importVersion(versionId: string) {
-    return this.request<{ job: JobResult; imported: JsonValue; warnings: string[] }>(
+    return this.request<{ job: JobResult; imported?: JsonValue; warnings?: string[] }>(
       `/api/v1/versions/${versionId}/import`,
       {
         method: "POST",

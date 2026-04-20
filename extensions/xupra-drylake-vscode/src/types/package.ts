@@ -21,3 +21,19 @@ export type DetectedWorkspaceFile = {
     | "agent_config"
     | "source";
 };
+
+export type LastImportSummary = {
+  jobId: string;
+  versionId: string;
+  status: string;
+  completedAt: string;
+  imported?: {
+    rawFiles?: number;
+    subagents?: number;
+    skills?: number;
+    rules?: number;
+    updatedInstructions?: boolean;
+  };
+  warnings: string[];
+  uploadedPaths: string[];
+};
