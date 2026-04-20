@@ -195,14 +195,16 @@ export async function activate(context: vscode.ExtensionContext) {
     const selectedPackage = selectedProject?.packages.find((agentPackage) => agentPackage.id === selection.packageId);
     const selectedVersion = selectedPackage?.versions.find((version) => version.id === selection.versionId);
     let importedWorkspace: ImportedWorkspaceSnapshot | null = null;
+    let importedWorkspaceError: string | null = null;
 
     if (connection.userEmail && selection.versionId) {
       try {
         const versionResponse = await apiClient.getVersion(selection.versionId);
         importedWorkspace = mapImportedWorkspace(versionResponse.version);
       } catch (error) {
+        importedWorkspaceError = error instanceof Error ? error.message : String(error);
         logger.error(
-          `Failed to load imported workspace snapshot for ${selection.versionId}: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to load imported workspace snapshot for ${selection.versionId}: ${importedWorkspaceError}`,
         );
       }
     }
@@ -214,6 +216,7 @@ export async function activate(context: vscode.ExtensionContext) {
       connection,
       lastImport,
       importedWorkspace,
+      importedWorkspaceError,
       workspaceName: getWorkspaceDisplayName(),
       defaultTargetPlatform: String(configuration.get("defaultTargetPlatform", "claude_code"))
     });

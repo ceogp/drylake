@@ -31,6 +31,7 @@ type TreeState = {
   connection: ConnectionState;
   lastImport: LastImportSummary | null;
   importedWorkspace: ImportedWorkspaceSnapshot | null;
+  importedWorkspaceError: string | null;
   workspaceName: string;
   defaultTargetPlatform: string;
 };
@@ -82,6 +83,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     connection: {},
     lastImport: null,
     importedWorkspace: null,
+    importedWorkspaceError: null,
     workspaceName: "No workspace",
     defaultTargetPlatform: "claude_code"
   };
@@ -236,9 +238,11 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           label: "Imported Workspace",
           description: !this.state.selection.versionId
             ? "Select a version"
+            : this.state.importedWorkspaceError
+              ? "load failed"
             : this.state.importedWorkspace
               ? `${this.state.importedWorkspace.files.length + this.state.importedWorkspace.subagents.length + this.state.importedWorkspace.skillRules.length} artifacts`
-              : "unavailable",
+              : "loading",
         },
         {
           kind: "section",
@@ -284,12 +288,40 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
       const snapshot = this.state.importedWorkspace;
 
+      if (this.state.importedWorkspaceError) {
+        return [
+          {
+            kind: "status",
+            label: "Failed to load imported workspace details",
+            description: this.state.importedWorkspaceError,
+          },
+          {
+            kind: "action",
+            label: "Refresh Projects",
+            description: "Retry loading imported file, skill, and agent details",
+            command: "xupra.refreshProjects",
+          },
+          {
+            kind: "action",
+            label: "Open Web Workspace",
+            description: "Open the website version view for verification",
+            command: "xupra.openWebApp",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
       if (!snapshot || snapshot.versionId !== this.state.selection.versionId) {
         return [
           {
             kind: "status",
             label: "Imported workspace not loaded yet",
             description: "Refresh Projects to load file, skill, and agent details",
+          },
+          {
+            kind: "action",
+            label: "Refresh Projects",
+            description: "Load server-side imported artifacts",
+            command: "xupra.refreshProjects",
           },
         ] satisfies ProjectTreeItem[];
       }
@@ -385,8 +417,44 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     }
 
     if (element.kind === "section" && element.id === "next_actions") {
+      const selectedProject = this.state.projects.find((project) => project.id === this.state.selection.projectId);
+      const selectedPackage = selectedProject?.packages.find((agentPackage) => agentPackage.id === this.state.selection.packageId);
+      const selectedVersion = selectedPackage?.versions.find((version) => version.id === this.state.selection.versionId);
+      const importedWorkspace =
+        this.state.importedWorkspace && this.state.importedWorkspace.versionId === this.state.selection.versionId
+          ? this.state.importedWorkspace
+          : null;
+      const importedFromLastRun =
+        this.state.lastImport && this.state.lastImport.versionId === this.state.selection.versionId
+          ? this.state.lastImport.imported?.rawFiles ?? this.state.lastImport.uploadedPaths.length
+          : 0;
+      const importedArtifacts = importedWorkspace
+        ? importedWorkspace.files.length + importedWorkspace.subagents.length + importedWorkspace.skillRules.length
+        : importedFromLastRun;
+
+      const statusRows: ProjectTreeItem[] = [
+        {
+          kind: "status",
+          label: this.state.connection.userEmail ? `Connected: ${this.state.connection.userEmail}` : "Not connected",
+          description: this.state.connection.organizationSlug ?? "Connect to Xupra to continue",
+        },
+        {
+          kind: "status",
+          label: selectedVersion ? `Selected version: v${selectedVersion.versionNumber}` : "Selected version: none",
+          description: selectedVersion ? `${selectedProject?.name ?? "Project"} / ${selectedPackage?.name ?? "Package"}` : "Use Select Version",
+        },
+        {
+          kind: "status",
+          label: `Imported artifacts visible: ${importedArtifacts}`,
+          description:
+            this.state.importedWorkspaceError ??
+            (importedArtifacts > 0 ? "Expand Imported Workspace to inspect files, skills, and agents" : "Run Import Workspace then refresh"),
+        },
+      ];
+
       if (!this.state.connection.userEmail) {
         return [
+          ...statusRows,
           {
             kind: "action",
             label: "Connect Xupra",
@@ -410,6 +478,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
       if (!this.state.detectedFiles.length) {
         return [
+          ...statusRows,
           {
             kind: "action",
             label: "Scan Workspace",
@@ -433,6 +502,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
       if (!this.state.selection.versionId) {
         return [
+          ...statusRows,
           {
             kind: "action",
             label: "Import Workspace",
@@ -455,6 +525,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
       }
 
       return [
+        ...statusRows,
         {
           kind: "action",
           label: "Import Workspace",
