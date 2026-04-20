@@ -132,19 +132,17 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
   }
 
   getChildren(element?: ProjectTreeItem) {
-    const shouldShowWelcome = !this.state.connection.userEmail;
-
     if (!element) {
-      if (shouldShowWelcome) {
-        return [];
-      }
-
       return [
         {
           kind: "section",
           id: "next_actions",
           label: "Next Actions",
-          description: this.state.selection.versionId ? "Ready to import and export" : "Connect the next step"
+          description: !this.state.connection.userEmail
+            ? "Connect first"
+            : this.state.selection.versionId
+              ? "Ready to import and export"
+              : "Select a version for import",
         },
         {
           kind: "section",
@@ -220,6 +218,29 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     }
 
     if (element.kind === "section" && element.id === "next_actions") {
+      if (!this.state.connection.userEmail) {
+        return [
+          {
+            kind: "action",
+            label: "Connect Xupra",
+            description: "Sign in and link this VS Code workspace",
+            command: "xupra.connect",
+          },
+          {
+            kind: "action",
+            label: "Open Connect Page",
+            description: "Open browser connect flow manually",
+            command: "xupra.openConnectPage",
+          },
+          {
+            kind: "action",
+            label: "Open Web Workspace",
+            description: "Open website workspace view",
+            command: "xupra.openWebApp",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
       if (!this.state.detectedFiles.length) {
         return [
           {
@@ -301,6 +322,11 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         },
         {
           kind: "status",
+          label: `Auth mode: ${this.state.connection.authMode ?? "unknown"}`,
+          description: this.state.connection.userEmail ? "Session active" : "Session missing",
+        },
+        {
+          kind: "status",
           label: `Repo: ${this.state.workspaceName}`,
           description: selectedProject ? `${selectedProject.name}${selectedPackage ? ` / ${selectedPackage.name}` : ""}` : "No project selected"
         },
@@ -313,6 +339,16 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     }
 
     if (element.kind === "section" && element.id === "files") {
+      if (!this.state.connection.userEmail) {
+        return [
+          {
+            kind: "status",
+            label: "Connect first to scan and import",
+            description: "Use Connect Xupra in Next Actions",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
       return this.state.detectedFiles.length > 0
         ? this.state.detectedFiles.map((file) => ({ kind: "detected_file", file }) satisfies ProjectTreeItem)
         : ([
@@ -325,6 +361,16 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     }
 
     if (element.kind === "section" && element.id === "projects") {
+      if (!this.state.connection.userEmail) {
+        return [
+          {
+            kind: "status",
+            label: "No projects loaded",
+            description: "Connect to load workspace projects",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
       return this.state.projects.map((project) => ({ kind: "project", project }) satisfies ProjectTreeItem);
     }
 
