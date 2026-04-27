@@ -120,23 +120,19 @@ cleanup_npm_cache
 systemctl enable postgresql
 systemctl start postgresql
 
-if ! sudo -u postgres psql -v db_user="$DB_USER" -tAc "SELECT 1 FROM pg_roles WHERE rolname = :'db_user'" | grep -q 1; then
-  sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_user="$DB_USER" --set=db_password="$DB_PASSWORD" <<'SQL'
-DO $$
-BEGIN
-  EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', :'db_user', :'db_password');
-END $$;
+sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_user="$DB_USER" --set=db_password="$DB_PASSWORD" <<'SQL'
+SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'db_user', :'db_password')
+WHERE NOT EXISTS (
+  SELECT 1 FROM pg_roles WHERE rolname = :'db_user'
+) \gexec
 SQL
-fi
 
-if ! sudo -u postgres psql -v db_name="$DB_NAME" -tAc "SELECT 1 FROM pg_database WHERE datname = :'db_name'" | grep -q 1; then
-  sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_name="$DB_NAME" --set=db_user="$DB_USER" <<'SQL'
-DO $$
-BEGIN
-  EXECUTE format('CREATE DATABASE %I OWNER %I', :'db_name', :'db_user');
-END $$;
+sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_name="$DB_NAME" --set=db_user="$DB_USER" <<'SQL'
+SELECT format('CREATE DATABASE %I OWNER %I', :'db_name', :'db_user')
+WHERE NOT EXISTS (
+  SELECT 1 FROM pg_database WHERE datname = :'db_name'
+) \gexec
 SQL
-fi
 
 release_name="$(date +%Y%m%d%H%M%S)"
 release_dir="$APP_DIR/releases/$release_name"
