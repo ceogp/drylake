@@ -32,7 +32,7 @@ export async function importWorkspaceCommand(
 
   if (!selection?.versionId) {
     void vscode.window.showWarningMessage(
-      "Import canceled because no package version is selected. Select a version, then run Import Workspace again.",
+      "Import canceled because no import target was chosen.",
     );
     return;
   }
@@ -41,7 +41,7 @@ export async function importWorkspaceCommand(
   await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
 
   if (files.length === 0) {
-    void vscode.window.showWarningMessage("No supported workspace files were found.");
+    void vscode.window.showWarningMessage("No supported skills, agents, rules, or instruction files were found.");
     return;
   }
 

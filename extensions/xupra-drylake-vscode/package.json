@@ -48,7 +48,6 @@
     "onView:xupra.help",
     "onCommand:xupra.connect",
     "onCommand:xupra.pasteToken",
-    "onCommand:xupra.scanWorkspace",
     "onCommand:xupra.refreshProjects",
     "onCommand:xupra.importWorkspace",
     "onCommand:xupra.checkCompatibility",
@@ -85,7 +84,7 @@
         "xupra.autoScanOnOpen": {
           "type": "boolean",
           "default": false,
-          "description": "Automatically scan the current workspace on open."
+          "description": "Automatically import supported files when a workspace opens."
         },
         "xupra.includeGlobalAgentFiles": {
           "type": "boolean",
@@ -98,7 +97,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "Additional glob patterns to scan when your agent files live outside the default directories."
+          "description": "Additional file patterns for unusual agent locations."
         },
         "xupra.openDashboardAfterConnect": {
           "type": "boolean",
@@ -171,22 +170,22 @@
       },
       {
         "view": "xupra.projects",
-        "contents": "You are connected. Xupra can scan the default agent file locations in this repo and prepare the workspace for import.\n\n[Scan Workspace](command:xupra.scanWorkspace)\n[Open Extension Settings](command:xupra.openSettings)",
+        "contents": "You are connected. Import will find supported repo and global agent files, upload them, and show what landed.\n\n[Import Skills And Agents](command:xupra.importWorkspace)\n[Open Extension Settings](command:xupra.openSettings)",
         "when": "xupra.connected && !xupra.hasDetectedFiles"
       },
       {
         "view": "xupra.projects",
-        "contents": "Files were detected. The next step is to import them into a Xupra package version.\n\n[Import Workspace](command:xupra.importWorkspace)\n[Open Xupra App](command:xupra.openWebApp)",
+        "contents": "Importable files were found. Import them into Xupra, then inspect the results here or in the web app.\n\n[Import Skills And Agents](command:xupra.importWorkspace)\n[Open Xupra App](command:xupra.openWebApp)",
         "when": "xupra.connected && xupra.hasDetectedFiles && !xupra.hasVersionSelection"
       },
       {
         "view": "xupra.projects",
-        "contents": "A package version is selected. Import files, run compatibility checks, or generate export previews from here.\n\n[Import Workspace](command:xupra.importWorkspace)\n[Export Preview](command:xupra.exportPreview)",
+        "contents": "Import files, run compatibility checks, or generate export previews from here.\n\n[Import Skills And Agents](command:xupra.importWorkspace)\n[Export Preview](command:xupra.exportPreview)",
         "when": "xupra.connected && xupra.hasDetectedFiles && xupra.hasVersionSelection"
       },
       {
         "view": "xupra.jobs",
-        "contents": "Imports, compatibility checks, exports, and deploys show up here.\n\n[Import Workspace](command:xupra.importWorkspace)\n[Check Compatibility](command:xupra.checkCompatibility)",
+        "contents": "Imports, compatibility checks, exports, and deploys show up here.\n\n[Import Skills And Agents](command:xupra.importWorkspace)\n[Check Compatibility](command:xupra.checkCompatibility)",
         "when": "true"
       }
     ],
@@ -222,23 +221,23 @@
           },
           {
             "id": "xupra.scan",
-            "title": "Scan The Repo",
-            "description": "Xupra looks for default files such as `AGENTS.md`, `CLAUDE.md`, skills, rules, and subagents.\n\n[Scan Workspace](command:xupra.scanWorkspace)",
+            "title": "Import Skills And Agents",
+            "description": "Xupra finds supported repo and global agent files, uploads them, and imports them into your Xupra workspace.\n\n[Import Skills And Agents](command:xupra.importWorkspace)",
             "media": {
               "image": "media/readme-workflow.svg",
-              "altText": "Scan the repo and detect source files."
+              "altText": "Import skills and agents."
             },
             "completionEvents": [
-              "onContext:xupra.hasDetectedFiles"
+              "onCommand:xupra.importWorkspace"
             ]
           },
           {
             "id": "xupra.import",
-            "title": "Import Into A Package",
-            "description": "Once files are detected, import them into a Xupra package version and continue with compatibility checks or exports.\n\n[Import Workspace](command:xupra.importWorkspace)",
+            "title": "Review What Imported",
+            "description": "After import, Xupra shows raw files, agents, skills, and rules in the extension and web workspace.\n\n[Open Xupra App](command:xupra.openWebApp)",
             "media": {
               "image": "media/readme-workflow.svg",
-              "altText": "Import detected files into a canonical Xupra package."
+              "altText": "Review imported files."
             },
             "completionEvents": [
               "onCommand:xupra.importWorkspace"
@@ -265,10 +264,6 @@
         "title": "Xupra DryLake: Refresh Projects"
       },
       {
-        "command": "xupra.scanWorkspace",
-        "title": "Xupra DryLake: Scan Workspace"
-      },
-      {
         "command": "xupra.selectProject",
         "title": "Xupra DryLake: Select Project"
       },
@@ -278,11 +273,11 @@
       },
       {
         "command": "xupra.selectVersion",
-        "title": "Xupra DryLake: Select Version"
+        "title": "Xupra DryLake: Choose Import Target"
       },
       {
         "command": "xupra.importWorkspace",
-        "title": "Xupra DryLake: Import Workspace"
+        "title": "Xupra DryLake: Import Skills And Agents"
       },
       {
         "command": "xupra.checkCompatibility",
@@ -342,11 +337,6 @@
         },
         {
           "command": "xupra.importWorkspace",
-          "when": "view == xupra.projects",
-          "group": "navigation"
-        },
-        {
-          "command": "xupra.scanWorkspace",
           "when": "view == xupra.projects",
           "group": "navigation"
         },

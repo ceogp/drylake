@@ -93,12 +93,12 @@ export async function selectVersionWithPrompt(apiClient: ApiClient, stateStore: 
   );
 
   if (versions.length === 0) {
-    throw new Error("No package versions are available yet.");
+    throw new Error("No import targets are available yet.");
   }
 
   const picked = await vscode.window.showQuickPick(versions, {
-    title: "Select Xupra package version",
-    placeHolder: selected.packageId ? "Versions in your workspace" : undefined
+    title: "Choose where imports should land",
+    placeHolder: selected.packageId ? "Available import targets" : undefined
   });
 
   if (!picked) {

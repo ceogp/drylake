@@ -159,7 +159,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
       item.description = element.selected ? "selected" : "version";
       item.command = {
         command: "xupra.selectVersion",
-        title: "Select Version",
+        title: "Choose Import Target",
         arguments: [element]
       };
       return item;
@@ -218,7 +218,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
             ? "Connect first"
             : this.state.selection.versionId
               ? "Ready to import and export"
-              : "Select a version for import",
+              : "Choose where imports land",
         },
         {
           kind: "section",
@@ -247,7 +247,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         {
           kind: "section",
           id: "files",
-          label: "Detected Files",
+          label: "Importable Files",
           description: `${this.state.detectedFiles.length}`
         },
         {
@@ -280,8 +280,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         return [
           {
             kind: "status",
-            label: "No version selected",
-            description: "Select Version, then import workspace files",
+            label: "No import target chosen",
+            description: "Import will ask where the files should land",
           },
         ] satisfies ProjectTreeItem[];
       }
@@ -338,7 +338,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           {
             kind: "status",
             label: "No imported artifacts in this version yet",
-            description: "Run Import Workspace to populate files, skills, and agents",
+            description: "Run Import Skills And Agents to populate files, skills, and agents",
           },
         ] satisfies ProjectTreeItem[];
       }
@@ -347,7 +347,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         {
           kind: "status",
           label: `Version: ${snapshot.versionId}`,
-          description: `${totalArtifacts} artifacts in this package version`,
+          description: `${totalArtifacts} imported artifacts`,
         },
         {
           kind: "import_group",
@@ -384,7 +384,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           {
             kind: "status",
             label: "No import has run in this workspace yet",
-            description: "Run Import Workspace after selecting a version",
+            description: "Run Import Skills And Agents",
           },
         ] satisfies ProjectTreeItem[];
       }
@@ -435,22 +435,22 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
       const statusRows: ProjectTreeItem[] = [
         {
           kind: "status",
-          label: this.state.connection.userEmail ? `Connected: ${this.state.connection.userEmail}` : "Step 1: Connect",
+          label: this.state.connection.userEmail ? `Connected: ${this.state.connection.userEmail}` : "Not connected",
           description: this.state.connection.userEmail
             ? this.state.connection.organizationSlug
-            : "Click 'Connect Xupra' below",
+            : "Sign in to import skills and agents",
         },
         {
           kind: "status",
-          label: selectedVersion ? `Selected version: v${selectedVersion.versionNumber}` : "Selected version: none",
-          description: selectedVersion ? `${selectedProject?.name ?? "Project"} / ${selectedPackage?.name ?? "Package"}` : "Use Select Version",
+          label: selectedVersion ? `Import target: v${selectedVersion.versionNumber}` : "Import target: not chosen yet",
+          description: selectedVersion ? `${selectedProject?.name ?? "Project"} / ${selectedPackage?.name ?? "Package"}` : "Import will ask if needed",
         },
         {
           kind: "status",
           label: `Imported artifacts visible: ${importedArtifacts}`,
           description:
             this.state.importedWorkspaceError ??
-            (importedArtifacts > 0 ? "Expand Imported Workspace to inspect files, skills, and agents" : "Run Import Workspace then refresh"),
+            (importedArtifacts > 0 ? "Expand Imported Workspace to inspect files, skills, and agents" : "Import skills and agents to populate this"),
         },
       ];
 
@@ -489,14 +489,14 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           ...statusRows,
           {
             kind: "action",
-            label: "Scan Workspace",
-            description: "Look for AGENTS, CLAUDE, skills, rules, and subagents",
-            command: "xupra.scanWorkspace",
+            label: "Import Skills And Agents",
+            description: "Find repo and global agent files, upload them, and import",
+            command: "xupra.importWorkspace",
           },
           {
             kind: "action",
             label: "Open Extension Settings",
-            description: "Add custom scan patterns if your files live in non-standard paths",
+            description: "Add custom file patterns for unusual agent locations",
             command: "xupra.openSettings",
           },
           {
@@ -513,20 +513,20 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           ...statusRows,
           {
             kind: "action",
-            label: "Import Workspace",
-            description: "Upload detected files and choose a Xupra package version",
+            label: "Import Skills And Agents",
+            description: "Find files, choose where they land, and import",
             command: "xupra.importWorkspace",
           },
           {
             kind: "action",
-            label: "Select Version",
-            description: "Choose the package version this repo should map into",
+            label: "Choose Import Target",
+            description: "Pick the Xupra package/version before importing",
             command: "xupra.selectVersion",
           },
           {
             kind: "action",
             label: "Open Xupra App",
-            description: "Create or inspect projects and package versions",
+            description: "Create or inspect projects and imports",
             command: "xupra.openWebApp",
           },
         ] satisfies ProjectTreeItem[];
@@ -536,8 +536,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         ...statusRows,
         {
           kind: "action",
-          label: "Import Workspace",
-          description: "Upload detected files into the selected package version",
+          label: "Import Skills And Agents",
+          description: "Find repo and global agent files, upload them, and import",
           command: "xupra.importWorkspace",
         },
         {
@@ -568,7 +568,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
             {
               kind: "status",
               label: "No raw files uploaded yet",
-              description: "Import Workspace uploads files into raw_source storage",
+              description: "Import Skills And Agents uploads source files here",
             },
           ] satisfies ProjectTreeItem[];
         }
@@ -797,8 +797,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         },
         {
           kind: "status",
-          label: selectedVersion ? `Version: ${selectedVersion.versionNumber}` : "Version: none selected",
-          description: selectedVersion?.status ?? "Use Select Version"
+          label: selectedVersion ? `Import target: v${selectedVersion.versionNumber}` : "Import target: not chosen",
+          description: selectedVersion?.status ?? "Import will ask if needed"
         },
         {
           kind: "status",
@@ -815,7 +815,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         return [
           {
             kind: "status",
-            label: "Connect first to scan and import",
+            label: "Connect first to import",
             description: "Use Connect Xupra in Next Actions",
           },
         ] satisfies ProjectTreeItem[];
@@ -826,8 +826,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         : ([
             {
               kind: "status",
-              label: "No supported files detected yet",
-              description: "Use Scan Workspace or add custom scan patterns"
+              label: "No importable files listed yet",
+              description: "Use Import Skills And Agents or add custom file patterns"
             }
           ] satisfies ProjectTreeItem[]);
     }

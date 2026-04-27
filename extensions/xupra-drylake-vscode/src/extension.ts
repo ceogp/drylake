@@ -271,8 +271,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     void vscode.window.showInformationMessage(
       files.length > 0
-        ? `Connected. Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} in this repo.`
-        : "Connected. Xupra did not find supported files yet, so the next step is to scan or add custom scan patterns.",
+        ? `Connected. Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} on this machine.`
+        : "Connected. Xupra did not find supported files yet. Import can still check global folders, or you can add custom file patterns.",
     );
 
     if (configuration.get<boolean>("openDashboardAfterConnect", true)) {
@@ -326,8 +326,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
       void vscode.window.showInformationMessage(
         files.length > 0
-          ? `Connected. Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} in this repo.`
-          : "Connected. Xupra did not find supported files yet, so the next step is to scan or add custom scan patterns.",
+          ? `Connected. Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} on this machine.`
+          : "Connected. Xupra did not find supported files yet. Import can still check global folders, or you can add custom file patterns.",
       );
 
       if (configuration.get<boolean>("openDashboardAfterConnect", true)) {

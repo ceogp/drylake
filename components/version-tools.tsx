@@ -217,7 +217,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
   const [statusMessage, setStatusMessage] = useState(
     currentSummary.rawFiles > 0
       ? `This version already has ${currentSummary.rawFiles} raw files in storage.`
-      : "Choose a repo folder or selected files, then upload and import them here.",
+      : "Choose a folder or selected files to import skills, agents, rules, and instructions.",
   );
   const [latestPreview, setLatestPreview] = useState<Array<{ logicalPath: string; preview: string }>>([]);
   const [importedFiles, setImportedFiles] = useState<ImportedFileRecord[]>([]);
@@ -344,7 +344,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
 
   async function uploadPendingFiles(files: PendingBrowserFile[], options?: { autoImport?: boolean }) {
     if (files.length === 0) {
-      setStatusMessage("Choose a repo folder or selected files first.");
+      setStatusMessage("No supported skills, agents, rules, or instruction files were found.");
       return;
     }
 
@@ -426,6 +426,28 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
     }
   }
 
+  function importFolderFiles(fileList: FileList | null) {
+    const files = toPendingBrowserFiles(fileList);
+    setPendingFolderFiles(files);
+    setStatusMessage(
+      files.length > 0
+        ? `${describePendingFiles(files)} found. Uploading and importing...`
+        : "No supported skills, agents, rules, or instruction files were found in that folder.",
+    );
+    void uploadPendingFiles(files, { autoImport: true });
+  }
+
+  function importSelectedFiles(fileList: FileList | null) {
+    const files = toPendingBrowserFiles(fileList);
+    setPendingManualFiles(files);
+    setStatusMessage(
+      files.length > 0
+        ? `${describePendingFiles(files)} found. Uploading and importing...`
+        : "No supported skills, agents, rules, or instruction files were found in those files.",
+    );
+    void uploadPendingFiles(files, { autoImport: true });
+  }
+
   return (
     <div id="version-upload" className="space-y-5 rounded-[1.25rem] border border-stone-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -434,8 +456,8 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
             Upload Files
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-700">
-            Choose a repo folder, a global agent folder, or selected files. Xupra uploads and imports
-            supported skills, agents, rules, and instruction files.
+            Choose a repo folder, a global agent folder, or selected files. Xupra finds supported
+            skills, agents, rules, and instruction files, then imports them immediately.
           </p>
         </div>
         <p className="max-w-sm rounded-2xl bg-stone-100 px-4 py-3 font-mono text-xs leading-6 text-stone-700">
@@ -465,7 +487,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
       <section className="grid gap-4 rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-5 lg:grid-cols-[0.9fr_1.1fr]">
         <div>
           <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-            Upload a repo folder
+            Import from a folder
           </h3>
           <p className="mt-3 text-sm leading-7 text-stone-700">
             Pick the parent folder that contains `AGENTS.md`, `.codex`, `.claude`, `.agents`, or `.cursor`.
@@ -478,28 +500,20 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
             className="hidden"
             multiple
             type="file"
-            onChange={(event) => setPendingFolderFiles(toPendingBrowserFiles(event.target.files))}
+            onChange={(event) => importFolderFiles(event.target.files)}
           />
           <div className="flex flex-wrap gap-3">
             <button
-              className="rounded-full border border-emerald-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
               disabled={isBusy}
               onClick={() => directoryInputRef.current?.click()}
               type="button"
             >
-              Choose Repo Folder
-            </button>
-            <button
-              className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
-              disabled={isBusy || pendingFolderFiles.length === 0}
-              onClick={() => void uploadPendingFiles(pendingFolderFiles, { autoImport: true })}
-              type="button"
-            >
-              {isBusy ? "Working..." : "Upload Folder And Import"}
+              {isBusy ? "Importing..." : "Choose Folder And Import"}
             </button>
           </div>
           <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
-            {pendingFolderFiles.length > 0 ? folderSummary : "No repo folder selected yet."}
+            {pendingFolderFiles.length > 0 ? folderSummary : "Selecting a folder starts the import."}
           </div>
           {pendingFolderFiles.length > 0 ? (
             <div className="mt-3 grid gap-2">
@@ -518,36 +532,31 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
       </section>
 
       <section className="grid gap-4 rounded-[1.25rem] border border-dashed border-stone-300 bg-stone-50 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
-        <label className="grid gap-2 text-sm font-medium text-stone-900">
-          Or upload selected files
+        <div className="grid gap-2 text-sm font-medium text-stone-900">
+          <span>Or import selected files</span>
+          <span className="text-sm font-normal leading-7 text-stone-700">
+            Use this when the files are scattered or you only want to import a few items.
+          </span>
           <input
             ref={manualInputRef}
             multiple
             type="file"
-            className="rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-700"
-            onChange={(event) => setPendingManualFiles(toPendingBrowserFiles(event.target.files))}
+            className="hidden"
+            onChange={(event) => importSelectedFiles(event.target.files)}
           />
-        </label>
+        </div>
         <div className="flex flex-wrap gap-3">
           <button
-            className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isBusy || pendingManualFiles.length === 0}
-            onClick={() => void uploadPendingFiles(pendingManualFiles)}
-            type="button"
-          >
-            Upload Selected Files
-          </button>
-          <button
             className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-orange-300"
-            disabled={isBusy || pendingManualFiles.length === 0}
-            onClick={() => void uploadPendingFiles(pendingManualFiles, { autoImport: true })}
+            disabled={isBusy}
+            onClick={() => manualInputRef.current?.click()}
             type="button"
           >
-            Upload And Import
+            {isBusy ? "Importing..." : "Choose Files And Import"}
           </button>
         </div>
         <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 lg:col-span-2">
-          {pendingManualFiles.length > 0 ? manualSummary : "Choose files if you do not want to upload the full repo folder."}
+          {pendingManualFiles.length > 0 ? manualSummary : "Selecting files starts the import."}
         </div>
       </section>
 
