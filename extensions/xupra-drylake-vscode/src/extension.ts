@@ -368,6 +368,14 @@ export async function activate(context: vscode.ExtensionContext) {
     await syncWorkspaceView();
   });
 
+  register("xupra.resetWorkspaceState", async () => {
+    await stateStore.resetWorkspaceState();
+    await syncWorkspaceView();
+    void vscode.window.showInformationMessage(
+      "Xupra workspace state reset. Your account connection is still active.",
+    );
+  });
+
   register("xupra.checkCompatibility", async () => {
     await checkCompatibilityCommand(apiClient, configuration, stateStore, jobsView);
     await syncWorkspaceView();

@@ -50,6 +50,7 @@
     "onCommand:xupra.pasteToken",
     "onCommand:xupra.refreshProjects",
     "onCommand:xupra.importWorkspace",
+    "onCommand:xupra.resetWorkspaceState",
     "onCommand:xupra.checkCompatibility",
     "onCommand:xupra.exportPreview",
     "onCommand:xupra.deploy",
@@ -280,6 +281,10 @@
         "title": "Xupra DryLake: Import Skills And Agents"
       },
       {
+        "command": "xupra.resetWorkspaceState",
+        "title": "Xupra DryLake: Reset Workspace State"
+      },
+      {
         "command": "xupra.checkCompatibility",
         "title": "Xupra DryLake: Check Compatibility"
       },
@@ -338,6 +343,11 @@
         {
           "command": "xupra.importWorkspace",
           "when": "view == xupra.projects",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.resetWorkspaceState",
+          "when": "view == xupra.help",
           "group": "navigation"
         },
         {

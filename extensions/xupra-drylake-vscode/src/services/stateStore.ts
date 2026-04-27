@@ -32,6 +32,12 @@ export class StateStore {
     await this.context.workspaceState.update(KEY, {});
   }
 
+  async resetWorkspaceState() {
+    await this.context.workspaceState.update(KEY, {});
+    await this.context.workspaceState.update(DETECTED_FILES_KEY, []);
+    await this.context.workspaceState.update(LAST_IMPORT_KEY, null);
+  }
+
   getConnection(): ConnectionState {
     return this.context.workspaceState.get<ConnectionState>(CONNECTION_KEY, {});
   }
