@@ -87,6 +87,11 @@
           "default": false,
           "description": "Automatically scan the current workspace on open."
         },
+        "xupra.includeGlobalAgentFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include default global agent folders such as ~/.codex, ~/.claude, and ~/.cursor when scanning."
+        },
         "xupra.additionalScanPatterns": {
           "type": "array",
           "items": {

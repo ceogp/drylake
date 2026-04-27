@@ -148,6 +148,17 @@ async function main() {
       ].join("\n"),
     },
     {
+      logicalPath: "selected-repo/.codex/skills/.system/nested-codex-skill/SKILL.md",
+      sourceFormat: "md",
+      text: [
+        "---",
+        "name: nested-codex-skill",
+        "description: Validate nested Codex skill folders from global installs.",
+        "---",
+        "Check that nested Codex skills import from selected global folders.",
+      ].join("\n"),
+    },
+    {
       logicalPath: ".cursor/rules/repository-rule.mdc",
       sourceFormat: "mdc",
       text: [
@@ -215,9 +226,17 @@ async function main() {
       kind: "skill",
     },
   });
+  const nestedCodexSkill = await prisma.skillRule.findFirst({
+    where: {
+      packageVersionId: version.id,
+      name: "nested-codex-skill",
+      kind: "skill",
+    },
+  });
 
   expect(browserPrefixSubagent, "Browser-prefixed Codex agent was not imported as a subagent.");
   expect(browserPrefixSkill, "Browser-prefixed skill folder was not imported as a skill.");
+  expect(nestedCodexSkill, "Nested Codex skill folder was not imported as a skill.");
 
   const targets = ["codex", "claude_code", "claude_agents", "cursor"] as const;
   const exports = [];

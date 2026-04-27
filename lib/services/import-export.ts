@@ -241,7 +241,7 @@ function stringifyCodexCustomAgent(subagent: VersionWithRelations["subagents"][n
 function getSkillPlatformAndName(logicalPath: string) {
   const normalized = logicalPath.replace(/\\/g, "/");
   const match = normalized.match(
-    /^(\.agents\/skills|\.cursor\/skills|\.claude\/skills|\.codex\/skills)\/([^/]+)\/SKILL\.md$/i,
+    /^(\.agents\/skills|\.cursor\/skills|\.claude\/skills|\.codex\/skills)\/(?:.+\/)?([^/]+)\/SKILL\.md$/i,
   );
 
   if (!match) {

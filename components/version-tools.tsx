@@ -145,7 +145,7 @@ function classifySupportedPath(logicalPath: string): PendingBrowserFile["categor
     return "subagent";
   }
 
-  if (/^(\.agents\/skills|\.claude\/skills|\.cursor\/skills)\/.+\/SKILL\.md$/i.test(normalized)) {
+  if (/^(\.agents\/skills|\.codex\/skills|\.claude\/skills|\.cursor\/skills)\/.+\/SKILL\.md$/i.test(normalized)) {
     return "skill";
   }
 
@@ -434,8 +434,8 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
             Upload Files
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-700">
-            Choose a repo folder or selected files. Xupra uploads them and imports supported skills,
-            agents, rules, and instruction files.
+            Choose a repo folder, a global agent folder, or selected files. Xupra uploads and imports
+            supported skills, agents, rules, and instruction files.
           </p>
         </div>
         <p className="max-w-sm rounded-2xl bg-stone-100 px-4 py-3 font-mono text-xs leading-6 text-stone-700">
@@ -468,7 +468,8 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
             Upload a repo folder
           </h3>
           <p className="mt-3 text-sm leading-7 text-stone-700">
-            This keeps supported files and imports them immediately.
+            Pick the parent folder that contains `AGENTS.md`, `.codex`, `.claude`, `.agents`, or `.cursor`.
+            For installed global files, choose your `.codex` or `.claude` folder.
           </p>
         </div>
         <div className="rounded-[1.35rem] border border-emerald-200 bg-white p-4">

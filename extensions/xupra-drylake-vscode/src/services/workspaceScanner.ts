@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import os from "node:os";
+import path from "node:path";
 
 import { readWorkspaceFile } from "../utils/files";
 import type { DetectedWorkspaceFile } from "../types/package";
@@ -17,6 +19,40 @@ const PATTERNS = [
 ];
 
 const EXCLUDE_PATTERN = "**/{node_modules,.git,.next,dist,build,out,coverage}/**";
+const MAX_FILES_PER_GLOBAL_ROOT = 200;
+
+const GLOBAL_SCAN_ROOTS = [
+  {
+    absolutePath: () => path.join(os.homedir(), ".codex", "agents"),
+    logicalBase: ".codex/agents",
+    matches: (relativePath: string) => /\.toml$/i.test(relativePath),
+  },
+  {
+    absolutePath: () => path.join(os.homedir(), ".codex", "skills"),
+    logicalBase: ".codex/skills",
+    matches: (relativePath: string) => /(^|\/)SKILL\.md$/i.test(relativePath),
+  },
+  {
+    absolutePath: () => path.join(os.homedir(), ".claude", "agents"),
+    logicalBase: ".claude/agents",
+    matches: (relativePath: string) => /\.md$/i.test(relativePath),
+  },
+  {
+    absolutePath: () => path.join(os.homedir(), ".claude", "skills"),
+    logicalBase: ".claude/skills",
+    matches: (relativePath: string) => /(^|\/)SKILL\.md$/i.test(relativePath),
+  },
+  {
+    absolutePath: () => path.join(os.homedir(), ".cursor", "skills"),
+    logicalBase: ".cursor/skills",
+    matches: (relativePath: string) => /(^|\/)SKILL\.md$/i.test(relativePath),
+  },
+  {
+    absolutePath: () => path.join(os.homedir(), ".cursor", "rules"),
+    logicalBase: ".cursor/rules",
+    matches: (relativePath: string) => /\.mdc$/i.test(relativePath),
+  },
+] as const;
 
 function getConfiguredPatterns(configuration?: vscode.WorkspaceConfiguration) {
   const configuredPatterns = configuration?.get<string[]>("additionalScanPatterns", []) ?? [];
@@ -47,7 +83,85 @@ export async function scanWorkspaceFiles(configuration?: vscode.WorkspaceConfigu
     }
   }
 
+  if (configuration?.get<boolean>("includeGlobalAgentFiles", true) ?? true) {
+    const globalFiles = await scanGlobalAgentFiles();
+
+    for (const file of globalFiles) {
+      if (seen.has(file.logicalPath)) {
+        continue;
+      }
+
+      seen.add(file.logicalPath);
+      results.push(file);
+    }
+  }
+
   return results;
+}
+
+async function scanGlobalAgentFiles() {
+  const results: Array<{ logicalPath: string; content: string; category: DetectedWorkspaceFile["category"] }> = [];
+
+  for (const root of GLOBAL_SCAN_ROOTS) {
+    const rootUri = vscode.Uri.file(root.absolutePath());
+    const files = await findGlobalFiles(rootUri, root.matches, MAX_FILES_PER_GLOBAL_ROOT);
+
+    for (const file of files) {
+      const relativePath = path.relative(rootUri.fsPath, file.fsPath).replace(/\\/g, "/");
+      const logicalPath = `${root.logicalBase}/${relativePath}`;
+
+      results.push({
+        logicalPath,
+        content: await readWorkspaceFile(file),
+        category: classifyWorkspaceFile(logicalPath),
+      });
+    }
+  }
+
+  return results;
+}
+
+async function findGlobalFiles(
+  rootUri: vscode.Uri,
+  matches: (relativePath: string) => boolean,
+  limit: number,
+) {
+  const files: vscode.Uri[] = [];
+
+  async function walk(currentUri: vscode.Uri) {
+    if (files.length >= limit) {
+      return;
+    }
+
+    let entries: [string, vscode.FileType][];
+
+    try {
+      entries = await vscode.workspace.fs.readDirectory(currentUri);
+    } catch {
+      return;
+    }
+
+    for (const [name, fileType] of entries) {
+      if (files.length >= limit) {
+        return;
+      }
+
+      const childUri = vscode.Uri.joinPath(currentUri, name);
+      const relativePath = path.relative(rootUri.fsPath, childUri.fsPath).replace(/\\/g, "/");
+
+      if (fileType === vscode.FileType.Directory) {
+        await walk(childUri);
+        continue;
+      }
+
+      if (fileType === vscode.FileType.File && matches(relativePath)) {
+        files.push(childUri);
+      }
+    }
+  }
+
+  await walk(rootUri);
+  return files;
 }
 
 export function getWorkspaceDisplayName() {
@@ -71,7 +185,7 @@ export function classifyWorkspaceFile(logicalPath: string): DetectedWorkspaceFil
     return "rule";
   }
 
-  if (/SKILL\.md$/i.test(logicalPath)) {
+  if (/\/?(\.agents\/skills|\.codex\/skills|\.claude\/skills|\.cursor\/skills)\/.+\/SKILL\.md$/i.test(logicalPath)) {
     return "skill";
   }
 
