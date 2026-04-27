@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireVersionAccess } from "@/lib/services/access";
 import { readArtifactText } from "@/lib/storage/artifacts";
 import { saveArtifactBuffer } from "@/lib/storage/artifacts";
+import { normalizeImportLogicalPath } from "@/lib/utils/import-paths";
 
 export const runtime = "nodejs";
 
@@ -31,7 +32,7 @@ function parseLimit(rawValue: string | null) {
 }
 
 function normalizeLogicalPath(rawValue: string) {
-  const normalized = rawValue.replace(/\\/g, "/").replace(/^\/+/, "").trim();
+  const normalized = normalizeImportLogicalPath(rawValue);
   return normalized || path.basename(rawValue);
 }
 

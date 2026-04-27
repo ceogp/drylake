@@ -1,15 +1,14 @@
 import Link from "next/link";
 
 const steps = [
-  "Install the Xupra DryLake extension in VS Code or Cursor.",
-  "Click Connect inside the extension.",
-  "The browser opens Xupra so the user can sign up or sign in there.",
-  "Xupra creates the personal workspace and starter import version automatically, then returns the user straight to the editor.",
-  "Open a repo with agent files like AGENTS.md, CLAUDE.md, skills, rules, or subagents.",
-  "If the repo does not use standard directories, add custom scan patterns in extension settings.",
-  "Import the repo into the starter version first, then reorganize later only if needed.",
-  "Run compatibility checks while the user is still on free, then upgrade when they want export preview or deploy.",
-  "Pull generated files back into the repo or deploy from the selected version once the plan allows it."
+  "Open the web import workspace.",
+  "Choose a repo folder or selected files.",
+  "Upload and import source files into the starter package version.",
+  "Confirm the raw files, extracted agents, skills, rules, and instructions are visible.",
+  "Run compatibility checks after the import result is correct.",
+  "Install the extension later if you want to scan and pull generated files directly from VS Code or Cursor.",
+  "Add custom scan patterns only when a repo uses unusual directories.",
+  "Upgrade only when export preview or deploy needs paid features."
 ];
 
 const webControls = [
@@ -26,11 +25,11 @@ export default function ExtensionInstallPage() {
         <div className="space-y-4">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">Install And Connect</p>
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
-            Start in the extension. Use the website for control-plane work.
+            Start by uploading skills and agents.
           </h1>
           <p className="max-w-4xl text-lg leading-8 text-stone-700">
-            Xupra is designed so discovery and daily repo work happen in VS Code or Cursor while the website handles
-            the import workspace, account, and billing surfaces behind that workflow.
+            The extension is useful, but it should not block the first test. The website has a real
+            import workspace where you can upload a folder, import files, and review what landed.
           </p>
         </div>
 
@@ -66,6 +65,9 @@ export default function ExtensionInstallPage() {
               <Link className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700" href="/get-started">
                 Sign Up In Browser
               </Link>
+              <Link className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800" href="/workspace">
+                Upload Skills And Agents
+              </Link>
               <Link className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/connect">
                 Connect Extension
               </Link>
@@ -94,8 +96,8 @@ export default function ExtensionInstallPage() {
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700" href="/app">
-                Open App
+              <Link className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700" href="/workspace">
+                Upload Skills And Agents
               </Link>
               <Link className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions">
                 Back To Extension Page

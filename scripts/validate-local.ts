@@ -92,6 +92,16 @@ async function main() {
       ].join("\n"),
     },
     {
+      logicalPath: "selected-repo/.codex/agents/browser-reviewer.toml",
+      sourceFormat: "toml",
+      text: [
+        'name = "browser-reviewer"',
+        'description = "Review browser folder uploads after import."',
+        'developer_instructions = """Confirm browser folder imports normalize selected-folder prefixes."""',
+        'tools = ["Read"]',
+      ].join("\n"),
+    },
+    {
       logicalPath: ".claude/agents/migration-checker.md",
       sourceFormat: "md",
       text: [
@@ -124,6 +134,17 @@ async function main() {
         "  - Grep",
         "---",
         "Review release notes, check blockers, and produce a go-live checklist.",
+      ].join("\n"),
+    },
+    {
+      logicalPath: "selected-repo/.agents/skills/browser-folder-import/SKILL.md",
+      sourceFormat: "md",
+      text: [
+        "---",
+        "name: browser-folder-import",
+        "description: Validate browser folder uploads with selected-folder prefixes.",
+        "---",
+        "Check that imported browser paths canonicalize before parsing.",
       ].join("\n"),
     },
     {
@@ -178,6 +199,25 @@ async function main() {
     sourcePlatform: "generic",
     createdByUserId: user.id,
   });
+
+  const browserPrefixSubagent = await prisma.subagent.findUnique({
+    where: {
+      packageVersionId_slug: {
+        packageVersionId: version.id,
+        slug: "browser-reviewer",
+      },
+    },
+  });
+  const browserPrefixSkill = await prisma.skillRule.findFirst({
+    where: {
+      packageVersionId: version.id,
+      name: "browser-folder-import",
+      kind: "skill",
+    },
+  });
+
+  expect(browserPrefixSubagent, "Browser-prefixed Codex agent was not imported as a subagent.");
+  expect(browserPrefixSkill, "Browser-prefixed skill folder was not imported as a skill.");
 
   const targets = ["codex", "claude_code", "claude_agents", "cursor"] as const;
   const exports = [];

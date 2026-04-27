@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { normalizeImportLogicalPath } from "@/lib/utils/import-paths";
+
 const TARGETS = [
   { value: "codex", label: "Codex" },
   { value: "claude_code", label: "Claude Code" },
@@ -117,7 +119,7 @@ function formatTimestamp(timestamp: string | null) {
 }
 
 function normalizeLogicalPath(rawValue: string) {
-  return rawValue.replace(/\\/g, "/").replace(/^\/+/, "").trim();
+  return normalizeImportLogicalPath(rawValue);
 }
 
 function isIgnoredPath(logicalPath: string) {
@@ -425,15 +427,15 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
   }
 
   return (
-    <div className="space-y-6 rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+    <div id="version-upload" className="space-y-5 rounded-[1.25rem] border border-stone-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-            Import Workspace
+            Upload Files
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-7 text-stone-700">
-            This is the real ingest path. Upload a repo folder or selected files, store them as raw
-            source records, then turn them into agents, skills, rules, and canonical instructions.
+          <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-700">
+            Choose a repo folder or selected files. Xupra uploads them and imports supported skills,
+            agents, rules, and instruction files.
           </p>
         </div>
         <p className="max-w-sm rounded-2xl bg-stone-100 px-4 py-3 font-mono text-xs leading-6 text-stone-700">
@@ -445,38 +447,28 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
         <article className="rounded-[1.35rem] border border-stone-200 bg-stone-50 p-4">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Raw Files</p>
           <p className="mt-3 text-3xl font-semibold text-stone-950">{currentSummary.rawFiles}</p>
-          <p className="mt-2 text-xs leading-6 text-stone-600">Rows stored in `PackageFile` for this version.</p>
         </article>
         <article className="rounded-[1.35rem] border border-stone-200 bg-stone-50 p-4">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Agents</p>
           <p className="mt-3 text-3xl font-semibold text-stone-950">{currentSummary.subagents}</p>
-          <p className="mt-2 text-xs leading-6 text-stone-600">Canonical subagents extracted from imported files.</p>
         </article>
         <article className="rounded-[1.35rem] border border-stone-200 bg-stone-50 p-4">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Skills And Rules</p>
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Skills/Rules</p>
           <p className="mt-3 text-3xl font-semibold text-stone-950">{currentSummary.skillRules}</p>
-          <p className="mt-2 text-xs leading-6 text-stone-600">Reusable skills, rules, and prompt fragments.</p>
         </article>
         <article className="rounded-[1.35rem] border border-stone-200 bg-stone-50 p-4">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Last Import</p>
           <p className="mt-3 text-base font-semibold text-stone-950">{formatTimestamp(currentSummary.lastImportedAt)}</p>
-          <p className="mt-2 text-xs leading-6 text-stone-600">{currentSummary.transformJobs} recent transform job(s) tracked.</p>
         </article>
       </div>
 
-      <section className="grid gap-4 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid gap-4 rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-5 lg:grid-cols-[0.9fr_1.1fr]">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-emerald-700">Fastest Path</p>
           <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-            Choose the repo folder once, then import everything
+            Upload a repo folder
           </h3>
           <p className="mt-3 text-sm leading-7 text-stone-700">
-            This scans the selected folder in your browser, keeps only supported files, uploads them
-            into Postgres-backed raw storage, and immediately runs import.
-          </p>
-          <p className="mt-3 text-xs leading-6 text-stone-600">
-            Supported paths: `AGENTS.md`, `CLAUDE.md`, `.claude/agents`, `.codex/agents`,
-            skill folders, Cursor rules, plus markdown and python source files.
+            This keeps supported files and imports them immediately.
           </p>
         </div>
         <div className="rounded-[1.35rem] border border-emerald-200 bg-white p-4">
@@ -504,12 +496,6 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
             >
               {isBusy ? "Working..." : "Upload Folder And Import"}
             </button>
-            <a
-              className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
-              href="/extensions/install"
-            >
-              Connect Extension
-            </a>
           </div>
           <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
             {pendingFolderFiles.length > 0 ? folderSummary : "No repo folder selected yet."}
@@ -530,9 +516,9 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
+      <section className="grid gap-4 rounded-[1.25rem] border border-dashed border-stone-300 bg-stone-50 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
         <label className="grid gap-2 text-sm font-medium text-stone-900">
-          Manual file upload
+          Or upload selected files
           <input
             ref={manualInputRef}
             multiple
@@ -564,6 +550,8 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
         </div>
       </section>
 
+      {currentSummary.rawFiles > 0 ? (
+        <>
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-end">
         <label className="grid gap-2 text-sm font-medium text-stone-900">
           Target platform
@@ -617,17 +605,15 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
         Compatibility checks only tell you whether the canonical package is ready for a target.
         They do not upload source files, export artifacts, or deploy anything.
       </div>
+        </>
+      ) : null}
 
-      <section className="space-y-4 rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
+      <section className="space-y-4 rounded-[1.25rem] border border-stone-200 bg-stone-50 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
               Imported Source Files
             </h3>
-            <p className="mt-2 text-sm leading-7 text-stone-700">
-              These rows come from `PackageFile` and prove whether raw files actually reached the
-              backend for this version.
-            </p>
           </div>
           <button
             className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.16em] text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -677,7 +663,8 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
         )}
       </section>
 
-      <div className="grid gap-4 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-5">
+      {currentSummary.rawFiles > 0 && deploymentTargets.length > 0 ? (
+      <div className="grid gap-4 rounded-[1.25rem] border border-dashed border-stone-300 bg-stone-50 p-5">
         <div>
           <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
             Deploy Version
@@ -717,6 +704,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
           </button>
         </div>
       </div>
+      ) : null}
 
       {latestPreview.length > 0 ? (
         <div className="space-y-4">

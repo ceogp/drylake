@@ -31,26 +31,24 @@ export default function ExtensionsPage() {
                 <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-orange-700">
                   VS Code Extension
                 </p>
-                <h1 className="font-[family-name:var(--font-heading)] text-4xl font-semibold tracking-[-0.05em] text-stone-950 md:text-5xl">
-                  Xupra DryLake starts inside the editor, not on a random website.
+              <h1 className="font-[family-name:var(--font-heading)] text-4xl font-semibold tracking-[-0.05em] text-stone-950 md:text-5xl">
+                  Upload skills and agents first. Use the extension when you want editor sync.
                 </h1>
               </div>
             </div>
 
             <p className="max-w-4xl text-lg leading-8 text-stone-700">
-              The extension is the front door. Users install it, click Connect, sign up in the
-              browser, return to VS Code or Cursor, and immediately start scanning agent files,
-              importing them into the starter workspace, checking portability, and only upgrading
-              later when they want export and deployment across Codex, Claude Code, Cursor, and
-              Claude Agents.
+              The web import workspace can already upload a repo folder, preserve source files, and
+              import supported agent definitions, skills, rules, and instructions. The extension is
+              optional for scanning from VS Code or Cursor once the basic upload flow is working.
             </p>
 
             <div className="flex flex-wrap gap-4">
               <Link
                 className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
-                href="/get-started"
+                href="/workspace"
               >
-                Get Started
+                Upload Skills And Agents
               </Link>
               <Link
                 className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
@@ -68,11 +66,11 @@ export default function ExtensionsPage() {
               In-editor workflow
             </p>
             <div className="mt-4 grid gap-4 text-sm leading-7 text-stone-700">
-              <p>1. Connect your Xupra account from VS Code or Cursor.</p>
-              <p>2. Scan the current repo and detect supported agent files.</p>
-              <p>3. Import those files into the starter Xupra package version.</p>
-              <p>4. Run compatibility checks before worrying about billing.</p>
-              <p>5. Upgrade only when the user wants export or deploy.</p>
+              <p>1. Open the import workspace.</p>
+              <p>2. Choose a repo folder or selected files.</p>
+              <p>3. Upload and import into the starter package version.</p>
+              <p>4. Confirm raw files, skills, and agents are visible.</p>
+              <p>5. Use the extension later when editor sync is needed.</p>
             </div>
           </article>
 

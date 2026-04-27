@@ -37,7 +37,7 @@ export function HeaderAuthControls() {
   const hasExtensionCallback = Boolean(searchParams.get("callback"));
   const redirectPath = isExtensionConnectPage
     ? buildExtensionConnectPath(searchParams)
-    : undefined;
+    : "/workspace";
 
   const signInRedirectProps = redirectPath
     ? {

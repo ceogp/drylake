@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { normalizeAmbiguousFilesWithAi } from "@/lib/services/ai-normalization";
 import { notifyOrganizationIntegrations } from "@/lib/services/integrations";
 import { readArtifactText, saveArtifactText } from "@/lib/storage/artifacts";
+import { normalizeImportLogicalPath } from "@/lib/utils/import-paths";
 import { toSlug } from "@/lib/utils/slug";
 
 type SupportedTarget = "codex" | "claude_code" | "claude_agents" | "cursor";
@@ -940,8 +941,8 @@ export async function runImportForVersion(params: {
 
   for (const rawFile of rawFiles) {
     const text = await readArtifactText(rawFile.storageKey);
-    const fileName = path.posix.basename(rawFile.logicalPath);
-    const normalizedPath = rawFile.logicalPath.replace(/\\/g, "/");
+    const normalizedPath = normalizeImportLogicalPath(rawFile.logicalPath);
+    const fileName = path.posix.basename(normalizedPath);
 
     if (fileName === "AGENTS.md" || fileName === "CLAUDE.md") {
       applyInstructions(text, fileName);

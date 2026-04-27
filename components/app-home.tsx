@@ -3,11 +3,12 @@ import Link from "next/link";
 
 import { createProjectAction } from "@/app/actions";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
-import { getActiveWorkspace } from "@/lib/services/workspace";
+import { getActiveWorkspace, getImportWorkspacePath } from "@/lib/services/workspace";
 
 export async function AppHome() {
   await requireCurrentAppContextForPage();
   const workspace = await getActiveWorkspace();
+  const importWorkspacePath = (await getImportWorkspacePath()) ?? "/workspace";
 
   if (!workspace) {
     return (
@@ -49,9 +50,9 @@ export async function AppHome() {
             <div className="flex flex-wrap gap-3">
               <Link
                 className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700"
-                href="/extensions/install"
+                href={importWorkspacePath}
               >
-                Import With Extension
+                Upload Skills And Agents
               </Link>
               <Link
                 className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
@@ -79,9 +80,9 @@ export async function AppHome() {
                 Your transfer workspace for the extension-led workflow.
               </h1>
               <p className="max-w-3xl text-lg leading-8 text-stone-700">
-                The extension is where users import repos, preview portability, and pull generated files back into the editor.
-                This workspace is where you review imports, organize projects, and manage the account
-                layer behind that flow once onboarding is already working.
+                Start by uploading the repo folder or selected agent files into the import
+                workspace. After the import is visible, use compatibility checks, export preview,
+                deployment, or the editor extension as needed.
               </p>
             </div>
             <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_18px_45px_rgba(120,53,15,0.08)]">
@@ -106,15 +107,15 @@ export async function AppHome() {
             <article className="rounded-[1.85rem] border border-stone-200 bg-white p-6 shadow-sm">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">First run</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-              Extension first. Website behind it.
+              Upload first. Extension later.
               </h2>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-              Your workspace is ready. Users should discover Xupra in VS Code or Cursor, connect there,
-              return from the browser, scan the repo, and import the files that already exist.
+              Your workspace is ready. Upload skills, agents, rules, and instruction files directly
+              here so the canonical package has real source files before any extension workflow.
               </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Link className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700" href="/extensions/install">
-                Extension install flow
+              <Link className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700" href={importWorkspacePath}>
+                Upload Skills And Agents
               </Link>
               <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/get-started">
                 Onboarding page

@@ -43,16 +43,24 @@ function DryLakeHome() {
 
             <div className="space-y-5">
               <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.07em] text-stone-950 sm:text-6xl lg:text-7xl">
-                Move agents from one platform to the next without rebuilding them by hand.
+                Upload your skills and agents. Then move them to the next platform.
               </h1>
               <p className="max-w-3xl text-lg leading-8 text-stone-700 sm:text-xl">
-                Sign up on the website, connect the extension, import the repo you already have, and let Xupra keep the source files while it generates the next platform format.
+                Start by uploading an existing repo folder or selected files. Xupra stores the raw
+                source files, imports skills and agents into a package version, and shows what landed
+                before you generate target outputs.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-4">
               <Link
                 className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
+                href="/workspace"
+              >
+                Upload Skills And Agents
+              </Link>
+              <Link
+                className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
                 href="/get-started"
               >
                 Get Started
@@ -61,13 +69,7 @@ function DryLakeHome() {
                 className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
                 href="/extensions"
               >
-                VS Code Extension
-              </Link>
-              <Link
-                className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
-                href="/extensions/install"
-              >
-                Install Flow
+                Extension
               </Link>
             </div>
 
@@ -87,21 +89,21 @@ function DryLakeHome() {
         <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
           <div className="grid gap-5 lg:grid-cols-3">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">1. Sign up</p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">1. Upload</p>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                Start with any email and get a personal workspace automatically.
+                Choose a repo folder or selected files from the web import workspace.
               </p>
             </div>
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">2. Connect the extension</p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">2. Review</p>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                Use VS Code or Cursor for the repo workflow and add custom scan paths only if the defaults miss something.
+                Confirm raw files, extracted agents, skills, rules, and instructions on the version page.
               </p>
             </div>
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">3. Import, convert, export</p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">3. Export</p>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                Keep the originals, build the canonical package once, then generate the target you need.
+                Generate Codex, Claude Code, Cursor, or Claude Agents output after the import is visible.
               </p>
             </div>
           </div>

@@ -141,8 +141,8 @@ export default async function RootLayout({
               <Link className="transition hover:text-stone-950" href="/extensions">
                 Extension
               </Link>
-              <Link className="transition hover:text-stone-950" href="/app">
-                App
+              <Link className="transition hover:text-stone-950" href="/workspace">
+                Upload
               </Link>
               <Link className="transition hover:text-stone-950" href="/settings">
                 Settings

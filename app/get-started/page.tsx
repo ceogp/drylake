@@ -7,17 +7,17 @@ const steps = [
   {
     eyebrow: "Step 1",
     title: "Create your Xupra workspace",
-    body: "Sign up with any email. Xupra automatically creates your personal workspace, starter project, starter package, and first import version.",
+    body: "Sign up with any email. Xupra automatically creates your personal workspace and first import version.",
   },
   {
     eyebrow: "Step 2",
-    title: "Import first on free, upgrade when you need export or deploy",
-    body: "Free gets users into the system fast. Paid should unlock export preview, deployment, deeper automation, and the heavier transfer workflow after they have already seen their data inside Xupra.",
+    title: "Upload skills and agents",
+    body: "Choose a repo folder or selected files, then import them into the starter package version.",
   },
   {
     eyebrow: "Step 3",
-    title: "Go back to VS Code or Cursor and connect",
-    body: "Install the extension, let the browser handoff return you to the editor, scan the repo, import what you already have, and only add external credentials when a specific deploy target actually needs them.",
+    title: "Review before export",
+    body: "Confirm raw files, extracted agents, skills, rules, and instructions are visible before worrying about extension sync or deployment.",
   },
 ];
 
@@ -42,21 +42,21 @@ export default function GetStartedPage() {
                 Get Started
               </p>
               <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.06em] text-stone-950 sm:text-6xl">
-                Sign up on the website. Finish the real work in the editor.
+                Sign up, then upload your skills and agents.
               </h1>
               <p className="max-w-3xl text-lg leading-8 text-stone-700">
-                Xupra DryLake should feel simple on day one: create an account, land in your own
-                workspace, then go back to VS Code or Cursor to import the repo you already have.
+                Xupra DryLake should feel simple on day one: create an account, land in your import
+                workspace, upload the repo files you already have, and see what was imported.
               </p>
               <div className="flex flex-wrap gap-3">
                 {useClerkUi ? (
-                  <GetStartedAuthActions workspaceHref="/app" />
+                  <GetStartedAuthActions workspaceHref="/workspace" />
                 ) : (
                   <Link
                     className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
-                    href="/app"
+                    href="/workspace"
                   >
-                    Open Development Workspace
+                    Upload Skills And Agents
                   </Link>
                 )}
               </div>
@@ -72,7 +72,7 @@ export default function GetStartedPage() {
                   <span className="text-white">automatic, including a starter import version</span>
                 </p>
                 <p>
-                  After sign in: <span className="text-white">the page flips to Connected and the import workspace button becomes available</span>
+                  After sign in: <span className="text-white">open the import workspace and upload files</span>
                 </p>
                 <p>
                   First plan: <span className="text-white">free by default</span>
@@ -153,9 +153,9 @@ export default function GetStartedPage() {
               </Link>
               <Link
                 className="rounded-[1.35rem] border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50"
-                href="/app"
+                href="/workspace"
               >
-                Open workspace
+                Upload skills and agents
               </Link>
             </div>
           </article>
