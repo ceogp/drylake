@@ -1,5 +1,5 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 
 import {
   getConfiguredAppUrlForPath,
@@ -51,7 +51,7 @@ function hasValidBasicAuthHeader(value: string | null, expectedUsername: string,
   return username === expectedUsername && password === expectedPassword;
 }
 
-export default clerkMiddleware((_auth, request) => {
+function handleProxyRequest(request: NextRequest) {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const pathname = request.nextUrl.pathname;
 
@@ -105,7 +105,21 @@ export default clerkMiddleware((_auth, request) => {
   return NextResponse.redirect(
     getConfiguredAppUrlForPath(request.nextUrl.pathname, request.nextUrl.search),
   );
-});
+}
+
+export function proxy(request: NextRequest, event: NextFetchEvent) {
+  const clerkConfigured = Boolean(
+    process.env.AUTH_MODE === "clerk" &&
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+      process.env.CLERK_SECRET_KEY,
+  );
+
+  if (!clerkConfigured) {
+    return handleProxyRequest(request);
+  }
+
+  return clerkMiddleware((_auth, clerkRequest) => handleProxyRequest(clerkRequest))(request, event);
+}
 
 export const config = {
   matcher: [
