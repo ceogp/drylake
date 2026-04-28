@@ -1,0 +1,8 @@
+Xupra DryLake VS Code Extension
+Copyright (c) Xupra
+
+All rights reserved.
+
+This extension is provided for evaluation and internal testing unless Xupra grants
+separate written permission. Redistribution, sublicensing, or public marketplace
+publication is not permitted without Xupra approval.

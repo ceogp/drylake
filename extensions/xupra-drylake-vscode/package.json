@@ -1,0 +1,436 @@
+{
+  "name": "xupra-drylake-vscode",
+  "displayName": "Xupra DryLake",
+  "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
+  "version": "0.0.9",
+  "private": true,
+  "publisher": "xupra",
+  "license": "UNLICENSED",
+  "preview": true,
+  "icon": "media/icon.png",
+  "homepage": "https://drylake.xupracorp.com/extensions",
+  "bugs": {
+    "url": "https://gitlab.com/xupraplatform/drylake/-/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/xupraplatform/drylake.git",
+    "directory": "extensions/xupra-drylake-vscode"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other",
+    "Productivity",
+    "Machine Learning"
+  ],
+  "keywords": [
+    "agents",
+    "skills",
+    "codex",
+    "cursor",
+    "claude code",
+    "claude agents",
+    "prompt portability",
+    "agent transfer"
+  ],
+  "galleryBanner": {
+    "color": "#fff7ed",
+    "theme": "light"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onUri",
+    "onView:xupra.projects",
+    "onView:xupra.jobs",
+    "onView:xupra.help",
+    "onCommand:xupra.connect",
+    "onCommand:xupra.pasteToken",
+    "onCommand:xupra.scanWorkspace",
+    "onCommand:xupra.refreshProjects",
+    "onCommand:xupra.importWorkspace",
+    "onCommand:xupra.importDefaultLocations",
+    "onCommand:xupra.importFolder",
+    "onCommand:xupra.resetWorkspaceState",
+    "onCommand:xupra.checkCompatibility",
+    "onCommand:xupra.exportPreview",
+    "onCommand:xupra.deploy",
+    "onCommand:xupra.pullPackage",
+    "onCommand:xupra.openWebApp",
+    "onCommand:xupra.openSettings",
+    "onCommand:xupra.openAccountSettings",
+    "onCommand:xupra.openBilling",
+    "onCommand:xupra.openInstallGuide",
+    "onCommand:xupra.openConnectPage",
+    "onCommand:xupra.openGetStarted"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "Xupra DryLake",
+      "properties": {
+        "xupra.baseUrl": {
+          "type": "string",
+          "default": "https://drylake.xupracorp.com",
+          "description": "Base URL for the Xupra DryLake backend."
+        },
+        "xupra.devEmail": {
+          "type": "string",
+          "default": "owner@xupra.local",
+          "description": "Development email used before real auth is connected."
+        },
+        "xupra.devDisplayName": {
+          "type": "string",
+          "default": "Xupra Owner",
+          "description": "Development display name used before real auth is connected."
+        },
+        "xupra.autoScanOnOpen": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically import supported files when a workspace opens."
+        },
+        "xupra.includeGlobalAgentFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include default global agent folders such as ~/.codex, ~/.claude, and ~/.cursor when scanning."
+        },
+        "xupra.additionalScanPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional file patterns for unusual agent locations."
+        },
+        "xupra.openDashboardAfterConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the Xupra dashboard in your browser after a successful connection."
+        },
+        "xupra.defaultTargetPlatform": {
+          "type": "string",
+          "enum": [
+            "codex",
+            "claude_code",
+            "claude_agents",
+            "cursor"
+          ],
+          "default": "claude_code",
+          "description": "Default target platform for compatibility and export actions."
+        },
+        "xupra.pullGeneratedFilesAfterExport": {
+          "type": "boolean",
+          "default": false,
+          "description": "Pull generated files into the workspace after export preview."
+        },
+        "xupra.confirmBeforeWriteback": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask for confirmation before writing generated files into the current workspace."
+        },
+        "xupra.logLevel": {
+          "type": "string",
+          "enum": [
+            "error",
+            "info",
+            "debug"
+          ],
+          "default": "info",
+          "description": "Logging verbosity for the extension."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "xupra",
+          "title": "Xupra DryLake",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "xupra": [
+        {
+          "id": "xupra.projects",
+          "name": "Workspace"
+        },
+        {
+          "id": "xupra.jobs",
+          "name": "Jobs"
+        },
+        {
+          "id": "xupra.help",
+          "name": "Help"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "xupra.projects",
+        "contents": "[Connect Xupra](command:xupra.connect)",
+        "when": "!xupra.connected"
+      },
+      {
+        "view": "xupra.projects",
+        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Import From Folder](command:xupra.importFolder)",
+        "when": "xupra.connected && !xupra.hasDetectedFiles"
+      },
+      {
+        "view": "xupra.projects",
+        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Open Xupra App](command:xupra.openWebApp)",
+        "when": "xupra.connected && xupra.hasDetectedFiles && !xupra.hasVersionSelection"
+      },
+      {
+        "view": "xupra.projects",
+        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Export Preview](command:xupra.exportPreview)",
+        "when": "xupra.connected && xupra.hasDetectedFiles && xupra.hasVersionSelection"
+      },
+      {
+        "view": "xupra.jobs",
+        "contents": "Jobs appear here after an import, compatibility check, export, or deploy starts.",
+        "when": "true"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "xupra.getStarted",
+        "title": "Get Started With Xupra DryLake",
+        "description": "Install, connect, return to VS Code, and move your first agent package without rebuilding it by hand.",
+        "steps": [
+          {
+            "id": "xupra.connect",
+            "title": "Connect Xupra",
+            "description": "Start in VS Code. Click the button below and Xupra opens your browser for sign-in or sign-up.\n\n[Connect Xupra](command:xupra.connect)",
+            "media": {
+              "image": "media/readme-connect.svg",
+              "altText": "Connect Xupra from VS Code and continue in the browser."
+            },
+            "completionEvents": [
+              "onCommand:xupra.connect"
+            ]
+          },
+          {
+            "id": "xupra.return",
+            "title": "Return To VS Code Signed In",
+            "description": "After browser sign-in, Xupra returns directly to VS Code or Cursor and stores the extension session automatically.",
+            "media": {
+              "image": "media/readme-connect.svg",
+              "altText": "Browser sign-in returns directly to VS Code."
+            },
+            "completionEvents": [
+              "onContext:xupra.connected"
+            ]
+          },
+          {
+            "id": "xupra.scan",
+            "title": "Import Skills And Agents",
+            "description": "Xupra finds supported repo and global agent files, uploads them, and imports them into your Xupra workspace.\n\n[Import Skills And Agents](command:xupra.importWorkspace)",
+            "media": {
+              "image": "media/readme-workflow.svg",
+              "altText": "Import skills and agents."
+            },
+            "completionEvents": [
+              "onCommand:xupra.importWorkspace"
+            ]
+          },
+          {
+            "id": "xupra.import",
+            "title": "Review What Imported",
+            "description": "After import, Xupra shows raw files, agents, skills, and rules in the extension and web workspace.\n\n[Open Xupra App](command:xupra.openWebApp)",
+            "media": {
+              "image": "media/readme-workflow.svg",
+              "altText": "Review imported files."
+            },
+            "completionEvents": [
+              "onCommand:xupra.importWorkspace"
+            ]
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "xupra.connect",
+        "title": "Xupra DryLake: Connect"
+      },
+      {
+        "command": "xupra.pasteToken",
+        "title": "Xupra DryLake: Paste Extension Token"
+      },
+      {
+        "command": "xupra.openWebApp",
+        "title": "Xupra DryLake: Open Web App"
+      },
+      {
+        "command": "xupra.refreshProjects",
+        "title": "Xupra DryLake: Refresh Projects"
+      },
+      {
+        "command": "xupra.scanWorkspace",
+        "title": "Xupra DryLake: Scan Workspace"
+      },
+      {
+        "command": "xupra.selectProject",
+        "title": "Xupra DryLake: Select Project"
+      },
+      {
+        "command": "xupra.selectPackage",
+        "title": "Xupra DryLake: Select Package"
+      },
+      {
+        "command": "xupra.selectVersion",
+        "title": "Xupra DryLake: Choose Import Target"
+      },
+      {
+        "command": "xupra.importWorkspace",
+        "title": "Xupra DryLake: Import Workspace"
+      },
+      {
+        "command": "xupra.importDefaultLocations",
+        "title": "Xupra DryLake: Import Default Locations"
+      },
+      {
+        "command": "xupra.importFolder",
+        "title": "Xupra DryLake: Import From Folder"
+      },
+      {
+        "command": "xupra.resetWorkspaceState",
+        "title": "Xupra DryLake: Reset Workspace State"
+      },
+      {
+        "command": "xupra.checkCompatibility",
+        "title": "Xupra DryLake: Check Compatibility"
+      },
+      {
+        "command": "xupra.exportPreview",
+        "title": "Xupra DryLake: Export Preview"
+      },
+      {
+        "command": "xupra.pullPackage",
+        "title": "Xupra DryLake: Pull Package Files"
+      },
+      {
+        "command": "xupra.deploy",
+        "title": "Xupra DryLake: Deploy"
+      },
+      {
+        "command": "xupra.showRecentJobs",
+        "title": "Xupra DryLake: Show Recent Jobs"
+      },
+      {
+        "command": "xupra.openSettings",
+        "title": "Xupra DryLake: Open Extension Settings"
+      },
+      {
+        "command": "xupra.openAccountSettings",
+        "title": "Xupra DryLake: Open Account Settings"
+      },
+      {
+        "command": "xupra.openBilling",
+        "title": "Xupra DryLake: Open Billing"
+      },
+      {
+        "command": "xupra.openInstallGuide",
+        "title": "Xupra DryLake: Open Install Guide"
+      },
+      {
+        "command": "xupra.openConnectPage",
+        "title": "Xupra DryLake: Open Extension Connect Page"
+      },
+      {
+        "command": "xupra.openGetStarted",
+        "title": "Xupra DryLake: Open Get Started Page"
+      },
+      {
+        "command": "xupra.openWalkthrough",
+        "title": "Xupra DryLake: Open Walkthrough"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "xupra.refreshProjects",
+          "when": "view == xupra.projects && xupra.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.importWorkspace",
+          "when": "view == xupra.projects && xupra.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.importDefaultLocations",
+          "when": "view == xupra.projects && xupra.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.importFolder",
+          "when": "view == xupra.projects && xupra.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.connect",
+          "when": "view == xupra.projects && !xupra.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.resetWorkspaceState",
+          "when": "view == xupra.help",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.deploy",
+          "when": "view == xupra.jobs",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.openSettings",
+          "when": "view == xupra.help",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "xupra.selectProject",
+          "when": "view == xupra.projects && viewItem == xupra.project",
+          "group": "inline"
+        },
+        {
+          "command": "xupra.selectPackage",
+          "when": "view == xupra.projects && viewItem == xupra.package",
+          "group": "inline"
+        },
+        {
+          "command": "xupra.selectVersion",
+          "when": "view == xupra.projects && viewItem == xupra.version",
+          "group": "inline"
+        },
+        {
+          "command": "xupra.deploy",
+          "when": "view == xupra.projects && viewItem == xupra.version",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "check:cursor": "node scripts/check-cursor-compatibility.mjs",
+    "prepackage": "npm run build",
+    "package:vsix": "npx @vscode/vsce package --allow-star-activation",
+    "install:vsix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-vsix.ps1",
+    "reinstall:vsix": "npm run package:vsix && npm run install:vsix",
+    "uninstall:vscode": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-vscode-extension.ps1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.9.1",
+    "esbuild": "^0.25.3",
+    "typescript": "^5.8.3"
+  }
+}

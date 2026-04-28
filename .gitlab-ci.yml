@@ -1,0 +1,205 @@
+stages:
+  - validate
+  - deploy
+
+default:
+  image: node:22-bookworm
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+
+variables:
+  NODE_ENV: production
+  DATABASE_PROVIDER: sqlite
+  DATABASE_URL: file:./dev.db
+  APP_BASE_URL: http://localhost:3000
+  APP_ENCRYPTION_KEY: gitlab-ci-dev-only-key-0000000000000000
+  AUTH_MODE: dev
+  DEFAULT_DEV_USER_EMAIL: owner@xupra.local
+  DEFAULT_DEV_USER_NAME: Xupra Owner
+  PLATFORM_ADMIN_EMAILS: owner@xupra.local
+  ARTIFACT_STORAGE_DRIVER: local
+  SECRETS_PROVIDER: env
+  BILLING_ENFORCEMENT_MODE: development
+
+validate:
+  stage: validate
+  script:
+    - npm ci --include=dev
+    - npx tsx scripts/prisma/render-schema.ts sqlite prisma/schema.runtime.prisma
+    - npx prisma generate --schema prisma/schema.runtime.prisma
+    - npx prisma db push --schema prisma/schema.runtime.prisma
+    - npx tsx prisma/seed.ts
+    - npm run typecheck
+    - npm run lint
+    - npm run build
+  rules:
+    - if: $CI_COMMIT_BRANCH
+
+deploy_staging:
+  stage: deploy
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+      - script_failure
+  image: debian:bookworm-slim
+  before_script:
+    - apt-get update
+    - apt-get install -y openssh-client git
+    - eval "$(ssh-agent -s)"
+    - mkdir -p ~/.ssh
+    - |
+      key_path=~/.ssh/staging_deploy_key
+      if [ -z "${STAGING_SSH_PRIVATE_KEY:-}" ]; then
+        echo "STAGING_SSH_PRIVATE_KEY is empty or undefined in CI variables." >&2
+        exit 1
+      fi
+
+      if [ -f "$STAGING_SSH_PRIVATE_KEY" ]; then
+        cp "$STAGING_SSH_PRIVATE_KEY" "$key_path"
+        chmod 600 "$key_path"
+        if ! ssh-add "$key_path" >/dev/null 2>&1; then
+          bytes="$(wc -c < "$key_path" | tr -d ' ')"
+          echo "Unable to load file-based STAGING_SSH_PRIVATE_KEY into ssh-agent (bytes=$bytes)." >&2
+          exit 1
+        fi
+      else
+        key_value="$(printf '%s' "$STAGING_SSH_PRIVATE_KEY" | tr -d '\r')"
+        key_value="${key_value#\"}"
+        key_value="${key_value%\"}"
+        key_value="${key_value#\'}"
+        key_value="${key_value%\'}"
+        raw_candidate="${key_path}.raw"
+        escaped_candidate="${key_path}.escaped"
+        b64_candidate="${key_path}.b64"
+        selected_key=""
+
+        # Try the most common formats in order: raw multiline, escaped newline text, and base64.
+        printf '%s\n' "$key_value" > "$raw_candidate"
+        printf '%b' "$key_value" > "$escaped_candidate"
+        if ! printf '%s' "$key_value" | base64 -d > "$b64_candidate" 2>/dev/null; then
+          rm -f "$b64_candidate"
+        fi
+
+        for candidate in "$raw_candidate" "$escaped_candidate" "$b64_candidate"; do
+          if [ -s "$candidate" ]; then
+            chmod 600 "$candidate"
+          fi
+
+          if [ -s "$candidate" ] && ssh-add "$candidate" >/dev/null 2>&1; then
+            selected_key="$candidate"
+            break
+          fi
+        done
+
+        if [ -z "$selected_key" ]; then
+          has_begin_marker="no"
+          has_escaped_newlines="no"
+          if printf '%s' "$key_value" | grep -q 'BEGIN .* PRIVATE KEY'; then
+            has_begin_marker="yes"
+          fi
+          if printf '%s' "$key_value" | grep -q '\\n'; then
+            has_escaped_newlines="yes"
+          fi
+          echo "Unable to load STAGING_SSH_PRIVATE_KEY (length=${#key_value}, begin_marker=$has_begin_marker, escaped_newlines=$has_escaped_newlines)." >&2
+          exit 1
+        fi
+
+        cp "$selected_key" "$key_path"
+        rm -f "$raw_candidate" "$escaped_candidate" "$b64_candidate"
+      fi
+
+      chmod 600 "$key_path"
+    - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
+  script:
+    - ': "${STAGING_HOST:?STAGING_HOST is required}"'
+    - ': "${STAGING_SSH_USER:?STAGING_SSH_USER is required}"'
+    - ': "${STAGING_SSH_PRIVATE_KEY:?STAGING_SSH_PRIVATE_KEY is required}"'
+    - ': "${STAGING_ENV_FILE:?STAGING_ENV_FILE is required}"'
+    - git archive --format=tar HEAD -o release.tar
+    - printf "%s" "$STAGING_ENV_FILE" > staging.env
+    - |
+      app_base_url="${STAGING_URL:-}"
+      if [ -z "$app_base_url" ]; then
+        app_base_url="$(grep -E '^APP_BASE_URL=' staging.env | tail -n 1 | cut -d'=' -f2-)"
+      fi
+
+      if [ -z "$app_base_url" ]; then
+        echo "APP_BASE_URL is required in STAGING_ENV_FILE or STAGING_URL." >&2
+        exit 1
+      fi
+
+      if ! printf '%s' "$app_base_url" | grep -Eq '^https://'; then
+        echo "APP_BASE_URL must use https. Set STAGING_URL to an https domain URL." >&2
+        exit 1
+      fi
+
+      app_host="$(printf '%s' "$app_base_url" | sed -E 's#^https://([^/]+).*$#\1#')"
+      app_host_no_port="${app_host%%:*}"
+      if printf '%s' "$app_host_no_port" | grep -Eq '^[0-9]{1,3}(\\.[0-9]{1,3}){3}$'; then
+        echo "APP_BASE_URL must use a domain host, not a raw IP ($app_host_no_port)." >&2
+        exit 1
+      fi
+
+      if grep -Eq '^APP_BASE_URL=' staging.env; then
+        sed -i "s#^APP_BASE_URL=.*#APP_BASE_URL=$app_base_url#" staging.env
+      else
+        printf '\nAPP_BASE_URL=%s\n' "$app_base_url" >> staging.env
+      fi
+    - |
+      for attempt in 1 2 3; do
+        if scp release.tar "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-release.tar"; then
+          break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+          exit 1
+        fi
+        sleep 5
+      done
+    - |
+      for attempt in 1 2 3; do
+        if scp staging.env "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-staging.env"; then
+          break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+          exit 1
+        fi
+        sleep 5
+      done
+    - |
+      for attempt in 1 2 3; do
+        if scp scripts/deploy/remote-bootstrap.sh "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-bootstrap.sh"; then
+          break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+          exit 1
+        fi
+        sleep 5
+      done
+    - |
+      for attempt in 1 2 3; do
+        if ssh "$STAGING_SSH_USER@$STAGING_HOST" \
+          "chmod +x /tmp/xupra-bootstrap.sh && \
+          sudo APP_DIR=/srv/xupra-drylake \
+          APP_USER=xupra \
+          APP_GROUP=xupra \
+          RELEASE_TAR=/tmp/xupra-release.tar \
+          ENV_FILE=/tmp/xupra-staging.env \
+          bash /tmp/xupra-bootstrap.sh"; then
+          break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+          exit 1
+        fi
+        sleep 10
+      done
+  environment:
+    name: staging
+    url: $STAGING_URL
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "development"'
