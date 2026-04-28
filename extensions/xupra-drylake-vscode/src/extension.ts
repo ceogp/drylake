@@ -4,7 +4,7 @@ import { checkCompatibilityCommand } from "./commands/checkCompatibility";
 import { connectCommand } from "./commands/connect";
 import { deployCommand } from "./commands/deploy";
 import { exportPreviewCommand } from "./commands/exportPreview";
-import { importWorkspaceCommand } from "./commands/importWorkspace";
+import { importDefaultLocationsCommand, importFolderCommand, importWorkspaceCommand } from "./commands/importWorkspace";
 import { openWebAppCommand } from "./commands/openWebApp";
 import { pullPackageCommand } from "./commands/pullPackage";
 import { refreshProjectsCommand } from "./commands/refreshProjects";
@@ -165,13 +165,33 @@ export async function activate(context: vscode.ExtensionContext) {
   }
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
-  apiClient.setAccessToken(await stateStore.getAccessToken());
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const projectsView = new ProjectTreeProvider();
   const jobsView = new JobTreeProvider();
   const helpView = new HelpTreeProvider();
   const logger = getLogger();
   const statusBar = createStatusBar();
+  const storedAccessToken = await stateStore.getAccessToken();
+  apiClient.setAccessToken(storedAccessToken);
+
+  if (storedAccessToken) {
+    try {
+      const result = await apiClient.connect(undefined, undefined, storedAccessToken);
+      await stateStore.setConnection({
+        organizationId: result.organization?.id ?? result.auth.session.organizationId ?? undefined,
+        organizationSlug: result.organization?.slug,
+        userEmail: result.user?.email ?? undefined,
+        authMode: result.auth.mode
+      });
+    } catch (error) {
+      apiClient.setAccessToken(undefined);
+      await stateStore.clearAccessToken();
+      await stateStore.clearConnection();
+      logger.error(`Stored Xupra extension token is no longer valid: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  } else {
+    await stateStore.clearConnection();
+  }
 
   const syncContexts = async (input: {
     connected: boolean;
@@ -336,6 +356,7 @@ export async function activate(context: vscode.ExtensionContext) {
     } catch (error) {
       apiClient.setAccessToken(undefined);
       await stateStore.clearAccessToken();
+      await stateStore.clearConnection();
       void vscode.window.showErrorMessage(
         error instanceof Error ? error.message : "Failed to connect with extension token."
       );
@@ -344,7 +365,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.openWebApp", async () => {
-    await openWebAppCommand(apiClient);
+    await openWebAppCommand(apiClient, stateStore.getSelection().versionId);
   });
 
   register("xupra.refreshProjects", async () => {
@@ -365,6 +386,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("xupra.importWorkspace", async () => {
     await importWorkspaceCommand(apiClient, stateStore, jobsView);
+    await syncWorkspaceView();
+  });
+
+  register("xupra.importDefaultLocations", async () => {
+    await importDefaultLocationsCommand(apiClient, stateStore, jobsView);
+    await syncWorkspaceView();
+  });
+
+  register("xupra.importFolder", async () => {
+    await importFolderCommand(apiClient, stateStore, jobsView);
     await syncWorkspaceView();
   });
 

@@ -9,7 +9,8 @@ const PATTERNS = [
   "AGENTS.md",
   "CLAUDE.md",
   ".agents/skills/**/SKILL.md",
-  ".codex/agents/*.toml",
+  ".codex/agents/**/*.toml",
+  ".codex/skills/**/SKILL.md",
   ".claude/skills/**/SKILL.md",
   ".claude/agents/**/*.md",
   ".cursor/skills/**/SKILL.md",
@@ -20,6 +21,8 @@ const PATTERNS = [
 
 const EXCLUDE_PATTERN = "**/{node_modules,.git,.next,dist,build,out,coverage}/**";
 const MAX_FILES_PER_GLOBAL_ROOT = 200;
+const MAX_FILES_PER_SELECTED_FOLDER = 1000;
+const EXCLUDED_FOLDER_NAMES = new Set(["node_modules", ".git", ".next", "dist", "build", "out", "coverage"]);
 
 const GLOBAL_SCAN_ROOTS = [
   {
@@ -99,6 +102,26 @@ export async function scanWorkspaceFiles(configuration?: vscode.WorkspaceConfigu
   return results;
 }
 
+export async function scanDefaultLocationFiles() {
+  return scanGlobalAgentFiles();
+}
+
+export async function scanSelectedFolderFiles(rootUri: vscode.Uri) {
+  const files = await findSelectedFolderFiles(rootUri, MAX_FILES_PER_SELECTED_FOLDER);
+
+  return Promise.all(
+    files.map(async (file) => {
+      const logicalPath = getLogicalPathForSelectedFolder(rootUri, file);
+
+      return {
+        logicalPath,
+        content: await readWorkspaceFile(file),
+        category: classifyWorkspaceFile(logicalPath),
+      };
+    }),
+  );
+}
+
 async function scanGlobalAgentFiles() {
   const results: Array<{ logicalPath: string; content: string; category: DetectedWorkspaceFile["category"] }> = [];
 
@@ -162,6 +185,97 @@ async function findGlobalFiles(
 
   await walk(rootUri);
   return files;
+}
+
+async function findSelectedFolderFiles(rootUri: vscode.Uri, limit: number) {
+  const files: vscode.Uri[] = [];
+
+  async function walk(currentUri: vscode.Uri) {
+    if (files.length >= limit) {
+      return;
+    }
+
+    let entries: [string, vscode.FileType][];
+
+    try {
+      entries = await vscode.workspace.fs.readDirectory(currentUri);
+    } catch {
+      return;
+    }
+
+    for (const [name, fileType] of entries) {
+      if (files.length >= limit) {
+        return;
+      }
+
+      if (fileType === vscode.FileType.Directory && EXCLUDED_FOLDER_NAMES.has(name)) {
+        continue;
+      }
+
+      const childUri = vscode.Uri.joinPath(currentUri, name);
+
+      if (fileType === vscode.FileType.Directory) {
+        await walk(childUri);
+        continue;
+      }
+
+      if (fileType === vscode.FileType.File && isSupportedFolderImportFile(rootUri, childUri)) {
+        files.push(childUri);
+      }
+    }
+  }
+
+  await walk(rootUri);
+  return files;
+}
+
+function isSupportedFolderImportFile(rootUri: vscode.Uri, fileUri: vscode.Uri) {
+  const logicalPath = getLogicalPathForSelectedFolder(rootUri, fileUri).toLowerCase();
+  const baseName = path.posix.basename(logicalPath);
+
+  if (logicalPath === "agents.md" || logicalPath === "claude.md") {
+    return true;
+  }
+
+  if (baseName === "skill.md" && /(^|\/)(\.agents|\.codex|\.claude|\.cursor)?\/?skills\//i.test(logicalPath)) {
+    return true;
+  }
+
+  if (/\.codex\/agents\/.+\.toml$/i.test(logicalPath)) {
+    return true;
+  }
+
+  if (/\.claude\/agents\/.+\.md$/i.test(logicalPath)) {
+    return true;
+  }
+
+  if (/\.cursor\/rules\/.+\.mdc$/i.test(logicalPath)) {
+    return true;
+  }
+
+  return false;
+}
+
+function getLogicalPathForSelectedFolder(rootUri: vscode.Uri, fileUri: vscode.Uri) {
+  const relativePath = path.relative(rootUri.fsPath, fileUri.fsPath).replace(/\\/g, "/");
+  const rootParts = rootUri.fsPath.replace(/\\/g, "/").split("/").filter(Boolean);
+  let hiddenRootIndex = -1;
+
+  for (let index = rootParts.length - 1; index >= 0; index -= 1) {
+    const part = rootParts[index];
+
+    if (part === ".agents" || part === ".codex" || part === ".claude" || part === ".cursor") {
+      hiddenRootIndex = index;
+      break;
+    }
+  }
+
+  if (hiddenRootIndex >= 0) {
+    const prefix = rootParts.slice(hiddenRootIndex).join("/");
+    return `${prefix}/${relativePath}`;
+  }
+
+  return relativePath;
 }
 
 export function getWorkspaceDisplayName() {

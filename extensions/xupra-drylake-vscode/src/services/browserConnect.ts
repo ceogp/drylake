@@ -87,6 +87,12 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
 
     this.apiClient.setAccessToken(exchanged.token.token);
     await this.stateStore.setAccessToken(exchanged.token.token);
+    await this.stateStore.setConnection({
+      organizationId: exchanged.organization.id,
+      organizationSlug: exchanged.organization.slug,
+      userEmail: exchanged.user.email,
+      authMode: "clerk",
+    });
     void vscode.window.showInformationMessage(
       `Connected to Xupra DryLake as ${exchanged.user.email}.`,
     );

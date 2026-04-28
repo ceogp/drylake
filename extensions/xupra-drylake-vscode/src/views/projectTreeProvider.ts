@@ -10,9 +10,10 @@ import type {
 } from "../types/package";
 
 export type ProjectTreeItem =
-  | { kind: "section"; id: "next_actions" | "workspace" | "last_import" | "imported_workspace" | "files" | "projects" | "targets"; label: string; description?: string }
+  | { kind: "section"; id: "next_actions" | "workspace" | "scan_locations" | "last_import" | "imported_workspace" | "files" | "projects" | "targets"; label: string; description?: string; collapsed?: boolean }
   | { kind: "status"; label: string; description?: string }
   | { kind: "action"; label: string; description?: string; command: string }
+  | { kind: "scan_location"; label: string; description: string }
   | { kind: "detected_file"; file: DetectedWorkspaceFile }
   | { kind: "project"; project: ProjectSummary | ProjectDetail }
   | { kind: "package"; projectId: string; packageId: string; name: string; selected?: boolean }
@@ -55,6 +56,16 @@ const SOURCE_LABELS: Record<string, string> = {
 
 const MAX_VISIBLE_IMPORT_ITEMS = 80;
 
+const SCAN_LOCATIONS: Array<{ label: string; description: string }> = [
+  { label: "Repo instructions", description: "AGENTS.md, CLAUDE.md" },
+  { label: "Repo skills", description: ".agents/skills, .codex/skills, .claude/skills, .cursor/skills" },
+  { label: "Repo agents", description: ".codex/agents, .claude/agents" },
+  { label: "Cursor rules", description: ".cursor/rules" },
+  { label: "Global Codex", description: "~/.codex/agents, ~/.codex/skills" },
+  { label: "Global Claude", description: "~/.claude/agents, ~/.claude/skills" },
+  { label: "Global Cursor", description: "~/.cursor/skills, ~/.cursor/rules" },
+];
+
 function getSourceLabel(sourcePlatform: string) {
   return SOURCE_LABELS[sourcePlatform] ?? sourcePlatform;
 }
@@ -70,6 +81,37 @@ function withLimit<T>(items: T[]) {
 
 function normalizeRuleKind(kind: string) {
   return kind.replace(/_/g, " ");
+}
+
+function getActionIcon(command: string) {
+  switch (command) {
+    case "xupra.connect":
+      return new vscode.ThemeIcon("plug");
+    case "xupra.importWorkspace":
+      return new vscode.ThemeIcon("cloud-upload");
+    case "xupra.importDefaultLocations":
+      return new vscode.ThemeIcon("home");
+    case "xupra.importFolder":
+      return new vscode.ThemeIcon("folder-opened");
+    case "xupra.selectVersion":
+      return new vscode.ThemeIcon("target");
+    case "xupra.scanWorkspace":
+    case "xupra.refreshProjects":
+      return new vscode.ThemeIcon("refresh");
+    case "xupra.openSettings":
+      return new vscode.ThemeIcon("gear");
+    case "xupra.openWebApp":
+    case "xupra.openConnectPage":
+      return new vscode.ThemeIcon("globe");
+    case "xupra.pasteToken":
+      return new vscode.ThemeIcon("key");
+    case "xupra.checkCompatibility":
+      return new vscode.ThemeIcon("checklist");
+    case "xupra.exportPreview":
+      return new vscode.ThemeIcon("preview");
+    default:
+      return new vscode.ThemeIcon("play");
+  }
 }
 
 export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeItem> {
@@ -102,24 +144,38 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
   getTreeItem(element: ProjectTreeItem) {
     if (element.kind === "section") {
-      const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.Expanded);
+      const item = new vscode.TreeItem(
+        element.label,
+        element.collapsed ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded,
+      );
       item.description = element.description;
+      item.iconPath = new vscode.ThemeIcon("list-tree");
       return item;
     }
 
     if (element.kind === "status") {
       const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
       item.description = element.description;
+      item.iconPath = new vscode.ThemeIcon("info");
       return item;
     }
 
     if (element.kind === "action") {
       const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
       item.description = element.description;
+      item.tooltip = element.description;
+      item.iconPath = getActionIcon(element.command);
       item.command = {
         command: element.command,
         title: element.label,
       };
+      return item;
+    }
+
+    if (element.kind === "scan_location") {
+      const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
+      item.description = element.description;
+      item.iconPath = new vscode.ThemeIcon("folder");
       return item;
     }
 
@@ -209,60 +265,183 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
   getChildren(element?: ProjectTreeItem) {
     if (!element) {
-      return [
+      if (!this.state.connection.userEmail) {
+        return [
+          {
+            kind: "action",
+            label: "Connect Xupra",
+            description: "Open browser sign-in and link this editor",
+            command: "xupra.connect",
+          },
+        ] satisfies ProjectTreeItem[];
+      }
+
+      const selectedProject = this.state.projects.find((project) => project.id === this.state.selection.projectId);
+      const selectedPackage = selectedProject?.packages.find((agentPackage) => agentPackage.id === this.state.selection.packageId);
+      const selectedVersion = selectedPackage?.versions.find((version) => version.id === this.state.selection.versionId);
+      const importedWorkspace =
+        this.state.importedWorkspace && this.state.importedWorkspace.versionId === this.state.selection.versionId
+          ? this.state.importedWorkspace
+          : null;
+      const importedFromLastRun =
+        this.state.lastImport && this.state.lastImport.versionId === this.state.selection.versionId
+          ? this.state.lastImport.imported?.rawFiles ?? this.state.lastImport.uploadedPaths.length
+          : 0;
+      const importedArtifacts = importedWorkspace
+        ? importedWorkspace.files.length + importedWorkspace.subagents.length + importedWorkspace.skillRules.length
+        : importedFromLastRun;
+      const rows: ProjectTreeItem[] = [
         {
-          kind: "section",
-          id: "next_actions",
-          label: "Next Actions",
-          description: !this.state.connection.userEmail
-            ? "Connect first"
-            : this.state.selection.versionId
-              ? "Ready to import and export"
-              : "Choose where imports land",
+          kind: "action",
+          label: "Import Default Locations",
+          description: "Find global Codex, Claude, and Cursor files, then upload",
+          command: "xupra.importDefaultLocations",
         },
+        {
+          kind: "action",
+          label: "Import Workspace",
+          description: this.state.detectedFiles.length > 0
+            ? `${this.state.detectedFiles.length} detected repo files ready to upload`
+            : "Scan this repo plus configured patterns, then upload",
+          command: "xupra.importWorkspace",
+        },
+        {
+          kind: "action",
+          label: "Import From Folder",
+          description: "Choose a folder, find supported skills and agents inside it, then upload",
+          command: "xupra.importFolder",
+        },
+      ];
+
+      if (!selectedVersion) {
+        rows.push({
+          kind: "action",
+          label: "Choose Import Target",
+          description: "Pick the Xupra package/version where imports land",
+          command: "xupra.selectVersion",
+        });
+      }
+
+      rows.push({
+        kind: "action",
+        label: "Open Xupra App",
+        description: "Manage workspace, projects, packages, and imports",
+        command: "xupra.openWebApp",
+      });
+
+      if (selectedVersion && importedArtifacts > 0) {
+        rows.push(
+          {
+            kind: "action",
+            label: "Check Compatibility",
+            description: "Review how this import fits the selected target",
+            command: "xupra.checkCompatibility",
+          },
+          {
+            kind: "action",
+            label: "Export Preview",
+            description: "Generate target-native output before writeback",
+            command: "xupra.exportPreview",
+          },
+        );
+      }
+
+      rows.push(
         {
           kind: "section",
           id: "workspace",
-          label: "Workspace",
-          description: this.state.workspaceName
+          label: "Connection Details",
+          description: this.state.connection.organizationSlug ?? this.state.connection.userEmail,
+          collapsed: true,
         },
         {
           kind: "section",
           id: "last_import",
           label: "Last Import",
           description: this.state.lastImport ? this.state.lastImport.status : "none",
-        },
-        {
-          kind: "section",
-          id: "imported_workspace",
-          label: "Imported Workspace",
-          description: !this.state.selection.versionId
-            ? "Select a version"
-            : this.state.importedWorkspaceError
-              ? "load failed"
-            : this.state.importedWorkspace
-              ? `${this.state.importedWorkspace.files.length + this.state.importedWorkspace.subagents.length + this.state.importedWorkspace.skillRules.length} artifacts`
-              : "loading",
+          collapsed: !this.state.lastImport,
         },
         {
           kind: "section",
           id: "files",
-          label: "Importable Files",
-          description: `${this.state.detectedFiles.length}`
+          label: "Files To Import",
+          description: `${this.state.detectedFiles.length}`,
+          collapsed: true,
         },
         {
           kind: "section",
           id: "projects",
           label: "Projects",
-          description: `${this.state.projects.length}`
+          description: `${this.state.projects.length}`,
+          collapsed: true,
         },
         {
           kind: "section",
           id: "targets",
           label: "Targets",
-          description: TARGET_LABELS[this.state.defaultTargetPlatform] ?? this.state.defaultTargetPlatform
-        }
-      ] satisfies ProjectTreeItem[];
+          description: TARGET_LABELS[this.state.defaultTargetPlatform] ?? this.state.defaultTargetPlatform,
+          collapsed: true,
+        },
+      );
+
+      if (this.state.selection.versionId) {
+        const firstDetailIndex = rows.findIndex((row) => row.kind === "section");
+        rows.splice(firstDetailIndex === -1 ? rows.length : firstDetailIndex, 0, {
+          kind: "section",
+          id: "imported_workspace",
+          label: "Imported Workspace",
+          description: this.state.importedWorkspaceError
+            ? "load failed"
+            : importedArtifacts > 0
+              ? `${importedArtifacts} artifacts`
+              : "empty",
+          collapsed: importedArtifacts === 0,
+        });
+      }
+
+      return rows;
+    }
+
+    if (element.kind === "section" && element.id === "scan_locations") {
+      const rows: ProjectTreeItem[] = SCAN_LOCATIONS.map(
+        (location) =>
+          ({
+            kind: "scan_location",
+            label: location.label,
+            description: location.description,
+          }) satisfies ProjectTreeItem,
+      );
+
+      if (this.state.connection.userEmail) {
+        rows.push(
+          {
+            kind: "action",
+            label: "Import Default Locations",
+            description: "Find global Codex, Claude, and Cursor files, then upload",
+            command: "xupra.importDefaultLocations",
+          },
+          {
+            kind: "action",
+            label: "Import From Folder",
+            description: "Choose a folder and import supported files found inside it",
+            command: "xupra.importFolder",
+          },
+          {
+            kind: "action",
+            label: "Scan Workspace",
+            description: "Refresh the detected file list without importing",
+            command: "xupra.scanWorkspace",
+          },
+          {
+            kind: "action",
+            label: "Open Extension Settings",
+            description: "Add custom patterns if your files live somewhere else",
+            command: "xupra.openSettings",
+          },
+        );
+      }
+
+      return rows;
     }
 
     if (element.kind === "section" && element.id === "imported_workspace") {
@@ -338,7 +517,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           {
             kind: "status",
             label: "No imported artifacts in this version yet",
-            description: "Run Import Skills And Agents to populate files, skills, and agents",
+            description: "Run Import Default Locations to populate files, skills, and agents",
           },
         ] satisfies ProjectTreeItem[];
       }
@@ -384,7 +563,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           {
             kind: "status",
             label: "No import has run in this workspace yet",
-            description: "Run Import Skills And Agents",
+            description: "Run Import Default Locations",
           },
         ] satisfies ProjectTreeItem[];
       }
@@ -827,7 +1006,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
             {
               kind: "status",
               label: "No importable files listed yet",
-              description: "Use Import Skills And Agents or add custom file patterns"
+              description: "Use Import Workspace or add custom file patterns"
             }
           ] satisfies ProjectTreeItem[]);
     }

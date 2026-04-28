@@ -50,6 +50,10 @@ export class StateStore {
     });
   }
 
+  async clearConnection() {
+    await this.context.workspaceState.update(CONNECTION_KEY, {});
+  }
+
   getDetectedFiles(): DetectedWorkspaceFile[] {
     return this.context.workspaceState.get<DetectedWorkspaceFile[]>(DETECTED_FILES_KEY, []);
   }

@@ -2,7 +2,7 @@
   "name": "xupra-drylake-vscode",
   "displayName": "Xupra DryLake",
   "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "private": true,
   "publisher": "xupra",
   "license": "UNLICENSED",
@@ -48,8 +48,11 @@
     "onView:xupra.help",
     "onCommand:xupra.connect",
     "onCommand:xupra.pasteToken",
+    "onCommand:xupra.scanWorkspace",
     "onCommand:xupra.refreshProjects",
     "onCommand:xupra.importWorkspace",
+    "onCommand:xupra.importDefaultLocations",
+    "onCommand:xupra.importFolder",
     "onCommand:xupra.resetWorkspaceState",
     "onCommand:xupra.checkCompatibility",
     "onCommand:xupra.exportPreview",
@@ -166,27 +169,27 @@
     "viewsWelcome": [
       {
         "view": "xupra.projects",
-        "contents": "Move agents, skills, rules, and configs between platforms from one place inside VS Code.\n\n[Connect Xupra](command:xupra.connect)\n[See Install Guide](command:xupra.openInstallGuide)",
+        "contents": "[Connect Xupra](command:xupra.connect)",
         "when": "!xupra.connected"
       },
       {
         "view": "xupra.projects",
-        "contents": "You are connected. Import will find supported repo and global agent files, upload them, and show what landed.\n\n[Import Skills And Agents](command:xupra.importWorkspace)\n[Open Extension Settings](command:xupra.openSettings)",
+        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Import From Folder](command:xupra.importFolder)",
         "when": "xupra.connected && !xupra.hasDetectedFiles"
       },
       {
         "view": "xupra.projects",
-        "contents": "Importable files were found. Import them into Xupra, then inspect the results here or in the web app.\n\n[Import Skills And Agents](command:xupra.importWorkspace)\n[Open Xupra App](command:xupra.openWebApp)",
+        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Open Xupra App](command:xupra.openWebApp)",
         "when": "xupra.connected && xupra.hasDetectedFiles && !xupra.hasVersionSelection"
       },
       {
         "view": "xupra.projects",
-        "contents": "Import files, run compatibility checks, or generate export previews from here.\n\n[Import Skills And Agents](command:xupra.importWorkspace)\n[Export Preview](command:xupra.exportPreview)",
+        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Export Preview](command:xupra.exportPreview)",
         "when": "xupra.connected && xupra.hasDetectedFiles && xupra.hasVersionSelection"
       },
       {
         "view": "xupra.jobs",
-        "contents": "Imports, compatibility checks, exports, and deploys show up here.\n\n[Import Skills And Agents](command:xupra.importWorkspace)\n[Check Compatibility](command:xupra.checkCompatibility)",
+        "contents": "Jobs appear here after an import, compatibility check, export, or deploy starts.",
         "when": "true"
       }
     ],
@@ -265,6 +268,10 @@
         "title": "Xupra DryLake: Refresh Projects"
       },
       {
+        "command": "xupra.scanWorkspace",
+        "title": "Xupra DryLake: Scan Workspace"
+      },
+      {
         "command": "xupra.selectProject",
         "title": "Xupra DryLake: Select Project"
       },
@@ -278,7 +285,15 @@
       },
       {
         "command": "xupra.importWorkspace",
-        "title": "Xupra DryLake: Import Skills And Agents"
+        "title": "Xupra DryLake: Import Workspace"
+      },
+      {
+        "command": "xupra.importDefaultLocations",
+        "title": "Xupra DryLake: Import Default Locations"
+      },
+      {
+        "command": "xupra.importFolder",
+        "title": "Xupra DryLake: Import From Folder"
       },
       {
         "command": "xupra.resetWorkspaceState",
@@ -337,12 +352,27 @@
       "view/title": [
         {
           "command": "xupra.refreshProjects",
-          "when": "view == xupra.projects",
+          "when": "view == xupra.projects && xupra.connected",
           "group": "navigation"
         },
         {
           "command": "xupra.importWorkspace",
-          "when": "view == xupra.projects",
+          "when": "view == xupra.projects && xupra.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.importDefaultLocations",
+          "when": "view == xupra.projects && xupra.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.importFolder",
+          "when": "view == xupra.projects && xupra.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.connect",
+          "when": "view == xupra.projects && !xupra.connected",
           "group": "navigation"
         },
         {
