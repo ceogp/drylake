@@ -187,33 +187,16 @@ export class ApiClient {
   }
 
   async listGeneratedExports(versionId: string, targetPlatform: string, ensureGenerated = false) {
-    const url = new URL(`${this.baseUrl}/api/v1/versions/${versionId}/exports`);
-    url.searchParams.set("targetPlatform", targetPlatform);
+    const params = new URLSearchParams();
+    params.set("targetPlatform", targetPlatform);
 
     if (ensureGenerated) {
-      url.searchParams.set("ensureGenerated", "true");
+      params.set("ensureGenerated", "true");
     }
 
-    let response: Response;
-
-    try {
-      response = await fetch(url);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `Network request failed for ${url.pathname}. Check xupra.baseUrl (currently ${this.baseUrl}). ${message}`,
-      );
-    }
-
-    const payload = (await response.json()) as {
-      ok?: boolean;
-      error?: { message?: string };
+    const payload = await this.request<{
       generatedFiles?: GeneratedExportFile[];
-    };
-
-    if (!response.ok || payload.ok === false) {
-      throw new Error(payload.error?.message ?? `Request failed for ${url.pathname}`);
-    }
+    }>(`/api/v1/versions/${versionId}/exports?${params.toString()}`);
 
     return {
       generatedFiles: payload.generatedFiles ?? []

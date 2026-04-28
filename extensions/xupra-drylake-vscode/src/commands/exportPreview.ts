@@ -38,8 +38,17 @@ export async function exportPreviewCommand(
 
   const completed = await waitForTransformJob(apiClient, result.job.id);
 
-  if (configuration.get<boolean>("pullGeneratedFilesAfterExport") && result.generatedFiles?.length) {
-    const writtenCount = await writeGeneratedFilesToWorkspace(result.generatedFiles, {
+  if (configuration.get<boolean>("pullGeneratedFilesAfterExport")) {
+    const generated = result.generatedFiles?.length
+      ? result.generatedFiles
+      : (await apiClient.listGeneratedExports(selection.versionId, targetPlatform)).generatedFiles;
+
+    if (generated.length === 0) {
+      void vscode.window.showWarningMessage(`Export preview completed for ${picked.label}, but no generated files were available to write.`);
+      return;
+    }
+
+    const writtenCount = await writeGeneratedFilesToWorkspace(generated, {
       confirmBeforeWrite: configuration.get<boolean>("confirmBeforeWriteback", true)
     });
     void vscode.window.showInformationMessage(`Exported ${picked.label} with status ${completed.status} and wrote ${writtenCount} files.`);

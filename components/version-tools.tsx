@@ -208,12 +208,11 @@ function describePendingFiles(files: PendingBrowserFile[]) {
     .join(" · ");
 }
 
-export function VersionTools({ versionId, deploymentTargets, currentSummary }: VersionToolsProps) {
+export function VersionTools({ versionId, currentSummary }: VersionToolsProps) {
   const router = useRouter();
   const manualInputRef = useRef<HTMLInputElement | null>(null);
   const directoryInputRef = useRef<HTMLInputElement | null>(null);
   const [targetPlatform, setTargetPlatform] = useState<(typeof TARGETS)[number]["value"]>("claude_code");
-  const [deploymentTargetId, setDeploymentTargetId] = useState<string>(deploymentTargets[0]?.id ?? "");
   const [statusMessage, setStatusMessage] = useState(
     currentSummary.rawFiles > 0
       ? `This version already has ${currentSummary.rawFiles} raw files in storage.`
@@ -223,9 +222,10 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
   const [importedFiles, setImportedFiles] = useState<ImportedFileRecord[]>([]);
   const [importedFilesSource, setImportedFilesSource] = useState("postgres_package_file");
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-  const [isBusy, setIsBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"upload" | "import" | "generate" | "install" | null>(null);
   const [pendingFolderFiles, setPendingFolderFiles] = useState<PendingBrowserFile[]>([]);
   const [pendingManualFiles, setPendingManualFiles] = useState<PendingBrowserFile[]>([]);
+  const isBusy = busyAction !== null;
 
   const loadImportedFiles = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -283,8 +283,8 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
   const folderSummary = useMemo(() => describePendingFiles(pendingFolderFiles), [pendingFolderFiles]);
   const manualSummary = useMemo(() => describePendingFiles(pendingManualFiles), [pendingManualFiles]);
 
-  async function runJsonPost(url: string, body?: Record<string, unknown>) {
-    setIsBusy(true);
+  async function runJsonPost(url: string, body?: Record<string, unknown>, action: NonNullable<typeof busyAction> = "import") {
+    setBusyAction(action);
 
     try {
       const response = await fetch(url, {
@@ -304,6 +304,14 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
 
       if (payload.generatedFiles) {
         setLatestPreview(payload.generatedFiles);
+        const targetLabel = TARGETS.find((target) => target.value === targetPlatform)?.label ?? targetPlatform;
+        setStatusMessage(
+          payload.generatedFiles.length > 0
+            ? `Generated ${payload.generatedFiles.length} ${targetLabel} file${payload.generatedFiles.length === 1 ? "" : "s"}. Review them below.`
+            : `No ${targetLabel} files were generated from this import.`,
+        );
+        router.refresh();
+        return true;
       }
 
       if (payload.result?.status) {
@@ -317,9 +325,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
           detailParts.push(`warnings: ${payload.result.warnings.join("; ")}`);
         }
 
-        setStatusMessage(
-          `Compatibility: ${payload.result.status}${detailParts.length ? ` | ${detailParts.join(" | ")}` : ""}`,
-        );
+        setStatusMessage(`${payload.result.status ?? "Checked"}${detailParts.length ? `: ${detailParts.join(" | ")}` : ""}`);
       } else if (payload.imported) {
         setStatusMessage(
           `Imported ${payload.imported.rawFiles} files, ${payload.imported.subagents} agents, ${payload.imported.skills} skills, ${payload.imported.rules} rules.`,
@@ -338,8 +344,19 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
       router.refresh();
       return true;
     } finally {
-      setIsBusy(false);
+      setBusyAction(null);
     }
+  }
+
+  async function generateTargetFiles() {
+    const targetLabel = TARGETS.find((target) => target.value === targetPlatform)?.label ?? targetPlatform;
+    setLatestPreview([]);
+    setStatusMessage(`Generating ${targetLabel} files...`);
+    await runJsonPost(
+      `/api/v1/versions/${versionId}/export-preview`,
+      { targetPlatform },
+      "generate",
+    );
   }
 
   async function uploadPendingFiles(files: PendingBrowserFile[], options?: { autoImport?: boolean }) {
@@ -348,7 +365,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
       return;
     }
 
-    setIsBusy(true);
+    setBusyAction("upload");
 
     try {
       const formData = new FormData();
@@ -422,7 +439,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
       await loadImportedFiles({ silent: true });
       router.refresh();
     } finally {
-      setIsBusy(false);
+      setBusyAction(null);
     }
   }
 
@@ -453,11 +470,11 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-            Upload Files
+            Import Skills And Agents
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-700">
-            Choose a repo folder, a global agent folder, or selected files. Xupra finds supported
-            skills, agents, rules, and instruction files, then imports them immediately.
+            Choose a repo folder, a global agent folder, or selected files. Xupra finds your
+            agents, skills, rules, and instructions, then makes them available for every target.
           </p>
         </div>
         <p className="max-w-sm rounded-2xl bg-stone-100 px-4 py-3 font-mono text-xs leading-6 text-stone-700">
@@ -509,7 +526,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
               onClick={() => directoryInputRef.current?.click()}
               type="button"
             >
-              {isBusy ? "Importing..." : "Choose Folder And Import"}
+              {busyAction === "upload" ? "Importing..." : "Choose Folder And Import"}
             </button>
           </div>
           <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
@@ -552,7 +569,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
             onClick={() => manualInputRef.current?.click()}
             type="button"
           >
-            {isBusy ? "Importing..." : "Choose Files And Import"}
+            {busyAction === "upload" ? "Importing..." : "Choose Files And Import"}
           </button>
         </div>
         <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 lg:col-span-2">
@@ -562,9 +579,9 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
 
       {currentSummary.rawFiles > 0 ? (
         <>
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-end">
+      <section className="grid gap-4 rounded-[1.25rem] border border-stone-200 bg-stone-50 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
         <label className="grid gap-2 text-sm font-medium text-stone-900">
-          Target platform
+          Send these files to
           <select
             className="rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-800"
             onChange={(event) => setTargetPlatform(event.target.value as (typeof TARGETS)[number]["value"])}
@@ -578,43 +595,43 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
           </select>
         </label>
         <button
-          className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isBusy}
-          onClick={() => void runJsonPost(`/api/v1/versions/${versionId}/import`, { mode: "auto" })}
-          type="button"
-        >
-          Import Existing Raw Files
-        </button>
-        <button
-          className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isBusy}
-          onClick={() =>
-            void runJsonPost(`/api/v1/versions/${versionId}/compatibility`, {
-              targetPlatform,
-            })
-          }
-          type="button"
-        >
-          Check Compatibility
-        </button>
-        <button
           className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
           disabled={isBusy}
-          onClick={() =>
-            void runJsonPost(`/api/v1/versions/${versionId}/export-preview`, {
-              targetPlatform,
-            })
-          }
+          onClick={() => void generateTargetFiles()}
           type="button"
         >
-          Export Preview
+          {busyAction === "generate" ? "Generating..." : "Generate Files"}
         </button>
-      </div>
+        <p className="text-sm leading-7 text-stone-700 lg:col-span-2">
+          This creates target-native files from your imported library so you can review them and
+          install them into Codex, Claude, or Cursor.
+        </p>
+      </section>
 
-      <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-7 text-stone-700">
-        Compatibility checks only tell you whether the canonical package is ready for a target.
-        They do not upload source files, export artifacts, or deploy anything.
-      </div>
+      {latestPreview.length > 0 ? (
+        <section className="space-y-4 rounded-[1.25rem] border border-stone-200 bg-white p-5">
+          <div>
+            <h3 className="font-[family-name:var(--font-heading)] text-xl font-semibold text-stone-950">
+              Generated Files
+            </h3>
+            <p className="mt-2 text-sm leading-7 text-stone-700">
+              Review these files. In VS Code, use Pull Generated Files to write them into a scratch workspace.
+            </p>
+          </div>
+          <div className="grid gap-4">
+            {latestPreview.map((file) => (
+              <article key={file.logicalPath} className="overflow-hidden rounded-[1.25rem] border border-stone-200">
+                <div className="break-all border-b border-stone-200 bg-stone-50 px-4 py-3 font-mono text-xs text-stone-700">
+                  {file.logicalPath}
+                </div>
+                <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words bg-stone-950 px-4 py-4 font-mono text-xs leading-6 text-stone-100">
+                  {file.preview}
+                </pre>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
         </>
       ) : null}
 
@@ -642,7 +659,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
             {importedFiles.map((file) => (
               <article key={file.dbId} className="overflow-hidden rounded-[1.25rem] border border-stone-200 bg-white">
                 <div className="border-b border-stone-200 bg-stone-50 px-4 py-3">
-                  <p className="font-mono text-xs uppercase tracking-[0.16em] text-stone-500">
+                  <p className="break-all font-mono text-xs text-stone-700">
                     {file.logicalPath}
                   </p>
                   <p className="mt-1 text-xs text-stone-600">
@@ -651,7 +668,7 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
                   </p>
                 </div>
                 {file.previewText ? (
-                  <pre className="max-h-56 overflow-auto bg-stone-950 px-4 py-4 font-mono text-xs leading-6 text-stone-100">
+                  <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words bg-stone-950 px-4 py-4 font-mono text-xs leading-6 text-stone-100">
                     {file.previewText}
                     {file.previewTruncated ? "\n\n[preview truncated]" : ""}
                   </pre>
@@ -673,68 +690,6 @@ export function VersionTools({ versionId, deploymentTargets, currentSummary }: V
         )}
       </section>
 
-      {currentSummary.rawFiles > 0 && deploymentTargets.length > 0 ? (
-      <div className="grid gap-4 rounded-[1.25rem] border border-dashed border-stone-300 bg-stone-50 p-5">
-        <div>
-          <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
-            Deploy Version
-          </h3>
-          <p className="mt-2 text-sm leading-7 text-stone-700">
-            Run a deployment job against a configured target after import and compatibility are in shape.
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-          <label className="grid gap-2 text-sm font-medium text-stone-900">
-            Deployment target
-            <select
-              className="rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-800"
-              onChange={(event) => setDeploymentTargetId(event.target.value)}
-              value={deploymentTargetId}
-            >
-              <option value="">Select a target</option>
-              {deploymentTargets.map((target) => (
-                <option key={target.id} value={target.id}>
-                  {target.name} ({target.platform} · {target.deliveryMode})
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-orange-300"
-            disabled={isBusy || !deploymentTargetId}
-            onClick={() =>
-              void runJsonPost(`/api/v1/versions/${versionId}/deploy`, {
-                deploymentTargetId,
-                triggerSource: "ui",
-              })
-            }
-            type="button"
-          >
-            Deploy
-          </button>
-        </div>
-      </div>
-      ) : null}
-
-      {latestPreview.length > 0 ? (
-        <div className="space-y-4">
-          <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
-            Latest Generated Files
-          </h3>
-          <div className="grid gap-4">
-            {latestPreview.map((file) => (
-              <article key={file.logicalPath} className="overflow-hidden rounded-[1.5rem] border border-stone-200">
-                <div className="border-b border-stone-200 bg-stone-50 px-4 py-3 font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
-                  {file.logicalPath}
-                </div>
-                <pre className="overflow-x-auto bg-stone-950 px-4 py-4 font-mono text-xs leading-6 text-stone-100">
-                  {file.preview}
-                </pre>
-              </article>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -340,8 +340,14 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
           {
             kind: "action",
             label: "Export Preview",
-            description: "Generate target-native output before writeback",
+            description: "Generate target-native output before installing files",
             command: "xupra.exportPreview",
+          },
+          {
+            kind: "action",
+            label: "Pull Generated Files",
+            description: "Write generated target files into the open workspace",
+            command: "xupra.pullPackage",
           },
         );
       }
@@ -728,8 +734,14 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         {
           kind: "action",
           label: "Export Preview",
-          description: "Generate target-native output files before deployment",
+          description: "Generate target-native output files before install",
           command: "xupra.exportPreview",
+        },
+        {
+          kind: "action",
+          label: "Pull Generated Files",
+          description: "Write generated target files into the open workspace",
+          command: "xupra.pullPackage",
         },
       ] satisfies ProjectTreeItem[];
     }

@@ -88,11 +88,10 @@ export default async function VersionPage({ params }: PageProps) {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
-                Upload Skills And Agents
+                Review And Share Skills
               </h1>
               <p className="mt-3 max-w-3xl text-lg leading-8 text-stone-700">
-                Upload a repo folder or selected files, then confirm the imported source files,
-                agents, skills, and rules on this page.
+                Review your imported agents and skills, then generate files for Codex, Claude, or Cursor.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">

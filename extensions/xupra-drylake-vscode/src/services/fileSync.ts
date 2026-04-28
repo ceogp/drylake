@@ -1,6 +1,16 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
 
+function safeLogicalPath(rawPath: string) {
+  const normalized = rawPath.replace(/\\/g, "/").split("/").filter(Boolean);
+
+  if (path.posix.isAbsolute(rawPath) || normalized.some((segment) => segment === "." || segment === "..")) {
+    throw new Error(`Refusing to write generated file outside the workspace: ${rawPath}`);
+  }
+
+  return normalized;
+}
+
 export async function writeGeneratedFilesToWorkspace(
   files: Array<{ logicalPath: string; preview: string }>,
   options?: {
@@ -26,11 +36,12 @@ export async function writeGeneratedFilesToWorkspace(
   }
 
   for (const file of files) {
-    const target = vscode.Uri.joinPath(root, ...file.logicalPath.split("/"));
+    const pathSegments = safeLogicalPath(file.logicalPath);
+    const target = vscode.Uri.joinPath(root, ...pathSegments);
     const directorySegments = path.posix
       .dirname(file.logicalPath)
       .split("/")
-      .filter((segment) => Boolean(segment) && segment !== ".");
+      .filter((segment) => Boolean(segment) && segment !== "." && segment !== "..");
     const directory =
       directorySegments.length > 0 ? vscode.Uri.joinPath(root, ...directorySegments) : root;
     await vscode.workspace.fs.createDirectory(directory);

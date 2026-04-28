@@ -184,7 +184,7 @@
       },
       {
         "view": "xupra.projects",
-        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Export Preview](command:xupra.exportPreview)",
+        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Export Preview](command:xupra.exportPreview)\n[Pull Generated Files](command:xupra.pullPackage)",
         "when": "xupra.connected && xupra.hasDetectedFiles && xupra.hasVersionSelection"
       },
       {
@@ -309,7 +309,7 @@
       },
       {
         "command": "xupra.pullPackage",
-        "title": "Xupra DryLake: Pull Package Files"
+        "title": "Xupra DryLake: Pull Generated Files Into Workspace"
       },
       {
         "command": "xupra.deploy",
