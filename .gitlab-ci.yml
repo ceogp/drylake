@@ -202,4 +202,6 @@ deploy_staging:
     name: staging
     url: $STAGING_URL
   rules:
-    - if: '$CI_COMMIT_BRANCH == "development"'
+    - if: '$CI_COMMIT_BRANCH == "development" && $AUTO_DEPLOY_STAGING == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE'
+    - if: '$CI_COMMIT_BRANCH == "development" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE'
+      when: manual
