@@ -14,6 +14,13 @@ type Manifest = {
     user: string;
     password: string;
   };
+  rdsDatabase?: {
+    endpointAddress?: string;
+    endpointPort?: number;
+    name: string;
+    user: string;
+    password: string;
+  };
   appEncryptionKey: string;
 };
 
@@ -59,6 +66,21 @@ function isIpv4Hostname(hostname: string) {
   return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
 }
 
+function encodeDatabaseUrlPart(value: string) {
+  return encodeURIComponent(value);
+}
+
+function databaseUrlFromManifest(manifest: Manifest) {
+  if (manifest.rdsDatabase?.endpointAddress) {
+    const database = manifest.rdsDatabase;
+    const port = database.endpointPort ?? 5432;
+
+    return `postgresql://${encodeDatabaseUrlPart(database.user)}:${encodeDatabaseUrlPart(database.password)}@${database.endpointAddress}:${port}/${encodeDatabaseUrlPart(database.name)}`;
+  }
+
+  return `postgresql://${encodeDatabaseUrlPart(manifest.database.user)}:${encodeDatabaseUrlPart(manifest.database.password)}@127.0.0.1:5432/${encodeDatabaseUrlPart(manifest.database.name)}`;
+}
+
 async function writeStagingEnv(manifest: Manifest) {
   const baseUrl = requireEnv("APP_BASE_URL");
   let parsedBaseUrl: URL;
@@ -84,7 +106,7 @@ async function writeStagingEnv(manifest: Manifest) {
   const values: Record<string, string> = {
     NODE_ENV: "production",
     DATABASE_PROVIDER: "postgresql",
-    DATABASE_URL: `postgresql://${manifest.database.user}:${manifest.database.password}@127.0.0.1:5432/${manifest.database.name}`,
+    DATABASE_URL: databaseUrlFromManifest(manifest),
     APP_BASE_URL: baseUrl,
     ADMIN_INTERNAL_HOST: process.env.ADMIN_INTERNAL_HOST || "",
     ADMIN_INTERNAL_ORIGIN: process.env.ADMIN_INTERNAL_ORIGIN || "",
@@ -166,7 +188,7 @@ async function main() {
   await run("ssh", [
     ...sshArgs,
     remoteHost,
-    `chmod +x ${remoteBootstrapPath} && sudo APP_DIR=/srv/xupra-drylake APP_USER=xupra APP_GROUP=xupra RELEASE_TAR=${remoteReleasePath} ENV_FILE=${remoteEnvPath} DB_NAME=${manifest.database.name} DB_USER=${manifest.database.user} DB_PASSWORD=${manifest.database.password} LEGACY_IP_HOST=${manifest.publicIp} bash ${remoteBootstrapPath}`,
+    `chmod +x ${remoteBootstrapPath} && sudo APP_DIR=/srv/xupra-drylake APP_USER=xupra APP_GROUP=xupra RELEASE_TAR=${remoteReleasePath} ENV_FILE=${remoteEnvPath} LEGACY_IP_HOST=${manifest.publicIp} bash ${remoteBootstrapPath}`,
   ]);
 
   console.log(`Staging deployment completed: ${baseUrl}`);
