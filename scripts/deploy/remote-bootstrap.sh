@@ -111,7 +111,7 @@ console.log(dbPassword);
 fi
 
 id -u "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash "$APP_USER"
-mkdir -p "$APP_DIR/releases" "$APP_DIR/shared"
+mkdir -p "$APP_DIR/releases" "$APP_DIR/shared" "$APP_DIR/shared/storage"
 chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
 
 prune_release_directories 1

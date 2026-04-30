@@ -102,6 +102,7 @@ async function writeStagingEnv(manifest: Manifest) {
     CLERK_SIGN_IN_URL: process.env.CLERK_SIGN_IN_URL || "/",
     CLERK_SIGN_UP_URL: process.env.CLERK_SIGN_UP_URL || "/",
     ARTIFACT_STORAGE_DRIVER: "local",
+    ARTIFACT_STORAGE_ROOT: "/srv/xupra-drylake/shared/storage",
     SECRETS_PROVIDER: "env",
     JOB_EXECUTION_MODE: "inline",
     AWS_REGION: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "ap-northeast-1",
