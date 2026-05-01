@@ -75,7 +75,7 @@ function databaseUrlFromManifest(manifest: Manifest) {
     const database = manifest.rdsDatabase;
     const port = database.endpointPort ?? 5432;
 
-    return `postgresql://${encodeDatabaseUrlPart(database.user)}:${encodeDatabaseUrlPart(database.password)}@${database.endpointAddress}:${port}/${encodeDatabaseUrlPart(database.name)}?sslmode=require`;
+    return `postgresql://${encodeDatabaseUrlPart(database.user)}:${encodeDatabaseUrlPart(database.password)}@${database.endpointAddress}:${port}/${encodeDatabaseUrlPart(database.name)}?uselibpqcompat=true&sslmode=require`;
   }
 
   return `postgresql://${encodeDatabaseUrlPart(manifest.database.user)}:${encodeDatabaseUrlPart(manifest.database.password)}@127.0.0.1:5432/${encodeDatabaseUrlPart(manifest.database.name)}`;
