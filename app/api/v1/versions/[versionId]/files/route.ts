@@ -55,6 +55,16 @@ function canReadTextPreview(file: { mimeType: string; logicalPath: string }) {
   );
 }
 
+function textResponse(text: string, init?: ResponseInit) {
+  return new Response(text, {
+    ...init,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
 function toPreviewText(text: string) {
   const maxChars = 1600;
   const trimmed = text.slice(0, maxChars);
@@ -71,9 +81,42 @@ export async function GET(request: Request, context: Context) {
     await requireVersionAccess(versionId);
 
     const url = new URL(request.url);
+    const fileId = url.searchParams.get("fileId")?.trim();
+    const mode = url.searchParams.get("mode")?.trim();
     const kind = url.searchParams.get("kind")?.trim() || "raw_source";
     const includePreview = url.searchParams.get("preview") === "1";
     const limit = parseLimit(url.searchParams.get("limit"));
+
+    if (fileId && (mode === "content" || mode === "download")) {
+      const file = await prisma.packageFile.findFirst({
+        where: {
+          id: fileId,
+          packageVersionId: versionId,
+          kind: "raw_source",
+        },
+      });
+
+      if (!file) {
+        return badRequest("Source file not found");
+      }
+
+      if (!canReadTextPreview(file)) {
+        return badRequest("Only text source files can be read from this endpoint");
+      }
+
+      const text = await readArtifactText(file.storageKey);
+
+      if (mode === "download") {
+        const filename = path.basename(file.logicalPath).replace(/"/g, "");
+        return textResponse(text, {
+          headers: {
+            "Content-Disposition": `attachment; filename="${filename || "source-file.txt"}"`,
+          },
+        });
+      }
+
+      return textResponse(text);
+    }
 
     const files = await prisma.packageFile.findMany({
       where: {
@@ -95,7 +138,6 @@ export async function GET(request: Request, context: Context) {
             mimeType: file.mimeType,
             sizeBytes: file.sizeBytes,
             checksumSha256: file.checksumSha256,
-            storageKey: file.storageKey,
             createdAt: file.createdAt.toISOString(),
             previewText: null,
             previewTruncated: false,
@@ -115,7 +157,6 @@ export async function GET(request: Request, context: Context) {
             mimeType: file.mimeType,
             sizeBytes: file.sizeBytes,
             checksumSha256: file.checksumSha256,
-            storageKey: file.storageKey,
             createdAt: file.createdAt.toISOString(),
             previewText: preview.text,
             previewTruncated: preview.truncated,
@@ -130,7 +171,6 @@ export async function GET(request: Request, context: Context) {
             mimeType: file.mimeType,
             sizeBytes: file.sizeBytes,
             checksumSha256: file.checksumSha256,
-            storageKey: file.storageKey,
             createdAt: file.createdAt.toISOString(),
             previewText: null,
             previewTruncated: false,

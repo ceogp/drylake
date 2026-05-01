@@ -7,7 +7,9 @@ import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getS3Client } from "@/lib/aws/clients";
 import { env } from "@/lib/env";
 
-const STORAGE_ROOT = path.join(process.cwd(), "storage");
+const STORAGE_ROOT = process.env.ARTIFACT_STORAGE_ROOT?.trim()
+  ? path.resolve(process.env.ARTIFACT_STORAGE_ROOT)
+  : path.join(process.cwd(), "storage");
 
 function toRelativeLogicalPath(logicalPath: string) {
   return logicalPath

@@ -69,7 +69,7 @@ cleanup_npm_cache() {
 }
 
 apt-get update
-apt-get install -y ca-certificates curl git build-essential nginx postgresql postgresql-contrib
+apt-get install -y ca-certificates curl git build-essential nginx
 
 if ! command -v node >/dev/null 2>&1; then
   install_node_runtime
@@ -79,6 +79,13 @@ else
   if [ "$node_major_version" -lt 22 ]; then
     install_node_runtime
   fi
+fi
+
+USE_LOCAL_POSTGRES="0"
+DATABASE_HOST=""
+
+if [ -n "$DB_NAME" ] || [ -n "$DB_USER" ] || [ -n "$DB_PASSWORD" ]; then
+  USE_LOCAL_POSTGRES="1"
 fi
 
 if [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ]; then
@@ -94,10 +101,12 @@ if (!parsed.protocol.startsWith('postgres')) process.exit(2);
 const dbName = decodeURIComponent(parsed.pathname.replace(/^\\/+/, ''));
 const dbUser = decodeURIComponent(parsed.username || '');
 const dbPassword = decodeURIComponent(parsed.password || '');
+const dbHost = parsed.hostname || '';
 if (!dbName || !dbUser || !dbPassword) process.exit(3);
 console.log(dbName);
 console.log(dbUser);
 console.log(dbPassword);
+console.log(dbHost);
 ")
 
   if [ "${#db_parts[@]}" -lt 3 ]; then
@@ -108,31 +117,43 @@ console.log(dbPassword);
   DB_NAME="${DB_NAME:-${db_parts[0]}}"
   DB_USER="${DB_USER:-${db_parts[1]}}"
   DB_PASSWORD="${DB_PASSWORD:-${db_parts[2]}}"
+  DATABASE_HOST="${db_parts[3]:-}"
+fi
+
+if [ -z "$DATABASE_HOST" ] && [ -n "${DATABASE_URL:-}" ]; then
+  DATABASE_HOST="$(node -e "const parsed = new URL(process.env.DATABASE_URL || ''); process.stdout.write(parsed.hostname || '');")"
+fi
+
+if [ "$DATABASE_HOST" = "127.0.0.1" ] || [ "$DATABASE_HOST" = "localhost" ] || [ "$DATABASE_HOST" = "::1" ]; then
+  USE_LOCAL_POSTGRES="1"
 fi
 
 id -u "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash "$APP_USER"
-mkdir -p "$APP_DIR/releases" "$APP_DIR/shared"
+mkdir -p "$APP_DIR/releases" "$APP_DIR/shared" "$APP_DIR/shared/storage"
 chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
 
 prune_release_directories 1
 cleanup_npm_cache
 
-systemctl enable postgresql
-systemctl start postgresql
+if [ "$USE_LOCAL_POSTGRES" = "1" ]; then
+  apt-get install -y postgresql postgresql-contrib
+  systemctl enable postgresql
+  systemctl start postgresql
 
-sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_user="$DB_USER" --set=db_password="$DB_PASSWORD" <<'SQL'
+  sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_user="$DB_USER" --set=db_password="$DB_PASSWORD" <<'SQL'
 SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'db_user', :'db_password')
 WHERE NOT EXISTS (
   SELECT 1 FROM pg_roles WHERE rolname = :'db_user'
 ) \gexec
 SQL
 
-sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_name="$DB_NAME" --set=db_user="$DB_USER" <<'SQL'
+  sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_name="$DB_NAME" --set=db_user="$DB_USER" <<'SQL'
 SELECT format('CREATE DATABASE %I OWNER %I', :'db_name', :'db_user')
 WHERE NOT EXISTS (
   SELECT 1 FROM pg_database WHERE datname = :'db_name'
 ) \gexec
 SQL
+fi
 
 release_name="$(date +%Y%m%d%H%M%S)"
 release_dir="$APP_DIR/releases/$release_name"
@@ -202,10 +223,15 @@ prune_release_directories 2
 cleanup_npm_cache
 rm -f -- "$RELEASE_TAR" "$ENV_FILE"
 
+service_after="network.target"
+if [ "$USE_LOCAL_POSTGRES" = "1" ]; then
+  service_after="$service_after postgresql.service"
+fi
+
 cat >/etc/systemd/system/xupra-drylake.service <<SERVICE
 [Unit]
 Description=Xupra DryLake staging app
-After=network.target postgresql.service
+After=$service_after
 
 [Service]
 Type=simple
