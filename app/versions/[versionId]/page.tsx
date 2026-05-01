@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { VersionTools } from "@/components/version-tools";
@@ -172,15 +171,9 @@ export default async function VersionPage({ params }: PageProps) {
     <main className="min-h-screen bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_48%,_#ffffff_100%)]">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 py-16 md:px-10">
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-3 font-mono text-xs uppercase tracking-[0.22em] text-orange-700">
-            <Link href="/app">App</Link>
-            <span>/</span>
-            <Link href={`/projects/${version.agentPackage.projectId}`}>{version.agentPackage.project.name}</Link>
-            <span>/</span>
-            <Link href={`/packages/${version.agentPackageId}`}>{version.agentPackage.name}</Link>
-            <span>/</span>
-            <span>Version {version.versionNumber}</span>
-          </div>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-orange-700">
+            Skills & Agents / Version {version.versionNumber}
+          </p>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">

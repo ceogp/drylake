@@ -470,7 +470,7 @@ export function VersionTools({
   async function generateTargetFiles() {
     if (!canUseAiFeatures) {
       setActiveTab("targets");
-      setStatusMessage("Upgrade to canonicalize and generate target-ready files.");
+      setStatusMessage("Target file generation requires Pro.");
       return;
     }
 
@@ -500,7 +500,7 @@ export function VersionTools({
       setSelectedGeneratedPath(filteredFiles[0]?.logicalPath ?? null);
       setStatusMessage(
         filteredFiles.length > 0
-          ? `Generated ${filteredFiles.length} target file${filteredFiles.length === 1 ? "" : "s"}. Review before upload/share.`
+          ? `Generated ${filteredFiles.length} target file${filteredFiles.length === 1 ? "" : "s"}. Review before download.`
           : "No target files were generated.",
       );
       router.refresh();
@@ -551,8 +551,8 @@ export function VersionTools({
               Skills & Agents
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-stone-700">
-              Upload, view, and organize your AI coding agents and skills. Pro users can canonicalize
-              them with AI and send target-ready files to Codex, Claude, Cursor, or AGENTS.md.
+              Upload, view, copy, and organize your AI coding agents and skills. Target files can
+              be generated from parsed records for Codex, Claude, Cursor, or AGENTS.md.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -565,21 +565,11 @@ export function VersionTools({
               {busyAction === "upload" ? "Importing..." : "Import Files"}
             </button>
             <button
-              className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
-              onClick={() => {
-                setActiveTab("library");
-                setStatusMessage("Skill creation will use the AI canonical library in a later step.");
-              }}
-              type="button"
-            >
-              Create Skill
-            </button>
-            <button
               className="rounded-full border border-orange-300 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-900 transition hover:bg-orange-100"
               onClick={() => setActiveTab("targets")}
               type="button"
             >
-              Upload / Share
+              Target Files
             </button>
           </div>
         </div>
@@ -706,16 +696,9 @@ export function VersionTools({
                         <button className="rounded-full border border-stone-300 px-3 py-1 text-xs font-medium text-stone-800" onClick={() => void downloadSource(file)} type="button">
                           Download
                         </button>
-                        <button
-                          className="rounded-full border border-orange-300 bg-orange-50 px-3 py-1 text-xs font-medium text-orange-900"
-                          onClick={() => {
-                            setActiveTab("library");
-                            setStatusMessage(canUseAiFeatures ? "AI canonicalization is the next backend step." : "Upgrade to canonicalize with AI.");
-                          }}
-                          type="button"
-                        >
-                          Canonicalize with AI · Pro
-                        </button>
+                        <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-medium text-stone-600">
+                          AI canonicalization not live yet
+                        </span>
                       </div>
                     </div>
                   </article>
@@ -746,20 +729,6 @@ export function VersionTools({
                 </p>
               </div>
 
-              {!canUseAiFeatures ? (
-                <div className="rounded-lg border border-orange-200 bg-orange-50 p-5">
-                  <h4 className="font-semibold text-orange-950">Upgrade to canonicalize</h4>
-                  <p className="mt-2 text-sm leading-6 text-orange-900">
-                    Your source files are stored and viewable for free. Upgrade to let Xupra use AI
-                    to understand them as portable skills, agents, and rules.
-                  </p>
-                  <button className="mt-4 rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white" type="button">
-                    Upgrade to canonicalize
-                  </button>
-                </div>
-              ) : null}
-
-              {canUseAiFeatures ? (
               <div className="grid gap-3">
                 {importedItems.map((item) => (
                   <button
@@ -789,10 +758,9 @@ export function VersionTools({
                   </div>
                 ) : null}
               </div>
-              ) : null}
             </div>
 
-            {canUseAiFeatures ? <ImportedItemPreview item={selectedImportedItem} /> : null}
+            <ImportedItemPreview item={selectedImportedItem} />
           </div>
         ) : null}
 
@@ -802,8 +770,8 @@ export function VersionTools({
               <h3 className="text-xl font-semibold text-stone-950">Targets</h3>
               {!canUseAiFeatures ? (
                 <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm leading-6 text-orange-900">
-                  Target upload/share is available after AI canonicalization. Your source files are
-                  still stored and viewable for free.
+                  Target file generation requires Pro. Your source files are still stored,
+                  viewable, copyable, and downloadable for free.
                 </div>
               ) : null}
               <label className="grid gap-2 text-sm font-medium text-stone-900">
@@ -824,7 +792,7 @@ export function VersionTools({
               </label>
               <div className="flex flex-wrap gap-2">
                 <button className="rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-white disabled:bg-stone-400" disabled={!canUseAiFeatures || busyAction === "generate"} onClick={() => void generateTargetFiles()} type="button">
-                  {busyAction === "generate" ? "Preparing..." : "Prepare Upload / Share"}
+                  {busyAction === "generate" ? "Generating..." : "Generate target files"}
                 </button>
                 <button className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 disabled:opacity-60" disabled={!generatedFiles.length} onClick={downloadGeneratedTargetFiles} type="button">
                   Download target files
@@ -847,7 +815,7 @@ export function VersionTools({
                 ))}
                 {generatedFiles.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-stone-700">
-                    Generated target files will appear here before upload, share, download, or VS Code install.
+                    Generated target files will appear here for review and download.
                   </div>
                 ) : null}
               </div>
