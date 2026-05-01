@@ -8,7 +8,7 @@
   "license": "UNLICENSED",
   "preview": true,
   "icon": "media/icon.png",
-  "homepage": "https://drylake.xupracorp.com/extensions",
+  "homepage": "https://drylake.xupracorp.com/upload",
   "bugs": {
     "url": "https://gitlab.com/xupraplatform/drylake/-/issues"
   },
@@ -333,7 +333,7 @@
       },
       {
         "command": "xupra.openInstallGuide",
-        "title": "Xupra DryLake: Open Install Guide"
+        "title": "Xupra DryLake: Open Import From IDE"
       },
       {
         "command": "xupra.openConnectPage",
@@ -341,7 +341,7 @@
       },
       {
         "command": "xupra.openGetStarted",
-        "title": "Xupra DryLake: Open Get Started Page"
+        "title": "Xupra DryLake: Open Import Page"
       },
       {
         "command": "xupra.openWalkthrough",

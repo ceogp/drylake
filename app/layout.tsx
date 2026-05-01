@@ -80,9 +80,6 @@ export default async function RootLayout({
             <a className="transition hover:text-stone-950" href={dryLakeOrigin}>
               DryLake
             </a>
-            <a className="transition hover:text-stone-950" href={`${dryLakeOrigin}/extensions/install`}>
-              Install
-            </a>
             <a className="transition hover:text-stone-950" href={`${dryLakeOrigin}/billing`}>
               Pricing
             </a>
@@ -135,14 +132,8 @@ export default async function RootLayout({
               </div>
             </Link>
             <nav className="hidden items-center gap-4 text-sm text-stone-600 md:flex">
-              <Link className="transition hover:text-stone-950" href="/get-started">
-                Get Started
-              </Link>
-              <Link className="transition hover:text-stone-950" href="/extensions">
-                Extension
-              </Link>
-              <Link className="transition hover:text-stone-950" href="/workspace">
-                Upload
+              <Link className="transition hover:text-stone-950" href="/upload">
+                Import
               </Link>
               <Link className="transition hover:text-stone-950" href="/settings">
                 Settings
@@ -166,7 +157,7 @@ export default async function RootLayout({
                   id: membership.organizationId,
                   name: membership.organization.name,
                 }))}
-                redirectTo="/app"
+                redirectTo="/upload"
               />
             ) : null}
             {useClerkUi ? (

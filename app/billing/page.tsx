@@ -149,19 +149,23 @@ export default async function BillingPage({
                   Upgrade To Pro ($10/mo)
                 </button>
               </form>
-              <form action={createCheckoutAction}>
-                <input name="organizationId" type="hidden" value={organizationId} />
-                <input name="plan" type="hidden" value="enterprise" />
-                <button className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" type="submit">
-                  Enterprise Checkout
-                </button>
-              </form>
-              <form action={openBillingPortalAction}>
-                <input name="organizationId" type="hidden" value={organizationId} />
-                <button className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" type="submit">
-                  Billing Portal
-                </button>
-              </form>
+              {env.STRIPE_ENTERPRISE_PRICE_ID ? (
+                <form action={createCheckoutAction}>
+                  <input name="organizationId" type="hidden" value={organizationId} />
+                  <input name="plan" type="hidden" value="enterprise" />
+                  <button className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" type="submit">
+                    Enterprise Checkout
+                  </button>
+                </form>
+              ) : null}
+              {subscription?.stripeCustomerId ? (
+                <form action={openBillingPortalAction}>
+                  <input name="organizationId" type="hidden" value={organizationId} />
+                  <button className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" type="submit">
+                    Billing Portal
+                  </button>
+                </form>
+              ) : null}
             </div>
           </article>
 

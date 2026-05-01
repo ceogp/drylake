@@ -132,7 +132,7 @@ export default async function SettingsPage() {
               <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/app">
                 Open import workspace
               </Link>
-              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/extensions/install">
+              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/extensions/connect">
                 Install or reconnect extension
               </Link>
               <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/billing">

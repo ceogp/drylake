@@ -5,125 +5,258 @@ This file is the restart point for the current `Xupra DryLake` session.
 ## Current State
 
 - Branch: `development`
-- Working tree: clean
-- Latest pushed commit: `381dff2` (`Default VS Code extension to staging backend`)
-- Previous major extension/auth commit: `0e74774` (`Add browser callback onboarding for VS Code extension`)
+- Latest pushed commit: `ad4af79` (`Add VS Code workspace reset command`)
+- Live app: `https://drylake.xupracorp.com`
+- Live health check passed after deploy:
+  - `https://drylake.xupracorp.com/api/v1/health`
+- Local VS Code extension VSIX was packaged and installed:
+  - `extensions/xupra-drylake-vscode/xupra-drylake-vscode-0.0.8.vsix`
+- Working tree has only untracked local scratch files:
+  - `.tmp-browser-import-fixture/`
+  - `.tmp-cloudflared.log`
 
-## What Was Just Done
+## User Goal
 
-- The installed VS Code extension copy was removed from:
-  - `C:\Users\gp\.vscode\extensions\xupra.xupra-drylake-vscode-0.0.1`
-- Reason:
-  - the user wants to test the extension as a real end user, click by click
-  - the current experience still feels too developer-oriented
-  - the next step is a clean reinstall and user-first discovery test
+The user wants the first useful product action to work:
 
-## Important Product Context
+1. Authenticate.
+2. Import skills, agents, rules, and instruction files.
+3. See what imported.
+4. Later export/check compatibility/deploy.
 
-- The user does **not** want dev-mode testing as the primary flow.
-- The user wants to discover the extension the way a real customer would.
-- The current problem is not just auth plumbing. The extension still does not feel like a polished first-run product.
-- The next pass should focus on:
-  - first-run discovery
-  - first visible extension UI
-  - click-by-click onboarding
-  - eliminating hidden/manual setup steps
+The user does not want instruction-heavy pages, hidden setup, separate scan/import steps, or developer-language UI.
 
-## Current Extension/Auth Status
+## What Changed In This Pass
 
-Implemented and pushed:
-- Browser auth round-trip:
-  - click `Connect` in VS Code
-  - browser opens Xupra
-  - user signs up / signs in
-  - browser returns to VS Code or Cursor
-  - extension exchanges a one-time code for a long-lived extension token
-- Manual token flow is fallback only
-- Default extension backend now points to staging:
-  - `http://52.196.86.96`
+### Browser Upload And Import
 
-Key files:
-- [app/extensions/connect/page.tsx](C:/Users/gp/Desktop/agenttransfer/app/extensions/connect/page.tsx)
-- [app/api/v1/extension/connect/exchange/route.ts](C:/Users/gp/Desktop/agenttransfer/app/api/v1/extension/connect/exchange/route.ts)
-- [components/extension-browser-return.tsx](C:/Users/gp/Desktop/agenttransfer/components/extension-browser-return.tsx)
-- [lib/services/extension-auth-requests.ts](C:/Users/gp/Desktop/agenttransfer/lib/services/extension-auth-requests.ts)
-- [extensions/xupra-drylake-vscode/src/services/browserConnect.ts](C:/Users/gp/Desktop/agenttransfer/extensions/xupra-drylake-vscode/src/services/browserConnect.ts)
-- [extensions/xupra-drylake-vscode/src/services/session.ts](C:/Users/gp/Desktop/agenttransfer/extensions/xupra-drylake-vscode/src/services/session.ts)
-- [extensions/xupra-drylake-vscode/package.json](C:/Users/gp/Desktop/agenttransfer/extensions/xupra-drylake-vscode/package.json)
-- Packaged VSIX:
-  - [xupra-drylake-vscode-0.0.1.vsix](C:/Users/gp/Desktop/agenttransfer/extensions/xupra-drylake-vscode/xupra-drylake-vscode-0.0.1.vsix)
+Fixed the browser folder upload import bug.
 
-## Planning Files
+Problem:
+- Browser folder uploads used paths like `selected-folder/.codex/agents/foo.toml`.
+- The importer expected paths like `.codex/agents/foo.toml`.
+- Result: raw files could upload, but agents/skills were not extracted reliably.
 
-Core planning:
-- [planning/README.md](C:/Users/gp/Desktop/agenttransfer/planning/README.md)
-- [planning/architecture.md](C:/Users/gp/Desktop/agenttransfer/planning/architecture.md)
-- [planning/roadmap.md](C:/Users/gp/Desktop/agenttransfer/planning/roadmap.md)
-- [planning/local-validation.md](C:/Users/gp/Desktop/agenttransfer/planning/local-validation.md)
-- [planning/aws-cutover.md](C:/Users/gp/Desktop/agenttransfer/planning/aws-cutover.md)
+Fix:
+- Added shared import path normalization:
+  - `lib/utils/import-paths.ts`
+- Used it in:
+  - `components/version-tools.tsx`
+  - `app/api/v1/versions/[versionId]/files/route.ts`
+  - `lib/services/import-export.ts`
 
-Extension planning:
-- [planning/vscode-tool-design.md](C:/Users/gp/Desktop/agenttransfer/planning/vscode-tool-design.md)
-- [planning/vscode-extension-roadmap.md](C:/Users/gp/Desktop/agenttransfer/planning/vscode-extension-roadmap.md)
-- [planning/extension-support-pages.md](C:/Users/gp/Desktop/agenttransfer/planning/extension-support-pages.md)
+The importer now strips selected-folder prefixes before known agent roots:
+- `.agents/skills`
+- `.codex/agents`
+- `.codex/skills`
+- `.claude/agents`
+- `.claude/skills`
+- `.cursor/rules`
+- `.cursor/skills`
+- `AGENTS.md`
+- `CLAUDE.md`
 
-Web/page planning:
-- [planning/page-audit.md](C:/Users/gp/Desktop/agenttransfer/planning/page-audit.md)
+### Website UX
+
+The web import page now treats upload/import as one action:
+
+- `Choose Folder And Import`
+- `Choose Files And Import`
+
+Selecting a folder or files now immediately uploads supported files and runs import.
+
+The visible web flow no longer asks the user to:
+- upload first, then import separately
+- understand raw backend storage first
+- read several instruction blocks before trying the main action
+
+### Supported Skill Paths
+
+Added support for Codex skills and nested installed-skill folders:
+
+- `.codex/skills/<skill>/SKILL.md`
+- `.codex/skills/.system/<skill>/SKILL.md`
+
+The nested case matters because globally installed Codex skills can live under `.system`.
+
+### VS Code Extension UX
+
+The extension primary action is now:
+
+- `Xupra DryLake: Import Skills And Agents`
+
+The visible `Scan Workspace` command was removed from the user-facing command palette path.
+
+Import still scans internally, but the user does not need to know or run a separate scan step.
+
+The extension import scans:
+- current workspace/repo
+- `~/.codex/agents`
+- `~/.codex/skills`
+- `~/.claude/agents`
+- `~/.claude/skills`
+- `~/.cursor/skills`
+- `~/.cursor/rules`
+
+Config added:
+- `xupra.includeGlobalAgentFiles` defaults to `true`
+
+### VS Code Reset
+
+Added:
+
+- `Xupra DryLake: Reset Workspace State`
+
+It clears:
+- selected import target
+- cached importable file list
+- last import summary
+
+It does not clear:
+- Xupra account connection token
+
+## Important Current UX Decisions
+
+- Website cannot silently read `C:\Users\gp\.codex` or other local folders. Browser security blocks this.
+- Website can only import a folder after the user chooses it.
+- VS Code extension can scan global folders because it runs locally inside the editor.
+- Therefore both surfaces now expose one user action, but their mechanics differ:
+  - website: choose folder/files and import immediately
+  - extension: import command finds repo/global files and imports immediately
 
 ## Recent Commits
 
-- `381dff2` Default VS Code extension to staging backend
-- `0e74774` Add browser callback onboarding for VS Code extension
-- `0d72655` Add real website-to-extension auth flow
-- `2ec2767` Build onboarding flow and extension setup path
-- `3eeb9f3` Build extension MVP and extension-led web flow
+- `ad4af79` Add VS Code workspace reset command
+- `4c9bb62` Make import a single user action
+- `fa807c7` Scan global agent folders
+- `669f1e8` Fix staging database bootstrap
+- `924c6cb` Fix browser upload import flow
 
 ## Verification Already Passed
 
-- Root app:
-  - `npm run typecheck`
-  - `npm run lint`
-  - `npm run build`
-  - `npm run validate:local`
-- Extension:
-  - `npm run typecheck`
-  - `npm run build`
-  - `npm run package:vsix`
+Root app:
 
-Known remaining lint warnings:
-- [scripts/aws/deploy-staging.ts](C:/Users/gp/Desktop/agenttransfer/scripts/aws/deploy-staging.ts)
-- [scripts/aws/provision-staging.ts](C:/Users/gp/Desktop/agenttransfer/scripts/aws/provision-staging.ts)
+- `npm run typecheck`
+- `npm run build`
+- `npm run validate:local`
+- `npm run lint`
 
-## What Needs To Happen Next
+Extension:
 
-Immediate next steps:
-1. Restart VS Code.
-2. Confirm Xupra is actually gone after the uninstall.
-3. Reinstall the VSIX fresh:
-   - [xupra-drylake-vscode-0.0.1.vsix](C:/Users/gp/Desktop/agenttransfer/extensions/xupra-drylake-vscode/xupra-drylake-vscode-0.0.1.vsix)
-4. Test the extension as a real user would:
-   - discover extension
-   - install
-   - open it
-   - decide whether the first-run UX is good or bad
-5. Do **not** start from settings JSON, dev host, or fallback token flow.
+- `npm run typecheck`
+- `npm run build`
+- `npm run package:vsix`
+- `npm run install:vsix`
 
-Product work likely needed after that test:
-1. Real first-run extension landing surface
-2. Clear primary CTA in the extension itself
-3. Better explanation of what happens when browser sign-in opens
-4. Cleaner “what happens next” flow after return to VS Code
-5. Possibly a new extension shell if the current one is too compromised by earlier assumptions
+Deploy:
 
-## Staging / URLs
+- `npm run aws:deploy-staging`
+- live health check returned `200`
 
-- Staging app: `http://52.196.86.96`
-- Health: `http://52.196.86.96/api/v1/health`
+Known lint warning:
+- `scripts/aws/provision-staging.ts`
+  - unused `CreateTagsCommand`
+  - unrelated to this import/extension work
 
-## Git / Deploy
+## What Still Needs Real User Testing
 
-- Remote: `origin` -> GitLab
-- Branch policy for now:
-  - work directly on `development`
-  - do not create feature branches unless explicitly requested
+The code checks passed, but authenticated browser/editor UX still needs click-through testing by the user.
 
+Test the live website:
+
+1. Open `https://drylake.xupracorp.com/workspace`.
+2. Open the import version.
+3. Click `Choose Folder And Import`.
+4. Choose a repo root, `.codex`, `.claude`, or another folder containing supported files.
+5. Confirm counts update:
+   - Raw Files
+   - Agents
+   - Skills/Rules
+6. Confirm rows appear under Imported Source Files.
+
+Test VS Code:
+
+1. Reload VS Code.
+2. Open Command Palette.
+3. Run `Xupra DryLake: Reset Workspace State` if a clean local extension state is needed.
+4. Run `Xupra DryLake: Import Skills And Agents`.
+5. If prompted, choose the import target.
+6. Confirm the result message shows imported file/skill/agent counts.
+7. Open the Xupra activity view and inspect Imported Workspace.
+
+## Current Risk Assessment
+
+I do not think it is guaranteed that everything is perfect yet.
+
+What is likely fixed:
+- browser folder prefix import bug
+- `.codex/skills` support
+- nested Codex skill folder support
+- one-action import on website
+- one-action import in VS Code
+- global folder scanning in VS Code
+- reset command for local extension workspace state
+
+What may still need adjustment:
+- whether the user's installed global skills are exactly under the default scanned paths
+- whether VS Code reload picks up the freshly installed VSIX immediately
+- whether the user has multiple import targets and the target picker language is clear enough
+- whether global scans pick up too many markdown/python repo files from broad patterns
+- whether the Imported Workspace tree is still too busy
+
+## Useful Commands
+
+Build/check root app:
+
+```powershell
+npm run typecheck
+npm run build
+npm run validate:local
+npm run lint
+```
+
+Build/check extension:
+
+```powershell
+npm run typecheck
+npm run build
+npm run package:vsix
+npm run install:vsix
+```
+
+Deploy live app:
+
+```powershell
+npm run aws:deploy-staging
+```
+
+Health check:
+
+```powershell
+Invoke-WebRequest -Uri https://drylake.xupracorp.com/api/v1/health -UseBasicParsing
+```
+
+## Key Files
+
+- `components/version-tools.tsx`
+- `lib/utils/import-paths.ts`
+- `lib/services/import-export.ts`
+- `app/api/v1/versions/[versionId]/files/route.ts`
+- `scripts/validate-local.ts`
+- `extensions/xupra-drylake-vscode/src/services/workspaceScanner.ts`
+- `extensions/xupra-drylake-vscode/src/commands/importWorkspace.ts`
+- `extensions/xupra-drylake-vscode/src/services/stateStore.ts`
+- `extensions/xupra-drylake-vscode/src/extension.ts`
+- `extensions/xupra-drylake-vscode/src/views/projectTreeProvider.ts`
+- `extensions/xupra-drylake-vscode/package.json`
+
+## Note About Old RESTART.md
+
+The previous `RESTART.md` helped by showing the intended user-first testing posture:
+
+- avoid dev-mode assumptions
+- avoid manual settings/token-first flows
+- test the extension as a real user
+- remove hidden/manual setup steps
+
+It was stale on URLs, VSIX version, and latest commits, so this file replaces it with the current live-domain and import-focused state.

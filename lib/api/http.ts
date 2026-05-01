@@ -25,6 +25,20 @@ export function badRequest(message: string, details?: unknown) {
   );
 }
 
+export function unprocessableEntity(message: string, details?: unknown) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: {
+        code: "unprocessable_entity",
+        message,
+        details,
+      },
+    },
+    { status: 422 },
+  );
+}
+
 export function unauthorized(message = "Authentication required") {
   return NextResponse.json(
     {
