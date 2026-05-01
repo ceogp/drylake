@@ -39,7 +39,7 @@ validate:
   rules:
     - if: $CI_COMMIT_BRANCH
 
-deploy_staging:
+.deploy_app:
   stage: deploy
   retry:
     max: 2
@@ -54,22 +54,22 @@ deploy_staging:
     - eval "$(ssh-agent -s)"
     - mkdir -p ~/.ssh
     - |
-      key_path=~/.ssh/staging_deploy_key
-      if [ -z "${STAGING_SSH_PRIVATE_KEY:-}" ]; then
-        echo "STAGING_SSH_PRIVATE_KEY is empty or undefined in CI variables." >&2
+      key_path=~/.ssh/deploy_key
+      if [ -z "${DEPLOY_SSH_PRIVATE_KEY:-}" ]; then
+        echo "DEPLOY_SSH_PRIVATE_KEY is empty or undefined." >&2
         exit 1
       fi
 
-      if [ -f "$STAGING_SSH_PRIVATE_KEY" ]; then
-        cp "$STAGING_SSH_PRIVATE_KEY" "$key_path"
+      if [ -f "$DEPLOY_SSH_PRIVATE_KEY" ]; then
+        cp "$DEPLOY_SSH_PRIVATE_KEY" "$key_path"
         chmod 600 "$key_path"
         if ! ssh-add "$key_path" >/dev/null 2>&1; then
           bytes="$(wc -c < "$key_path" | tr -d ' ')"
-          echo "Unable to load file-based STAGING_SSH_PRIVATE_KEY into ssh-agent (bytes=$bytes)." >&2
+          echo "Unable to load file-based DEPLOY_SSH_PRIVATE_KEY into ssh-agent (bytes=$bytes)." >&2
           exit 1
         fi
       else
-        key_value="$(printf '%s' "$STAGING_SSH_PRIVATE_KEY" | tr -d '\r')"
+        key_value="$(printf '%s' "$DEPLOY_SSH_PRIVATE_KEY" | tr -d '\r')"
         key_value="${key_value#\"}"
         key_value="${key_value%\"}"
         key_value="${key_value#\'}"
@@ -106,7 +106,7 @@ deploy_staging:
           if printf '%s' "$key_value" | grep -q '\\n'; then
             has_escaped_newlines="yes"
           fi
-          echo "Unable to load STAGING_SSH_PRIVATE_KEY (length=${#key_value}, begin_marker=$has_begin_marker, escaped_newlines=$has_escaped_newlines)." >&2
+          echo "Unable to load DEPLOY_SSH_PRIVATE_KEY (length=${#key_value}, begin_marker=$has_begin_marker, escaped_newlines=$has_escaped_newlines)." >&2
           exit 1
         fi
 
@@ -115,22 +115,22 @@ deploy_staging:
       fi
 
       chmod 600 "$key_path"
-    - ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
+    - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
   script:
-    - ': "${STAGING_HOST:?STAGING_HOST is required}"'
-    - ': "${STAGING_SSH_USER:?STAGING_SSH_USER is required}"'
-    - ': "${STAGING_SSH_PRIVATE_KEY:?STAGING_SSH_PRIVATE_KEY is required}"'
-    - ': "${STAGING_ENV_FILE:?STAGING_ENV_FILE is required}"'
+    - ': "${DEPLOY_HOST:?DEPLOY_HOST is required}"'
+    - ': "${DEPLOY_SSH_USER:?DEPLOY_SSH_USER is required}"'
+    - ': "${DEPLOY_SSH_PRIVATE_KEY:?DEPLOY_SSH_PRIVATE_KEY is required}"'
+    - ': "${DEPLOY_ENV_FILE:?DEPLOY_ENV_FILE is required}"'
     - git archive --format=tar HEAD -o release.tar
-    - printf "%s" "$STAGING_ENV_FILE" > staging.env
+    - printf "%s" "$DEPLOY_ENV_FILE" > deploy.env
     - |
-      app_base_url="${STAGING_URL:-}"
+      app_base_url="${DEPLOY_URL:-}"
       if [ -z "$app_base_url" ]; then
-        app_base_url="$(grep -E '^APP_BASE_URL=' staging.env | tail -n 1 | cut -d'=' -f2-)"
+        app_base_url="$(grep -E '^APP_BASE_URL=' deploy.env | tail -n 1 | cut -d'=' -f2-)"
       fi
 
       if [ -z "$app_base_url" ]; then
-        echo "APP_BASE_URL is required in STAGING_ENV_FILE or STAGING_URL." >&2
+        echo "APP_BASE_URL is required in DEPLOY_ENV_FILE or DEPLOY_URL." >&2
         exit 1
       fi
 
@@ -146,14 +146,14 @@ deploy_staging:
         exit 1
       fi
 
-      if grep -Eq '^APP_BASE_URL=' staging.env; then
-        sed -i "s#^APP_BASE_URL=.*#APP_BASE_URL=$app_base_url#" staging.env
+      if grep -Eq '^APP_BASE_URL=' deploy.env; then
+        sed -i "s#^APP_BASE_URL=.*#APP_BASE_URL=$app_base_url#" deploy.env
       else
-        printf '\nAPP_BASE_URL=%s\n' "$app_base_url" >> staging.env
+        printf '\nAPP_BASE_URL=%s\n' "$app_base_url" >> deploy.env
       fi
     - |
       for attempt in 1 2 3; do
-        if scp release.tar "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-release.tar"; then
+        if scp release.tar "$DEPLOY_SSH_USER@$DEPLOY_HOST:/tmp/xupra-release.tar"; then
           break
         fi
         if [ "$attempt" -eq 3 ]; then
@@ -163,7 +163,7 @@ deploy_staging:
       done
     - |
       for attempt in 1 2 3; do
-        if scp staging.env "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-staging.env"; then
+        if scp deploy.env "$DEPLOY_SSH_USER@$DEPLOY_HOST:/tmp/xupra-deploy.env"; then
           break
         fi
         if [ "$attempt" -eq 3 ]; then
@@ -173,7 +173,7 @@ deploy_staging:
       done
     - |
       for attempt in 1 2 3; do
-        if scp scripts/deploy/remote-bootstrap.sh "$STAGING_SSH_USER@$STAGING_HOST:/tmp/xupra-bootstrap.sh"; then
+        if scp scripts/deploy/remote-bootstrap.sh "$DEPLOY_SSH_USER@$DEPLOY_HOST:/tmp/xupra-bootstrap.sh"; then
           break
         fi
         if [ "$attempt" -eq 3 ]; then
@@ -183,13 +183,13 @@ deploy_staging:
       done
     - |
       for attempt in 1 2 3; do
-        if ssh "$STAGING_SSH_USER@$STAGING_HOST" \
+        if ssh "$DEPLOY_SSH_USER@$DEPLOY_HOST" \
           "chmod +x /tmp/xupra-bootstrap.sh && \
           sudo APP_DIR=/srv/xupra-drylake \
           APP_USER=xupra \
           APP_GROUP=xupra \
           RELEASE_TAR=/tmp/xupra-release.tar \
-          ENV_FILE=/tmp/xupra-staging.env \
+          ENV_FILE=/tmp/xupra-deploy.env \
           bash /tmp/xupra-bootstrap.sh"; then
           break
         fi
@@ -198,10 +198,34 @@ deploy_staging:
         fi
         sleep 10
       done
+
+deploy_staging:
+  extends: .deploy_app
+  variables:
+    DEPLOY_HOST: $STAGING_HOST
+    DEPLOY_SSH_USER: $STAGING_SSH_USER
+    DEPLOY_SSH_PRIVATE_KEY: $STAGING_SSH_PRIVATE_KEY
+    DEPLOY_ENV_FILE: $STAGING_ENV_FILE
+    DEPLOY_URL: $STAGING_URL
   environment:
     name: staging
     url: $STAGING_URL
   rules:
     - if: '$CI_COMMIT_BRANCH == "development" && $AUTO_DEPLOY_STAGING == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE'
     - if: '$CI_COMMIT_BRANCH == "development" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE'
+      when: manual
+
+deploy_production:
+  extends: .deploy_app
+  variables:
+    DEPLOY_HOST: $PRODUCTION_HOST
+    DEPLOY_SSH_USER: $PRODUCTION_SSH_USER
+    DEPLOY_SSH_PRIVATE_KEY: $PRODUCTION_SSH_PRIVATE_KEY
+    DEPLOY_ENV_FILE: $PRODUCTION_ENV_FILE
+    DEPLOY_URL: $PRODUCTION_URL
+  environment:
+    name: production
+    url: $PRODUCTION_URL
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $PRODUCTION_HOST && $PRODUCTION_SSH_USER && $PRODUCTION_SSH_PRIVATE_KEY && $PRODUCTION_ENV_FILE'
       when: manual
