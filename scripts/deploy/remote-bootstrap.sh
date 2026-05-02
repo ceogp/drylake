@@ -16,6 +16,8 @@ set -a
 source "$ENV_FILE"
 set +a
 
+REQUIRE_HTTPS_URL="${REQUIRE_HTTPS_URL:-true}"
+
 install_node_runtime() {
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
@@ -187,14 +189,16 @@ if ! app_base_url_hostname="$(node -e "const input = process.env.APP_BASE_URL ||
   exit 1
 fi
 
-if [ "$app_base_url_protocol" != "https:" ]; then
-  echo "APP_BASE_URL must use https. Received protocol: $app_base_url_protocol" >&2
-  exit 1
-fi
+if [ "$REQUIRE_HTTPS_URL" = "true" ]; then
+  if [ "$app_base_url_protocol" != "https:" ]; then
+    echo "APP_BASE_URL must use https. Received protocol: $app_base_url_protocol" >&2
+    exit 1
+  fi
 
-if node -e "const host = process.argv[1] || ''; process.exit(/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(host) ? 0 : 1);" "$app_base_url_hostname"; then
-  echo "APP_BASE_URL must use a domain host, not a raw IP ($app_base_url_hostname)." >&2
-  exit 1
+  if node -e "const host = process.argv[1] || ''; process.exit(/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(host) ? 0 : 1);" "$app_base_url_hostname"; then
+    echo "APP_BASE_URL must use a domain host, not a raw IP ($app_base_url_hostname)." >&2
+    exit 1
+  fi
 fi
 
 cp "$ENV_FILE" "$APP_DIR/shared/.env"

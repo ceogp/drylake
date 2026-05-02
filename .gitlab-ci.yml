@@ -195,6 +195,7 @@ validate:
           APP_GROUP=xupra \
           RELEASE_TAR=/tmp/xupra-release.tar \
           ENV_FILE=/tmp/xupra-deploy.env \
+          REQUIRE_HTTPS_URL="${REQUIRE_HTTPS_URL:-true}" \
           bash /tmp/xupra-bootstrap.sh"; then
           break
         fi
