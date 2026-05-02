@@ -1,4 +1,5 @@
 import { forbidden, internalError, ok, unauthorized } from "@/lib/api/http";
+import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { requireVersionAccess } from "@/lib/services/access";
 import { getCanonicalizationResult } from "@/lib/services/canonicalize";
@@ -37,16 +38,18 @@ export async function GET(_: Request, context: Context) {
       ]),
       getCanonicalizationResult(versionId),
     ]);
+    const hasSucceededCanonicalization = Boolean(canonicalization.lastSucceededJob);
     const canonicalizationStatus =
-      canonicalization.job?.status === "succeeded"
+      hasSucceededCanonicalization
         ? "succeeded"
-        : canonicalization.job?.status === "failed"
+        : canonicalization.lastFailedJob
           ? "failed"
           : "none";
 
     return ok({
       versionId,
       organizationId: access.context.organization.id,
+      billingProvider: env.BILLING_PROVIDER,
       isPro,
       hasSourceFiles: sourceFileCount > 0,
       sourceFileCount,
@@ -62,7 +65,7 @@ export async function GET(_: Request, context: Context) {
             skillCount: canonicalization.result.skillCount,
           }
         : null,
-      canonicalizationError: readErrorMessage(canonicalization.job?.errorJson),
+      canonicalizationError: readErrorMessage(canonicalization.lastFailedJob?.errorJson),
       extensionConnected: false,
     });
   } catch (error) {

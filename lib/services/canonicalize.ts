@@ -340,11 +340,29 @@ export async function getLatestCanonicalizationJob(versionId: string) {
   });
 }
 
+export async function getLastSucceededCanonicalizationJob(versionId: string) {
+  return prisma.transformJob.findFirst({
+    where: {
+      packageVersionId: versionId,
+      jobType: "canonicalize",
+      status: "succeeded",
+    },
+    orderBy: [{ finishedAt: "desc" }, { createdAt: "desc" }],
+  });
+}
+
 export async function getCanonicalizationResult(versionId: string) {
-  const job = await getLatestCanonicalizationJob(versionId);
+  const latestJob = await getLatestCanonicalizationJob(versionId);
+  const lastSucceededJob =
+    latestJob?.status === "succeeded"
+      ? latestJob
+      : await getLastSucceededCanonicalizationJob(versionId);
+
   return {
-    job,
-    result: readResult(job?.resultJson ?? null),
+    job: latestJob,
+    lastSucceededJob,
+    result: readResult(lastSucceededJob?.resultJson ?? null),
+    lastFailedJob: latestJob?.status === "failed" ? latestJob : null,
   };
 }
 

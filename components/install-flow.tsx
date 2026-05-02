@@ -7,11 +7,13 @@ type CanonicalizationStatus = "none" | "succeeded" | "failed";
 type Destination = "cursor" | "codex" | "claude" | "other";
 type EditorScheme = "vscode" | "cursor";
 type TargetPlatform = "cursor" | "codex" | "claude_agents";
+type BillingProvider = "stripe" | "clerk";
 
 type InstallStatus = {
   ok: boolean;
   versionId: string;
   organizationId: string;
+  billingProvider?: BillingProvider;
   isPro: boolean;
   hasSourceFiles: boolean;
   sourceFileCount: number;
@@ -240,6 +242,12 @@ export function InstallFlow({ versionId }: { versionId: string }) {
     status?.canonicalizationStatus === "succeeded" &&
     !needsReview &&
     !isCanonicalizing;
+  const blockingCanonicalizationFailed =
+    status?.canonicalizationStatus === "failed" && !status.canonicalizationResult;
+  const showCanonicalizationRetryWarning =
+    status?.canonicalizationStatus === "succeeded" &&
+    Boolean(status.canonicalizationError) &&
+    !isCanonicalizing;
   const canonicalizeStepState = readyForDestination
     ? "done"
     : isCanonicalizing || needsReview || awaitingCanonicalization
@@ -252,6 +260,13 @@ export function InstallFlow({ versionId }: { versionId: string }) {
     }
 
     setIsUpgrading(true);
+
+    if (status.billingProvider === "clerk") {
+      setMessage("Opening billing...");
+      window.location.href = "/billing?returnPath=/install";
+      return;
+    }
+
     setMessage("Opening checkout...");
 
     try {
@@ -375,7 +390,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
         </section>
       ) : null}
 
-      {status?.isPro && status.canonicalizationStatus === "failed" && !isCanonicalizing ? (
+      {status?.isPro && blockingCanonicalizationFailed && !isCanonicalizing ? (
         <section className="rounded-lg border border-red-200 bg-red-50 p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-red-700">Canonicalization Failed</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Kimi could not complete this run</h1>
@@ -389,6 +404,27 @@ export function InstallFlow({ versionId }: { versionId: string }) {
           >
             Retry canonicalization
           </button>
+        </section>
+      ) : null}
+
+      {showCanonicalizationRetryWarning && status ? (
+        <section className="rounded-lg border border-amber-200 bg-amber-50 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-700">Canonicalization Warning</p>
+              <p className="mt-2 text-sm font-medium text-stone-950">
+                Last re-canonicalize attempt failed. Using previous successful result.
+              </p>
+              <p className="mt-1 text-sm leading-6 text-stone-700">{status.canonicalizationError}</p>
+            </div>
+            <button
+              className="shrink-0 rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+              onClick={() => void runCanonicalization(true)}
+              type="button"
+            >
+              Retry
+            </button>
+          </div>
         </section>
       ) : null}
 
@@ -439,7 +475,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Step 3 of 3</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Where do you want to install?</h1>
           <p className="mt-2 text-sm leading-6 text-stone-700">
-            Using {status.canonicalizationResult?.itemCount ?? status.canonicalItemCount} canonical items from the latest canonicalization.
+            Using {status.canonicalizationResult?.itemCount ?? status.canonicalItemCount} canonical items from the latest successful canonicalization.
             <button
               className="ml-2 font-medium text-orange-700 underline decoration-orange-300 underline-offset-4"
               onClick={() => void runCanonicalization(true)}

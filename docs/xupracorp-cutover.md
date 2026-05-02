@@ -50,10 +50,10 @@ Do not use `Flexible`.
 
 ## GitLab Staging Env
 
-`STAGING_ENV_FILE` should include the real app URL and Clerk billing values:
+`STAGING_ENV_FILE` should include the dev/staging app URL and Clerk billing values:
 
 ```env
-APP_BASE_URL=https://drylake.xupracorp.com
+APP_BASE_URL=http://ec2-52-196-86-96.ap-northeast-1.compute.amazonaws.com
 AUTH_MODE=clerk
 BILLING_PROVIDER=clerk
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
@@ -63,6 +63,7 @@ BILLING_ENFORCEMENT_MODE=strict
 ```
 
 Keep your existing database, encryption, and storage values in the same env file.
+This is the dev/staging env file, not the production env file. The production env file uses `APP_BASE_URL=https://drylake.xupracorp.com`.
 
 ## Clerk Billing
 
@@ -85,9 +86,11 @@ In Clerk Dashboard:
 1. Update GitLab `STAGING_ENV_FILE`.
 2. Redeploy the `development` branch.
 3. Verify:
-   - `https://drylake.xupracorp.com/api/v1/health`
-   - `https://drylake.xupracorp.com/extensions/connect`
+   - `http://ec2-52-196-86-96.ap-northeast-1.compute.amazonaws.com/api/v1/health`
+   - `http://ec2-52-196-86-96.ap-northeast-1.compute.amazonaws.com/extensions/connect`
    - `https://xupracorp.com`
+
+Production (`https://drylake.xupracorp.com`) is only updated via the manual `deploy_production` job on `main`, as documented in the "Release & Rollback" section.
 
 Expected health response should report:
 
@@ -185,9 +188,8 @@ Confirm these variables are set before dev/staging deploys:
 
 ### Baseline Tag Note
 
-Before the next production deploy, create a baseline tag on the current `main` HEAD:
+The baseline tag already exists:
 
-```sh
-git tag v1.0.0-baseline
-git push origin v1.0.0-baseline
-```
+`v1.0.0-baseline -> 56cfb447`
+
+Use this tag as the rollback target for the pre-overhaul production state. Future production releases should create new tags using the `vX.Y.Z` convention.
