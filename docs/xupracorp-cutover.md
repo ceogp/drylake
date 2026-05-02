@@ -50,20 +50,23 @@ Do not use `Flexible`.
 
 ## GitLab Staging Env
 
-`STAGING_ENV_FILE` should include the dev/staging app URL and Clerk billing values:
+`STAGING_ENV_FILE` should include the dev/staging app URL, Clerk auth values, and the configured billing values. The current dev environment uses Stripe billing:
 
 ```env
 APP_BASE_URL=http://ec2-52-196-86-96.ap-northeast-1.compute.amazonaws.com
 AUTH_MODE=clerk
-BILLING_PROVIDER=clerk
+BILLING_PROVIDER=stripe
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
 CLERK_SECRET_KEY=sk_...
 CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
-BILLING_ENFORCEMENT_MODE=strict
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+BILLING_ENFORCEMENT_MODE=development
 ```
 
 Keep your existing database, encryption, and storage values in the same env file.
-This is the dev/staging env file, not the production env file. The production env file uses `APP_BASE_URL=https://drylake.xupracorp.com`.
+This is the dev/staging env file, not the production env file. The production env file uses `APP_BASE_URL=https://drylake.xupracorp.com` and production billing keys.
 
 ## Clerk Billing
 
@@ -95,9 +98,10 @@ Production (`https://drylake.xupracorp.com`) is only updated via the manual `dep
 Expected health response should report:
 
 - `authMode: clerk`
-- `billingProvider: clerk`
+- `billingProvider: stripe`
 - `billingConfigured: true`
 - `clerkConfigured: true`
+- `stripeConfigured: true`
 
 ## AWS Edge
 
