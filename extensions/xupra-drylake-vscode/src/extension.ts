@@ -10,6 +10,7 @@ import { pullPackageCommand } from "./commands/pullPackage";
 import { refreshProjectsCommand } from "./commands/refreshProjects";
 import { ApiClient } from "./services/apiClient";
 import { BrowserConnectCoordinator } from "./services/browserConnect";
+import { connectionStateFromExtensionConnection } from "./services/connectionState";
 import { selectPackageWithPrompt, selectProjectWithPrompt, selectVersionWithPrompt } from "./services/selection";
 import { StateStore } from "./services/stateStore";
 import { getWorkspaceDisplayName, scanWorkspaceFiles } from "./services/workspaceScanner";
@@ -177,12 +178,7 @@ export async function activate(context: vscode.ExtensionContext) {
   if (storedAccessToken) {
     try {
       const result = await apiClient.connect(undefined, undefined, storedAccessToken);
-      await stateStore.setConnection({
-        organizationId: result.organization?.id ?? result.auth.session.organizationId ?? undefined,
-        organizationSlug: result.organization?.slug,
-        userEmail: result.user?.email ?? undefined,
-        authMode: result.auth.mode
-      });
+      await stateStore.setConnection(connectionStateFromExtensionConnection(result));
     } catch (error) {
       apiClient.setAccessToken(undefined);
       await stateStore.clearAccessToken();
@@ -260,6 +256,53 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.projects", projectsView));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.jobs", jobsView));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.help", helpView));
+  context.subscriptions.push(
+    vscode.window.onDidChangeWindowState(async (windowState) => {
+      if (!windowState.focused) {
+        return;
+      }
+
+      const storedToken = await stateStore.getAccessToken();
+
+      if (!storedToken) {
+        return;
+      }
+
+      const awaitingUntil = stateStore.getAwaitingPlanRefreshUntil();
+
+      if (awaitingUntil && Date.now() < new Date(awaitingUntil).getTime()) {
+        for (const delay of [5_000, 15_000, 30_000]) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+
+          try {
+            const result = await apiClient.connect(undefined, undefined, storedToken);
+            const newConnection = connectionStateFromExtensionConnection(result);
+            await stateStore.setConnection(newConnection);
+            const tier = newConnection.organizationTier?.toLowerCase();
+
+            if (tier === "pro" || tier === "enterprise") {
+              await stateStore.setAwaitingPlanRefreshUntil(null);
+              await syncWorkspaceView();
+              return;
+            }
+          } catch {
+            // Background refresh failures are intentionally silent.
+          }
+        }
+
+        return;
+      }
+
+      try {
+        const result = await apiClient.connect(undefined, undefined, storedToken);
+        const newConnection = connectionStateFromExtensionConnection(result);
+        await stateStore.setConnection(newConnection);
+        await syncWorkspaceView();
+      } catch {
+        // Background refresh failures are intentionally silent.
+      }
+    }),
+  );
 
   await syncContexts({
     connected: false,
@@ -323,12 +366,7 @@ export async function activate(context: vscode.ExtensionContext) {
       apiClient.setAccessToken(trimmedToken);
       const result = await apiClient.connect(undefined, undefined, trimmedToken);
       await stateStore.setAccessToken(trimmedToken);
-      await stateStore.setConnection({
-        organizationId: result.organization?.id ?? result.auth.session.organizationId ?? undefined,
-        organizationSlug: result.organization?.slug,
-        userEmail: result.user?.email ?? undefined,
-        authMode: result.auth.mode
-      });
+      await stateStore.setConnection(connectionStateFromExtensionConnection(result));
       await stateStore.clearLastImport();
 
       if (!result.auth.configured) {
@@ -366,6 +404,26 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("xupra.openWebApp", async () => {
     await openWebAppCommand(apiClient);
+  });
+
+  register("xupra.refreshPlan", async () => {
+    const storedToken = await stateStore.getAccessToken();
+
+    if (!storedToken) {
+      void vscode.window.showInformationMessage("Not connected");
+      return;
+    }
+
+    const result = await apiClient.connect(undefined, undefined, storedToken);
+    const newConnection = connectionStateFromExtensionConnection(result);
+    await stateStore.setConnection(newConnection);
+    const tier = newConnection.organizationTier?.toLowerCase();
+
+    if (tier === "pro" || tier === "enterprise") {
+      await stateStore.setAwaitingPlanRefreshUntil(null);
+    }
+
+    await syncWorkspaceView();
   });
 
   register("xupra.refreshProjects", async () => {
@@ -512,7 +570,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.openInstallGuide", async () => {
-    await vscode.env.openExternal(apiClient.openWebUrl("/upload"));
+    await vscode.env.openExternal(apiClient.openWebUrl("/extensions/install"));
   });
 
   register("xupra.openConnectPage", async () => {
@@ -520,7 +578,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.openGetStarted", async () => {
-    await vscode.env.openExternal(apiClient.openWebUrl("/upload"));
+    await vscode.env.openExternal(apiClient.openWebUrl("/app"));
   });
 
   try {

@@ -8,7 +8,7 @@
   "license": "UNLICENSED",
   "preview": true,
   "icon": "media/icon.png",
-  "homepage": "https://drylake.xupracorp.com/upload",
+  "homepage": "https://drylake.xupracorp.com/app",
   "bugs": {
     "url": "https://gitlab.com/xupraplatform/drylake/-/issues"
   },
@@ -64,7 +64,8 @@
     "onCommand:xupra.openBilling",
     "onCommand:xupra.openInstallGuide",
     "onCommand:xupra.openConnectPage",
-    "onCommand:xupra.openGetStarted"
+    "onCommand:xupra.openGetStarted",
+    "onCommand:xupra.openWalkthrough"
   ],
   "contributes": {
     "configuration": {

@@ -96,6 +96,13 @@ export type GeneratedExportFile = {
   checksumSha256?: string;
 };
 
+export type GeneratedSkill = {
+  name: string;
+  description: string;
+  targetPlatform: string;
+  content: string;
+};
+
 export type ExtensionConnection = {
   editor: "vscode" | "cursor";
   auth: {
@@ -129,4 +136,8 @@ export type ExtensionConnection = {
         tier?: string;
       }
     | null;
+  entitlements?: Record<string, boolean>;
+  subscription?: {
+    status: string;
+  };
 };

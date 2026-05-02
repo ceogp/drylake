@@ -4,6 +4,7 @@ import { created, forbidden, fromZodError, internalError, unauthorized } from "@
 import { getAuthSessionSummary, getAuthSetup } from "@/lib/services/auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { ensureDevSession } from "@/lib/services/dev-session";
+import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
 import { verifyExtensionAccessToken } from "@/lib/services/extension-tokens";
 import { prisma } from "@/lib/prisma";
 
@@ -51,6 +52,8 @@ export async function POST(request: Request) {
         return unauthorized("The extension token no longer maps to an active workspace.");
       }
 
+      const { subscription, entitlements } = await getEntitlementsForOrganization(membership.organizationId);
+
       return created({
         editor: parsed.data.editor,
         auth: {
@@ -74,11 +77,22 @@ export async function POST(request: Request) {
           slug: membership.organization.slug,
           tier: membership.organization.tier,
         },
+        entitlements,
+        subscription: {
+          status: subscription?.status ?? "none",
+        },
       });
     }
 
     if (auth.session.status === "active") {
       const appContext = await getCurrentAppContext();
+      const organizationId = appContext?.organization.id ?? auth.session.organizationId;
+
+      if (!organizationId) {
+        return unauthorized("The active session is not associated with an organization.");
+      }
+
+      const { subscription, entitlements } = await getEntitlementsForOrganization(organizationId);
 
       return created({
         editor: parsed.data.editor,
@@ -99,6 +113,10 @@ export async function POST(request: Request) {
           : {
               id: auth.session.organizationId,
             },
+        entitlements,
+        subscription: {
+          status: subscription?.status ?? "none",
+        },
       });
     }
 
@@ -125,6 +143,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const { subscription, entitlements } = await getEntitlementsForOrganization(session.organization.id);
+
     return created({
       editor: parsed.data.editor,
       auth,
@@ -137,6 +157,10 @@ export async function POST(request: Request) {
         name: session.organization.name,
         slug: session.organization.slug,
         tier: session.organization.tier,
+      },
+      entitlements,
+      subscription: {
+        status: subscription?.status ?? "none",
       },
     });
   } catch (error) {

@@ -4,9 +4,16 @@ export type SelectedContext = {
   versionId?: string;
 };
 
+export type EntitlementMap = Record<string, boolean>;
+
 export type ConnectionState = {
   organizationId?: string;
+  organizationName?: string;
   organizationSlug?: string;
+  organizationTier?: string;
+  entitlements?: EntitlementMap;
+  subscriptionStatus?: string;
+  awaitingPlanRefreshUntil?: string | null;
   userEmail?: string;
   authMode?: "dev" | "clerk";
 };

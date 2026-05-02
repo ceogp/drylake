@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import type {
   ExtensionConnection,
+  GeneratedSkill,
   GeneratedExportFile,
   JobResult,
   PackageVersionDetail,
@@ -115,6 +116,10 @@ export class ApiClient {
         slug: string;
         tier: string;
       };
+      entitlements?: Record<string, boolean>;
+      subscription?: {
+        status: string;
+      };
       editor: "vscode" | "cursor";
     }>("/api/v1/extension/connect/exchange", {
       method: "POST",
@@ -225,5 +230,37 @@ export class ApiClient {
 
   async getTransformJob(jobId: string) {
     return this.request<{ transformJob: TransformJobDetail }>(`/api/v1/transform-jobs/${jobId}`);
+  }
+
+  async generateSkill(params: {
+    name: string;
+    description: string;
+    targetPlatform: string;
+    context?: string;
+  }) {
+    return this.request<{ skill: GeneratedSkill; job?: JobResult }>("/api/v1/skills/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
+  async fetchMarketplace(pathname: string, params?: Record<string, string | number | boolean | undefined>) {
+    const normalizedPath = pathname
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    const query = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(params ?? {})) {
+      if (value !== undefined) {
+        query.set(key, String(value));
+      }
+    }
+
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    return this.request<{ data: unknown; upstreamPath: string }>(
+      `/api/v1/skills-marketplace/${normalizedPath}${suffix}`,
+    );
   }
 }

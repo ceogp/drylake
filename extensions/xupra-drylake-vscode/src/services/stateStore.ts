@@ -12,6 +12,7 @@ const CONNECTION_KEY = "xupra.connection";
 const DETECTED_FILES_KEY = "xupra.detectedFiles";
 const ACCESS_TOKEN_KEY = "xupra.extensionAccessToken";
 const LAST_IMPORT_KEY = "xupra.lastImport";
+const AWAITING_PLAN_REFRESH_KEY = "xupra.awaitingPlanRefreshUntil";
 
 export class StateStore {
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -52,6 +53,14 @@ export class StateStore {
 
   async clearConnection() {
     await this.context.workspaceState.update(CONNECTION_KEY, {});
+  }
+
+  getAwaitingPlanRefreshUntil(): string | null {
+    return this.context.workspaceState.get<string | null>(AWAITING_PLAN_REFRESH_KEY, null);
+  }
+
+  async setAwaitingPlanRefreshUntil(value: string | null): Promise<void> {
+    await this.context.workspaceState.update(AWAITING_PLAN_REFRESH_KEY, value);
   }
 
   getDetectedFiles(): DetectedWorkspaceFile[] {

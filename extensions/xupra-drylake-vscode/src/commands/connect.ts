@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import { ApiClient } from "../services/apiClient";
 import { BrowserConnectCoordinator } from "../services/browserConnect";
+import { connectionStateFromExtensionConnection } from "../services/connectionState";
 import { connectSession } from "../services/session";
 import { StateStore } from "../services/stateStore";
 
@@ -13,12 +14,8 @@ export async function connectCommand(
 ) {
   try {
     const result = await connectSession(apiClient, configuration, stateStore, browserConnect);
-    await stateStore.setConnection({
-      organizationId: result.organization?.id ?? result.auth.session.organizationId ?? undefined,
-      organizationSlug: result.organization?.slug,
-      userEmail: result.user?.email ?? undefined,
-      authMode: result.auth.mode
-    });
+    const connection = connectionStateFromExtensionConnection(result);
+    await stateStore.setConnection(connection);
     await stateStore.clearLastImport();
 
     if (!result.auth.configured) {
@@ -29,7 +26,7 @@ export async function connectCommand(
     }
 
     void vscode.window.showInformationMessage(
-      `Connected to Xupra DryLake as ${result.user?.email ?? "pending auth"} in ${result.organization?.slug ?? "current workspace"}.`
+      `Connected as ${result.user?.email ?? "pending auth"}. You're on the ${connection.organizationTier ?? "free"} plan.`
     );
     return true;
   } catch (error) {

@@ -4,6 +4,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 
 import { ApiClient } from "./apiClient";
+import { normalizeEntitlements } from "./connectionState";
 import { writeGeneratedFilesToWorkspace } from "./fileSync";
 import { StateStore } from "./stateStore";
 
@@ -149,7 +150,11 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
     await this.stateStore.setAccessToken(exchanged.token.token);
     await this.stateStore.setConnection({
       organizationId: exchanged.organization.id,
+      organizationName: exchanged.organization.name,
       organizationSlug: exchanged.organization.slug,
+      organizationTier: exchanged.organization.tier,
+      entitlements: normalizeEntitlements(exchanged.entitlements),
+      subscriptionStatus: exchanged.subscription?.status,
       userEmail: exchanged.user.email,
       authMode: "clerk",
     });
