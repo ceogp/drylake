@@ -651,13 +651,11 @@ export function VersionTools({
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h4 className="font-semibold text-stone-950">{item.name}</h4>
-                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        item.canonicalized
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-stone-100 text-stone-700"
-                      }`}>
-                        {item.canonicalized ? "Canonicalized" : "Parsed import"}
-                      </span>
+                      {item.canonicalized ? (
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                          Canonicalized
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-1 text-sm text-stone-700">{item.kind} · Source: {item.sourcePlatform}</p>
                     <p className="mt-2 text-xs leading-5 text-stone-600">

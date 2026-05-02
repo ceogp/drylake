@@ -232,14 +232,18 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
           rootUri: targetFolder,
           confirmationLabel: "the selected folder",
         });
-        void vscode.window.showInformationMessage(`Installed ${writtenCount} files.`);
+        if (writtenCount > 0) {
+          void vscode.window.showInformationMessage(`Installed ${writtenCount} files.`);
+        }
         return;
       }
 
       const writtenCount = await writeGeneratedFilesToWorkspace(generatedFiles, {
         confirmBeforeWrite: true,
       });
-      void vscode.window.showInformationMessage(`Installed ${writtenCount} files.`);
+      if (writtenCount > 0) {
+        void vscode.window.showInformationMessage(`Installed ${writtenCount} files.`);
+      }
     } catch (error) {
       void vscode.window.showErrorMessage(
         error instanceof Error ? error.message : "Xupra install failed.",

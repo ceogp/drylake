@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type CanonicalizationStatus = "none" | "succeeded" | "failed";
 type Destination = "cursor" | "codex" | "claude" | "other";
@@ -111,44 +111,53 @@ function formatConfidence(value: number) {
 }
 
 export function InstallFlow({ versionId }: { versionId: string }) {
-  const hasStartedCanonicalization = useRef(false);
   const [status, setStatus] = useState<InstallStatus | null>(null);
   const [message, setMessage] = useState("Loading install status...");
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [isCanonicalizing, setIsCanonicalizing] = useState(false);
   const [reviewAccepted, setReviewAccepted] = useState(false);
+  const [canonicalizationJustRan, setCanonicalizationJustRan] = useState(false);
   const [upgradeDismissed, setUpgradeDismissed] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [destination, setDestination] = useState<Destination>("cursor");
   const [customFormat, setCustomFormat] = useState<TargetPlatform>("cursor");
 
-  const loadStatus = useCallback(async () => {
-    setIsLoadingStatus(true);
+  const loadStatus = useCallback(
+    async ({ preserveMessage = false }: { preserveMessage?: boolean } = {}) => {
+      setIsLoadingStatus(true);
 
-    try {
-      const response = await fetch(`/api/v1/versions/${versionId}/install-status`, {
-        method: "GET",
-        cache: "no-store",
-      });
-      const payload = (await response.json()) as InstallStatus;
+      try {
+        const response = await fetch(`/api/v1/versions/${versionId}/install-status`, {
+          method: "GET",
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as InstallStatus;
 
-      if (!response.ok || !payload.ok) {
-        setMessage(payload.error?.message ?? "Install status is unavailable.");
-        return;
+        if (!response.ok || !payload.ok) {
+          if (!preserveMessage) {
+            setMessage(payload.error?.message ?? "Install status is unavailable.");
+          }
+          return;
+        }
+
+        setStatus(payload);
+        if (!preserveMessage) {
+          setMessage(
+            payload.hasSourceFiles
+              ? `${payload.sourceFileCount} source files are ready for install.`
+              : "Import source files before installing.",
+          );
+        }
+      } catch (error) {
+        if (!preserveMessage) {
+          setMessage(error instanceof Error ? error.message : "Install status is unavailable.");
+        }
+      } finally {
+        setIsLoadingStatus(false);
       }
-
-      setStatus(payload);
-      setMessage(
-        payload.hasSourceFiles
-          ? `${payload.sourceFileCount} source files are ready for install.`
-          : "Import source files before installing.",
-      );
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Install status is unavailable.");
-    } finally {
-      setIsLoadingStatus(false);
-    }
-  }, [versionId]);
+    },
+    [versionId],
+  );
 
   const runCanonicalization = useCallback(
     async (force = false) => {
@@ -165,15 +174,16 @@ export function InstallFlow({ versionId }: { versionId: string }) {
 
         if (!response.ok || !payload.ok) {
           setMessage(payload.error?.message ?? "Canonicalization failed.");
-          await loadStatus();
+          await loadStatus({ preserveMessage: true });
           return;
         }
 
+        setCanonicalizationJustRan(true);
         setReviewAccepted((payload.confidence ?? 0) >= 0.85);
         setMessage(
           `Canonicalized ${payload.agentCount ?? 0} agents and ${payload.skillCount ?? 0} skills.`,
         );
-        await loadStatus();
+        await loadStatus({ preserveMessage: true });
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Canonicalization failed.");
       } finally {
@@ -190,26 +200,6 @@ export function InstallFlow({ versionId }: { versionId: string }) {
 
     return () => window.clearTimeout(timer);
   }, [loadStatus]);
-
-  useEffect(() => {
-    if (
-      !status ||
-      !status.isPro ||
-      !status.hasSourceFiles ||
-      status.canonicalizationStatus !== "none" ||
-      hasStartedCanonicalization.current ||
-      isCanonicalizing
-    ) {
-      return;
-    }
-
-    hasStartedCanonicalization.current = true;
-    const timer = window.setTimeout(() => {
-      void runCanonicalization();
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [isCanonicalizing, runCanonicalization, status]);
 
   const selectedTargetPlatform = targetPlatformFor(destination, customFormat);
   const vscodeInstallHref = useMemo(
@@ -237,13 +227,24 @@ export function InstallFlow({ versionId }: { versionId: string }) {
     status?.canonicalizationStatus === "succeeded" &&
     status.canonicalizationResult &&
     status.canonicalizationResult.confidence < 0.85 &&
+    canonicalizationJustRan &&
     !reviewAccepted;
+  const awaitingCanonicalization = status?.canonicalizationStatus === "none" && !isCanonicalizing;
+  const canStartCanonicalization =
+    Boolean(status?.isPro) &&
+    Boolean(status?.hasSourceFiles) &&
+    awaitingCanonicalization;
   const readyForDestination =
     Boolean(status?.isPro) &&
     Boolean(status?.hasSourceFiles) &&
     status?.canonicalizationStatus === "succeeded" &&
     !needsReview &&
     !isCanonicalizing;
+  const canonicalizeStepState = readyForDestination
+    ? "done"
+    : isCanonicalizing || needsReview || awaitingCanonicalization
+      ? "active"
+      : "pending";
 
   async function startUpgrade() {
     if (!status?.organizationId) {
@@ -292,10 +293,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <StepBadge label="Import" state="done" />
         <span className="text-stone-300">/</span>
-        <StepBadge
-          label="Canonicalize"
-          state={readyForDestination ? "done" : isCanonicalizing || needsReview ? "active" : "pending"}
-        />
+        <StepBadge label="Canonicalize" state={canonicalizeStepState} />
         <span className="text-stone-300">/</span>
         <StepBadge label="Install" state={readyForDestination ? "active" : "pending"} />
       </div>
@@ -342,6 +340,23 @@ export function InstallFlow({ versionId }: { versionId: string }) {
             type="button"
           >
             {isUpgrading ? "Opening..." : "Upgrade to Pro - $10/mo"}
+          </button>
+        </section>
+      ) : null}
+
+      {canStartCanonicalization ? (
+        <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Step 2 of 3</p>
+          <h1 className="mt-3 text-2xl font-semibold text-stone-950">Canonicalize your agents and skills</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-700">
+            Kimi AI will analyze your source files and convert them into a portable canonical format.
+          </p>
+          <button
+            className="mt-6 rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700 disabled:bg-orange-300"
+            onClick={() => void runCanonicalization()}
+            type="button"
+          >
+            Canonicalize with Kimi
           </button>
         </section>
       ) : null}
@@ -400,7 +415,10 @@ export function InstallFlow({ versionId }: { versionId: string }) {
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700"
-              onClick={() => setReviewAccepted(true)}
+              onClick={() => {
+                setReviewAccepted(true);
+                setCanonicalizationJustRan(false);
+              }}
               type="button"
             >
               Accept all and continue
@@ -504,7 +522,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
         </section>
       ) : null}
 
-      {status && !status.isPro && !upgradeDismissed ? (
+      {status && status.hasSourceFiles && !status.isPro && !upgradeDismissed ? (
         <UpgradeModal
           isUpgrading={isUpgrading}
           onContinue={() => setUpgradeDismissed(true)}

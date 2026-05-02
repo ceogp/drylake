@@ -132,3 +132,62 @@ For AWS-native sending instead, run `npm run aws:setup-ses-domain` and publish t
    - `Import Workspace`
    - `Check Compatibility`
    - `Export Preview`
+
+## Release & Rollback
+
+### Promotion Steps
+
+1. Push to `development`. This auto-deploys to the dev environment at the AWS public DNS URL.
+2. Verify on the dev URL. Open the AWS public DNS URL in a browser and test as a new user end-to-end.
+3. Open a GitLab MR from `development` to `main`. Review the diff, confirm it looks right, and merge.
+4. Immediately tag the merged `main` commit:
+   ```sh
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+5. In GitLab, manually trigger `deploy_production` on `main`.
+6. Verify `https://drylake.xupracorp.com/api/v1/health`.
+
+### Rollback Steps
+
+1. Identify the last good tag:
+   ```sh
+   git tag --sort=-creatordate
+   ```
+2. In GitLab, find the pipeline for that tag's commit on `main`.
+3. Re-run `deploy_production` from that pipeline.
+4. Verify `https://drylake.xupracorp.com/api/v1/health`.
+
+### Production GitLab CI Variables
+
+Confirm these variables are set before production deploys:
+
+| Variable | Value |
+| --- | --- |
+| `PRODUCTION_HOST` | IP of the production EC2 instance |
+| `PRODUCTION_SSH_USER` | SSH user |
+| `PRODUCTION_SSH_PRIVATE_KEY` | SSH private key |
+| `PRODUCTION_ENV_FILE` | Full production env file with `APP_BASE_URL=https://drylake.xupracorp.com` |
+| `PRODUCTION_URL` | `https://drylake.xupracorp.com` |
+
+### Dev/Staging GitLab CI Variables
+
+Confirm these variables are set before dev/staging deploys:
+
+| Variable | Value |
+| --- | --- |
+| `STAGING_HOST` | IP of the dev EC2 instance |
+| `STAGING_SSH_USER` | SSH user |
+| `STAGING_SSH_PRIVATE_KEY` | SSH private key |
+| `STAGING_ENV_FILE` | Full env file for the dev server with `APP_BASE_URL` set to the AWS public DNS URL |
+| `STAGING_URL` | The AWS public DNS URL |
+| `AUTO_DEPLOY_STAGING` | `true` |
+
+### Baseline Tag Note
+
+Before the next production deploy, create a baseline tag on the current `main` HEAD:
+
+```sh
+git tag v1.0.0-baseline
+git push origin v1.0.0-baseline
+```

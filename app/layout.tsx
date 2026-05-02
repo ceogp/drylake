@@ -8,14 +8,12 @@ import { setActiveOrganizationAction } from "@/app/actions";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
-  getConfiguredAdminInternalOrigin,
   getConfiguredAppOrigin,
   getConfiguredMarketingOrigin,
   isConfiguredAdminInternalHost,
   isConfiguredMarketingHost,
   normalizeHost,
 } from "@/lib/site-hosts";
-import { getIsPlatformAdmin } from "@/lib/services/access";
 import { getAuthSetup } from "@/lib/services/auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import "./globals.css";
@@ -53,12 +51,8 @@ export default async function RootLayout({
   const appContext = marketingHostRequest || adminInternalHostRequest
     ? null
     : await getCurrentAppContext({ allowDevFallback });
-  const isPlatformAdmin = marketingHostRequest || adminInternalHostRequest
-    ? false
-    : await getIsPlatformAdmin({ allowDevFallback });
   const marketingOrigin = getConfiguredMarketingOrigin();
   const dryLakeOrigin = getConfiguredAppOrigin();
-  const adminInternalOrigin = getConfiguredAdminInternalOrigin();
 
   const shell = marketingHostRequest ? (
     <>
@@ -141,11 +135,6 @@ export default async function RootLayout({
               <Link className="transition hover:text-stone-950" href="/billing">
                 Billing
               </Link>
-              {isPlatformAdmin && adminInternalOrigin ? (
-                <a className="transition hover:text-stone-950" href={`${adminInternalOrigin}/admin`}>
-                  Internal Admin
-                </a>
-              ) : null}
             </nav>
           </div>
           <div className="flex items-center gap-3">
