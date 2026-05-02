@@ -1,0 +1,4 @@
+name = "browser-reviewer"
+description = "Review browser folder import results."
+developer_instructions = """Confirm folder uploads import Codex agents after path normalization."""
+tools = ["Read"]

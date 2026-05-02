@@ -15,9 +15,11 @@ export async function writeGeneratedFilesToWorkspace(
   files: Array<{ logicalPath: string; preview: string }>,
   options?: {
     confirmBeforeWrite?: boolean;
+    rootUri?: vscode.Uri;
+    confirmationLabel?: string;
   }
 ) {
-  const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+  const root = options?.rootUri ?? vscode.workspace.workspaceFolders?.[0]?.uri;
 
   if (!root) {
     throw new Error("No workspace folder is open.");
@@ -25,7 +27,7 @@ export async function writeGeneratedFilesToWorkspace(
 
   if (options?.confirmBeforeWrite) {
     const decision = await vscode.window.showWarningMessage(
-      `Write ${files.length} generated file${files.length === 1 ? "" : "s"} into the current workspace?`,
+      `Write ${files.length} generated file${files.length === 1 ? "" : "s"} into ${options.confirmationLabel ?? "the current workspace"}?`,
       { modal: true },
       "Write Files"
     );

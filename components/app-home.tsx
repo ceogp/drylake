@@ -52,7 +52,7 @@ export async function AppHome() {
                 className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700"
                 href={importWorkspacePath}
               >
-                Upload Skills And Agents
+                Import Skills And Agents
               </Link>
               <Link
                 className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
@@ -107,18 +107,18 @@ export async function AppHome() {
             <article className="rounded-[1.85rem] border border-stone-200 bg-white p-6 shadow-sm">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">First run</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
-              Upload first. Extension later.
+              Import first. Install later.
               </h2>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-              Your workspace is ready. Upload skills, agents, rules, and instruction files directly
+              Your workspace is ready. Import skills, agents, rules, and instruction files directly
               here so the canonical package has real source files before any extension workflow.
               </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700" href={importWorkspacePath}>
-                Upload Skills And Agents
+                Import Skills And Agents
               </Link>
-              <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/get-started">
-                Onboarding page
+              <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/install">
+                Install
               </Link>
             </div>
           </article>
@@ -142,10 +142,10 @@ export async function AppHome() {
               Start in VS Code or Cursor
             </h2>
             <p className="mt-3 text-sm leading-7 text-stone-700">
-              Connect the extension, scan the repo, import source files, and generate exports where the code already lives.
+              Connect the extension, scan the repo, import source files, and install generated outputs where the code already lives.
             </p>
-            <Link className="mt-5 inline-flex rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/install">
-              Open install flow
+            <Link className="mt-5 inline-flex rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/connect">
+              Connect extension
             </Link>
           </article>
 

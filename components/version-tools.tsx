@@ -5,22 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { normalizeImportLogicalPath } from "@/lib/utils/import-paths";
 
-const TARGETS = [
-  { value: "codex", label: "Codex" },
-  { value: "claude_code", label: "Claude Code" },
-  { value: "cursor", label: "Cursor" },
-  { value: "agents_md", label: "AGENTS.md" },
-] as const;
-
-type TabId = "source" | "library" | "targets" | "history";
+type TabId = "source" | "library" | "history";
 
 type VersionToolsProps = {
   versionId: string;
-  canUseAiFeatures: boolean;
   currentSummary: {
     rawFiles: number;
     importedItems: number;
-    targetFiles: number;
+    canonicalItems: number;
     lastImportAt: string | null;
   };
   importedItems: Array<{
@@ -31,6 +23,7 @@ type VersionToolsProps = {
     sourcePlatform: string;
     description: string;
     body: string;
+    canonicalized: boolean;
   }>;
   historyEvents: Array<{
     id: string;
@@ -44,10 +37,6 @@ type VersionToolsProps = {
 
 type JobResponse = {
   ok: boolean;
-  generatedFiles?: Array<{
-    logicalPath: string;
-    preview: string;
-  }>;
   imported?: {
     rawFiles: number;
     subagents: number;
@@ -257,7 +246,6 @@ function sourceFileUrl(versionId: string, fileId: string, mode: "content" | "dow
 
 export function VersionTools({
   versionId,
-  canUseAiFeatures,
   currentSummary,
   importedItems,
   historyEvents,
@@ -266,29 +254,24 @@ export function VersionTools({
   const manualInputRef = useRef<HTMLInputElement | null>(null);
   const directoryInputRef = useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("source");
-  const [targetPlatform, setTargetPlatform] = useState<(typeof TARGETS)[number]["value"]>("codex");
   const [sourceFiles, setSourceFiles] = useState<SourceFileRecord[]>([]);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [selectedImportedItemId, setSelectedImportedItemId] = useState<string | null>(null);
-  const [selectedGeneratedPath, setSelectedGeneratedPath] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(
     currentSummary.rawFiles > 0
       ? `${currentSummary.rawFiles} source files are stored in this library.`
       : "Import files or a folder to build your source library.",
   );
-  const [generatedFiles, setGeneratedFiles] = useState<Array<{ logicalPath: string; preview: string }>>([]);
   const [sourceTextById, setSourceTextById] = useState<Record<string, string>>({});
   const [sourceTextLoadingId, setSourceTextLoadingId] = useState<string | null>(null);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-  const [busyAction, setBusyAction] = useState<"upload" | "generate" | null>(null);
+  const [busyAction, setBusyAction] = useState<"upload" | null>(null);
   const [pendingFolderFiles, setPendingFolderFiles] = useState<PendingBrowserFile[]>([]);
   const [pendingManualFiles, setPendingManualFiles] = useState<PendingBrowserFile[]>([]);
 
   const selectedSource = sourceFiles.find((file) => file.dbId === selectedSourceId) ?? sourceFiles[0] ?? null;
   const selectedImportedItem =
     importedItems.find((item) => item.id === selectedImportedItemId) ?? importedItems[0] ?? null;
-  const selectedGenerated =
-    generatedFiles.find((file) => file.logicalPath === selectedGeneratedPath) ?? generatedFiles[0] ?? null;
 
   const loadSourceFiles = useCallback(async () => {
     setIsLoadingFiles(true);
@@ -467,78 +450,9 @@ export function VersionTools({
     setStatusMessage(`Downloaded ${file.logicalPath}.`);
   }
 
-  async function generateTargetFiles() {
-    if (!canUseAiFeatures) {
-      setActiveTab("targets");
-      setStatusMessage("Upgrade to canonicalize and generate target-ready files.");
-      return;
-    }
-
-    setBusyAction("generate");
-    setGeneratedFiles([]);
-    setStatusMessage("Generating target files...");
-
-    try {
-      const response = await fetch(`/api/v1/versions/${versionId}/export-preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          targetPlatform: targetPlatform === "agents_md" ? "codex" : targetPlatform,
-        }),
-      });
-      const payload = (await response.json()) as JobResponse;
-
-      if (!response.ok || !payload.ok) {
-        setStatusMessage(payload.error?.message ?? "Target generation failed.");
-        return;
-      }
-
-      const files = payload.generatedFiles ?? [];
-      const filteredFiles =
-        targetPlatform === "agents_md" ? files.filter((file) => file.logicalPath === "AGENTS.md") : files;
-      setGeneratedFiles(filteredFiles);
-      setSelectedGeneratedPath(filteredFiles[0]?.logicalPath ?? null);
-      setStatusMessage(
-        filteredFiles.length > 0
-          ? `Generated ${filteredFiles.length} target file${filteredFiles.length === 1 ? "" : "s"}. Review before upload/share.`
-          : "No target files were generated.",
-      );
-      router.refresh();
-    } finally {
-      setBusyAction(null);
-    }
-  }
-
-  function downloadGeneratedTargetFiles() {
-    if (generatedFiles.length === 0) {
-      return;
-    }
-
-    const payload = {
-      versionId,
-      targetPlatform,
-      generatedAt: new Date().toISOString(),
-      files: generatedFiles.map((file) => ({
-        path: file.logicalPath,
-        content: file.preview,
-      })),
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `xupra-target-files-${targetPlatform}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-    setStatusMessage(`Downloaded ${generatedFiles.length} target files.`);
-  }
-
   const tabs: Array<{ id: TabId; label: string }> = [
     { id: "source", label: "Source Files" },
     { id: "library", label: "Canonical Library" },
-    { id: "targets", label: "Targets" },
     { id: "history", label: "History" },
   ];
 
@@ -551,8 +465,7 @@ export function VersionTools({
               Skills & Agents
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-stone-700">
-              Upload, view, and organize your AI coding agents and skills. Pro users can canonicalize
-              them with AI and send target-ready files to Codex, Claude, Cursor, or AGENTS.md.
+              Import, view, copy, and organize your AI coding agents and skills before install.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -565,21 +478,11 @@ export function VersionTools({
               {busyAction === "upload" ? "Importing..." : "Import Files"}
             </button>
             <button
-              className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
-              onClick={() => {
-                setActiveTab("library");
-                setStatusMessage("Skill creation will use the AI canonical library in a later step.");
-              }}
+              className="rounded-full border border-orange-500 bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
+              onClick={() => router.push("/install")}
               type="button"
             >
-              Create Skill
-            </button>
-            <button
-              className="rounded-full border border-orange-300 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-900 transition hover:bg-orange-100"
-              onClick={() => setActiveTab("targets")}
-              type="button"
-            >
-              Upload / Share
+              Install -&gt;
             </button>
           </div>
         </div>
@@ -609,8 +512,8 @@ export function VersionTools({
             <p className="mt-2 text-2xl font-semibold text-stone-950">{currentSummary.importedItems}</p>
           </div>
           <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-            <p className="font-mono text-xs uppercase text-stone-500">Target Files</p>
-            <p className="mt-2 text-2xl font-semibold text-stone-950">{currentSummary.targetFiles + generatedFiles.length}</p>
+            <p className="font-mono text-xs uppercase text-stone-500">Canonical Items</p>
+            <p className="mt-2 text-2xl font-semibold text-stone-950">{currentSummary.canonicalItems}</p>
           </div>
           <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
             <p className="font-mono text-xs uppercase text-stone-500">Last Import</p>
@@ -706,16 +609,6 @@ export function VersionTools({
                         <button className="rounded-full border border-stone-300 px-3 py-1 text-xs font-medium text-stone-800" onClick={() => void downloadSource(file)} type="button">
                           Download
                         </button>
-                        <button
-                          className="rounded-full border border-orange-300 bg-orange-50 px-3 py-1 text-xs font-medium text-orange-900"
-                          onClick={() => {
-                            setActiveTab("library");
-                            setStatusMessage(canUseAiFeatures ? "AI canonicalization is the next backend step." : "Upgrade to canonicalize with AI.");
-                          }}
-                          type="button"
-                        >
-                          Canonicalize with AI · Pro
-                        </button>
                       </div>
                     </div>
                   </article>
@@ -742,24 +635,10 @@ export function VersionTools({
               <div>
                 <h3 className="text-xl font-semibold text-stone-950">Canonical Library</h3>
                 <p className="mt-1 text-sm leading-6 text-stone-700">
-                  Current records are imported items parsed from source. They are not AI-canonicalized yet.
+                  Parsed imports are listed here. Canonicalized items are marked after the install flow runs Kimi.
                 </p>
               </div>
 
-              {!canUseAiFeatures ? (
-                <div className="rounded-lg border border-orange-200 bg-orange-50 p-5">
-                  <h4 className="font-semibold text-orange-950">Upgrade to canonicalize</h4>
-                  <p className="mt-2 text-sm leading-6 text-orange-900">
-                    Your source files are stored and viewable for free. Upgrade to let Xupra use AI
-                    to understand them as portable skills, agents, and rules.
-                  </p>
-                  <button className="mt-4 rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white" type="button">
-                    Upgrade to canonicalize
-                  </button>
-                </div>
-              ) : null}
-
-              {canUseAiFeatures ? (
               <div className="grid gap-3">
                 {importedItems.map((item) => (
                   <button
@@ -772,13 +651,17 @@ export function VersionTools({
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h4 className="font-semibold text-stone-950">{item.name}</h4>
-                      <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">
-                        Imported item
-                      </span>
+                      {item.canonicalized ? (
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                          Canonicalized
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-1 text-sm text-stone-700">{item.kind} · Source: {item.sourcePlatform}</p>
                     <p className="mt-2 text-xs leading-5 text-stone-600">
-                      Parsed from source — canonicalization requires Pro.
+                      {item.canonicalized
+                        ? "Ready for target-specific install."
+                        : "Parsed from source. Canonicalization runs from Install."}
                     </p>
                     {item.sourcePath ? <p className="mt-1 break-all font-mono text-xs text-stone-500">From: {item.sourcePath}</p> : null}
                   </button>
@@ -789,74 +672,9 @@ export function VersionTools({
                   </div>
                 ) : null}
               </div>
-              ) : null}
             </div>
 
-            {canUseAiFeatures ? <ImportedItemPreview item={selectedImportedItem} /> : null}
-          </div>
-        ) : null}
-
-        {activeTab === "targets" ? (
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
-            <div className="space-y-4 rounded-lg border border-stone-200 bg-stone-50 p-5">
-              <h3 className="text-xl font-semibold text-stone-950">Targets</h3>
-              {!canUseAiFeatures ? (
-                <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm leading-6 text-orange-900">
-                  Target upload/share is available after AI canonicalization. Your source files are
-                  still stored and viewable for free.
-                </div>
-              ) : null}
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Select item
-                <select className="rounded-lg border border-stone-300 bg-white px-3 py-2" disabled={!canUseAiFeatures || importedItems.length === 0} value={selectedImportedItemId ?? importedItems[0]?.id ?? ""} onChange={(event) => setSelectedImportedItemId(event.target.value)}>
-                  {importedItems.map((item) => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-stone-900">
-                Choose target
-                <select className="rounded-lg border border-stone-300 bg-white px-3 py-2" disabled={!canUseAiFeatures} value={targetPlatform} onChange={(event) => setTargetPlatform(event.target.value as (typeof TARGETS)[number]["value"])}>
-                  {TARGETS.map((target) => (
-                    <option key={target.value} value={target.value}>{target.label}</option>
-                  ))}
-                </select>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button className="rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-white disabled:bg-stone-400" disabled={!canUseAiFeatures || busyAction === "generate"} onClick={() => void generateTargetFiles()} type="button">
-                  {busyAction === "generate" ? "Preparing..." : "Prepare Upload / Share"}
-                </button>
-                <button className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 disabled:opacity-60" disabled={!generatedFiles.length} onClick={downloadGeneratedTargetFiles} type="button">
-                  Download target files
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-stone-950">Target Files</h3>
-              <div className="grid gap-3">
-                {generatedFiles.map((file) => (
-                  <button
-                    key={file.logicalPath}
-                    className={`rounded-lg border p-4 text-left ${selectedGenerated?.logicalPath === file.logicalPath ? "border-orange-300" : "border-stone-200"}`}
-                    onClick={() => setSelectedGeneratedPath(file.logicalPath)}
-                    type="button"
-                  >
-                    <p className="break-all font-mono text-sm font-semibold text-stone-950">{file.logicalPath}</p>
-                  </button>
-                ))}
-                {generatedFiles.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-stone-700">
-                    Generated target files will appear here before upload, share, download, or VS Code install.
-                  </div>
-                ) : null}
-              </div>
-              {selectedGenerated ? (
-                <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-stone-950 p-4 font-mono text-xs leading-6 text-stone-100">
-                  {selectedGenerated.preview}
-                </pre>
-              ) : null}
-            </div>
+            <ImportedItemPreview item={selectedImportedItem} />
           </div>
         ) : null}
 
@@ -961,7 +779,9 @@ function ImportedItemPreview({ item }: { item: VersionToolsProps["importedItems"
   return (
     <aside className="rounded-lg border border-stone-200 bg-white">
       <div className="border-b border-stone-200 p-4">
-        <p className="text-xs font-medium uppercase text-stone-500">Imported item — not AI-canonicalized yet</p>
+        <p className="text-xs font-medium uppercase text-stone-500">
+          {item.canonicalized ? "Canonicalized item" : "Parsed import"}
+        </p>
         <h4 className="mt-2 text-xl font-semibold text-stone-950">{item.name}</h4>
         <p className="mt-1 text-sm text-stone-700">{item.kind} · Source: {item.sourcePlatform}</p>
       </div>

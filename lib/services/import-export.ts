@@ -1077,85 +1077,65 @@ export async function runImportForVersion(params: {
   } | null = null;
 
   if (ambiguousFiles.length > 0) {
-    if (process.env.OPENAI_API_KEY) {
-      try {
-        const normalized = await normalizeAmbiguousFilesWithAi({
-          files: ambiguousFiles,
-        });
+    try {
+      const normalized = await normalizeAmbiguousFilesWithAi({
+        files: ambiguousFiles,
+      });
 
-        if (normalized) {
-          if (normalized.instructions.trim()) {
-            applyInstructions(normalized.instructions, "OpenAI normalization");
-          }
+      if (normalized) {
+        if (normalized.instructions.trim()) {
+          applyInstructions(normalized.instructions, `${env.AI_PROVIDER} normalization`);
+        }
 
-          agentDefinition.tools = mergeToolLists(agentDefinition.tools, normalized.tools);
+        agentDefinition.tools = mergeToolLists(agentDefinition.tools, normalized.tools);
 
-          for (const skill of normalized.skills) {
-            await applyImportedSkill({
-              name: skill.name,
-              description: skill.description,
-              bodyMd: skill.body,
-              metadata: {
-                sourcePlatform: "ai_normalization",
-              },
-            });
-          }
-
-          for (const subagent of normalized.subagents) {
-            await upsertSubagent({
-              versionId: version.id,
-              slug: toSlug(subagent.name),
-              name: subagent.name,
-              description: subagent.description,
-              instructionsMd: subagent.instructions,
-              tools: subagent.tools,
-              modelHint: subagent.modelHint,
-              permissionMode: subagent.permissionMode,
-              metadata: {
-                sourcePlatform: "ai_normalization",
-              },
-            });
-            imported.subagents += 1;
-          }
-
-          for (const fragment of normalized.promptFragments) {
-            await upsertSkillRule({
-              versionId: version.id,
-              name: fragment.name,
-              kind: "prompt_fragment",
-              bodyMd: fragment.body,
-              metadata: {
-                sourcePlatform: "ai_normalization",
-              },
-            });
-            imported.rules += 1;
-          }
-
-          warnings.push(...normalized.warnings);
-          assistedNormalization = {
-            confidence: normalized.confidence,
-            warnings: normalized.warnings,
-            summary: normalized.summary,
-          };
-
-          await prisma.transformJob.create({
-            data: {
-              organizationId,
-              projectId: version.agentPackage.projectId,
-              agentPackageId: version.agentPackage.id,
-              packageVersionId: version.id,
-              jobType: "normalize",
-              status: "succeeded",
-              sourcePlatform: params.sourcePlatform ?? version.agentPackage.sourcePlatform,
-              resultJson: normalized as Prisma.InputJsonObject,
-              finishedAt: new Date(),
-              createdByUserId: params.createdByUserId,
+        for (const skill of normalized.skills) {
+          await applyImportedSkill({
+            name: skill.name,
+            description: skill.description,
+            bodyMd: skill.body,
+            metadata: {
+              sourcePlatform: "ai_normalization",
             },
           });
         }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Assisted normalization failed";
-        warnings.push(message);
+
+        for (const subagent of normalized.subagents) {
+          await upsertSubagent({
+            versionId: version.id,
+            slug: toSlug(subagent.name),
+            name: subagent.name,
+            description: subagent.description,
+            instructionsMd: subagent.instructions,
+            tools: subagent.tools,
+            modelHint: subagent.modelHint,
+            permissionMode: subagent.permissionMode,
+            metadata: {
+              sourcePlatform: "ai_normalization",
+            },
+          });
+          imported.subagents += 1;
+        }
+
+        for (const fragment of normalized.promptFragments) {
+          await upsertSkillRule({
+            versionId: version.id,
+            name: fragment.name,
+            kind: "prompt_fragment",
+            bodyMd: fragment.body,
+            metadata: {
+              sourcePlatform: "ai_normalization",
+            },
+          });
+          imported.rules += 1;
+        }
+
+        warnings.push(...normalized.warnings);
+        assistedNormalization = {
+          confidence: normalized.confidence,
+          warnings: normalized.warnings,
+          summary: normalized.summary,
+        };
 
         await prisma.transformJob.create({
           data: {
@@ -1164,16 +1144,34 @@ export async function runImportForVersion(params: {
             agentPackageId: version.agentPackage.id,
             packageVersionId: version.id,
             jobType: "normalize",
-            status: "failed",
+            status: "succeeded",
             sourcePlatform: params.sourcePlatform ?? version.agentPackage.sourcePlatform,
-            errorJson: { message },
+            resultJson: normalized as Prisma.InputJsonObject,
             finishedAt: new Date(),
             createdByUserId: params.createdByUserId,
           },
         });
+      } else {
+        warnings.push(`${env.AI_PROVIDER} assisted normalization is available when its API key is configured.`);
       }
-    } else {
-      warnings.push("OpenAI-assisted normalization is available when OPENAI_API_KEY is configured.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Assisted normalization failed";
+      warnings.push(message);
+
+      await prisma.transformJob.create({
+        data: {
+          organizationId,
+          projectId: version.agentPackage.projectId,
+          agentPackageId: version.agentPackage.id,
+          packageVersionId: version.id,
+          jobType: "normalize",
+          status: "failed",
+          sourcePlatform: params.sourcePlatform ?? version.agentPackage.sourcePlatform,
+          errorJson: { message },
+          finishedAt: new Date(),
+          createdByUserId: params.createdByUserId,
+        },
+      });
     }
   }
 

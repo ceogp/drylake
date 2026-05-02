@@ -8,14 +8,12 @@ import { setActiveOrganizationAction } from "@/app/actions";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
-  getConfiguredAdminInternalOrigin,
   getConfiguredAppOrigin,
   getConfiguredMarketingOrigin,
   isConfiguredAdminInternalHost,
   isConfiguredMarketingHost,
   normalizeHost,
 } from "@/lib/site-hosts";
-import { getIsPlatformAdmin } from "@/lib/services/access";
 import { getAuthSetup } from "@/lib/services/auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import "./globals.css";
@@ -53,12 +51,8 @@ export default async function RootLayout({
   const appContext = marketingHostRequest || adminInternalHostRequest
     ? null
     : await getCurrentAppContext({ allowDevFallback });
-  const isPlatformAdmin = marketingHostRequest || adminInternalHostRequest
-    ? false
-    : await getIsPlatformAdmin({ allowDevFallback });
   const marketingOrigin = getConfiguredMarketingOrigin();
   const dryLakeOrigin = getConfiguredAppOrigin();
-  const adminInternalOrigin = getConfiguredAdminInternalOrigin();
 
   const shell = marketingHostRequest ? (
     <>
@@ -79,9 +73,6 @@ export default async function RootLayout({
           <nav className="hidden items-center gap-5 text-sm text-stone-600 md:flex">
             <a className="transition hover:text-stone-950" href={dryLakeOrigin}>
               DryLake
-            </a>
-            <a className="transition hover:text-stone-950" href={`${dryLakeOrigin}/extensions/install`}>
-              Install
             </a>
             <a className="transition hover:text-stone-950" href={`${dryLakeOrigin}/billing`}>
               Pricing
@@ -135,14 +126,8 @@ export default async function RootLayout({
               </div>
             </Link>
             <nav className="hidden items-center gap-4 text-sm text-stone-600 md:flex">
-              <Link className="transition hover:text-stone-950" href="/get-started">
-                Get Started
-              </Link>
-              <Link className="transition hover:text-stone-950" href="/extensions">
-                Extension
-              </Link>
-              <Link className="transition hover:text-stone-950" href="/workspace">
-                Upload
+              <Link className="transition hover:text-stone-950" href="/upload">
+                Import
               </Link>
               <Link className="transition hover:text-stone-950" href="/settings">
                 Settings
@@ -150,11 +135,6 @@ export default async function RootLayout({
               <Link className="transition hover:text-stone-950" href="/billing">
                 Billing
               </Link>
-              {isPlatformAdmin && adminInternalOrigin ? (
-                <a className="transition hover:text-stone-950" href={`${adminInternalOrigin}/admin`}>
-                  Internal Admin
-                </a>
-              ) : null}
             </nav>
           </div>
           <div className="flex items-center gap-3">
@@ -166,7 +146,7 @@ export default async function RootLayout({
                   id: membership.organizationId,
                   name: membership.organization.name,
                 }))}
-                redirectTo="/app"
+                redirectTo="/upload"
               />
             ) : null}
             {useClerkUi ? (

@@ -365,7 +365,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.openWebApp", async () => {
-    await openWebAppCommand(apiClient, stateStore.getSelection().versionId);
+    await openWebAppCommand(apiClient);
   });
 
   register("xupra.refreshProjects", async () => {
@@ -512,7 +512,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.openInstallGuide", async () => {
-    await vscode.env.openExternal(apiClient.openWebUrl("/extensions/install"));
+    await vscode.env.openExternal(apiClient.openWebUrl("/upload"));
   });
 
   register("xupra.openConnectPage", async () => {
@@ -520,7 +520,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.openGetStarted", async () => {
-    await vscode.env.openExternal(apiClient.openWebUrl("/get-started"));
+    await vscode.env.openExternal(apiClient.openWebUrl("/upload"));
   });
 
   try {

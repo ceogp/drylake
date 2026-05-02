@@ -43,33 +43,26 @@ function DryLakeHome() {
 
             <div className="space-y-5">
               <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.07em] text-stone-950 sm:text-6xl lg:text-7xl">
-                Upload your skills and agents. Then move them to the next platform.
+                Import your skills and agents. Then install them in the next tool.
               </h1>
               <p className="max-w-3xl text-lg leading-8 text-stone-700 sm:text-xl">
-                Start by uploading an existing repo folder or selected files. Xupra stores the raw
-                source files, imports skills and agents into a package version, and shows what landed
-                before you generate target outputs.
+                Start by importing an existing repo folder or selected files. Xupra stores the raw
+                source files, canonicalizes them with Kimi, and hands install back to your editor.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-4">
               <Link
                 className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
-                href="/workspace"
+                href="/upload"
               >
-                Upload Skills And Agents
+                Import Skills And Agents
               </Link>
               <Link
                 className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
-                href="/get-started"
+                href="/install"
               >
-                Get Started
-              </Link>
-              <Link
-                className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
-                href="/extensions"
-              >
-                Extension
+                Install
               </Link>
             </div>
 
@@ -89,21 +82,21 @@ function DryLakeHome() {
         <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
           <div className="grid gap-5 lg:grid-cols-3">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">1. Upload</p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">1. Import</p>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                Choose a repo folder or selected files from the web import workspace.
+                Choose a repo folder or selected files from the import page.
               </p>
             </div>
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">2. Review</p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">2. Canonicalize</p>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                Confirm raw files, extracted agents, skills, rules, and instructions on the version page.
+                Convert raw source into portable agents, skills, rules, and instructions with Kimi.
               </p>
             </div>
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">3. Export</p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">3. Install</p>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                Generate Codex, Claude Code, Cursor, or Claude Agents output after the import is visible.
+                Pick Cursor, Codex, Claude, or a custom path and let the extension write files.
               </p>
             </div>
           </div>
@@ -165,9 +158,9 @@ function MarketingHome() {
               </a>
               <a
                 className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
-                href={`${dryLakeOrigin}/extensions/install`}
+                href={`${dryLakeOrigin}/upload`}
               >
-                VS Code Install Flow
+                Import Skills And Agents
               </a>
             </div>
 

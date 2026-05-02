@@ -2,7 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { ensureStarterWorkspace, STARTER_VERSION_ORIGIN } from "@/lib/services/dev-session";
 
-async function getLatestWorkspaceVersionPath(organizationId: string) {
+const uploadPath = "/upload";
+
+async function getLatestWorkspaceVersionId(organizationId: string) {
   const latestVersion = await prisma.packageVersion.findFirst({
     where: {
       agentPackage: {
@@ -22,7 +24,7 @@ async function getLatestWorkspaceVersionPath(organizationId: string) {
     return null;
   }
 
-  return `/versions/${latestVersion.id}`;
+  return latestVersion.id;
 }
 
 export async function getActiveWorkspace() {
@@ -120,10 +122,10 @@ export async function getStarterWorkspaceRedirectPath() {
     return null;
   }
 
-  return `/versions/${starterVersion.id}`;
+  return uploadPath;
 }
 
-export async function getImportWorkspacePath() {
+export async function getImportWorkspaceVersionId() {
   const context = await getCurrentAppContext();
 
   if (!context) {
@@ -147,13 +149,13 @@ export async function getImportWorkspacePath() {
   });
 
   if (starterVersion) {
-    return `/versions/${starterVersion.id}`;
+    return starterVersion.id;
   }
 
-  const latestWorkspaceVersionPath = await getLatestWorkspaceVersionPath(context.organization.id);
+  const latestWorkspaceVersionId = await getLatestWorkspaceVersionId(context.organization.id);
 
-  if (latestWorkspaceVersionPath) {
-    return latestWorkspaceVersionPath;
+  if (latestWorkspaceVersionId) {
+    return latestWorkspaceVersionId;
   }
 
   await ensureStarterWorkspace({
@@ -177,10 +179,15 @@ export async function getImportWorkspacePath() {
     },
   });
 
-  return ensuredStarterVersion ? `/versions/${ensuredStarterVersion.id}` : null;
+  return ensuredStarterVersion?.id ?? null;
 }
 
-export async function getPrimaryWorkspacePath() {
+export async function getImportWorkspacePath() {
+  const versionId = await getImportWorkspaceVersionId();
+  return versionId ? uploadPath : null;
+}
+
+export async function getPrimaryWorkspaceVersionId() {
   const context = await getCurrentAppContext();
 
   if (!context) {
@@ -203,14 +210,19 @@ export async function getPrimaryWorkspacePath() {
   });
 
   if (latestImportedVersion?.packageVersionId) {
-    return `/versions/${latestImportedVersion.packageVersionId}`;
+    return latestImportedVersion.packageVersionId;
   }
 
-  const importWorkspacePath = await getImportWorkspacePath();
+  const importWorkspaceVersionId = await getImportWorkspaceVersionId();
 
-  if (importWorkspacePath) {
-    return importWorkspacePath;
+  if (importWorkspaceVersionId) {
+    return importWorkspaceVersionId;
   }
 
-  return getLatestWorkspaceVersionPath(context.organization.id);
+  return getLatestWorkspaceVersionId(context.organization.id);
+}
+
+export async function getPrimaryWorkspacePath() {
+  const versionId = await getPrimaryWorkspaceVersionId();
+  return versionId ? uploadPath : null;
 }

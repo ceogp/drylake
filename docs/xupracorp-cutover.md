@@ -50,19 +50,23 @@ Do not use `Flexible`.
 
 ## GitLab Staging Env
 
-`STAGING_ENV_FILE` should include the real app URL and Clerk billing values:
+`STAGING_ENV_FILE` should include the dev/staging app URL, Clerk auth values, and the configured billing values. The current dev environment uses Stripe billing:
 
 ```env
-APP_BASE_URL=https://drylake.xupracorp.com
+APP_BASE_URL=http://ec2-52-196-86-96.ap-northeast-1.compute.amazonaws.com
 AUTH_MODE=clerk
-BILLING_PROVIDER=clerk
+BILLING_PROVIDER=stripe
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
 CLERK_SECRET_KEY=sk_...
 CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
-BILLING_ENFORCEMENT_MODE=strict
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+BILLING_ENFORCEMENT_MODE=development
 ```
 
 Keep your existing database, encryption, and storage values in the same env file.
+This is the dev/staging env file, not the production env file. The production env file uses `APP_BASE_URL=https://drylake.xupracorp.com` and production billing keys.
 
 ## Clerk Billing
 
@@ -85,16 +89,19 @@ In Clerk Dashboard:
 1. Update GitLab `STAGING_ENV_FILE`.
 2. Redeploy the `development` branch.
 3. Verify:
-   - `https://drylake.xupracorp.com/api/v1/health`
-   - `https://drylake.xupracorp.com/extensions/connect`
+   - `http://ec2-52-196-86-96.ap-northeast-1.compute.amazonaws.com/api/v1/health`
+   - `http://ec2-52-196-86-96.ap-northeast-1.compute.amazonaws.com/extensions/connect`
    - `https://xupracorp.com`
+
+Production (`https://drylake.xupracorp.com`) is only updated via the manual `deploy_production` job on `main`, as documented in the "Release & Rollback" section.
 
 Expected health response should report:
 
 - `authMode: clerk`
-- `billingProvider: clerk`
+- `billingProvider: stripe`
 - `billingConfigured: true`
 - `clerkConfigured: true`
+- `stripeConfigured: true`
 
 ## AWS Edge
 
@@ -132,3 +139,61 @@ For AWS-native sending instead, run `npm run aws:setup-ses-domain` and publish t
    - `Import Workspace`
    - `Check Compatibility`
    - `Export Preview`
+
+## Release & Rollback
+
+### Promotion Steps
+
+1. Push to `development`. This auto-deploys to the dev environment at the AWS public DNS URL.
+2. Verify on the dev URL. Open the AWS public DNS URL in a browser and test as a new user end-to-end.
+3. Open a GitLab MR from `development` to `main`. Review the diff, confirm it looks right, and merge.
+4. Immediately tag the merged `main` commit:
+   ```sh
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+5. In GitLab, manually trigger `deploy_production` on `main`.
+6. Verify `https://drylake.xupracorp.com/api/v1/health`.
+
+### Rollback Steps
+
+1. Identify the last good tag:
+   ```sh
+   git tag --sort=-creatordate
+   ```
+2. In GitLab, find the pipeline for that tag's commit on `main`.
+3. Re-run `deploy_production` from that pipeline.
+4. Verify `https://drylake.xupracorp.com/api/v1/health`.
+
+### Production GitLab CI Variables
+
+Confirm these variables are set before production deploys:
+
+| Variable | Value |
+| --- | --- |
+| `PRODUCTION_HOST` | IP of the production EC2 instance |
+| `PRODUCTION_SSH_USER` | SSH user |
+| `PRODUCTION_SSH_PRIVATE_KEY` | SSH private key |
+| `PRODUCTION_ENV_FILE` | Full production env file with `APP_BASE_URL=https://drylake.xupracorp.com` |
+| `PRODUCTION_URL` | `https://drylake.xupracorp.com` |
+
+### Dev/Staging GitLab CI Variables
+
+Confirm these variables are set before dev/staging deploys:
+
+| Variable | Value |
+| --- | --- |
+| `STAGING_HOST` | IP of the dev EC2 instance |
+| `STAGING_SSH_USER` | SSH user |
+| `STAGING_SSH_PRIVATE_KEY` | SSH private key |
+| `STAGING_ENV_FILE` | Full env file for the dev server with `APP_BASE_URL` set to the AWS public DNS URL |
+| `STAGING_URL` | The AWS public DNS URL |
+| `AUTO_DEPLOY_STAGING` | `true` |
+
+### Baseline Tag Note
+
+The baseline tag already exists:
+
+`v1.0.0-baseline -> 56cfb447`
+
+Use this tag as the rollback target for the pre-overhaul production state. Future production releases should create new tags using the `vX.Y.Z` convention.
