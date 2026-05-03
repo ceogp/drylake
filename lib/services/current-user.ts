@@ -93,6 +93,7 @@ async function getClerkBackedUser() {
   const session = await ensureAppSession({
     email: primaryEmail,
     displayName,
+    avatarUrl: clerkUser.imageUrl || null,
     authProvider: "clerk",
     authSubject: userId,
   });

@@ -21,6 +21,7 @@ export async function POST() {
       user: {
         id: context.user.id,
         email: context.user.email,
+        imageUrl: context.user.profile?.avatarUrl ?? null,
         displayName: context.user.profile?.displayName ?? context.user.email,
       },
     });

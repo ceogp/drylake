@@ -117,6 +117,7 @@ export type ExtensionConnection = {
         | {
             id: string;
             email: string;
+            imageUrl?: string | null;
             displayName?: string | null;
           }
         | null;
@@ -126,6 +127,7 @@ export type ExtensionConnection = {
     | {
         id: string;
         email: string;
+        imageUrl?: string | null;
       }
     | null;
   organization:

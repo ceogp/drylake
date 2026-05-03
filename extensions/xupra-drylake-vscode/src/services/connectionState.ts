@@ -34,6 +34,7 @@ export function connectionStateFromExtensionConnection(result: ExtensionConnecti
     entitlements: normalizeEntitlements(result.entitlements),
     subscriptionStatus: result.subscription?.status,
     userEmail: result.user?.email ?? undefined,
+    userAvatarUrl: result.user?.imageUrl ?? result.auth.session.user?.imageUrl ?? undefined,
     authMode: result.auth.mode,
   };
 }

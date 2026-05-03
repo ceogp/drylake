@@ -15,6 +15,7 @@ export type ConnectionState = {
   subscriptionStatus?: string;
   awaitingPlanRefreshUntil?: string | null;
   userEmail?: string;
+  userAvatarUrl?: string | null;
   authMode?: "dev" | "clerk";
 };
 

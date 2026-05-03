@@ -109,6 +109,7 @@ export class ApiClient {
       user: {
         id: string;
         email: string;
+        imageUrl?: string | null;
       };
       organization: {
         id: string;

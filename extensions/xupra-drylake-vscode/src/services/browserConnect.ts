@@ -31,6 +31,7 @@ function buildExternalConnectUrl(apiClient: ApiClient, callbackUri: vscode.Uri) 
   const url = new URL(apiClient.openWebUrl("/extensions/connect").toString());
   url.searchParams.set("callback", callbackUri.toString());
   url.searchParams.set("editor", vscode.env.uriScheme === "cursor" ? "cursor" : "vscode");
+  url.searchParams.set("request", Date.now().toString());
   return vscode.Uri.parse(url.toString());
 }
 
@@ -156,6 +157,7 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       entitlements: normalizeEntitlements(exchanged.entitlements),
       subscriptionStatus: exchanged.subscription?.status,
       userEmail: exchanged.user.email,
+      userAvatarUrl: exchanged.user.imageUrl ?? undefined,
       authMode: "clerk",
     });
     const tierLabel = exchanged.organization.tier

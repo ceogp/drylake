@@ -8,6 +8,7 @@ import { importDefaultLocationsCommand, importFolderCommand, importWorkspaceComm
 import { openWebAppCommand } from "./commands/openWebApp";
 import { pullPackageCommand } from "./commands/pullPackage";
 import { refreshProjectsCommand } from "./commands/refreshProjects";
+import { signOutCommand } from "./commands/signOut";
 import { ApiClient } from "./services/apiClient";
 import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
@@ -18,6 +19,7 @@ import { scanWorkspaceFiles } from "./services/workspaceScanner";
 import type { PackageVersionDetail } from "./types/api";
 import type { ImportedWorkspaceSnapshot } from "./types/package";
 import { HelpTreeProvider } from "./views/helpTreeProvider";
+import { HowItWorksPanel } from "./views/howItWorksPanel";
 import { JobTreeProvider } from "./views/jobTreeProvider";
 import { SkillCreationPanel } from "./views/skillCreationPanel";
 import { SkillsMarketplacePanel } from "./views/skillsMarketplacePanel";
@@ -213,7 +215,21 @@ export async function activate(context: vscode.ExtensionContext) {
     const detectedFiles = stateStore.getDetectedFiles();
     const selection = stateStore.getSelection();
     const connection = stateStore.getConnection();
-    const projectList = projects ?? (await apiClient.listProjects()).projects;
+    let projectList = projects;
+
+    if (!projectList) {
+      if (connection.userEmail) {
+        try {
+          projectList = (await apiClient.listProjects()).projects;
+        } catch (error) {
+          logger.error(`Failed to list projects for sidebar sync: ${error instanceof Error ? error.message : String(error)}`);
+          projectList = [];
+        }
+      } else {
+        projectList = [];
+      }
+    }
+
     const selectedProject = projectList.find((project) => project.id === selection.projectId);
     const selectedPackage = selectedProject?.packages.find((agentPackage) => agentPackage.id === selection.packageId);
     const selectedVersion = selectedPackage?.versions.find((version) => version.id === selection.versionId);
@@ -235,6 +251,7 @@ export async function activate(context: vscode.ExtensionContext) {
     workspaceSidebar.postState({
       connected: Boolean(connection.userEmail),
       userEmail: connection.userEmail,
+      userAvatarUrl: connection.userAvatarUrl,
       orgName: connection.organizationName,
       orgTier: connection.organizationTier,
       entitlements: connection.entitlements,
@@ -271,6 +288,15 @@ export async function activate(context: vscode.ExtensionContext) {
       hasProjects: projectList.length > 0,
       hasVersionSelection: Boolean(selection.versionId),
     });
+  };
+
+  const refreshProjectsSafely = async (reason: string) => {
+    try {
+      return await refreshProjectsCommand(apiClient);
+    } catch (error) {
+      logger.error(`Failed to refresh projects during ${reason}: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
   };
 
   context.subscriptions.push(statusBar);
@@ -381,7 +407,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const files = await scanWorkspaceFiles(configuration);
     await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
-    const projects = await refreshProjectsCommand(apiClient);
+    const projects = await refreshProjectsSafely("connect");
     await syncWorkspaceView(projects);
     const connection = stateStore.getConnection();
 
@@ -434,7 +460,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const files = await scanWorkspaceFiles(configuration);
       await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
-      const projects = await refreshProjectsCommand(apiClient);
+      const projects = await refreshProjectsSafely("token paste");
       await syncWorkspaceView(projects);
       const connection = stateStore.getConnection();
 
@@ -485,8 +511,16 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.refreshProjects", async () => {
-    const projects = await refreshProjectsCommand(apiClient);
+    const projects = await refreshProjectsSafely("manual refresh");
     await syncWorkspaceView(projects);
+  });
+
+  register("xupra.signOut", async () => {
+    const signedOut = await signOutCommand(apiClient, stateStore);
+
+    if (signedOut) {
+      await syncWorkspaceView([]);
+    }
   });
 
   register("xupra.scanWorkspace", async () => {
@@ -580,6 +614,18 @@ export async function activate(context: vscode.ExtensionContext) {
     await stateStore.setAwaitingPlanRefreshUntil(new Date(Date.now() + 120_000).toISOString());
   });
 
+  register("xupra.contactSupport", async () => {
+    await vscode.env.openExternal(vscode.Uri.parse("mailto:support@xupracorp.com"));
+  });
+
+  register("xupra.openHowItWorks", () => {
+    HowItWorksPanel.createOrShow(context, "workflow");
+  });
+
+  register("xupra.openSupportedTargets", () => {
+    HowItWorksPanel.createOrShow(context, "targets");
+  });
+
   register("xupra.openInstallGuide", async () => {
     await vscode.env.openExternal(apiClient.openWebUrl("/extensions/install"));
   });
@@ -595,11 +641,24 @@ export async function activate(context: vscode.ExtensionContext) {
   try {
     const files = await scanWorkspaceFiles(configuration);
     await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
-    const projects = await refreshProjectsCommand(apiClient);
-    await syncWorkspaceView(projects);
   } catch (error) {
-    logger.error(`Failed to load initial projects: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`Failed to scan initial workspace files: ${error instanceof Error ? error.message : String(error)}`);
   }
+
+  const startupToken = await stateStore.getAccessToken();
+
+  if (startupToken) {
+    try {
+      apiClient.setAccessToken(startupToken);
+      const result = await apiClient.connect(undefined, undefined, startupToken);
+      await stateStore.setConnection(connectionStateFromExtensionConnection(result));
+    } catch (error) {
+      logger.error(`Failed to refresh connection during startup: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  const initialProjects = stateStore.getConnection().userEmail ? await refreshProjectsSafely("startup") : [];
+  await syncWorkspaceView(initialProjects);
 
   if (!context.globalState.get<boolean>(WALKTHROUGH_STATE_KEY)) {
     await context.globalState.update(WALKTHROUGH_STATE_KEY, true);

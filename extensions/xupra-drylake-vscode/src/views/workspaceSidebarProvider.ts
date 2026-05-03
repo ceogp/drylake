@@ -7,6 +7,7 @@ import type { DetectedWorkspaceFile, EntitlementMap, SelectedContext } from "../
 export type SidebarState = {
   connected: boolean;
   userEmail?: string;
+  userAvatarUrl?: string | null;
   orgName?: string;
   orgTier?: string;
   entitlements?: EntitlementMap;
@@ -31,6 +32,7 @@ type InboundAction =
   | "openBilling"
   | "openDashboard"
   | "openSettings"
+  | "signOut"
   | "refreshPlan"
   | "createSkill"
   | "browseSkills"
@@ -97,6 +99,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
           case "openSettings":
             await vscode.commands.executeCommand("xupra.openSettings");
             break;
+          case "signOut":
+            await vscode.commands.executeCommand("xupra.signOut");
+            break;
           case "refreshPlan":
             await vscode.commands.executeCommand("xupra.refreshPlan");
             break;
@@ -143,6 +148,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     return {
       connected: Boolean(connection.userEmail),
       userEmail: connection.userEmail,
+      userAvatarUrl: connection.userAvatarUrl,
       orgName: connection.organizationName,
       orgTier: connection.organizationTier,
       entitlements: connection.entitlements,
@@ -201,10 +207,22 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       height: 30px;
       flex: 0 0 30px;
       border-radius: 50%;
-      color: var(--vscode-badge-foreground);
-      background: var(--vscode-badge-background);
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
       font-weight: 700;
       text-transform: uppercase;
+      overflow: hidden;
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      grid-area: 1 / 1;
+    }
+
+    .avatar-initial {
+      grid-area: 1 / 1;
     }
 
     .account-info {
@@ -233,9 +251,11 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       padding: 2px 7px;
       border: 1px solid var(--vscode-panel-border);
       border-radius: 999px;
-      color: var(--vscode-descriptionForeground);
+      color: var(--vscode-foreground);
+      background: var(--vscode-editor-background);
       font-size: 0.85em;
       text-transform: uppercase;
+      cursor: pointer;
     }
 
     .plan-badge.pro {
@@ -462,6 +482,15 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       return escapeHtml((email || "X").slice(0, 1));
     }
 
+    function renderAvatar(state) {
+      const imageUrl = state.userAvatarUrl ? String(state.userAvatarUrl) : "";
+      if (!imageUrl) {
+        return '<div class="avatar"><span class="avatar-initial">' + accountInitial(state.userEmail) + '</span></div>';
+      }
+
+      return '<div class="avatar"><span class="avatar-initial">' + accountInitial(state.userEmail) + '</span><img src="' + escapeHtml(imageUrl) + '" alt="" onerror="this.remove()"></div>';
+    }
+
     function planClass(tier) {
       const normalized = String(tier || "free").toLowerCase();
       return normalized === "pro" || normalized === "enterprise" ? "plan-badge pro" : "plan-badge";
@@ -568,7 +597,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       const tier = state.orgTier || "free";
       const org = state.orgName || "Xupra";
       let html = '<div class="panel">';
-      html += '<div><div class="account-bar"><div class="avatar">' + accountInitial(state.userEmail) + '</div><div class="account-info"><div class="account-email">' + escapeHtml(state.userEmail || "") + '</div><div class="account-org">' + escapeHtml(org) + '</div></div><button class="' + planClass(tier) + '" data-action="refreshPlan">' + escapeHtml(tier) + '</button></div>';
+      html += '<div><div class="account-bar">' + renderAvatar(state) + '<div class="account-info"><div class="account-email">' + escapeHtml(state.userEmail || "") + '</div><div class="account-org">' + escapeHtml(org) + '</div></div><button class="' + planClass(tier) + '" data-action="refreshPlan">' + escapeHtml(tier) + '</button></div>';
       if (String(tier).toLowerCase() !== "pro" && String(tier).toLowerCase() !== "enterprise") {
         html += '<button class="upgrade-btn" data-action="openBilling">Upgrade</button>';
       }
@@ -576,7 +605,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       html += renderDetectedFiles(state);
       html += renderImportedWorkspace(state);
       html += renderActions(state);
-      html += '<div class="action-row"><button class="action-btn" data-action="openDashboard">Dashboard</button><button class="action-btn" data-action="openSettings">Settings</button></div>';
+      html += '<div class="action-row"><button class="action-btn" data-action="openDashboard">Dashboard</button><button class="action-btn" data-action="openSettings">Settings</button><button class="action-btn" data-action="signOut">Sign Out</button></div>';
       html += '</div>';
       return html;
     }

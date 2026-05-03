@@ -8,6 +8,9 @@ import { createExtensionAuthRequest } from "@/lib/services/extension-auth-reques
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { getPrimaryWorkspacePath } from "@/lib/services/workspace";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const allowedCallbackProtocols = new Set(["vscode:", "vscode-insiders:", "cursor:"]);
 
 const steps = [

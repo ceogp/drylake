@@ -69,11 +69,23 @@ export class HelpTreeProvider implements vscode.TreeDataProvider<HelpItem> {
       },
       {
         label: "Supported Targets",
-        description: "Codex, Claude Code, Claude Agents, Cursor"
+        description: "Codex, Claude Code, Claude Agents, Cursor",
+        command: "xupra.openSupportedTargets"
       },
       {
         label: "Workflow",
-        description: "Import -> canonicalize -> export"
+        description: "Import -> canonicalize -> export",
+        command: "xupra.openHowItWorks"
+      },
+      {
+        label: "Sign Out",
+        description: "Clear this editor's Xupra connection",
+        command: "xupra.signOut"
+      },
+      {
+        label: "Contact Support",
+        description: "Email support@xupracorp.com",
+        command: "xupra.contactSupport"
       }
     ];
   }

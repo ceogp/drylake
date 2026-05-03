@@ -86,6 +86,7 @@ export async function getAuthSessionSummary() {
             clerkUser.emailAddresses[0]?.emailAddress ??
             localUser?.email ??
             "",
+          imageUrl: clerkUser.imageUrl || localUser?.profile?.avatarUrl || null,
           displayName:
             [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim() ||
             clerkUser.username ||
@@ -108,6 +109,7 @@ export async function getAuthSessionSummary() {
         user: {
           id: user?.id ?? "",
           email: user?.email ?? "",
+          imageUrl: user?.profile?.avatarUrl ?? null,
           displayName: user?.profile?.displayName ?? env.DEFAULT_DEV_USER_NAME,
         },
         organizationId: context?.organization.id ?? null,

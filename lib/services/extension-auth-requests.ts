@@ -34,7 +34,11 @@ export async function exchangeExtensionAuthRequest(code: string) {
   const request = await prisma.extensionAuthRequest.findUnique({
     where: { code },
     include: {
-      user: true,
+      user: {
+        include: {
+          profile: true,
+        },
+      },
       organization: true,
     },
   });

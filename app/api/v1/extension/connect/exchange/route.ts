@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       user: {
         id: session.user.id,
         email: session.user.email,
+        imageUrl: session.user.profile?.avatarUrl ?? null,
       },
       organization: {
         id: session.organization.id,

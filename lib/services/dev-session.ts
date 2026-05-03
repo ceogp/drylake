@@ -17,6 +17,7 @@ const starterPackageDescription =
 type DevSessionInput = {
   email: string;
   displayName: string;
+  avatarUrl?: string | null;
 };
 
 type AppSessionInput = DevSessionInput & {
@@ -179,10 +180,12 @@ export async function ensureAppSession(input: AppSessionInput): Promise<{
       where: { userId: existingUser.id },
       update: {
         displayName: input.displayName,
+        avatarUrl: input.avatarUrl ?? undefined,
       },
       create: {
         userId: existingUser.id,
         displayName: input.displayName,
+        avatarUrl: input.avatarUrl ?? undefined,
       },
     });
 
@@ -218,10 +221,12 @@ export async function ensureAppSession(input: AppSessionInput): Promise<{
     where: { userId: user.id },
     update: {
       displayName: input.displayName,
+      avatarUrl: input.avatarUrl ?? undefined,
     },
     create: {
       userId: user.id,
       displayName: input.displayName,
+      avatarUrl: input.avatarUrl ?? undefined,
     },
   });
 

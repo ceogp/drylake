@@ -42,6 +42,7 @@ export async function POST(request: Request) {
               organization: true,
             },
           },
+          profile: true,
         },
       });
       const membership = user?.memberships.find(
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
             user: {
               id: user.id,
               email: user.email,
+              imageUrl: user.profile?.avatarUrl ?? null,
             },
             organizationId: membership.organizationId,
           },
@@ -70,6 +72,7 @@ export async function POST(request: Request) {
         user: {
           id: user.id,
           email: user.email,
+          imageUrl: user.profile?.avatarUrl ?? null,
         },
         organization: {
           id: membership.organization.id,
@@ -101,6 +104,7 @@ export async function POST(request: Request) {
           ? {
               id: appContext.user.id,
               email: appContext.user.email,
+              imageUrl: appContext.user.profile?.avatarUrl ?? null,
             }
           : auth.session.user,
         organization: appContext
@@ -151,6 +155,7 @@ export async function POST(request: Request) {
       user: {
         id: session.user.id,
         email: session.user.email,
+        imageUrl: session.user.profile?.avatarUrl ?? null,
       },
       organization: {
         id: session.organization.id,
