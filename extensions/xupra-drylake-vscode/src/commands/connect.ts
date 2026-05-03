@@ -25,9 +25,6 @@ export async function connectCommand(
       return;
     }
 
-    void vscode.window.showInformationMessage(
-      `Connected as ${result.user?.email ?? "pending auth"}. You're on the ${connection.organizationTier ?? "free"} plan.`
-    );
     return true;
   } catch (error) {
     void vscode.window.showErrorMessage(

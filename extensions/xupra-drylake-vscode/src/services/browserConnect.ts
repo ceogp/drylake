@@ -158,9 +158,13 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       userEmail: exchanged.user.email,
       authMode: "clerk",
     });
+    const tierLabel = exchanged.organization.tier
+      ? exchanged.organization.tier.charAt(0).toUpperCase() + exchanged.organization.tier.slice(1).toLowerCase()
+      : "Free";
     void vscode.window.showInformationMessage(
-      `Connected to Xupra DryLake as ${exchanged.user.email}.`,
+      `Connected to Xupra DryLake as ${exchanged.user.email} (${tierLabel} plan).`,
     );
+    void vscode.commands.executeCommand("xupra.refreshProjects");
   }
 
   private async handleInstallUri(uri: vscode.Uri) {

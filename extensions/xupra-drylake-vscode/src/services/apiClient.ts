@@ -245,22 +245,4 @@ export class ApiClient {
     });
   }
 
-  async fetchMarketplace(pathname: string, params?: Record<string, string | number | boolean | undefined>) {
-    const normalizedPath = pathname
-      .split("/")
-      .map((segment) => encodeURIComponent(segment))
-      .join("/");
-    const query = new URLSearchParams();
-
-    for (const [key, value] of Object.entries(params ?? {})) {
-      if (value !== undefined) {
-        query.set(key, String(value));
-      }
-    }
-
-    const suffix = query.size > 0 ? `?${query.toString()}` : "";
-    return this.request<{ data: unknown; upstreamPath: string }>(
-      `/api/v1/skills-marketplace/${normalizedPath}${suffix}`,
-    );
-  }
 }

@@ -43,7 +43,7 @@ export async function AppHome() {
                   Xupra DryLake
                 </p>
                 <p className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
-                  Transfer workspace
+                  Dashboard
                 </p>
               </div>
             </div>
@@ -52,7 +52,7 @@ export async function AppHome() {
                 className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700"
                 href={importWorkspacePath}
               >
-                Import Skills And Agents
+                Import Skills & Agents
               </Link>
               <Link
                 className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
@@ -77,19 +77,35 @@ export async function AppHome() {
           <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr]">
             <div className="space-y-5">
               <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950 sm:text-6xl">
-                Your transfer workspace for the extension-led workflow.
+                Your workspace for the extension-led workflow.
               </h1>
               <p className="max-w-3xl text-lg leading-8 text-stone-700">
-                Start by uploading the repo folder or selected agent files into the import
-                workspace. After the import is visible, use compatibility checks, export preview,
-                deployment, or the editor extension as needed.
+                Start by importing skills and agents from your repo into the workspace. After the
+                import is visible, use compatibility checks, export preview, deployment, or the
+                editor extension as needed.
               </p>
             </div>
             <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_18px_45px_rgba(120,53,15,0.08)]">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-stone-500">Active workspace</p>
               <div className="mt-4 space-y-3 text-sm text-stone-700">
                 <p className="text-xl font-semibold text-stone-950">{workspace.organization.name}</p>
-                <p>Tier: {workspace.organization.tier}</p>
+                <div>
+                  <span
+                    className={`rounded-full px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] ${
+                      workspace.organization.tier === "pro"
+                        ? "border border-green-300 bg-green-50 text-green-700"
+                        : workspace.organization.tier === "enterprise"
+                          ? "border border-purple-300 bg-purple-50 text-purple-700"
+                        : "border border-stone-300 bg-stone-100 text-stone-600"
+                    }`}
+                  >
+                    {workspace.organization.tier === "pro"
+                      ? "Pro"
+                      : workspace.organization.tier === "enterprise"
+                        ? "Enterprise"
+                        : "Free"}
+                  </span>
+                </div>
                 <p>{workspace.organization.projects.length} active projects</p>
                 <p>
                   {workspace.organization.projects.reduce(
@@ -115,7 +131,7 @@ export async function AppHome() {
               </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700" href={importWorkspacePath}>
-                Import Skills And Agents
+                Import Skills & Agents
               </Link>
               <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/install">
                 Install
@@ -132,6 +148,20 @@ export async function AppHome() {
               Keep onboarding simple: sign up, land in the workspace, then upgrade only when the
               heavier transfer and deployment workflow needs it.
             </p>
+            {workspace.organization.tier === "free" ? (
+              <div className="mt-5">
+                <Link
+                  className="rounded-full bg-orange-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
+                  href="/billing"
+                >
+                  Upgrade to Pro
+                </Link>
+              </div>
+            ) : (
+              <p className="mt-5 text-sm text-stone-400">
+                You&apos;re on the {workspace.organization.tier === "enterprise" ? "Enterprise" : "Pro"} plan.
+              </p>
+            )}
           </article>
         </section>
 
@@ -144,9 +174,14 @@ export async function AppHome() {
             <p className="mt-3 text-sm leading-7 text-stone-700">
               Connect the extension, scan the repo, import source files, and install generated outputs where the code already lives.
             </p>
-            <Link className="mt-5 inline-flex rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/connect">
-              Connect extension
-            </Link>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/connect">
+                Connect extension
+              </Link>
+              <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/install">
+                Install Extension
+              </Link>
+            </div>
           </article>
 
           <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">

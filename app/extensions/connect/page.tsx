@@ -131,7 +131,7 @@ export default async function ExtensionConnectPage({
               className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
               href={workspaceHref}
             >
-              Open Import Workspace
+              Open Dashboard
             </Link>
           </div>
         </div>

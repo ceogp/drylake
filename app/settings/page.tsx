@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { getConfiguredAdminInternalOrigin } from "@/lib/site-hosts";
 import { getIsPlatformAdmin } from "@/lib/services/access";
-import { getAuthSessionSummary } from "@/lib/services/auth";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 
 function DetailCard({
@@ -22,7 +21,6 @@ function DetailCard({
 
 export default async function SettingsPage() {
   const appContext = await requireCurrentAppContextForPage();
-  const auth = await getAuthSessionSummary();
   const isPlatformAdmin = await getIsPlatformAdmin();
   const adminInternalOrigin = getConfiguredAdminInternalOrigin();
   const profile = appContext.user.profile;
@@ -66,7 +64,6 @@ export default async function SettingsPage() {
             </h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <DetailCard label="Email" value={appContext.user.email} />
-              <DetailCard label="Auth Provider" value={appContext.user.authProvider} />
               <DetailCard label="Locale" value={profile?.locale ?? "en-US"} />
               <DetailCard label="Timezone" value={profile?.timezone ?? "UTC"} />
               <DetailCard label="Job Title" value={profile?.jobTitle ?? "Not set"} />
@@ -84,7 +81,31 @@ export default async function SettingsPage() {
             </h2>
             <div className="mt-5 space-y-2 text-sm leading-7 text-stone-700">
               <p>Role: {appContext.activeMembership.role}</p>
-              <p>Tier: {appContext.organization.tier}</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span
+                  className={`rounded-full px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] ${
+                    appContext.organization.tier === "pro"
+                      ? "border border-green-300 bg-green-50 text-green-700"
+                      : appContext.organization.tier === "enterprise"
+                        ? "border border-purple-300 bg-purple-50 text-purple-700"
+                      : "border border-stone-300 bg-stone-100 text-stone-600"
+                  }`}
+                >
+                  {appContext.organization.tier === "pro"
+                    ? "Pro"
+                    : appContext.organization.tier === "enterprise"
+                      ? "Enterprise"
+                      : "Free"}
+                </span>
+                {appContext.organization.tier === "free" ? (
+                  <Link
+                    className="rounded-full bg-orange-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
+                    href="/billing"
+                  >
+                    Upgrade to Pro
+                  </Link>
+                ) : null}
+              </div>
               <p>Status: {appContext.organization.status}</p>
               <p>Memberships: {appContext.memberships.length}</p>
             </div>
@@ -106,20 +127,6 @@ export default async function SettingsPage() {
 
         <section className="grid gap-6 lg:grid-cols-2">
           <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Session</p>
-            <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-              {auth.session.status === "active" ? "Signed In" : "Signed Out"}
-            </h2>
-            <div className="mt-5 space-y-2 text-sm leading-7 text-stone-700">
-              <p>Mode: {auth.mode}</p>
-              <p>Provider: {auth.provider}</p>
-              <p>Sign in URL: {auth.signInUrl}</p>
-              <p>Sign up URL: {auth.signUpUrl}</p>
-              <p>Active organization ID: {auth.session.organizationId ?? "none"}</p>
-            </div>
-          </article>
-
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Workspace Links</p>
             <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
               Recommended next steps
@@ -130,7 +137,7 @@ export default async function SettingsPage() {
             </p>
             <div className="mt-5 grid gap-3 text-sm">
               <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/app">
-                Open import workspace
+                Open Dashboard
               </Link>
               <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/extensions/connect">
                 Install or reconnect extension

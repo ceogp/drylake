@@ -18,7 +18,7 @@ export function ConnectedWorkspaceCard({
             Xupra is linked to {organizationName}
           </h3>
           <p className="mt-2 text-sm leading-7 text-stone-700">
-            Signed in as {signedInLabel}. Your import workspace is ready.
+            Signed in as {signedInLabel}. Your workspace is ready.
           </p>
         </div>
       </div>
@@ -28,7 +28,7 @@ export function ConnectedWorkspaceCard({
           className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-700"
           href={workspaceHref}
         >
-          Open Import Workspace
+          Open Dashboard
         </Link>
         <Link
           className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"

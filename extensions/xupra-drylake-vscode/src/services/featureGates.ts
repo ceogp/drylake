@@ -14,7 +14,7 @@ export async function promptForUpgrade(apiClient: ApiClient, message: string, st
   const selected = await vscode.window.showWarningMessage(message, UPGRADE_ACTION);
 
   if (selected === UPGRADE_ACTION) {
-    await vscode.env.openExternal(apiClient.openWebUrl("/billing"));
+    await vscode.env.openExternal(apiClient.openWebUrl("/billing?source=extension"));
     await stateStore.setAwaitingPlanRefreshUntil(new Date(Date.now() + 120_000).toISOString());
   }
 }

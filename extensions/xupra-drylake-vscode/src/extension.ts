@@ -11,15 +11,18 @@ import { refreshProjectsCommand } from "./commands/refreshProjects";
 import { ApiClient } from "./services/apiClient";
 import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
-import { selectPackageWithPrompt, selectProjectWithPrompt, selectVersionWithPrompt } from "./services/selection";
+import { requireManualExportEntitlement } from "./services/featureGates";
+import { MarketplaceClient } from "./services/marketplaceClient";
 import { StateStore } from "./services/stateStore";
-import { getWorkspaceDisplayName, scanWorkspaceFiles } from "./services/workspaceScanner";
+import { scanWorkspaceFiles } from "./services/workspaceScanner";
 import type { PackageVersionDetail } from "./types/api";
 import type { ImportedWorkspaceSnapshot } from "./types/package";
 import { HelpTreeProvider } from "./views/helpTreeProvider";
-import { ProjectTreeItem, ProjectTreeProvider } from "./views/projectTreeProvider";
 import { JobTreeProvider } from "./views/jobTreeProvider";
+import { SkillCreationPanel } from "./views/skillCreationPanel";
+import { SkillsMarketplacePanel } from "./views/skillsMarketplacePanel";
 import { createStatusBar } from "./views/statusBar";
+import { WorkspaceSidebarProvider } from "./views/workspaceSidebarProvider";
 import { getLogger } from "./utils/logging";
 
 const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
@@ -34,6 +37,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   }
 
   return value as Record<string, unknown>;
+}
+
+function formatTierLabel(tier: string | undefined): string {
+  return tier ? tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase() : "Free";
 }
 
 function inferSourcePlatformFromPath(logicalPath?: string) {
@@ -166,8 +173,9 @@ export async function activate(context: vscode.ExtensionContext) {
   }
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
+  const marketplaceClient = new MarketplaceClient();
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
-  const projectsView = new ProjectTreeProvider();
+  const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
   const jobsView = new JobTreeProvider();
   const helpView = new HelpTreeProvider();
   const logger = getLogger();
@@ -205,36 +213,50 @@ export async function activate(context: vscode.ExtensionContext) {
     const detectedFiles = stateStore.getDetectedFiles();
     const selection = stateStore.getSelection();
     const connection = stateStore.getConnection();
-    const lastImport = stateStore.getLastImport();
     const projectList = projects ?? (await apiClient.listProjects()).projects;
     const selectedProject = projectList.find((project) => project.id === selection.projectId);
     const selectedPackage = selectedProject?.packages.find((agentPackage) => agentPackage.id === selection.packageId);
     const selectedVersion = selectedPackage?.versions.find((version) => version.id === selection.versionId);
     let importedWorkspace: ImportedWorkspaceSnapshot | null = null;
-    let importedWorkspaceError: string | null = null;
 
     if (connection.userEmail && selection.versionId) {
       try {
         const versionResponse = await apiClient.getVersion(selection.versionId);
         importedWorkspace = mapImportedWorkspace(versionResponse.version);
       } catch (error) {
-        importedWorkspaceError = error instanceof Error ? error.message : String(error);
         logger.error(
-          `Failed to load imported workspace snapshot for ${selection.versionId}: ${importedWorkspaceError}`,
+          `Failed to load imported workspace snapshot for ${selection.versionId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
         );
       }
     }
 
-    projectsView.setState({
-      projects: projectList,
+    workspaceSidebar.postState({
+      connected: Boolean(connection.userEmail),
+      userEmail: connection.userEmail,
+      orgName: connection.organizationName,
+      orgTier: connection.organizationTier,
+      entitlements: connection.entitlements,
       detectedFiles,
+      importedWorkspace: importedWorkspace
+        ? {
+            agents: importedWorkspace.subagents.length,
+            agentPlatforms: [
+              ...new Set(importedWorkspace.subagents.map((subagent) => subagent.sourcePlatform).filter(Boolean)),
+            ],
+            skillRules: importedWorkspace.skillRules.length,
+            skillRulePlatforms: [
+              ...new Set(importedWorkspace.skillRules.map((skillRule) => skillRule.sourcePlatform).filter(Boolean)),
+            ],
+            rawFiles: importedWorkspace.files.length,
+            rawFilePlatforms: [
+              ...new Set(importedWorkspace.files.map((file) => file.sourcePlatform).filter(Boolean)),
+            ],
+          }
+        : null,
       selection,
-      connection,
-      lastImport,
-      importedWorkspace,
-      importedWorkspaceError,
-      workspaceName: getWorkspaceDisplayName(),
-      defaultTargetPlatform: String(configuration.get("defaultTargetPlatform", "claude_code"))
+      isLoading: false,
     });
 
     statusBar.update({
@@ -253,9 +275,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(statusBar);
   context.subscriptions.push(browserConnect.register());
-  context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.projects", projectsView));
+  context.subscriptions.push(vscode.window.registerWebviewViewProvider("xupra.projects", workspaceSidebar, {
+    webviewOptions: { retainContextWhenHidden: true }
+  }));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.jobs", jobsView));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.help", helpView));
+
+  let isRefreshingPlan = false;
+
   context.subscriptions.push(
     vscode.window.onDidChangeWindowState(async (windowState) => {
       if (!windowState.focused) {
@@ -271,9 +298,13 @@ export async function activate(context: vscode.ExtensionContext) {
       const awaitingUntil = stateStore.getAwaitingPlanRefreshUntil();
 
       if (awaitingUntil && Date.now() < new Date(awaitingUntil).getTime()) {
-        for (const delay of [5_000, 15_000, 30_000]) {
-          await new Promise((resolve) => setTimeout(resolve, delay));
+        if (isRefreshingPlan) {
+          return;
+        }
 
+        isRefreshingPlan = true;
+
+        try {
           try {
             const result = await apiClient.connect(undefined, undefined, storedToken);
             const newConnection = connectionStateFromExtensionConnection(result);
@@ -288,9 +319,30 @@ export async function activate(context: vscode.ExtensionContext) {
           } catch {
             // Background refresh failures are intentionally silent.
           }
-        }
 
-        return;
+          for (const delay of [5_000, 15_000, 30_000]) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+
+            try {
+              const result = await apiClient.connect(undefined, undefined, storedToken);
+              const newConnection = connectionStateFromExtensionConnection(result);
+              await stateStore.setConnection(newConnection);
+              const tier = newConnection.organizationTier?.toLowerCase();
+
+              if (tier === "pro" || tier === "enterprise") {
+                await stateStore.setAwaitingPlanRefreshUntil(null);
+                await syncWorkspaceView();
+                return;
+              }
+            } catch {
+              // Background refresh failures are intentionally silent.
+            }
+          }
+
+          return;
+        } finally {
+          isRefreshingPlan = false;
+        }
       }
 
       try {
@@ -329,13 +381,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const files = await scanWorkspaceFiles(configuration);
     await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
-    const projects = await refreshProjectsCommand(apiClient, projectsView);
+    const projects = await refreshProjectsCommand(apiClient);
     await syncWorkspaceView(projects);
+    const connection = stateStore.getConnection();
 
     void vscode.window.showInformationMessage(
-      files.length > 0
-        ? `Connected. Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} on this machine.`
-        : "Connected. Xupra did not find supported files yet. Import can still check global folders, or you can add custom file patterns.",
+      `Connected as ${connection.userEmail} (${formatTierLabel(connection.organizationTier)} plan).${
+        files.length > 0
+          ? ` Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} on this machine.`
+          : " No supported files found yet. Import can still check global folders, or you can add custom file patterns."
+      }`,
     );
 
     if (configuration.get<boolean>("openDashboardAfterConnect", true)) {
@@ -379,13 +434,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const files = await scanWorkspaceFiles(configuration);
       await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
-      const projects = await refreshProjectsCommand(apiClient, projectsView);
+      const projects = await refreshProjectsCommand(apiClient);
       await syncWorkspaceView(projects);
+      const connection = stateStore.getConnection();
 
       void vscode.window.showInformationMessage(
-        files.length > 0
-          ? `Connected. Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} on this machine.`
-          : "Connected. Xupra did not find supported files yet. Import can still check global folders, or you can add custom file patterns.",
+        `Connected as ${connection.userEmail} (${formatTierLabel(connection.organizationTier)} plan).${
+          files.length > 0
+            ? ` Xupra found ${files.length} supported file${files.length === 1 ? "" : "s"} on this machine.`
+            : " No supported files found yet. Import can still check global folders, or you can add custom file patterns."
+        }`,
       );
 
       if (configuration.get<boolean>("openDashboardAfterConnect", true)) {
@@ -427,7 +485,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.refreshProjects", async () => {
-    const projects = await refreshProjectsCommand(apiClient, projectsView);
+    const projects = await refreshProjectsCommand(apiClient);
     await syncWorkspaceView(projects);
   });
 
@@ -471,11 +529,21 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.exportPreview", async () => {
+    const hasEntitlement = await requireManualExportEntitlement(apiClient, stateStore, "Export Preview");
+    if (!hasEntitlement) {
+      return;
+    }
+
     await exportPreviewCommand(apiClient, configuration, stateStore, jobsView);
     await syncWorkspaceView();
   });
 
   register("xupra.deploy", async () => {
+    const hasEntitlement = await requireManualExportEntitlement(apiClient, stateStore, "Deploy");
+    if (!hasEntitlement) {
+      return;
+    }
+
     await deployCommand(apiClient, stateStore, jobsView);
     await syncWorkspaceView();
   });
@@ -488,70 +556,12 @@ export async function activate(context: vscode.ExtensionContext) {
     await vscode.commands.executeCommand("xupra.jobs.focus");
   });
 
-  register("xupra.selectProject", async (...args: unknown[]) => {
-    const item = args[0] as ProjectTreeItem | undefined;
-
-    if (item?.kind === "project") {
-      await stateStore.setSelection({
-        projectId: item.project.id,
-        packageId: undefined,
-        versionId: undefined
-      });
-
-      await syncWorkspaceView();
-      void vscode.window.showInformationMessage(`Selected project ${item.project.name}.`);
-      return;
-    }
-
-    const picked = await selectProjectWithPrompt(apiClient, stateStore);
-    if (picked) {
-      await syncWorkspaceView();
-      void vscode.window.showInformationMessage(`Selected project ${picked.name}.`);
-    }
+  register("xupra.createSkill", () => {
+    SkillCreationPanel.createOrShow(context, apiClient, stateStore, configuration);
   });
 
-  register("xupra.selectPackage", async (...args: unknown[]) => {
-    const item = args[0] as ProjectTreeItem | undefined;
-
-    if (item?.kind === "package") {
-      await stateStore.setSelection({
-        projectId: item.projectId,
-        packageId: item.packageId,
-        versionId: undefined
-      });
-
-      await syncWorkspaceView();
-      void vscode.window.showInformationMessage(`Selected package ${item.name}.`);
-      return;
-    }
-
-    const picked = await selectPackageWithPrompt(apiClient, stateStore);
-    if (picked) {
-      await syncWorkspaceView();
-      void vscode.window.showInformationMessage(`Selected package ${picked.label}.`);
-    }
-  });
-
-  register("xupra.selectVersion", async (...args: unknown[]) => {
-    const item = args[0] as ProjectTreeItem | undefined;
-
-    if (item?.kind === "version") {
-      await stateStore.setSelection({
-        projectId: item.projectId,
-        packageId: item.packageId,
-        versionId: item.versionId
-      });
-
-      await syncWorkspaceView();
-      void vscode.window.showInformationMessage(`Selected ${item.label}.`);
-      return;
-    }
-
-    const picked = await selectVersionWithPrompt(apiClient, stateStore);
-    if (picked) {
-      await syncWorkspaceView();
-      void vscode.window.showInformationMessage(`Selected ${picked.label}.`);
-    }
+  register("xupra.browseSkills", async () => {
+    SkillsMarketplacePanel.createOrShow(context, marketplaceClient, apiClient, stateStore);
   });
 
   register("xupra.openSettings", async () => {
@@ -566,7 +576,8 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.openBilling", async () => {
-    await vscode.env.openExternal(apiClient.openWebUrl("/billing"));
+    await vscode.env.openExternal(apiClient.openWebUrl("/billing?source=extension"));
+    await stateStore.setAwaitingPlanRefreshUntil(new Date(Date.now() + 120_000).toISOString());
   });
 
   register("xupra.openInstallGuide", async () => {
@@ -584,7 +595,7 @@ export async function activate(context: vscode.ExtensionContext) {
   try {
     const files = await scanWorkspaceFiles(configuration);
     await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
-    const projects = await refreshProjectsCommand(apiClient, projectsView);
+    const projects = await refreshProjectsCommand(apiClient);
     await syncWorkspaceView(projects);
   } catch (error) {
     logger.error(`Failed to load initial projects: ${error instanceof Error ? error.message : String(error)}`);

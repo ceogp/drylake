@@ -50,6 +50,7 @@
     "onCommand:xupra.pasteToken",
     "onCommand:xupra.scanWorkspace",
     "onCommand:xupra.refreshProjects",
+    "onCommand:xupra.refreshPlan",
     "onCommand:xupra.importWorkspace",
     "onCommand:xupra.importDefaultLocations",
     "onCommand:xupra.importFolder",
@@ -58,6 +59,8 @@
     "onCommand:xupra.exportPreview",
     "onCommand:xupra.deploy",
     "onCommand:xupra.pullPackage",
+    "onCommand:xupra.createSkill",
+    "onCommand:xupra.browseSkills",
     "onCommand:xupra.openWebApp",
     "onCommand:xupra.openSettings",
     "onCommand:xupra.openAccountSettings",
@@ -155,7 +158,8 @@
       "xupra": [
         {
           "id": "xupra.projects",
-          "name": "Workspace"
+          "name": "Workspace",
+          "type": "webview"
         },
         {
           "id": "xupra.jobs",
@@ -168,26 +172,6 @@
       ]
     },
     "viewsWelcome": [
-      {
-        "view": "xupra.projects",
-        "contents": "[Connect Xupra](command:xupra.connect)",
-        "when": "!xupra.connected"
-      },
-      {
-        "view": "xupra.projects",
-        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Import From Folder](command:xupra.importFolder)",
-        "when": "xupra.connected && !xupra.hasDetectedFiles"
-      },
-      {
-        "view": "xupra.projects",
-        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Open Xupra App](command:xupra.openWebApp)",
-        "when": "xupra.connected && xupra.hasDetectedFiles && !xupra.hasVersionSelection"
-      },
-      {
-        "view": "xupra.projects",
-        "contents": "[Import Default Locations](command:xupra.importDefaultLocations)\n[Export Preview](command:xupra.exportPreview)\n[Pull Generated Files](command:xupra.pullPackage)",
-        "when": "xupra.connected && xupra.hasDetectedFiles && xupra.hasVersionSelection"
-      },
       {
         "view": "xupra.jobs",
         "contents": "Jobs appear here after an import, compatibility check, export, or deploy starts.",
@@ -269,20 +253,12 @@
         "title": "Xupra DryLake: Refresh Projects"
       },
       {
+        "command": "xupra.refreshPlan",
+        "title": "Xupra DryLake: Refresh Plan"
+      },
+      {
         "command": "xupra.scanWorkspace",
         "title": "Xupra DryLake: Scan Workspace"
-      },
-      {
-        "command": "xupra.selectProject",
-        "title": "Xupra DryLake: Select Project"
-      },
-      {
-        "command": "xupra.selectPackage",
-        "title": "Xupra DryLake: Select Package"
-      },
-      {
-        "command": "xupra.selectVersion",
-        "title": "Xupra DryLake: Choose Import Target"
       },
       {
         "command": "xupra.importWorkspace",
@@ -321,6 +297,14 @@
         "title": "Xupra DryLake: Show Recent Jobs"
       },
       {
+        "command": "xupra.createSkill",
+        "title": "Xupra DryLake: Create Skill"
+      },
+      {
+        "command": "xupra.browseSkills",
+        "title": "Xupra DryLake: Browse skills.sh"
+      },
+      {
         "command": "xupra.openSettings",
         "title": "Xupra DryLake: Open Extension Settings"
       },
@@ -352,31 +336,6 @@
     "menus": {
       "view/title": [
         {
-          "command": "xupra.refreshProjects",
-          "when": "view == xupra.projects && xupra.connected",
-          "group": "navigation"
-        },
-        {
-          "command": "xupra.importWorkspace",
-          "when": "view == xupra.projects && xupra.connected",
-          "group": "navigation"
-        },
-        {
-          "command": "xupra.importDefaultLocations",
-          "when": "view == xupra.projects && xupra.connected",
-          "group": "navigation"
-        },
-        {
-          "command": "xupra.importFolder",
-          "when": "view == xupra.projects && xupra.connected",
-          "group": "navigation"
-        },
-        {
-          "command": "xupra.connect",
-          "when": "view == xupra.projects && !xupra.connected",
-          "group": "navigation"
-        },
-        {
           "command": "xupra.resetWorkspaceState",
           "when": "view == xupra.help",
           "group": "navigation"
@@ -390,28 +349,6 @@
           "command": "xupra.openSettings",
           "when": "view == xupra.help",
           "group": "navigation"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "xupra.selectProject",
-          "when": "view == xupra.projects && viewItem == xupra.project",
-          "group": "inline"
-        },
-        {
-          "command": "xupra.selectPackage",
-          "when": "view == xupra.projects && viewItem == xupra.package",
-          "group": "inline"
-        },
-        {
-          "command": "xupra.selectVersion",
-          "when": "view == xupra.projects && viewItem == xupra.version",
-          "group": "inline"
-        },
-        {
-          "command": "xupra.deploy",
-          "when": "view == xupra.projects && viewItem == xupra.version",
-          "group": "inline"
         }
       ]
     }

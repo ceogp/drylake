@@ -4,6 +4,7 @@ import { PricingTable } from "@clerk/nextjs";
 import { createCheckoutAction, openBillingPortalAction } from "@/app/actions";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
+import { getIsPlatformAdmin } from "@/lib/services/access";
 import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 import { getSetupStatus } from "@/lib/services/setup";
@@ -38,6 +39,8 @@ export default async function BillingPage({
 }) {
   const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
   const returnPath = getSafeReturnPath(resolvedSearchParams.returnPath);
+  const source = normalizeSearchValue(resolvedSearchParams.source);
+  const isPlatformAdmin = await getIsPlatformAdmin();
   const context = await requireCurrentAppContextForPage();
   const organizationId = context.organization.id;
 
@@ -124,10 +127,10 @@ export default async function BillingPage({
         <div className="space-y-4">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">Billing</p>
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
-            Billing behind the extension workflow.
+            Choose your plan.
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            Users should discover Xupra in the editor first. This page exists to manage plans, checkout, and feature access once the product is already in use.
+            Use the free plan for upload-only access, or upgrade to Pro to unlock all features.
           </p>
         </div>
 
@@ -167,6 +170,11 @@ export default async function BillingPage({
                 </form>
               ) : null}
             </div>
+            {source === "extension" && (
+              <p className="mt-4 text-sm leading-7 text-stone-700">
+                After upgrading, return to VS Code or Cursor to continue.
+              </p>
+            )}
           </article>
 
           <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
@@ -185,17 +193,19 @@ export default async function BillingPage({
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Stripe Readiness</p>
-            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-              {setup.billing.configured ? "Billing is wired." : "Billing still needs live Stripe keys."}
-            </h2>
-            <div className="mt-4 space-y-2 text-sm leading-7 text-stone-700">
-              <p>Webhook path: {setup.billing.webhookPath}</p>
-              <p>Portal ready: {setup.billing.portalReady ? "yes" : "no"}</p>
-              {setup.billing.missing.length > 0 ? <p>Missing: {setup.billing.missing.join(", ")}</p> : null}
-            </div>
-          </article>
+          {isPlatformAdmin && (
+            <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Stripe Readiness</p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+                {setup.billing.configured ? "Billing is wired." : "Billing still needs live Stripe keys."}
+              </h2>
+              <div className="mt-4 space-y-2 text-sm leading-7 text-stone-700">
+                <p>Webhook path: {setup.billing.webhookPath}</p>
+                <p>Portal ready: {setup.billing.portalReady ? "yes" : "no"}</p>
+                {setup.billing.missing.length > 0 ? <p>Missing: {setup.billing.missing.join(", ")}</p> : null}
+              </div>
+            </article>
+          )}
 
           <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Tier Model</p>
