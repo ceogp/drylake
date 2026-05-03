@@ -4,7 +4,6 @@ import {
   AssociateAddressCommand,
   AuthorizeSecurityGroupIngressCommand,
   CreateSecurityGroupCommand,
-  CreateTagsCommand,
   DescribeAddressesCommand,
   DescribeImagesCommand,
   DescribeInstancesCommand,
