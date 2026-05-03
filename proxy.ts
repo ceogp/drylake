@@ -56,6 +56,13 @@ function handleProxyRequest(request: NextRequest) {
 }
 
 export function proxy(request: NextRequest, event: NextFetchEvent) {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  const pathname = request.nextUrl.pathname;
+
+  if (isConfiguredAdminInternalHost(host) || isAdminPagePath(pathname) || isAdminApiPath(pathname)) {
+    return handleProxyRequest(request);
+  }
+
   const clerkConfigured = Boolean(
     process.env.AUTH_MODE === "clerk" &&
       process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
