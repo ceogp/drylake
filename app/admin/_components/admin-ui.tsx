@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 const adminLinks = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/users", label: "Users" },
   { href: "/admin/billing", label: "Billing" },
   { href: "/admin/skills", label: "Skills" },
   { href: "/admin/jobs", label: "Jobs" },

@@ -53,4 +53,10 @@ if (parsed.data.SECRETS_PROVIDER === "env" && parsed.data.APP_ENCRYPTION_KEY.len
   throw new Error("APP_ENCRYPTION_KEY must be at least 32 characters when SECRETS_PROVIDER=env");
 }
 
+if (parsed.data.NODE_ENV === "production" && parsed.data.DATABASE_PROVIDER !== "postgresql") {
+  throw new Error(
+    "Production requires DATABASE_PROVIDER=postgresql. Set DATABASE_PROVIDER=postgresql and a valid DATABASE_URL in your environment.",
+  );
+}
+
 export const env = parsed.data;

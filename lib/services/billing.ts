@@ -12,7 +12,7 @@ function getStripeClient() {
   return new Stripe(env.STRIPE_SECRET_KEY);
 }
 
-function entitlementsForTier(tier: string) {
+export function entitlementsForTier(tier: string) {
   switch (tier) {
     case "pro":
       return {

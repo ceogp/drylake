@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 import { getSetupStatus } from "@/lib/services/setup";
 
@@ -132,6 +134,51 @@ export async function getAdminUsersData() {
   });
 
   return { users };
+}
+
+export async function getAdminUsersListData(page: number = 1, search?: string) {
+  const PAGE_SIZE = 50;
+  const normalizedSearch = search?.trim();
+  const emailFilter: (Extract<NonNullable<Prisma.UserWhereInput["email"]>, object> & {
+    mode?: "insensitive";
+  }) | undefined = normalizedSearch
+    ? { contains: normalizedSearch }
+    : undefined;
+
+  if (emailFilter && process.env.DATABASE_PROVIDER === "postgresql") {
+    emailFilter.mode = "insensitive";
+  }
+
+  const where: Prisma.UserWhereInput | undefined = emailFilter
+    ? { email: emailFilter }
+    : undefined;
+
+  const [totalCount, users] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      include: {
+        profile: true,
+        _count: {
+          select: {
+            memberships: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
+
+  return {
+    users,
+    totalCount,
+    page,
+    pageSize: PAGE_SIZE,
+    hasNextPage: page * PAGE_SIZE < totalCount,
+    hasPrevPage: page > 1,
+  };
 }
 
 export async function getAdminUserDetailData(userId: string) {

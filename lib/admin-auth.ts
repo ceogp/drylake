@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+
 import { isConfiguredAdminInternalHost } from "@/lib/site-hosts";
 
 export const ADMIN_PATH_PREFIX = "/admin";
@@ -111,4 +113,30 @@ export function getAdminRequestAuthResult(headers: Headers): AdminAuthResult {
   }
 
   return { ok: true };
+}
+
+export async function requireAdminActionAccess() {
+  const requestHeaders = await headers();
+  const credentials = getInternalAdminCredentials();
+
+  if (!credentials.configured) {
+    throw new Error("Admin is not configured.");
+  }
+
+  const authorization = requestHeaders.get("authorization");
+  const isAuthorized = hasValidBasicAuthHeader(
+    authorization,
+    credentials.username,
+    credentials.password,
+  );
+
+  if (!isAuthorized) {
+    throw new Error("Unauthorized: valid Basic Auth required.");
+  }
+
+  const encodedCredentials = authorization?.split(" ")[1] ?? "";
+  const decodedCredentials = atob(encodedCredentials);
+  const separatorIndex = decodedCredentials.indexOf(":");
+
+  return decodedCredentials.slice(0, separatorIndex);
 }

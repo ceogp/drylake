@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: xupra-drylake-db
+    environment:
+      POSTGRES_DB: xupra_drylake
+      POSTGRES_USER: xupra_app
+      POSTGRES_PASSWORD: xupra_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - xupra_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  xupra_pgdata:

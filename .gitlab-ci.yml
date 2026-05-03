@@ -13,8 +13,11 @@ default:
 
 variables:
   NODE_ENV: production
-  DATABASE_PROVIDER: sqlite
-  DATABASE_URL: file:./dev.db
+  DATABASE_PROVIDER: postgresql
+  DATABASE_URL: postgresql://xupra_app:xupra_ci@postgres/xupra_drylake
+  POSTGRES_DB: xupra_drylake
+  POSTGRES_USER: xupra_app
+  POSTGRES_PASSWORD: xupra_ci
   APP_BASE_URL: http://localhost:3000
   APP_ENCRYPTION_KEY: gitlab-ci-dev-only-key-0000000000000000
   AUTH_MODE: dev
@@ -28,11 +31,18 @@ variables:
 
 validate:
   stage: validate
+  services:
+    - name: postgres:16
+      alias: postgres
+      variables:
+        POSTGRES_DB: $POSTGRES_DB
+        POSTGRES_USER: $POSTGRES_USER
+        POSTGRES_PASSWORD: $POSTGRES_PASSWORD
   script:
     - npm ci --include=dev
-    - npx tsx scripts/prisma/render-schema.ts sqlite prisma/schema.runtime.prisma
+    - npx tsx scripts/prisma/render-schema.ts postgresql prisma/schema.runtime.prisma
     - npx prisma generate --schema prisma/schema.runtime.prisma
-    - npx prisma db push --schema prisma/schema.runtime.prisma
+    - npx prisma migrate deploy --schema prisma/schema.runtime.prisma
     - npx tsx prisma/seed.ts
     - npm run typecheck
     - npm run lint

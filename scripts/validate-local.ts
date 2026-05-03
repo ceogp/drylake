@@ -14,6 +14,12 @@ function expect(condition: unknown, message: string) {
 }
 
 async function main() {
+  if (process.env.DATABASE_PROVIDER !== "postgresql") {
+    throw new Error(
+      "validate-local.ts requires DATABASE_PROVIDER=postgresql. Start a local PostgreSQL instance with: docker compose up -d",
+    );
+  }
+
   const [{ prisma }, { env }, { saveArtifactText }, importExport, { toSlug }] = await Promise.all([
     import("../lib/prisma"),
     import("../lib/env"),

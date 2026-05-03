@@ -4,9 +4,8 @@ import {
   JsonBlock,
   MetricCard,
   Panel,
-  StatusBadge,
-  formatDate,
 } from "@/app/admin/_components/admin-ui";
+import { BillingActionsPanel } from "@/app/admin/billing/_components/billing-actions-panel";
 import { requireAdminPageAccess } from "@/app/admin/_lib/access";
 import { getAdminBillingData } from "@/lib/services/admin-data";
 
@@ -35,46 +34,24 @@ export default async function AdminBillingPage() {
         {subscriptions.length === 0 ? (
           <EmptyState>No subscriptions recorded yet.</EmptyState>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm text-stone-700">
-              <thead className="border-b border-stone-200 font-mono text-xs uppercase tracking-[0.12em] text-stone-500">
-                <tr>
-                  <th className="px-3 py-3">Organization</th>
-                  <th className="px-3 py-3">Provider</th>
-                  <th className="px-3 py-3">Tier</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3">Period End</th>
-                  <th className="px-3 py-3">Stripe IDs</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subscriptions.map((subscription) => (
-                  <tr className="border-b border-stone-100 align-top" key={subscription.id}>
-                    <td className="px-3 py-4">
-                      <div className="font-medium text-stone-950">{subscription.organization.name}</div>
-                      <div className="text-xs text-stone-500">{subscription.organization.slug}</div>
-                    </td>
-                    <td className="px-3 py-4">{subscription.provider}</td>
-                    <td className="px-3 py-4">{subscription.tier}</td>
-                    <td className="px-3 py-4">
-                      <StatusBadge value={subscription.status} />
-                      {subscription.cancelAtPeriodEnd ? (
-                        <div className="mt-2 text-xs text-red-700">cancel at period end</div>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-4 text-xs text-stone-500">
-                      {formatDate(subscription.currentPeriodEndsAt)}
-                    </td>
-                    <td className="px-3 py-4 text-xs leading-6 text-stone-600">
-                      <div>Customer: {subscription.stripeCustomerId ?? "n/a"}</div>
-                      <div>Subscription: {subscription.stripeSubscriptionId ?? "n/a"}</div>
-                      <div>Price: {subscription.stripePriceId ?? "n/a"}</div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <BillingActionsPanel
+            subscriptions={subscriptions.map((subscription) => ({
+              id: subscription.id,
+              organization: {
+                name: subscription.organization.name,
+                slug: subscription.organization.slug,
+              },
+              stripeCustomerId: subscription.stripeCustomerId,
+              stripeSubscriptionId: subscription.stripeSubscriptionId,
+              orgId: subscription.organizationId,
+              provider: subscription.provider,
+              tier: subscription.tier,
+              status: subscription.status,
+              cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+              currentPeriodEndsAt: subscription.currentPeriodEndsAt?.toISOString() ?? null,
+              stripePriceId: subscription.stripePriceId,
+            }))}
+          />
         )}
       </Panel>
 

@@ -11,6 +11,7 @@ import {
   formatDate,
 } from "@/app/admin/_components/admin-ui";
 import { requireAdminPageAccess } from "@/app/admin/_lib/access";
+import { OperatorActionsPanel } from "@/app/admin/users/[userId]/_components/operator-actions-panel";
 import { getAdminUserDetailData } from "@/lib/services/admin-data";
 
 export default async function AdminUserPage({
@@ -188,6 +189,15 @@ export default async function AdminUserPage({
           </div>
         )}
       </Panel>
+
+      <OperatorActionsPanel
+        orgId={user.memberships[0]?.organizationId}
+        orgTier={user.memberships[0]?.organization.tier}
+        stripeSubscriptionId={user.memberships[0]?.organization.subscriptions[0]?.stripeSubscriptionId}
+        userEmail={user.email}
+        userId={user.id}
+        userStatus={user.status}
+      />
     </AdminShell>
   );
 }
