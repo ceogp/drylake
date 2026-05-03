@@ -98,6 +98,10 @@ export async function overrideTierAction(formData: FormData): Promise<{ error: s
     throw new Error("Invalid tier.");
   }
 
+  if (subscription?.stripeSubscriptionId && !env.STRIPE_SECRET_KEY) {
+    return { error: "Tier update failed — Stripe is not configured. No changes were made." };
+  }
+
   await prisma.$transaction([
     prisma.organization.update({
       where: { id: orgId },

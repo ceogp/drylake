@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+# Required production env vars:
+# CLERK_SECRET_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+# STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+# KIMI_API_KEY or OPENAI_API_KEY
+# APP_ENCRYPTION_KEY
+# ADMIN_INTERNAL_HOST, ADMIN_INTERNAL_BASIC_AUTH_USERNAME, ADMIN_INTERNAL_BASIC_AUTH_PASSWORD
+# BILLING_ENFORCEMENT_MODE=strict
+# DATABASE_URL (postgresql://...)
+# DATABASE_PROVIDER=postgresql
+
+if [ -z "${APP_BASE_URL:-}" ]; then
+  echo "APP_BASE_URL is required." >&2
+  exit 1
+fi
+
+failures=0
+app_base_url="${APP_BASE_URL%/}"
+
+check() {
+  local label="$1"
+  local expected_code="$2"
+  local actual_code=""
+  local curl_status=0
+
+  shift 2
+
+  actual_code="$(curl --max-time 15 -s -o /dev/null -w "%{http_code}" "$@")"
+  curl_status=$?
+
+  if [ "$curl_status" -eq 0 ] && [ "$actual_code" = "$expected_code" ]; then
+    echo "PASS $label: HTTP $actual_code"
+  else
+    echo "FAIL $label: expected HTTP $expected_code, got HTTP ${actual_code:-000} (curl exit $curl_status)"
+    failures=$((failures + 1))
+  fi
+}
+
+check "health" "200" "$app_base_url/api/v1/health"
+check "extension install" "200" "$app_base_url/extensions/install"
+check "extension connect" "200" "$app_base_url/extensions/connect"
+check "stripe webhook empty body" "400" -X POST -d '' "$app_base_url/api/stripe/webhook"
+
+if [ -n "${ADMIN_INTERNAL_HOST:-}" ]; then
+  check "admin internal auth challenge" "401" "http://$ADMIN_INTERNAL_HOST/admin"
+else
+  echo "SKIP admin internal auth challenge: ADMIN_INTERNAL_HOST is not set"
+fi
+
+if [ "$failures" -gt 0 ]; then
+  echo "Deployment verification failed with $failures failure(s)."
+  exit 1
+fi
+
+echo "Deployment verification succeeded."
+exit 0

@@ -6,10 +6,6 @@ APP_USER="${APP_USER:-xupra}"
 APP_GROUP="${APP_GROUP:-xupra}"
 RELEASE_TAR="${RELEASE_TAR:?RELEASE_TAR is required}"
 ENV_FILE="${ENV_FILE:?ENV_FILE is required}"
-DB_NAME="${DB_NAME:-}"
-DB_USER="${DB_USER:-}"
-DB_PASSWORD="${DB_PASSWORD:-}"
-LEGACY_IP_HOST="${LEGACY_IP_HOST:-}"
 
 export DEBIAN_FRONTEND=noninteractive
 set -a
@@ -83,51 +79,57 @@ else
   fi
 fi
 
-USE_LOCAL_POSTGRES="0"
 DATABASE_HOST=""
 
-if [ -n "$DB_NAME" ] || [ -n "$DB_USER" ] || [ -n "$DB_PASSWORD" ]; then
-  USE_LOCAL_POSTGRES="1"
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "DATABASE_URL is required in ENV_FILE." >&2
+  exit 1
 fi
 
-if [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ]; then
-  if [ -z "${DATABASE_URL:-}" ]; then
-    echo "DATABASE_URL is required when DB_NAME, DB_USER, or DB_PASSWORD is not provided." >&2
+if ! DATABASE_HOST="$(node -e "const parsed = new URL(process.env.DATABASE_URL || ''); if (!parsed.protocol.startsWith('postgres')) process.exit(2); process.stdout.write(parsed.hostname || '');" 2>/dev/null)"; then
+  echo "DATABASE_URL must be a valid PostgreSQL URL." >&2
+  exit 1
+fi
+
+echo "Using PostgreSQL database host: ${DATABASE_HOST:-unknown}"
+
+# Enforce required production env vars
+if [ "${NODE_ENV:-}" = "production" ]; then
+  missing_vars=()
+
+  # Auth
+  [ -z "${CLERK_SECRET_KEY:-}" ] && missing_vars+=("CLERK_SECRET_KEY")
+  [ -z "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}" ] && missing_vars+=("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")
+
+  # Billing
+  [ -z "${STRIPE_SECRET_KEY:-}" ] && missing_vars+=("STRIPE_SECRET_KEY")
+  [ -z "${STRIPE_WEBHOOK_SECRET:-}" ] && missing_vars+=("STRIPE_WEBHOOK_SECRET")
+  [ "${BILLING_ENFORCEMENT_MODE:-}" != "strict" ] && missing_vars+=("BILLING_ENFORCEMENT_MODE=strict")
+
+  # Encryption
+  [ -z "${APP_ENCRYPTION_KEY:-}" ] && missing_vars+=("APP_ENCRYPTION_KEY")
+
+  # Admin
+  [ -z "${ADMIN_INTERNAL_BASIC_AUTH_USERNAME:-}" ] && missing_vars+=("ADMIN_INTERNAL_BASIC_AUTH_USERNAME")
+  [ -z "${ADMIN_INTERNAL_BASIC_AUTH_PASSWORD:-}" ] && missing_vars+=("ADMIN_INTERNAL_BASIC_AUTH_PASSWORD")
+
+  # AI provider
+  ai_provider="${AI_PROVIDER:-openai}"
+  if [ "$ai_provider" = "kimi" ]; then
+    [ -z "${KIMI_API_KEY:-}" ] && missing_vars+=("KIMI_API_KEY (AI_PROVIDER=kimi)")
+  else
+    [ -z "${OPENAI_API_KEY:-}" ] && missing_vars+=("OPENAI_API_KEY (AI_PROVIDER=openai)")
+  fi
+
+  if [ "${#missing_vars[@]}" -gt 0 ]; then
+    echo "ERROR: Missing or invalid required production env vars:" >&2
+    for var in "${missing_vars[@]}"; do
+      echo "  - $var" >&2
+    done
     exit 1
   fi
 
-  mapfile -t db_parts < <(node -e "
-const input = process.env.DATABASE_URL || '';
-const parsed = new URL(input);
-if (!parsed.protocol.startsWith('postgres')) process.exit(2);
-const dbName = decodeURIComponent(parsed.pathname.replace(/^\\/+/, ''));
-const dbUser = decodeURIComponent(parsed.username || '');
-const dbPassword = decodeURIComponent(parsed.password || '');
-const dbHost = parsed.hostname || '';
-if (!dbName || !dbUser || !dbPassword) process.exit(3);
-console.log(dbName);
-console.log(dbUser);
-console.log(dbPassword);
-console.log(dbHost);
-")
-
-  if [ "${#db_parts[@]}" -lt 3 ]; then
-    echo "Failed to parse DB_NAME, DB_USER, and DB_PASSWORD from DATABASE_URL." >&2
-    exit 1
-  fi
-
-  DB_NAME="${DB_NAME:-${db_parts[0]}}"
-  DB_USER="${DB_USER:-${db_parts[1]}}"
-  DB_PASSWORD="${DB_PASSWORD:-${db_parts[2]}}"
-  DATABASE_HOST="${db_parts[3]:-}"
-fi
-
-if [ -z "$DATABASE_HOST" ] && [ -n "${DATABASE_URL:-}" ]; then
-  DATABASE_HOST="$(node -e "const parsed = new URL(process.env.DATABASE_URL || ''); process.stdout.write(parsed.hostname || '');")"
-fi
-
-if [ "$DATABASE_HOST" = "127.0.0.1" ] || [ "$DATABASE_HOST" = "localhost" ] || [ "$DATABASE_HOST" = "::1" ]; then
-  USE_LOCAL_POSTGRES="1"
+  echo "Production env var validation passed."
 fi
 
 id -u "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash "$APP_USER"
@@ -136,26 +138,6 @@ chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
 
 prune_release_directories 1
 cleanup_npm_cache
-
-if [ "$USE_LOCAL_POSTGRES" = "1" ]; then
-  apt-get install -y postgresql postgresql-contrib
-  systemctl enable postgresql
-  systemctl start postgresql
-
-  sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_user="$DB_USER" --set=db_password="$DB_PASSWORD" <<'SQL'
-SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'db_user', :'db_password')
-WHERE NOT EXISTS (
-  SELECT 1 FROM pg_roles WHERE rolname = :'db_user'
-) \gexec
-SQL
-
-  sudo -u postgres psql -v ON_ERROR_STOP=1 --set=db_name="$DB_NAME" --set=db_user="$DB_USER" <<'SQL'
-SELECT format('CREATE DATABASE %I OWNER %I', :'db_name', :'db_user')
-WHERE NOT EXISTS (
-  SELECT 1 FROM pg_database WHERE datname = :'db_name'
-) \gexec
-SQL
-fi
 
 release_name="$(date +%Y%m%d%H%M%S)"
 release_dir="$APP_DIR/releases/$release_name"
@@ -219,7 +201,7 @@ certificate_dir="/etc/letsencrypt/live/$certificate_name"
 certificate_fullchain="$certificate_dir/fullchain.pem"
 certificate_privkey="$certificate_dir/privkey.pem"
 
-sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev && npx prisma generate && npx prisma db push && npx tsx prisma/seed.ts && npm run build"
+sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev && npx prisma generate && npx prisma migrate deploy && npx tsx prisma/seed.ts && npm run build"
 
 ln -sfn "$release_dir" "$APP_DIR/current"
 release_activated="1"
@@ -228,9 +210,6 @@ cleanup_npm_cache
 rm -f -- "$RELEASE_TAR" "$ENV_FILE"
 
 service_after="network.target"
-if [ "$USE_LOCAL_POSTGRES" = "1" ]; then
-  service_after="$service_after postgresql.service"
-fi
 
 cat >/etc/systemd/system/xupra-drylake.service <<SERVICE
 [Unit]
@@ -281,7 +260,7 @@ server {
 }
 NGINX
 
-if [ -n "$LEGACY_IP_HOST" ]; then
+if [ -n "${LEGACY_IP_HOST:-}" ]; then
 cat >>/etc/nginx/sites-available/xupra-drylake <<NGINX
 
 server {
