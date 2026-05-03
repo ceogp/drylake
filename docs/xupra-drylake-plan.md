@@ -609,8 +609,7 @@ The correct shape for Xupra DryLake is:
 - Anthropic Claude Agent SDK subagents: https://platform.claude.com/docs/agent-sdk/subagents
 - Cursor rules docs: https://docs.cursor.com/en/context/rules
 - Cursor background agents docs: https://docs.cursor.com/en/background-agents
-- Prisma supported databases: https://www.prisma.io/docs/orm/overview/databases/sqlite
-- Prisma SQLite connector: https://www.prisma.io/docs/orm/core-concepts/supported-databases/sqlite
+- Prisma PostgreSQL connector: https://www.prisma.io/docs/orm/overview/databases/postgresql
 - Twilio WhatsApp docs: https://www.twilio.com/docs/whatsapp
 - Slack Events / app guidance: https://api.slack.com/tutorials/tracks/first-bolt-app
 - Slack deprecation note for legacy/custom bots and RTM migration guidance: https://api.slack.com/changelog/2024-09-legacy-custom-bots-classic-apps-deprecation

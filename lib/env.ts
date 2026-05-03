@@ -2,8 +2,12 @@ import { z } from "zod";
 
 const serverEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  DATABASE_PROVIDER: z.enum(["sqlite", "postgresql"]).default("sqlite"),
-  DATABASE_URL: z.string().min(1),
+  DATABASE_URL: z
+    .string()
+    .min(1)
+    .refine((value) => value.startsWith("postgresql://") || value.startsWith("postgres://"), {
+      message: "DATABASE_URL must be a PostgreSQL connection string.",
+    }),
   APP_BASE_URL: z.url().default("http://localhost:3000"),
   ADMIN_INTERNAL_HOST: z.string().optional(),
   ADMIN_INTERNAL_ORIGIN: z.string().optional(),
@@ -51,12 +55,6 @@ if (!parsed.success) {
 
 if (parsed.data.SECRETS_PROVIDER === "env" && parsed.data.APP_ENCRYPTION_KEY.length < 32) {
   throw new Error("APP_ENCRYPTION_KEY must be at least 32 characters when SECRETS_PROVIDER=env");
-}
-
-if (parsed.data.NODE_ENV === "production" && parsed.data.DATABASE_PROVIDER !== "postgresql") {
-  throw new Error(
-    "Production requires DATABASE_PROVIDER=postgresql. Set DATABASE_PROVIDER=postgresql and a valid DATABASE_URL in your environment.",
-  );
 }
 
 export const env = parsed.data;

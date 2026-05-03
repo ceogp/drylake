@@ -219,7 +219,7 @@ certificate_dir="/etc/letsencrypt/live/$certificate_name"
 certificate_fullchain="$certificate_dir/fullchain.pem"
 certificate_privkey="$certificate_dir/privkey.pem"
 
-sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev && npx tsx scripts/prisma/render-schema.ts postgresql prisma/schema.runtime.prisma && npx prisma generate --schema prisma/schema.runtime.prisma && npx prisma db push --schema prisma/schema.runtime.prisma && npx tsx prisma/seed.ts && npm run build"
+sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev && npx prisma generate && npx prisma db push && npx tsx prisma/seed.ts && npm run build"
 
 ln -sfn "$release_dir" "$APP_DIR/current"
 release_activated="1"

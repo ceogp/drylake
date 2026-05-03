@@ -105,7 +105,6 @@ async function writeStagingEnv(manifest: Manifest) {
 
   const values: Record<string, string> = {
     NODE_ENV: "production",
-    DATABASE_PROVIDER: "postgresql",
     DATABASE_URL: databaseUrlFromManifest(manifest),
     APP_BASE_URL: baseUrl,
     ADMIN_INTERNAL_HOST: process.env.ADMIN_INTERNAL_HOST || "",

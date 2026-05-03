@@ -14,9 +14,9 @@ without rewriting core business logic.
 
 Phase 4 prep locks these boundaries:
 
-- `DATABASE_PROVIDER`
-  - `sqlite` locally
-  - `postgresql` on AWS RDS
+- `DATABASE_URL`
+  - PostgreSQL locally
+  - PostgreSQL on AWS RDS
 - `ARTIFACT_STORAGE_DRIVER`
   - `local` locally
   - `s3` on AWS
@@ -31,18 +31,16 @@ Phase 4 prep locks these boundaries:
 
 Local:
 
-- `DATABASE_PROVIDER=sqlite`
-- `DATABASE_URL=file:./dev.db`
+- `DATABASE_URL=postgresql://...`
 
 AWS target:
 
-- `DATABASE_PROVIDER=postgresql`
 - `DATABASE_URL=postgresql://...`
 
 Requirement:
 
-- Prisma schema must remain provider-driven
-- app runtime must not assume SQLite-only adapters
+- Prisma schema is PostgreSQL-only
+- local development must use a disposable PostgreSQL database copy
 
 ## Artifact Path
 

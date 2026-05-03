@@ -96,7 +96,7 @@ It is not yet honest to call it fully ready for 1000 live customers until the pr
 
 The codebase is now better prepared for AWS cutover:
 
-- Prisma runtime can switch between `sqlite` and `postgresql`
+- Prisma runtime is PostgreSQL-only across local, staging, and production
 - artifacts can use S3 with optional SSE-KMS
 - runtime secrets can move from `.env` to AWS Secrets Manager
 - deployment jobs can run inline locally or be queued for a worker process

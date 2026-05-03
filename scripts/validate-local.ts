@@ -14,9 +14,9 @@ function expect(condition: unknown, message: string) {
 }
 
 async function main() {
-  if (process.env.DATABASE_PROVIDER !== "postgresql") {
+  if (!process.env.DATABASE_URL?.startsWith("postgres")) {
     throw new Error(
-      "validate-local.ts requires DATABASE_PROVIDER=postgresql. Start a local PostgreSQL instance with: docker compose up -d",
+      "validate-local.ts requires a PostgreSQL DATABASE_URL. Start PostgreSQL or point .env at the dev RDS copy.",
     );
   }
 

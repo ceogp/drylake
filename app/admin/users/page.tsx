@@ -35,9 +35,21 @@ export default async function AdminUsersPage({
 
   return (
     <AdminShell title="Users" subtitle="All registered accounts — paginated and searchable by email.">
-      <div>
+      <div className="flex flex-wrap items-center gap-3">
         <Link className="text-sm font-medium text-stone-700 hover:text-stone-950" href="/admin">
           ← Overview
+        </Link>
+        <Link
+          className="rounded-md border border-stone-300 bg-stone-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
+          href="/api/v1/admin/users/export"
+        >
+          Export Users CSV
+        </Link>
+        <Link
+          className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+          href="/api/v1/admin/skills/export"
+        >
+          Export All AI Content CSV
         </Link>
       </div>
 

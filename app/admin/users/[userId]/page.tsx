@@ -12,6 +12,7 @@ import {
 } from "@/app/admin/_components/admin-ui";
 import { requireAdminPageAccess } from "@/app/admin/_lib/access";
 import { OperatorActionsPanel } from "@/app/admin/users/[userId]/_components/operator-actions-panel";
+import { getAdminAiContentData } from "@/lib/services/admin-ai-content";
 import { getAdminUserDetailData } from "@/lib/services/admin-data";
 
 export default async function AdminUserPage({
@@ -29,16 +30,23 @@ export default async function AdminUserPage({
   }
 
   const { user, counts, transformJobs, deploymentJobs, auditEvents } = data;
+  const aiContent = await getAdminAiContentData({ userId, page: 1, pageSize: 10 });
 
   return (
     <AdminShell
       title={user.profile?.displayName ?? user.email}
       subtitle="User profile, memberships, extension connection activity, created content, jobs, and audit events."
     >
-      <div>
+      <div className="flex flex-wrap items-center gap-3">
         <Link className="text-sm font-medium text-stone-700 hover:text-stone-950" href="/admin">
           Back to overview
         </Link>
+        <a
+          className="rounded-md border border-stone-300 bg-stone-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
+          href={`/api/v1/admin/skills/export?userId=${encodeURIComponent(user.id)}`}
+        >
+          Export This User&apos;s AI Data CSV
+        </a>
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -126,6 +134,39 @@ export default async function AdminUserPage({
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </Panel>
+
+      <Panel eyebrow="Full Text" title="AI Content Records">
+        {aiContent.rows.length === 0 ? (
+          <EmptyState>No skill, agent, rule, upload, transform, or export records for this user.</EmptyState>
+        ) : (
+          <div className="space-y-4">
+            {aiContent.rows.map((row) => (
+              <article className="rounded-lg border border-stone-200 bg-stone-50 p-4" key={row.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-stone-950">{row.itemName}</div>
+                    <div className="mt-1 text-xs leading-5 text-stone-600">
+                      {row.organizationName} · {row.packageName || "No package"}
+                    </div>
+                    <div className="mt-1 font-mono text-xs text-stone-500">
+                      {row.logicalPath || row.dbId}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <StatusBadge value={row.recordStage} />
+                    <span className="inline-flex rounded-md border border-stone-200 bg-white px-2 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-stone-600">
+                      {row.recordType}
+                    </span>
+                  </div>
+                </div>
+                <pre className="mt-4 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md bg-stone-950 p-4 text-xs leading-5 text-stone-100">
+                  {row.content || "n/a"}
+                </pre>
+              </article>
+            ))}
           </div>
         )}
       </Panel>

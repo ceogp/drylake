@@ -145,7 +145,7 @@ export async function getAdminUsersListData(page: number = 1, search?: string) {
     ? { contains: normalizedSearch }
     : undefined;
 
-  if (emailFilter && process.env.DATABASE_PROVIDER === "postgresql") {
+  if (emailFilter) {
     emailFilter.mode = "insensitive";
   }
 

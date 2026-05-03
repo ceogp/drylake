@@ -13,7 +13,6 @@ default:
 
 variables:
   NODE_ENV: production
-  DATABASE_PROVIDER: postgresql
   DATABASE_URL: postgresql://xupra_app:xupra_ci@postgres:5432/xupra_drylake
   POSTGRES_DB: xupra_drylake
   POSTGRES_USER: xupra_app
@@ -75,9 +74,8 @@ validate:
         process.exit(1);
       });
       NODE
-    - npx tsx scripts/prisma/render-schema.ts postgresql prisma/schema.runtime.prisma
-    - npx prisma generate --schema prisma/schema.runtime.prisma
-    - npx prisma migrate deploy --schema prisma/schema.runtime.prisma
+    - npx prisma generate
+    - npx prisma migrate deploy
     - npx tsx prisma/seed.ts
     - npm run typecheck
     - npm run lint
