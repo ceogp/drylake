@@ -171,6 +171,7 @@ async function main() {
 
   const releaseTarPath = path.join(workDir, "release.tar");
   const bootstrapScriptPath = path.join(process.cwd(), "scripts", "deploy", "remote-bootstrap.sh");
+  const normalizedBootstrapScriptPath = path.join(workDir, "remote-bootstrap.sh");
   const remoteHost = `${manifest.sshUser}@${manifest.publicIp}`;
   const remoteBootstrapPath = "/tmp/xupra-bootstrap.sh";
   const remoteEnvPath = "/tmp/xupra-staging.env";
@@ -181,13 +182,18 @@ async function main() {
   await run("git", ["archive", "--format=tar", "HEAD", "-o", releaseTarPath], {
     cwd: process.cwd(),
   });
+  await fs.writeFile(
+    normalizedBootstrapScriptPath,
+    (await fs.readFile(bootstrapScriptPath, "utf8")).replace(/\r\n/g, "\n"),
+    "utf8",
+  );
 
   const sshArgs = ["-i", manifest.sshKeyPath, "-o", "StrictHostKeyChecking=accept-new"];
   const scpArgs = ["-i", manifest.sshKeyPath, "-o", "StrictHostKeyChecking=accept-new"];
 
   await run("scp", [...scpArgs, releaseTarPath, `${remoteHost}:${remoteReleasePath}`]);
   await run("scp", [...scpArgs, envFilePath, `${remoteHost}:${remoteEnvPath}`]);
-  await run("scp", [...scpArgs, bootstrapScriptPath, `${remoteHost}:${remoteBootstrapPath}`]);
+  await run("scp", [...scpArgs, normalizedBootstrapScriptPath, `${remoteHost}:${remoteBootstrapPath}`]);
 
   await run("ssh", [
     ...sshArgs,
