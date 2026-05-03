@@ -1,136 +1,82 @@
-import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import Link from "next/link";
 
-import { getConfiguredAppOrigin, isConfiguredAdminInternalHost } from "@/lib/site-hosts";
-import { prisma } from "@/lib/prisma";
-import { getSetupStatus } from "@/lib/services/setup";
-
-function MetricCard({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <article className="rounded-[1.75rem] border border-stone-200 bg-white p-5 shadow-sm">
-      <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</p>
-      <p className="mt-3 font-[family-name:var(--font-heading)] text-4xl font-semibold text-stone-950">
-        {value}
-      </p>
-      <p className="mt-2 text-sm leading-7 text-stone-700">{detail}</p>
-    </article>
-  );
-}
+import {
+  AdminShell,
+  EmptyState,
+  MetricCard,
+  Panel,
+  StatusBadge,
+  formatDate,
+} from "@/app/admin/_components/admin-ui";
+import { requireAdminPageAccess } from "@/app/admin/_lib/access";
+import { getConfiguredAppOrigin } from "@/lib/site-hosts";
+import { getAdminOverviewData } from "@/lib/services/admin-data";
 
 export default async function AdminPage() {
-  const requestHeaders = await headers();
-  const requestHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-
-  if (!isConfiguredAdminInternalHost(requestHost)) {
-    notFound();
-  }
+  await requireAdminPageAccess();
 
   const appOrigin = getConfiguredAppOrigin();
-  const setup = await getSetupStatus();
-
-  const [users, organizations, projectCount, packageCount, versionCount, credentialCount, transformJobs, deploymentJobs] =
-    await Promise.all([
-      prisma.user.findMany({
-        include: {
-          profile: true,
-          memberships: {
-            include: {
-              organization: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      }),
-      prisma.organization.findMany({
-        include: {
-          memberships: true,
-          projects: true,
-        },
-        orderBy: { createdAt: "desc" },
-        take: 12,
-      }),
-      prisma.project.count(),
-      prisma.agentPackage.count(),
-      prisma.packageVersion.count(),
-      prisma.credential.count(),
-      prisma.transformJob.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 12,
-        include: {
-          organization: true,
-          createdByUser: true,
-        },
-      }),
-      prisma.deploymentJob.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 12,
-        include: {
-          organization: true,
-          deploymentTarget: true,
-          createdByUser: true,
-        },
-      }),
-    ]);
-
-  const activeUsers = users.filter((user) => user.status === "active").length;
-  const queuedTransforms = transformJobs.filter((job) => job.status === "queued" || job.status === "running").length;
-  const failedDeployments = deploymentJobs.filter((job) => job.status === "failed").length;
+  const {
+    metrics,
+    recentUsers,
+    recentOrganizations,
+    recentTransformJobs,
+    recentDeploymentJobs,
+    recentAuditEvents,
+    setup,
+  } = await getAdminOverviewData();
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,_#1c1917_0%,_#292524_28%,_#fafaf9_28%,_#ffffff_100%)]">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 py-16 md:px-10">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-4 text-white">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-300">Platform Admin</p>
-            <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em]">
-              Xupra control surface for users, orgs, jobs, and system health.
-            </h1>
-            <p className="max-w-3xl text-lg leading-8 text-stone-200">
-              This is the platform-wide admin surface. It is intentionally separate from tenant-scoped product pages and is meant for your operator account only.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <a className="rounded-full border border-stone-600 bg-stone-900/60 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800" href={`${appOrigin}/settings`}>
-              User Settings
-            </a>
-            <a className="rounded-full border border-stone-600 bg-stone-900/60 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800" href={`${appOrigin}/app`}>
-              App
-            </a>
-          </div>
-        </div>
+    <AdminShell
+      title="Internal control surface"
+      subtitle="Read-only platform visibility for users, organizations, jobs, billing state, and runtime readiness."
+    >
+      <div className="flex flex-wrap gap-3">
+        <a
+          className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+          href={`${appOrigin}/app`}
+        >
+          Customer App
+        </a>
+        <a
+          className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+          href={`${appOrigin}/settings`}
+        >
+          User Settings
+        </a>
+      </div>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label="Users" value={String(users.length)} detail={`${activeUsers} active accounts`} />
-          <MetricCard label="Organizations" value={String(organizations.length)} detail="Latest organizations in the system" />
-          <MetricCard label="Projects / Packages" value={`${projectCount} / ${packageCount}`} detail={`${versionCount} package versions stored`} />
-          <MetricCard label="Jobs" value={`${queuedTransforms} / ${failedDeployments}`} detail="Queued transform jobs / failed deployment jobs" />
-        </section>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          detail={`${metrics.activeUserCount} active accounts`}
+          label="Users"
+          value={String(metrics.userCount)}
+        />
+        <MetricCard
+          detail={`${metrics.subscriptionCount} subscriptions tracked`}
+          label="Organizations"
+          value={String(metrics.organizationCount)}
+        />
+        <MetricCard
+          detail={`${metrics.versionCount} versions stored`}
+          label="Projects / Packages"
+          value={`${metrics.projectCount} / ${metrics.packageCount}`}
+        />
+        <MetricCard
+          detail={`${metrics.runningTransformCount + metrics.runningDeploymentCount} running, ${metrics.failedTransformCount + metrics.failedDeploymentCount} failed`}
+          label="Jobs"
+          value={`${metrics.queuedTransformCount + metrics.queuedDeploymentCount} queued`}
+        />
+      </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Users</p>
-                <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-                  Recent accounts
-                </h2>
-              </div>
-              <p className="rounded-full bg-stone-100 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-stone-600">
-                admin: internal access granted
-              </p>
-            </div>
-            <div className="mt-6 overflow-x-auto">
+      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <Panel eyebrow="Users" title="Recent Accounts">
+          {recentUsers.length === 0 ? (
+            <EmptyState>No users have been created yet.</EmptyState>
+          ) : (
+            <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm text-stone-700">
-                <thead className="border-b border-stone-200 font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
+                <thead className="border-b border-stone-200 font-mono text-xs uppercase tracking-[0.12em] text-stone-500">
                   <tr>
                     <th className="px-3 py-3">User</th>
                     <th className="px-3 py-3">Auth</th>
@@ -139,129 +85,118 @@ export default async function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b border-stone-100 align-top">
+                  {recentUsers.map((user) => (
+                    <tr className="border-b border-stone-100 align-top" key={user.id}>
                       <td className="px-3 py-4">
-                        <div className="font-medium text-stone-950">
+                        <Link className="font-medium text-stone-950 hover:underline" href={`/admin/users/${user.id}`}>
                           {user.profile?.displayName ?? user.email}
-                        </div>
+                        </Link>
                         <div className="text-xs text-stone-500">{user.email}</div>
                       </td>
                       <td className="px-3 py-4">
                         <div>{user.authProvider}</div>
-                        <div className="text-xs text-stone-500">{user.status}</div>
+                        <StatusBadge value={user.status} />
                       </td>
                       <td className="px-3 py-4">
                         {user.memberships.length === 0 ? (
                           <span className="text-xs text-stone-500">No orgs</span>
                         ) : (
                           user.memberships.map((membership) => (
-                            <div key={membership.id} className="text-xs leading-6">
+                            <div className="text-xs leading-6" key={membership.id}>
                               {membership.organization.name} · {membership.role}
                             </div>
                           ))
                         )}
                       </td>
-                      <td className="px-3 py-4 text-xs text-stone-500">
-                        {user.createdAt.toLocaleString()}
-                      </td>
+                      <td className="px-3 py-4 text-xs text-stone-500">{formatDate(user.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </article>
+          )}
+        </Panel>
 
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">System Setup</p>
-            <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-              Runtime readiness
-            </h2>
-            <div className="mt-6 grid gap-4">
-              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Authentication</p>
-                <p className="mt-2">Mode: {setup.auth.mode}</p>
-                <p>Provider: {setup.auth.provider}</p>
-                <p>Configured: {setup.auth.configured ? "yes" : "no"}</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Storage / AI</p>
-                <p className="mt-2">Artifact driver: {setup.storage.driver}</p>
-                <p>OpenAI model: {setup.openai.model}</p>
-                <p>OpenAI ready: {setup.openai.configured ? "yes" : "no"}</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Commercial</p>
-                <p className="mt-2">Stripe configured: {setup.billing.configured ? "yes" : "no"}</p>
-                <p>Credentials stored: {credentialCount}</p>
-                <p>Extension path: {setup.extension.packagePath}</p>
-              </div>
+        <Panel eyebrow="Runtime" title="Readiness">
+          <div className="grid gap-3 text-sm leading-7 text-stone-700">
+            <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+              <p className="font-mono text-xs uppercase tracking-[0.12em] text-stone-500">Authentication</p>
+              <p className="mt-2">Mode: {setup.auth.mode}</p>
+              <p>Provider: {setup.auth.provider}</p>
+              <p>Configured: {setup.auth.configured ? "yes" : "no"}</p>
             </div>
-          </article>
-        </section>
+            <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+              <p className="font-mono text-xs uppercase tracking-[0.12em] text-stone-500">Storage / AI</p>
+              <p className="mt-2">Artifact driver: {setup.storage.driver}</p>
+              <p>OpenAI model: {setup.openai.model}</p>
+              <p>OpenAI ready: {setup.openai.configured ? "yes" : "no"}</p>
+            </div>
+            <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+              <p className="font-mono text-xs uppercase tracking-[0.12em] text-stone-500">Commercial</p>
+              <p className="mt-2">Stripe configured: {setup.billing.configured ? "yes" : "no"}</p>
+              <p>Credentials stored: {metrics.credentialCount}</p>
+              <p>Extension path: {setup.extension.packagePath}</p>
+            </div>
+          </div>
+        </Panel>
+      </section>
 
-        <section className="grid gap-6 xl:grid-cols-2">
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Organizations</p>
-            <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-              Latest orgs
-            </h2>
-            <div className="mt-6 space-y-3">
-              {organizations.map((organization) => (
-                <div key={organization.id} className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="font-medium text-stone-950">{organization.name}</div>
-                    <div className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
-                      {organization.tier} · {organization.status}
-                    </div>
-                  </div>
-                  <p>Members: {organization.memberships.length}</p>
-                  <p>Projects: {organization.projects.length}</p>
+      <section className="grid gap-6 xl:grid-cols-3">
+        <Panel eyebrow="Organizations" title="Latest Orgs">
+          <div className="space-y-3">
+            {recentOrganizations.map((organization) => (
+              <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm leading-7" key={organization.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-medium text-stone-950">{organization.name}</div>
+                  <StatusBadge value={organization.status} />
                 </div>
-              ))}
-            </div>
-          </article>
+                <p className="text-stone-600">Tier: {organization.tier}</p>
+                <p className="text-stone-600">
+                  Members: {organization.memberships.length} · Projects: {organization.projects.length}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Panel>
 
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Recent Jobs</p>
-            <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-              Transforms and deployments
-            </h2>
-            <div className="mt-6 space-y-3">
-              {transformJobs.map((job) => (
-                <div key={job.id} className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
-                  <div className="flex items-center justify-between gap-4">
+        <Panel eyebrow="Jobs" title="Recent Activity">
+          <div className="space-y-3">
+            {[...recentTransformJobs, ...recentDeploymentJobs]
+              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+              .slice(0, 10)
+              .map((job) => (
+                <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm leading-7" key={job.id}>
+                  <div className="flex items-center justify-between gap-3">
                     <div className="font-medium text-stone-950">
-                      Transform · {job.jobType}
+                      {"jobType" in job ? `Transform · ${job.jobType}` : `Deploy · ${job.deploymentTarget.name}`}
                     </div>
-                    <div className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
-                      {job.status}
-                    </div>
+                    <StatusBadge value={job.status} />
                   </div>
-                  <p>Org: {job.organization.name}</p>
-                  <p>User: {job.createdByUser.email}</p>
-                  <p>Target: {job.targetPlatform ?? "n/a"}</p>
+                  <p className="text-stone-600">Org: {job.organization.name}</p>
+                  <p className="text-stone-600">User: {job.createdByUser.email}</p>
                 </div>
               ))}
-              {deploymentJobs.map((job) => (
-                <div key={job.id} className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="font-medium text-stone-950">
-                      Deployment · {job.deploymentTarget.name}
-                    </div>
-                    <div className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
-                      {job.status}
-                    </div>
-                  </div>
-                  <p>Org: {job.organization.name}</p>
-                  <p>User: {job.createdByUser.email}</p>
-                  <p>Platform: {job.deploymentTarget.platform}</p>
+          </div>
+        </Panel>
+
+        <Panel eyebrow="Audit" title="Recent Events">
+          {recentAuditEvents.length === 0 ? (
+            <EmptyState>No audit events recorded yet.</EmptyState>
+          ) : (
+            <div className="space-y-3">
+              {recentAuditEvents.map((event) => (
+                <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm leading-7" key={event.id}>
+                  <div className="font-medium text-stone-950">{event.action}</div>
+                  <p className="text-stone-600">
+                    {event.entityType} · {event.organization.name}
+                  </p>
+                  <p className="text-xs text-stone-500">{formatDate(event.createdAt)}</p>
                 </div>
               ))}
             </div>
-          </article>
-        </section>
-      </div>
-    </main>
+          )}
+        </Panel>
+      </section>
+    </AdminShell>
   );
 }
