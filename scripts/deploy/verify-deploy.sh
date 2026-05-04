@@ -43,7 +43,7 @@ check "extension connect" "200" "$app_base_url/extensions/connect"
 check "stripe webhook empty body" "400" -X POST -d '' "$app_base_url/api/stripe/webhook"
 
 if [ -n "${ADMIN_INTERNAL_HOST:-}" ]; then
-  check "admin internal auth challenge" "401" "http://$ADMIN_INTERNAL_HOST/admin"
+  check "admin internal auth challenge" "401" "https://$ADMIN_INTERNAL_HOST/admin"
 else
   echo "SKIP admin internal auth challenge: ADMIN_INTERNAL_HOST is not set"
 fi

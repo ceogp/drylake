@@ -191,10 +191,15 @@ app_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://loc
 marketing_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); const host = url.host; process.stdout.write(host.startsWith('drylake.') ? host.slice('drylake.'.length) : '');")"
 server_names="$app_host"
 certificate_name="$app_host"
+admin_internal_host="${ADMIN_INTERNAL_HOST:-}"
 
 if [ -n "$marketing_host" ]; then
   server_names="$server_names $marketing_host www.$marketing_host"
   certificate_name="$marketing_host"
+fi
+
+if [ -n "$admin_internal_host" ] && [ "$admin_internal_host" != "$app_host" ]; then
+  server_names="$server_names $admin_internal_host"
 fi
 
 certificate_dir="/etc/letsencrypt/live/$certificate_name"
