@@ -14,6 +14,7 @@ default:
 
 variables:
   NODE_ENV: production
+  DEPLOY_FREEZE: "true"
   DATABASE_URL: postgresql://xupra_app:xupra_ci@postgres:5432/xupra_drylake
   POSTGRES_DB: xupra_drylake
   POSTGRES_USER: xupra_app
@@ -95,7 +96,7 @@ validate:
   image: debian:bookworm-slim
   before_script:
     - apt-get update
-    - apt-get install -y openssh-client git
+    - apt-get install -y openssh-client git nodejs
     - eval "$(ssh-agent -s)"
     - mkdir -p ~/.ssh
     - |
@@ -167,7 +168,12 @@ validate:
     - ': "${DEPLOY_SSH_PRIVATE_KEY:?DEPLOY_SSH_PRIVATE_KEY is required}"'
     - ': "${DEPLOY_ENV_FILE:?DEPLOY_ENV_FILE is required}"'
     - git archive --format=tar HEAD -o release.tar
-    - printf "%s" "$DEPLOY_ENV_FILE" > deploy.env
+    - |
+      if [ -f "$DEPLOY_ENV_FILE" ]; then
+        cp "$DEPLOY_ENV_FILE" deploy.env
+      else
+        printf "%s" "$DEPLOY_ENV_FILE" > deploy.env
+      fi
     - |
       app_base_url="${DEPLOY_URL:-}"
       if [ -z "$app_base_url" ]; then
@@ -200,6 +206,139 @@ validate:
       else
         printf '\nAPP_BASE_URL=%s\n' "$app_base_url" >> deploy.env
       fi
+    - |
+      node <<'NODE'
+      const fs = require("node:fs");
+
+      const prefixes = ["DEVELOPMENT", "STAGING", "PRODUCTION"];
+      const currentName = process.env.CI_ENVIRONMENT_NAME || "current";
+
+      function stripQuotes(value) {
+        const trimmed = String(value || "").trim();
+        if (
+          (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+          (trimmed.startsWith("'") && trimmed.endsWith("'"))
+        ) {
+          return trimmed.slice(1, -1);
+        }
+        return trimmed;
+      }
+
+      function parseEnvFile(value) {
+        if (!value) return {};
+
+        const raw = fs.existsSync(value) ? fs.readFileSync(value, "utf8") : value;
+        const parsed = {};
+
+        for (const line of raw.split(/\r?\n/)) {
+          const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+          if (!match) continue;
+          parsed[match[1]] = stripQuotes(match[2]);
+        }
+
+        return parsed;
+      }
+
+      function appOrigin(value) {
+        if (!value) return "";
+        try {
+          return new URL(stripQuotes(value)).origin.toLowerCase();
+        } catch {
+          return stripQuotes(value).replace(/\/+$/, "").toLowerCase();
+        }
+      }
+
+      function databaseFingerprint(value) {
+        if (!value) return "";
+        try {
+          const url = new URL(stripQuotes(value));
+          const database = url.pathname.replace(/^\/+/, "");
+          const port = url.port || "5432";
+          return `${url.hostname.toLowerCase()}:${port}/${database}`;
+        } catch {
+          return "";
+        }
+      }
+
+      function normalize(value) {
+        return stripQuotes(value).trim().toLowerCase();
+      }
+
+      function collect(prefix) {
+        const envFile = parseEnvFile(process.env[`${prefix}_ENV_FILE`]);
+
+        return {
+          name: prefix.toLowerCase(),
+          deployHost: normalize(process.env[`${prefix}_HOST`]),
+          appBaseUrl: appOrigin(process.env[`${prefix}_URL`] || envFile.APP_BASE_URL),
+          database: databaseFingerprint(envFile.DATABASE_URL),
+          s3Bucket: normalize(envFile.AWS_S3_BUCKET),
+        };
+      }
+
+      const currentEnvFile = parseEnvFile("deploy.env");
+      const current = {
+        name: currentName,
+        deployHost: normalize(process.env.DEPLOY_HOST),
+        appBaseUrl: appOrigin(process.env.DEPLOY_URL || currentEnvFile.APP_BASE_URL),
+        database: databaseFingerprint(currentEnvFile.DATABASE_URL),
+        s3Bucket: normalize(currentEnvFile.AWS_S3_BUCKET),
+        artifactDriver: normalize(currentEnvFile.ARTIFACT_STORAGE_DRIVER),
+      };
+
+      const missingCurrent = [];
+      if (!current.deployHost) missingCurrent.push("DEPLOY_HOST");
+      if (!current.appBaseUrl) missingCurrent.push("APP_BASE_URL/DEPLOY_URL");
+      if (!current.database) missingCurrent.push("DATABASE_URL");
+      if (current.artifactDriver !== "s3") missingCurrent.push("ARTIFACT_STORAGE_DRIVER=s3");
+      if (!current.s3Bucket) missingCurrent.push("AWS_S3_BUCKET");
+
+      if (missingCurrent.length > 0) {
+        console.error(`Deploy isolation guard failed: ${current.name} is missing ${missingCurrent.join(", ")}.`);
+        process.exit(1);
+      }
+
+      const configured = prefixes
+        .map(collect)
+        .filter((item) => item.deployHost || item.appBaseUrl || item.database || item.s3Bucket);
+
+      if (!configured.some((item) => item.name === current.name)) {
+        configured.push(current);
+      }
+
+      const fields = [
+        ["deployHost", "DEPLOY_HOST"],
+        ["appBaseUrl", "APP_BASE_URL"],
+        ["database", "DATABASE_URL host/database"],
+        ["s3Bucket", "AWS_S3_BUCKET"],
+      ];
+      const failures = [];
+
+      for (let leftIndex = 0; leftIndex < configured.length; leftIndex += 1) {
+        for (let rightIndex = leftIndex + 1; rightIndex < configured.length; rightIndex += 1) {
+          const left = configured[leftIndex];
+          const right = configured[rightIndex];
+
+          if (left.name === right.name) continue;
+
+          for (const [field, label] of fields) {
+            if (left[field] && right[field] && left[field] === right[field]) {
+              failures.push(`${left.name} and ${right.name} share ${label}: ${left[field]}`);
+            }
+          }
+        }
+      }
+
+      if (failures.length > 0) {
+        console.error("Deploy isolation guard failed:");
+        for (const failure of failures) {
+          console.error(`- ${failure}`);
+        }
+        process.exit(1);
+      }
+
+      console.log(`Deploy isolation guard passed for ${current.name}.`);
+      NODE
     - |
       for attempt in 1 2 3; do
         if scp release.tar "$DEPLOY_SSH_USER@$DEPLOY_HOST:/tmp/xupra-release.tar"; then
@@ -257,6 +396,35 @@ validate:
   script:
     - bash scripts/deploy/verify-deploy.sh
 
+deploy_development:
+  extends: .deploy_app
+  variables:
+    DEPLOY_HOST: $DEVELOPMENT_HOST
+    DEPLOY_SSH_USER: $DEVELOPMENT_SSH_USER
+    DEPLOY_SSH_PRIVATE_KEY: $DEVELOPMENT_SSH_PRIVATE_KEY
+    DEPLOY_ENV_FILE: $DEVELOPMENT_ENV_FILE
+    DEPLOY_URL: $DEVELOPMENT_URL
+  environment:
+    name: development
+    url: $DEVELOPMENT_URL
+  rules:
+    - if: '$DEPLOY_FREEZE == "true"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "development" && $CI_COMMIT_REF_PROTECTED == "true" && $DEVELOPMENT_HOST && $DEVELOPMENT_SSH_USER && $DEVELOPMENT_SSH_PRIVATE_KEY && $DEVELOPMENT_ENV_FILE'
+      when: manual
+
+verify_development:
+  extends: .verify_app
+  variables:
+    APP_BASE_URL: $DEVELOPMENT_URL
+    ADMIN_INTERNAL_HOST: $DEVELOPMENT_ADMIN_INTERNAL_HOST
+  needs: [deploy_development]
+  rules:
+    - if: '$DEPLOY_FREEZE == "true"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "development" && $CI_COMMIT_REF_PROTECTED == "true" && $DEVELOPMENT_HOST && $DEVELOPMENT_SSH_USER && $DEVELOPMENT_SSH_PRIVATE_KEY && $DEVELOPMENT_ENV_FILE && $DEVELOPMENT_URL'
+      when: on_success
+
 deploy_staging:
   extends: .deploy_app
   variables:
@@ -265,13 +433,14 @@ deploy_staging:
     DEPLOY_SSH_PRIVATE_KEY: $STAGING_SSH_PRIVATE_KEY
     DEPLOY_ENV_FILE: $STAGING_ENV_FILE
     DEPLOY_URL: $STAGING_URL
-    REQUIRE_HTTPS_URL: "false"
+    REQUIRE_HTTPS_URL: "true"
   environment:
     name: staging
     url: $STAGING_URL
   rules:
-    - if: '$CI_COMMIT_BRANCH == "development" && $AUTO_DEPLOY_STAGING == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE'
-    - if: '$CI_COMMIT_BRANCH == "development" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE'
+    - if: '$DEPLOY_FREEZE == "true"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "staging" && $CI_COMMIT_REF_PROTECTED == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE'
       when: manual
 
 verify_staging:
@@ -281,9 +450,9 @@ verify_staging:
     ADMIN_INTERNAL_HOST: $STAGING_ADMIN_INTERNAL_HOST
   needs: [deploy_staging]
   rules:
-    - if: '$CI_COMMIT_BRANCH == "development" && $AUTO_DEPLOY_STAGING == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE && $STAGING_URL'
-      when: on_success
-    - if: '$CI_COMMIT_BRANCH == "development" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE && $STAGING_URL'
+    - if: '$DEPLOY_FREEZE == "true"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "staging" && $CI_COMMIT_REF_PROTECTED == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE && $STAGING_URL'
       when: on_success
 
 deploy_production:
@@ -298,7 +467,9 @@ deploy_production:
     name: production
     url: $PRODUCTION_URL
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" && $PRODUCTION_HOST && $PRODUCTION_SSH_USER && $PRODUCTION_SSH_PRIVATE_KEY && $PRODUCTION_ENV_FILE'
+    - if: '$DEPLOY_FREEZE == "true"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_COMMIT_REF_PROTECTED == "true" && $PRODUCTION_HOST && $PRODUCTION_SSH_USER && $PRODUCTION_SSH_PRIVATE_KEY && $PRODUCTION_ENV_FILE'
       when: manual
 
 verify_production:
@@ -308,5 +479,7 @@ verify_production:
     ADMIN_INTERNAL_HOST: $PRODUCTION_ADMIN_INTERNAL_HOST
   needs: [deploy_production]
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" && $PRODUCTION_HOST && $PRODUCTION_SSH_USER && $PRODUCTION_SSH_PRIVATE_KEY && $PRODUCTION_ENV_FILE && $PRODUCTION_URL'
+    - if: '$DEPLOY_FREEZE == "true"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_COMMIT_REF_PROTECTED == "true" && $PRODUCTION_HOST && $PRODUCTION_SSH_USER && $PRODUCTION_SSH_PRIVATE_KEY && $PRODUCTION_ENV_FILE && $PRODUCTION_URL'
       when: on_success
