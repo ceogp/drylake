@@ -105,7 +105,7 @@ function buildInstallUri(params: {
     mode: params.destination === "other" ? "custom-path" : "workspace-root",
   });
 
-  return `${params.editorScheme}://xupra.xupra-drylake-vscode/install?${query.toString()}`;
+  return `${params.editorScheme}://xupra.drylake/install?${query.toString()}`;
 }
 
 function formatConfidence(value: number) {

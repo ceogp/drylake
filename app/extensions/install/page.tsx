@@ -39,7 +39,7 @@ export default function ExtensionInstallPage() {
             </p>
             <a
               className="mt-5 inline-flex text-sm font-medium text-orange-700 underline underline-offset-2 hover:text-orange-900"
-              href="https://marketplace.visualstudio.com/items?itemName=xupra.xupra-drylake-vscode"
+              href="https://marketplace.visualstudio.com/items?itemName=xupra.drylake"
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -50,7 +50,7 @@ export default function ExtensionInstallPage() {
               Or install via command line
             </p>
             <div className="mt-3 rounded-[1.35rem] border border-stone-200 bg-stone-50 px-5 py-4 font-mono text-xs text-stone-700">
-              ext install xupra.xupra-drylake-vscode
+              ext install xupra.drylake
             </div>
           </article>
 
@@ -67,7 +67,7 @@ export default function ExtensionInstallPage() {
             </p>
             <a
               className="mt-5 inline-flex text-sm font-medium text-orange-700 underline underline-offset-2 hover:text-orange-900"
-              href="https://www.cursor.com/en/marketplace/xupra.xupra-drylake-vscode"
+              href="https://www.cursor.com/en/marketplace/xupra.drylake"
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -78,7 +78,7 @@ export default function ExtensionInstallPage() {
               Or install via command line
             </p>
             <div className="mt-3 rounded-[1.35rem] border border-stone-200 bg-stone-50 px-5 py-4 font-mono text-xs text-stone-700">
-              ext install xupra.xupra-drylake-vscode
+              ext install xupra.drylake
             </div>
 
             <div className="mt-6 rounded-[1.5rem] border border-dashed border-stone-300 bg-white p-4 text-sm leading-7 text-stone-700">

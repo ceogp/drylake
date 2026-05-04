@@ -601,7 +601,7 @@ export async function activate(context: vscode.ExtensionContext) {
   register("xupra.openSettings", async () => {
     await vscode.commands.executeCommand(
       "workbench.action.openSettings",
-      "@ext:xupra.xupra-drylake-vscode xupra"
+      "@ext:xupra.drylake xupra"
     );
   });
 

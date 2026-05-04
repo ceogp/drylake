@@ -29,7 +29,7 @@ function Resolve-CodeCliPath {
   throw "Could not find VS Code CLI (`"code`"). Install VS Code and ensure code command is available."
 }
 
-$latestVsix = Get-ChildItem -Path $extensionRoot -Filter "xupra-drylake-vscode-*.vsix" -File |
+$latestVsix = Get-ChildItem -Path $extensionRoot -Filter "drylake-*.vsix" -File |
   Sort-Object LastWriteTime -Descending |
   Select-Object -First 1
 

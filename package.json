@@ -17,6 +17,7 @@
     "aws:provision-edge": "tsx scripts/aws/provision-edge.ts",
     "aws:provision-admin-internal": "tsx scripts/aws/provision-admin-internal.ts",
     "aws:setup-ses-domain": "tsx scripts/aws/setup-ses-domain.ts",
+    "aws:refresh-nonprod-db": "tsx scripts/aws/refresh-nonprod-db.ts",
     "aws:tunnel-dev-db": "tsx scripts/aws/tunnel-dev-db.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

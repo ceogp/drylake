@@ -123,7 +123,7 @@ npm run uninstall:vscode
 Or in VS Code:
 
 - Open Extensions panel
-- Search `xupra.xupra-drylake-vscode`
+- Search `xupra.drylake`
 - Click the gear icon and choose `Uninstall`
 
 ## Cursor compatibility

@@ -26,7 +26,7 @@ function Resolve-CodeCliPath {
   throw "Could not find VS Code CLI (`"code`"). Install VS Code and ensure code command is available."
 }
 
-$extensionId = "xupra.xupra-drylake-vscode"
+$extensionId = "xupra.drylake"
 $codeCli = Resolve-CodeCliPath
 
 Write-Host "Uninstalling extension: $extensionId"
