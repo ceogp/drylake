@@ -109,6 +109,13 @@ export type GeneratedSkill = {
   content: string;
 };
 
+export type GeneratedAgent = {
+  name: string;
+  description: string;
+  targetPlatform: string;
+  content: string;
+};
+
 export type ExtensionConnection = {
   editor: "vscode" | "cursor";
   auth: {

@@ -115,11 +115,17 @@ if [ "${NODE_ENV:-}" = "production" ]; then
 
   # AI provider
   ai_provider="${AI_PROVIDER:-openai}"
-  if [ "$ai_provider" = "kimi" ]; then
-    [ -z "${KIMI_API_KEY:-}" ] && missing_vars+=("KIMI_API_KEY (AI_PROVIDER=kimi)")
-  else
-    [ -z "${OPENAI_API_KEY:-}" ] && missing_vars+=("OPENAI_API_KEY (AI_PROVIDER=openai)")
-  fi
+  case "$ai_provider" in
+    kimi)
+      [ -z "${KIMI_API_KEY:-}" ] && missing_vars+=("KIMI_API_KEY (AI_PROVIDER=kimi)")
+      ;;
+    anthropic)
+      [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${CLAUDE_API_KEY:-}" ] && missing_vars+=("ANTHROPIC_API_KEY or CLAUDE_API_KEY (AI_PROVIDER=anthropic)")
+      ;;
+    *)
+      [ -z "${OPENAI_API_KEY:-}" ] && missing_vars+=("OPENAI_API_KEY (AI_PROVIDER=openai)")
+      ;;
+  esac
 
   if [ "${#missing_vars[@]}" -gt 0 ]; then
     echo "ERROR: Missing or invalid required production env vars:" >&2

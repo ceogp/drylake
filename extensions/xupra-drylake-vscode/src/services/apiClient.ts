@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import type {
   ExtensionConnection,
+  GeneratedAgent,
   GeneratedSkill,
   GeneratedExportFile,
   JobResult,
@@ -245,6 +246,19 @@ export class ApiClient {
     context?: string;
   }) {
     return this.request<{ skill: GeneratedSkill; job?: JobResult }>("/api/v1/skills/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
+  async generateAgent(params: {
+    name: string;
+    description: string;
+    targetPlatform: string;
+    context?: string;
+  }) {
+    return this.request<{ agent: GeneratedAgent; job?: JobResult }>("/api/v1/agents/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),

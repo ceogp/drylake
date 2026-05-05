@@ -3,10 +3,17 @@ import * as vscode from "vscode";
 import type { ApiClient } from "../services/apiClient";
 import { requireManualExportEntitlement } from "../services/featureGates";
 import { writeGeneratedFilesToWorkspace } from "../services/fileSync";
-import { chooseTargetPlatform, ensureVersionSelection } from "../services/selection";
 import type { StateStore } from "../services/stateStore";
 
 type InboundMessage =
+  | {
+      type: "startBlank";
+      requestId: string;
+      name: string;
+      description: string;
+      targetPlatform: string;
+      context?: string;
+    }
   | {
       type: "generate";
       requestId: string;
@@ -15,20 +22,7 @@ type InboundMessage =
       targetPlatform: string;
       context?: string;
     }
-  | {
-      type: "export";
-      requestId: string;
-      content: string;
-      targetPlatform: string;
-      skillName: string;
-    }
-  | {
-      type: "saveToXupra";
-      requestId: string;
-      content: string;
-      skillName: string;
-      targetPlatform: string;
-    };
+  ;
 
 type OutboundMessage =
   | {
@@ -47,19 +41,163 @@ type OutboundMessage =
     };
 
 const LOGICAL_PATH_BY_PLATFORM: Record<string, (slug: string) => string> = {
-  claude_code: (slug) => `.claude/skills/${slug}/SKILL.md`,
-  claude_agents: (slug) => `.claude/skills/${slug}/SKILL.md`,
-  codex: (slug) => `.codex/skills/${slug}/SKILL.md`,
-  cursor: (slug) => `.cursor/skills/${slug}/SKILL.md`,
+  claude_code: (slug) => `.claude/agents/${slug}.md`,
+  claude_agents: (slug) => `.claude/agents/${slug}.md`,
+  codex: (slug) => `.codex/agents/${slug}.toml`,
+  cursor: (slug) => `.cursor/rules/${slug}.mdc`,
 };
 
-function slugForSkillName(skillName: string) {
-  return skillName.trim().toLowerCase().replace(/\s+/g, "-") || "skill";
+function slugForAgentName(agentName: string) {
+  return (
+    agentName
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "agent"
+  );
 }
 
-function logicalPathForPlatform(targetPlatform: string, skillName: string) {
-  const slug = slugForSkillName(skillName);
-  return (LOGICAL_PATH_BY_PLATFORM[targetPlatform] ?? ((value: string) => `skills/${value}/SKILL.md`))(slug);
+function logicalPathForPlatform(targetPlatform: string, agentName: string) {
+  const slug = slugForAgentName(agentName);
+  return (LOGICAL_PATH_BY_PLATFORM[targetPlatform] ?? ((value: string) => `.agents/agents/${value}.md`))(slug);
+}
+
+function escapeTomlString(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function escapeYamlString(value: string) {
+  return value.replace(/"/g, '\\"');
+}
+
+function buildMarkdownAgent(params: {
+  name: string;
+  description: string;
+  targetPlatform: string;
+  context?: string;
+}) {
+  const name = params.name.trim() || "New Agent";
+  const description = params.description.trim() || "Describe what this agent should help with.";
+  const context = params.context?.trim();
+
+  return [
+    "---",
+    `name: "${escapeYamlString(name)}"`,
+    `description: "${escapeYamlString(description)}"`,
+    `targetPlatform: "${escapeYamlString(params.targetPlatform)}"`,
+    "tools: []",
+    "---",
+    "",
+    `# ${name}`,
+    "",
+    description,
+    ...(context ? ["", "## Codebase Context", "", context] : []),
+    "",
+    "## Operating Guidance",
+    "",
+    "- Understand the user's goal before changing code.",
+    "- Follow the conventions already present in the current repository.",
+    "- Keep changes scoped to the requested work.",
+    "- Validate meaningful behavior before finishing.",
+    "",
+    "## Output Standard",
+    "",
+    "- Explain what changed.",
+    "- Mention validation performed.",
+    "- Surface blockers or risks clearly.",
+  ].join("\n");
+}
+
+function buildCodexAgent(params: {
+  name: string;
+  description: string;
+  context?: string;
+}) {
+  const name = params.name.trim() || "New Agent";
+  const slug = slugForAgentName(name);
+  const description = params.description.trim() || "Describe what this agent should help with.";
+  const context = params.context?.trim();
+  const instructions = [
+    `# ${name}`,
+    "",
+    description,
+    ...(context ? ["", "## Codebase Context", "", context] : []),
+    "",
+    "## Operating Guidance",
+    "",
+    "- Understand the user's goal before changing code.",
+    "- Follow the conventions already present in the current repository.",
+    "- Keep changes scoped to the requested work.",
+    "- Validate meaningful behavior before finishing.",
+  ].join("\n");
+
+  return [
+    `name = "${escapeTomlString(slug)}"`,
+    `description = "${escapeTomlString(description)}"`,
+    'tools = []',
+    'developer_instructions = """',
+    instructions.replace(/"""/g, '\\"\\"\\"'),
+    '"""',
+  ].join("\n");
+}
+
+function buildCursorAgent(params: {
+  name: string;
+  description: string;
+  context?: string;
+}) {
+  const name = params.name.trim() || "New Agent";
+  const description = params.description.trim() || "Describe what this agent should help with.";
+  const context = params.context?.trim();
+
+  return [
+    "---",
+    `description: "${escapeYamlString(description)}"`,
+    "alwaysApply: false",
+    "---",
+    "",
+    `# ${name}`,
+    "",
+    description,
+    ...(context ? ["", "## Codebase Context", "", context] : []),
+    "",
+    "## Operating Guidance",
+    "",
+    "- Use this rule when the current task matches the description.",
+    "- Follow the current repository's conventions.",
+    "- Keep edits scoped and validated.",
+  ].join("\n");
+}
+
+function buildBlankAgentTemplate(params: {
+  name: string;
+  description: string;
+  targetPlatform: string;
+  context?: string;
+}) {
+  switch (params.targetPlatform) {
+    case "codex":
+      return buildCodexAgent(params);
+    case "cursor":
+      return buildCursorAgent(params);
+    case "claude_agents":
+    case "claude_code":
+    default:
+      return buildMarkdownAgent(params);
+  }
+}
+
+function withPathSuffix(logicalPath: string, suffix: string) {
+  const slashIndex = logicalPath.lastIndexOf("/");
+  const directory = slashIndex >= 0 ? logicalPath.slice(0, slashIndex + 1) : "";
+  const fileName = slashIndex >= 0 ? logicalPath.slice(slashIndex + 1) : logicalPath;
+  const dotIndex = fileName.lastIndexOf(".");
+
+  if (dotIndex <= 0) {
+    return `${directory}${fileName}${suffix}`;
+  }
+
+  return `${directory}${fileName.slice(0, dotIndex)}${suffix}${fileName.slice(dotIndex)}`;
 }
 
 export class SkillCreationPanel {
@@ -100,7 +238,7 @@ export class SkillCreationPanel {
 
     const panel = vscode.window.createWebviewPanel(
       "xupra.skillCreation",
-      "Create Skill — Xupra DryLake",
+      "Create Agent — Xupra DryLake",
       vscode.ViewColumn.One,
       { enableScripts: true },
     );
@@ -125,14 +263,11 @@ export class SkillCreationPanel {
       async (message: InboundMessage) => {
         try {
           switch (message.type) {
+            case "startBlank":
+              await this._handleStartBlank(message);
+              break;
             case "generate":
               await this._handleGenerate(message);
-              break;
-            case "export":
-              await this._handleExport(message);
-              break;
-            case "saveToXupra":
-              await this._handleSaveToXupra(message);
               break;
           }
         } catch (error) {
@@ -148,6 +283,17 @@ export class SkillCreationPanel {
     );
   }
 
+  private async _handleStartBlank(message: Extract<InboundMessage, { type: "startBlank" }>) {
+    const content = buildBlankAgentTemplate(message);
+    await this._writeAndOpenAgent({
+      requestId: message.requestId,
+      name: message.name,
+      targetPlatform: message.targetPlatform,
+      content,
+      label: "Blank agent draft",
+    });
+  }
+
   private async _handleGenerate(message: Extract<InboundMessage, { type: "generate" }>) {
     await this._postMessage({ type: "stateUpdate", isLoading: true });
 
@@ -155,7 +301,7 @@ export class SkillCreationPanel {
       const hasEntitlement = await requireManualExportEntitlement(
         this._apiClient,
         this._stateStore,
-        "AI skill creation",
+        "Xupra AI agent generation",
       );
 
       if (!hasEntitlement) {
@@ -168,17 +314,19 @@ export class SkillCreationPanel {
         return;
       }
 
-      const skill = await this._apiClient.generateSkill({
+      const agent = await this._apiClient.generateAgent({
         name: message.name,
         description: message.description,
         targetPlatform: message.targetPlatform,
         context: message.context,
       });
 
-      await this._postMessage({
-        type: "result",
+      await this._writeAndOpenAgent({
         requestId: message.requestId,
-        content: skill.skill.content,
+        name: message.name,
+        targetPlatform: message.targetPlatform,
+        content: agent.agent.content,
+        label: "Xupra AI agent draft",
       });
       await this._postMessage({ type: "stateUpdate", isLoading: false });
     } catch (error) {
@@ -191,64 +339,52 @@ export class SkillCreationPanel {
     }
   }
 
-  private async _handleExport(message: Extract<InboundMessage, { type: "export" }>) {
-    let targetPlatform = message.targetPlatform;
+  private async _writeAndOpenAgent(params: {
+    requestId: string;
+    name: string;
+    targetPlatform: string;
+    content: string;
+    label: string;
+  }) {
+    const requestedLogicalPath = logicalPathForPlatform(params.targetPlatform, params.name);
+    try {
+      const root = vscode.workspace.workspaceFolders?.[0]?.uri;
 
-    if (!targetPlatform || !LOGICAL_PATH_BY_PLATFORM[targetPlatform]) {
-      const picked = await chooseTargetPlatform(this._configuration, "Choose export target");
-
-      if (!picked) {
-        await this._postMessage({
-          type: "error",
-          requestId: message.requestId,
-          message: "cancelled",
-        });
-        return;
+      if (!root) {
+        throw new Error("No workspace folder is open.");
       }
 
-      targetPlatform = picked.value;
-    }
+      const logicalPath = await this._nextAvailableLogicalPath(root, requestedLogicalPath);
+      await writeGeneratedFilesToWorkspace([{ logicalPath, preview: params.content }], {
+        confirmBeforeWrite: false,
+      });
 
-    const logicalPath = logicalPathForPlatform(targetPlatform, message.skillName);
-    try {
-      await writeGeneratedFilesToWorkspace([{ logicalPath, preview: message.content }]);
-      void vscode.window.showInformationMessage(`Skill written to ${logicalPath}.`);
-      await this._postMessage({ type: "result", requestId: message.requestId });
+      const document = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(root, ...logicalPath.split("/").filter(Boolean)));
+      await vscode.window.showTextDocument(document, { preview: false });
+      void vscode.window.showInformationMessage(`${params.label} opened at ${logicalPath}. Save it, then import to sync it to Xupra.`);
+      await this._postMessage({ type: "result", requestId: params.requestId });
     } catch (error) {
       await this._postMessage({
         type: "error",
-        requestId: message.requestId,
+        requestId: params.requestId,
         message: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  private async _handleSaveToXupra(message: Extract<InboundMessage, { type: "saveToXupra" }>) {
-    const selection = await ensureVersionSelection(this._apiClient, this._stateStore);
+  private async _nextAvailableLogicalPath(root: vscode.Uri, logicalPath: string) {
+    for (let index = 0; index < 50; index += 1) {
+      const candidate = index === 0 ? logicalPath : withPathSuffix(logicalPath, `-${index + 1}`);
+      const target = vscode.Uri.joinPath(root, ...candidate.split("/").filter(Boolean));
 
-    if (!selection?.versionId) {
-      await this._postMessage({
-        type: "error",
-        requestId: message.requestId,
-        message: "cancelled",
-      });
-      return;
+      try {
+        await vscode.workspace.fs.stat(target);
+      } catch {
+        return candidate;
+      }
     }
 
-    const logicalPath = logicalPathForPlatform(message.targetPlatform, message.skillName);
-    try {
-      await this._apiClient.uploadFiles(selection.versionId, [{ logicalPath, content: message.content }]);
-      await this._apiClient.importVersion(selection.versionId);
-      void vscode.commands.executeCommand("xupra.refreshProjects");
-      void vscode.window.showInformationMessage("Skill saved to your Xupra version.");
-      await this._postMessage({ type: "result", requestId: message.requestId });
-    } catch (error) {
-      await this._postMessage({
-        type: "error",
-        requestId: message.requestId,
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
+    return withPathSuffix(logicalPath, `-${Date.now()}`);
   }
 
   private _postMessage(message: OutboundMessage) {
@@ -327,11 +463,6 @@ export class SkillCreationPanel {
       line-height: 1.45;
     }
 
-    #skill-output {
-      min-height: 280px;
-      font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
-    }
-
     button {
       align-self: flex-start;
       padding: 7px 12px;
@@ -370,27 +501,25 @@ export class SkillCreationPanel {
       border-radius: 4px;
     }
 
-    #output-area {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding-top: 4px;
+    .hint {
+      color: var(--vscode-descriptionForeground);
+      line-height: 1.45;
     }
   </style>
 </head>
 <body data-extension-path="${extensionPath}">
   <main class="panel">
-    <h2>Create New Skill</h2>
-    <p class="intro">Create a system-specific skill manually for free, or generate a draft with AI on Pro.</p>
+    <h2>Create DryLake Agent</h2>
+    <p class="intro">Create a system-specific agent file manually for free, or generate a draft with Xupra AI on Pro.</p>
 
     <div class="field">
-      <label for="skill-name">Skill name</label>
-      <input type="text" id="skill-name">
+      <label for="agent-name">Agent name</label>
+      <input type="text" id="agent-name">
     </div>
 
     <div class="field">
-      <label for="skill-description">Description</label>
-      <input type="text" id="skill-description">
+      <label for="agent-description">Purpose</label>
+      <input type="text" id="agent-description">
     </div>
 
     <div class="field">
@@ -404,24 +533,17 @@ export class SkillCreationPanel {
     </div>
 
     <div class="field">
-      <label for="skill-context">Context</label>
-      <textarea id="skill-context"></textarea>
+      <label for="agent-context">Company or codebase context</label>
+      <textarea id="agent-context"></textarea>
     </div>
 
     <div class="actions">
-      <button id="start-blank-btn">Start Blank Skill</button>
-      <button id="generate-btn">Generate with AI (Pro)</button>
+      <button id="start-blank-btn">Start Blank Agent</button>
+      <button id="generate-btn">Generate Agent with Xupra AI (Pro)</button>
     </div>
-    <div id="loading" class="status" style="display:none">Generating skill…</div>
+    <div class="hint">Drafts are written into the current workspace and opened in a normal VS Code editor tab.</div>
+    <div id="loading" class="status" style="display:none">Generating agent…</div>
     <div id="error-message" class="error" style="display:none"></div>
-
-    <div id="output-area" style="display:none">
-      <textarea id="skill-output"></textarea>
-      <div class="actions">
-        <button id="export-btn">Export to Workspace</button>
-        <button id="save-btn">Save to Xupra</button>
-      </div>
-    </div>
   </main>
 
   <script>
@@ -444,17 +566,13 @@ export class SkillCreationPanel {
         .replace(/'/g, "&#39;");
     }
 
-    const skillName = document.getElementById("skill-name");
-    const skillDescription = document.getElementById("skill-description");
+    const agentName = document.getElementById("agent-name");
+    const agentDescription = document.getElementById("agent-description");
     const targetPlatform = document.getElementById("target-platform");
-    const skillContext = document.getElementById("skill-context");
+    const agentContext = document.getElementById("agent-context");
     const startBlankBtn = document.getElementById("start-blank-btn");
     const generateBtn = document.getElementById("generate-btn");
     const loading = document.getElementById("loading");
-    const outputArea = document.getElementById("output-area");
-    const skillOutput = document.getElementById("skill-output");
-    const exportBtn = document.getElementById("export-btn");
-    const saveBtn = document.getElementById("save-btn");
     const errorMessage = document.getElementById("error-message");
 
     function showError(message) {
@@ -467,62 +585,16 @@ export class SkillCreationPanel {
       errorMessage.style.display = "none";
     }
 
-    function escapeYaml(value) {
-      return String(value ?? "").replace(/"/g, '\\"');
-    }
-
-    function buildBlankSkillTemplate() {
-      const name = skillName.value.trim() || "New Skill";
-      const description = skillDescription.value.trim() || "Describe when to use this skill.";
-      const platform = targetPlatform.value || "claude_code";
-      const extraContext = skillContext.value.trim();
-      const contextSection = extraContext
-        ? ["", "Context:", extraContext]
-        : [];
-
-      return [
-        "---",
-        'name: "' + escapeYaml(name) + '"',
-        'description: "' + escapeYaml(description) + '"',
-        'targetPlatform: "' + escapeYaml(platform) + '"',
-        "---",
-        "",
-        '# ' + name,
-        "",
-        description,
-        ...contextSection,
-        "",
-        "Use this skill when:",
-        "- The task matches the description above.",
-        "",
-        "Workflow:",
-        "1. Confirm the goal and constraints.",
-        "2. Perform the task using the target system's expected conventions.",
-        "3. Review the output before finishing.",
-        "",
-        "Checks:",
-        "- Output is correct for the selected system.",
-        "- Unsafe or unrelated changes were not introduced.",
-      ].join("\n");
-    }
-
-    function showOutput(content, focusEditor) {
-      outputArea.style.display = "flex";
-      skillOutput.value = content;
-      if (focusEditor) {
-        skillOutput.focus();
-      }
-    }
-
     startBlankBtn.addEventListener("click", function() {
       clearError();
-      if (!skillOutput.value.trim()) {
-        showOutput(buildBlankSkillTemplate(), true);
-        return;
-      }
-
-      outputArea.style.display = "flex";
-      skillOutput.focus();
+      vscode.postMessage({
+        type: "startBlank",
+        requestId: uuid(),
+        name: agentName.value,
+        description: agentDescription.value,
+        targetPlatform: targetPlatform.value,
+        context: agentContext.value
+      });
     });
 
     generateBtn.addEventListener("click", function() {
@@ -530,32 +602,10 @@ export class SkillCreationPanel {
       vscode.postMessage({
         type: "generate",
         requestId: uuid(),
-        name: skillName.value,
-        description: skillDescription.value,
+        name: agentName.value,
+        description: agentDescription.value,
         targetPlatform: targetPlatform.value,
-        context: skillContext.value
-      });
-    });
-
-    exportBtn.addEventListener("click", function() {
-      clearError();
-      vscode.postMessage({
-        type: "export",
-        requestId: uuid(),
-        content: skillOutput.value,
-        targetPlatform: targetPlatform.value,
-        skillName: skillName.value
-      });
-    });
-
-    saveBtn.addEventListener("click", function() {
-      clearError();
-      vscode.postMessage({
-        type: "saveToXupra",
-        requestId: uuid(),
-        content: skillOutput.value,
-        skillName: skillName.value,
-        targetPlatform: targetPlatform.value
+        context: agentContext.value
       });
     });
 
@@ -568,8 +618,7 @@ export class SkillCreationPanel {
         generateBtn.disabled = Boolean(message.isLoading);
       }
 
-      if (message.type === "result" && message.content) {
-        showOutput(message.content, false);
+      if (message.type === "result") {
         clearError();
       }
 

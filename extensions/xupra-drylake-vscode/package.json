@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "Xupra DryLake",
   "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "publisher": "xupra",
   "license": "UNLICENSED",
@@ -58,10 +58,8 @@
     "onCommand:xupra.resetWorkspaceState",
     "onCommand:xupra.checkCompatibility",
     "onCommand:xupra.exportPreview",
-    "onCommand:xupra.deploy",
     "onCommand:xupra.pullPackage",
-    "onCommand:xupra.createSkill",
-    "onCommand:xupra.browseSkills",
+    "onCommand:xupra.createAgent",
     "onCommand:xupra.openWebApp",
     "onCommand:xupra.openSettings",
     "onCommand:xupra.openAccountSettings",
@@ -178,7 +176,7 @@
     "viewsWelcome": [
       {
         "view": "xupra.jobs",
-        "contents": "Jobs appear here after an import, compatibility check, export, or deploy starts.",
+        "contents": "Jobs appear here after an import, compatibility check, or export starts.",
         "when": "true"
       }
     ],
@@ -297,20 +295,12 @@
         "title": "Xupra DryLake: Pull Generated Files Into Workspace"
       },
       {
-        "command": "xupra.deploy",
-        "title": "Xupra DryLake: Deploy"
-      },
-      {
         "command": "xupra.showRecentJobs",
         "title": "Xupra DryLake: Show Recent Jobs"
       },
       {
-        "command": "xupra.createSkill",
-        "title": "Xupra DryLake: Create Skill"
-      },
-      {
-        "command": "xupra.browseSkills",
-        "title": "Xupra DryLake: Browse skills.sh"
+        "command": "xupra.createAgent",
+        "title": "Xupra DryLake: Create Agent"
       },
       {
         "command": "xupra.openSettings",
@@ -363,11 +353,6 @@
         {
           "command": "xupra.resetWorkspaceState",
           "when": "view == xupra.help",
-          "group": "navigation"
-        },
-        {
-          "command": "xupra.deploy",
-          "when": "view == xupra.jobs",
           "group": "navigation"
         },
         {

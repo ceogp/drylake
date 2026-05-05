@@ -10,7 +10,7 @@ const sections: Record<HelpSection, { title: string; eyebrow: string; body: stri
     items: [
       "Import supported workspace and global files from this editor.",
       "Review normalized agents, skills, rules, and raw files in the workspace.",
-      "Run compatibility checks before export or deployment.",
+      "Run compatibility checks before export preview.",
       "Export generated files back into the target IDE format.",
     ],
   },

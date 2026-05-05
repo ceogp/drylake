@@ -32,10 +32,8 @@ type InboundAction =
   | "openSettings"
   | "signOut"
   | "refreshPlan"
-  | "createSkill"
-  | "browseSkills"
-  | "exportPreview"
-  | "deploy";
+  | "createAgent"
+  | "exportPreview";
 
 type BasicInboundMessage = {
   [Action in InboundAction]: {
@@ -116,17 +114,11 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
           case "refreshPlan":
             await vscode.commands.executeCommand("xupra.refreshPlan");
             break;
-          case "createSkill":
-            await vscode.commands.executeCommand("xupra.createSkill");
-            break;
-          case "browseSkills":
-            await vscode.commands.executeCommand("xupra.browseSkills");
+          case "createAgent":
+            await vscode.commands.executeCommand("xupra.createAgent");
             break;
           case "exportPreview":
             await vscode.commands.executeCommand("xupra.exportPreview");
-            break;
-          case "deploy":
-            await vscode.commands.executeCommand("xupra.deploy");
             break;
           case "openImportedSkill":
             await vscode.commands.executeCommand("xupra.openImportedSkill", message.skillRuleId);
@@ -750,14 +742,11 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       const tier = String(state.orgTier || "").toLowerCase();
       const isPro = tier === "pro" || tier === "enterprise";
       const exportClass = isPro ? "big-action" : "big-action locked";
-      const deployClass = isPro ? "big-action" : "big-action locked";
       const lockSuffix = '<span class="lock-icon">🔒 Pro</span>';
 
       return '<div class="section"><div class="section-header"><span class="section-label">Actions</span></div><div class="actions-section">'
-        + '<button class="big-action" data-action="createSkill">Create Skill</button>'
-        + '<button class="big-action" data-action="browseSkills">Browse skills.sh</button>'
-        + '<button class="' + exportClass + '" data-action="exportPreview">Export Preview' + (isPro ? "" : lockSuffix) + '</button>'
-        + '<button class="' + deployClass + '" data-action="deploy">Deploy' + (isPro ? "" : lockSuffix) + '</button>'
+        + '<button class="big-action" data-action="createAgent">Create Agent</button>'
+        + '<button class="' + exportClass + '" data-action="exportPreview">Preview Generated Files' + (isPro ? "" : lockSuffix) + '</button>'
         + '</div></div>';
     }
 

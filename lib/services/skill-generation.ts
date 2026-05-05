@@ -1,6 +1,6 @@
 import yaml from "js-yaml";
 
-import { env } from "@/lib/env";
+import { generateAiText } from "@/lib/services/ai-text";
 
 export type GeneratedSkill = {
   name: string;
@@ -105,134 +105,12 @@ function normalizeSkillMarkdown(content: string, params: GenerateSkillParams) {
   return ["---", buildFrontmatter(params), "---", "", normalizedBody].join("\n");
 }
 
-function extractOpenAiText(payload: {
-  output_text?: string;
-  output?: Array<{
-    content?: Array<{
-      type?: string;
-      text?: string;
-    }>;
-  }>;
-}) {
-  return (
-    payload.output_text ??
-    payload.output
-      ?.flatMap((item) => item.content ?? [])
-      .find((item) => item.type === "output_text")?.text
-  );
-}
-
-function extractKimiText(payload: {
-  choices?: Array<{
-    message?: {
-      content?: string | Array<{ type?: string; text?: string }>;
-    };
-  }>;
-}) {
-  const content = payload.choices?.[0]?.message?.content;
-
-  return typeof content === "string"
-    ? content
-    : content?.find((item) => item.type === "text" || item.type === "output_text")?.text;
-}
-
-async function generateSkillWithOpenAi(params: GenerateSkillParams) {
-  if (!env.OPENAI_API_KEY) {
-    throw new Error("OpenAI skill generation is not configured.");
-  }
-
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: env.OPENAI_MODEL,
-      input: [
-        {
-          role: "system",
-          content: [
-            {
-              type: "input_text",
-              text: skillGenerationSystemPrompt,
-            },
-          ],
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: buildSkillPrompt(params),
-            },
-          ],
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI skill generation failed: ${errorText}`);
-  }
-
-  const payload = (await response.json()) as Parameters<typeof extractOpenAiText>[0];
-  const rawText = extractOpenAiText(payload);
-
-  if (!rawText?.trim()) {
-    throw new Error("OpenAI skill generation returned an empty response.");
-  }
-
-  return rawText;
-}
-
-async function generateSkillWithKimi(params: GenerateSkillParams) {
-  if (!env.KIMI_API_KEY) {
-    throw new Error("Kimi skill generation is not configured.");
-  }
-
-  const response = await fetch(`${env.KIMI_BASE_URL.replace(/\/+$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.KIMI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: env.KIMI_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: skillGenerationSystemPrompt,
-        },
-        {
-          role: "user",
-          content: buildSkillPrompt(params),
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Kimi skill generation failed: ${errorText}`);
-  }
-
-  const payload = (await response.json()) as Parameters<typeof extractKimiText>[0];
-  const rawText = extractKimiText(payload);
-
-  if (!rawText?.trim()) {
-    throw new Error("Kimi skill generation returned an empty response.");
-  }
-
-  return rawText;
-}
-
 export async function generateSkillWithAi(params: GenerateSkillParams): Promise<GeneratedSkill> {
-  const rawContent =
-    env.AI_PROVIDER === "kimi"
-      ? await generateSkillWithKimi(params)
-      : await generateSkillWithOpenAi(params);
+  const rawContent = await generateAiText({
+    systemPrompt: skillGenerationSystemPrompt,
+    userPrompt: buildSkillPrompt(params),
+    taskLabel: "skill generation",
+  });
 
   return {
     name: params.name,

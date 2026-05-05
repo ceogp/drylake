@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 
 import { checkCompatibilityCommand } from "./commands/checkCompatibility";
 import { connectCommand } from "./commands/connect";
-import { deployCommand } from "./commands/deploy";
 import { exportPreviewCommand } from "./commands/exportPreview";
 import { importDefaultLocationsCommand, importFolderCommand, importWorkspaceCommand } from "./commands/importWorkspace";
 import { openWebAppCommand } from "./commands/openWebApp";
@@ -14,7 +13,6 @@ import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
 import { requireManualExportEntitlement } from "./services/featureGates";
 import { ImportedSkillEditorManager } from "./services/importedSkillEditor";
-import { MarketplaceClient } from "./services/marketplaceClient";
 import { StateStore } from "./services/stateStore";
 import { scanWorkspaceFiles } from "./services/workspaceScanner";
 import type { PackageVersionDetail } from "./types/api";
@@ -23,7 +21,6 @@ import { HelpTreeProvider } from "./views/helpTreeProvider";
 import { HowItWorksPanel } from "./views/howItWorksPanel";
 import { JobTreeProvider } from "./views/jobTreeProvider";
 import { SkillCreationPanel } from "./views/skillCreationPanel";
-import { SkillsMarketplacePanel } from "./views/skillsMarketplacePanel";
 import { createStatusBar } from "./views/statusBar";
 import { WorkspaceSidebarProvider } from "./views/workspaceSidebarProvider";
 import { getLogger } from "./utils/logging";
@@ -307,7 +304,6 @@ export async function activate(context: vscode.ExtensionContext) {
   }
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
-  const marketplaceClient = new MarketplaceClient(apiClient);
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
   const importedSkillEditor = new ImportedSkillEditorManager(context, apiClient, async () => {
@@ -684,22 +680,12 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.exportPreview", async () => {
-    const hasEntitlement = await requireManualExportEntitlement(apiClient, stateStore, "Export Preview");
+    const hasEntitlement = await requireManualExportEntitlement(apiClient, stateStore, "Preview Generated Files");
     if (!hasEntitlement) {
       return;
     }
 
     await exportPreviewCommand(apiClient, configuration, stateStore, jobsView);
-    await syncWorkspaceView();
-  });
-
-  register("xupra.deploy", async () => {
-    const hasEntitlement = await requireManualExportEntitlement(apiClient, stateStore, "Deploy");
-    if (!hasEntitlement) {
-      return;
-    }
-
-    await deployCommand(apiClient, stateStore, jobsView);
     await syncWorkspaceView();
   });
 
@@ -711,12 +697,8 @@ export async function activate(context: vscode.ExtensionContext) {
     await vscode.commands.executeCommand("xupra.jobs.focus");
   });
 
-  register("xupra.createSkill", () => {
+  register("xupra.createAgent", () => {
     SkillCreationPanel.createOrShow(context, apiClient, stateStore, configuration);
-  });
-
-  register("xupra.browseSkills", async () => {
-    SkillsMarketplacePanel.createOrShow(context, marketplaceClient, apiClient, stateStore);
   });
 
   register("xupra.openImportedSkill", async (...args: unknown[]) => {
