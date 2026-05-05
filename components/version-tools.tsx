@@ -528,7 +528,7 @@ export function VersionTools({
 
   const tabs: Array<{ id: TabId; label: string }> = [
     { id: "source", label: "Source Files" },
-    { id: "library", label: "Canonical Library" },
+    { id: "library", label: "Uploaded Library" },
     { id: "history", label: "History" },
   ];
 
@@ -584,7 +584,7 @@ export function VersionTools({
             <p className="mt-2 text-2xl font-semibold text-stone-950">{currentSummary.rawFiles}</p>
           </div>
           <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-            <p className="font-mono text-xs uppercase text-stone-500">Imported Items</p>
+            <p className="font-mono text-xs uppercase text-stone-500">Uploaded Items</p>
             <p className="mt-2 text-2xl font-semibold text-stone-950">{currentSummary.importedItems}</p>
           </div>
           <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
@@ -709,9 +709,9 @@ export function VersionTools({
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]">
             <div className="space-y-4">
               <div>
-                <h3 className="text-xl font-semibold text-stone-950">Canonical Library</h3>
+                <h3 className="text-xl font-semibold text-stone-950">Uploaded Library</h3>
                 <p className="mt-1 text-sm leading-6 text-stone-700">
-                  Parsed imports are listed here. Canonicalized items are marked after the install flow runs Kimi.
+                  Uploaded agents, skills, and rules are listed here. Canonicalized items are marked after Kimi runs from Install.
                 </p>
               </div>
 
@@ -731,13 +731,17 @@ export function VersionTools({
                         <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
                           Canonicalized
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">
+                          Uploaded
+                        </span>
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-stone-700">{item.kind} · Source: {item.sourcePlatform}</p>
                     <p className="mt-2 text-xs leading-5 text-stone-600">
                       {item.canonicalized
                         ? "Ready for target-specific install."
-                        : "Parsed from source. Canonicalization runs from Install."}
+                        : "Uploaded from source. Canonicalization runs from Install."}
                     </p>
                     {item.sourcePath ? <p className="mt-1 break-all font-mono text-xs text-stone-500">From: {item.sourcePath}</p> : null}
                   </button>
@@ -856,7 +860,7 @@ function ImportedItemPreview({ item }: { item: VersionToolsProps["importedItems"
     <aside className="rounded-lg border border-stone-200 bg-white">
       <div className="border-b border-stone-200 p-4">
         <p className="text-xs font-medium uppercase text-stone-500">
-          {item.canonicalized ? "Canonicalized item" : "Parsed import"}
+          {item.canonicalized ? "Canonicalized item" : "Uploaded item"}
         </p>
         <h4 className="mt-2 text-xl font-semibold text-stone-950">{item.name}</h4>
         <p className="mt-1 text-sm text-stone-700">{item.kind} · Source: {item.sourcePlatform}</p>

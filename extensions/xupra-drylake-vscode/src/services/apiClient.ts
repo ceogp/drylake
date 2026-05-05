@@ -233,6 +233,11 @@ export class ApiClient {
     return this.request<{ transformJob: TransformJobDetail }>(`/api/v1/transform-jobs/${jobId}`);
   }
 
+  async getSkillsMarketplace<T>(pathname: string) {
+    const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+    return this.request<T>(`/api/v1/skills-marketplace${normalizedPath}`);
+  }
+
   async generateSkill(params: {
     name: string;
     description: string;

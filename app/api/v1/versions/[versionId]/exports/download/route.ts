@@ -15,12 +15,14 @@ type Context = {
 };
 
 const querySchema = z.object({
-  targetPlatform: z.enum(["codex", "claude_code", "claude_agents", "cursor"]),
+  targetPlatform: z.enum(["all", "codex", "claude_code", "claude_agents", "cursor"]),
   ensureGenerated: z
     .enum(["true", "false"])
     .optional()
     .transform((value) => value === "true"),
 });
+
+const allTargetPlatforms = ["codex", "claude_agents", "cursor"] as const;
 
 export async function GET(request: Request, context: Context) {
   try {
@@ -38,15 +40,21 @@ export async function GET(request: Request, context: Context) {
     const access = await requireVersionAccess(versionId);
     await assertEntitlement(access.context.organization.id, "manual_export");
 
+    const targetPlatforms =
+      parsed.data.targetPlatform === "all" ? allTargetPlatforms : [parsed.data.targetPlatform];
+
     if (parsed.data.ensureGenerated) {
-      await requestExportPreview({
-        versionId,
-        targetPlatform: parsed.data.targetPlatform,
-        createdByUserId: access.context.user.id,
-      });
+      await Promise.all(
+        targetPlatforms.map((targetPlatform) =>
+          requestExportPreview({
+            versionId,
+            targetPlatform,
+            createdByUserId: access.context.user.id,
+          }),
+        ),
+      );
     }
 
-    const prefix = `${parsed.data.targetPlatform}/`;
     const files = (
       await prisma.packageFile.findMany({
         where: {
@@ -55,7 +63,9 @@ export async function GET(request: Request, context: Context) {
         },
         orderBy: { logicalPath: "asc" },
       })
-    ).filter((file) => file.logicalPath.startsWith(prefix));
+    ).filter((file) =>
+      targetPlatforms.some((targetPlatform) => file.logicalPath.startsWith(`${targetPlatform}/`)),
+    );
 
     if (files.length === 0) {
       return notFound("No generated files are available for that target.");
@@ -64,12 +74,18 @@ export async function GET(request: Request, context: Context) {
     const archive = createZipArchive(
       await Promise.all(
         files.map(async (file) => ({
-          path: file.logicalPath.slice(prefix.length),
+          path:
+            parsed.data.targetPlatform === "all"
+              ? file.logicalPath
+              : file.logicalPath.slice(`${parsed.data.targetPlatform}/`.length),
           content: await readArtifactText(file.storageKey),
         })),
       ),
     );
-    const filename = `xupra-${parsed.data.targetPlatform}-files.zip`;
+    const filename =
+      parsed.data.targetPlatform === "all"
+        ? "xupra-all-supported-files.zip"
+        : `xupra-${parsed.data.targetPlatform}-files.zip`;
 
     return new Response(archive, {
       headers: {

@@ -1,12 +1,13 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 
-import type { ImportedWorkspaceSkillRule } from "../types/package";
+import type { ImportedWorkspaceSkillRule, ImportedWorkspaceSubagent } from "../types/package";
 import type { ApiClient } from "./apiClient";
 
 type ManagedSkillDocument = {
   versionId: string;
   logicalPath: string;
+  label: string;
 };
 
 function normalizeLogicalPath(rawValue: string) {
@@ -43,6 +44,19 @@ function fallbackSkillPath(skill: ImportedWorkspaceSkillRule) {
   }
 }
 
+function fallbackAgentPath(agent: ImportedWorkspaceSubagent) {
+  switch (agent.sourcePlatform) {
+    case "codex":
+      return `.codex/agents/${agent.slug}.toml`;
+    case "cursor":
+      return `.cursor/rules/${agent.slug}.mdc`;
+    case "claude_agents":
+    case "claude_code":
+    default:
+      return `.claude/agents/${agent.slug}.md`;
+  }
+}
+
 export class ImportedSkillEditorManager implements vscode.Disposable {
   private readonly managedDocuments = new Map<string, ManagedSkillDocument>();
   private readonly disposables: vscode.Disposable[] = [];
@@ -66,25 +80,49 @@ export class ImportedSkillEditorManager implements vscode.Disposable {
   }
 
   async openImportedSkill(versionId: string, skill: ImportedWorkspaceSkillRule) {
-    const logicalPath = normalizeLogicalPath(skill.sourcePath || fallbackSkillPath(skill));
+    await this.openImportedItem({
+      versionId,
+      logicalPath: normalizeLogicalPath(skill.sourcePath || fallbackSkillPath(skill)),
+      content: skill.sourceContent,
+      label: "skill",
+    });
+  }
+
+  async openImportedAgent(versionId: string, agent: ImportedWorkspaceSubagent) {
+    await this.openImportedItem({
+      versionId,
+      logicalPath: normalizeLogicalPath(agent.sourcePath || fallbackAgentPath(agent)),
+      content: agent.sourceContent,
+      label: "agent",
+    });
+  }
+
+  private async openImportedItem(params: {
+    versionId: string;
+    logicalPath: string;
+    content: string;
+    label: string;
+  }) {
+    const { versionId, logicalPath, content, label } = params;
     const workspaceFile = await this.findWorkspaceFile(logicalPath);
 
     if (workspaceFile) {
       const document = await vscode.workspace.openTextDocument(workspaceFile);
       await vscode.window.showTextDocument(document, { preview: false });
-      void vscode.window.showInformationMessage(`Opened workspace skill ${logicalPath}. Re-import to sync local edits back to Xupra.`);
+      void vscode.window.showInformationMessage(`Opened workspace ${label} ${logicalPath}. Re-import to sync local edits back to Xupra.`);
       return;
     }
 
-    const managedFile = await this.writeManagedFile(versionId, logicalPath, skill.sourceContent);
+    const managedFile = await this.writeManagedFile(versionId, logicalPath, content);
     this.managedDocuments.set(managedFile.toString(), {
       versionId,
       logicalPath,
+      label,
     });
 
     const document = await vscode.workspace.openTextDocument(managedFile);
     await vscode.window.showTextDocument(document, { preview: false });
-    void vscode.window.showInformationMessage(`Opened Xupra-managed skill ${logicalPath}. Save to sync changes back to Xupra.`);
+    void vscode.window.showInformationMessage(`Opened Xupra-managed ${label} ${logicalPath}. Save to sync changes back to Xupra.`);
   }
 
   private async findWorkspaceFile(logicalPath: string) {
@@ -139,7 +177,7 @@ export class ImportedSkillEditorManager implements vscode.Disposable {
       void vscode.window.showInformationMessage(`Synced ${managed.logicalPath} to Xupra.`);
     } catch (error) {
       void vscode.window.showErrorMessage(
-        error instanceof Error ? error.message : "Failed to sync skill changes back to Xupra.",
+        error instanceof Error ? error.message : `Failed to sync ${managed.label} changes back to Xupra.`,
       );
     }
   }

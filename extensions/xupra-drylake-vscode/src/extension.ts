@@ -94,6 +94,7 @@ function stringifyFrontmatterValue(value: unknown): string {
 }
 
 type VersionSkillRule = NonNullable<PackageVersionDetail["skillRules"]>[number];
+type VersionSubagent = NonNullable<PackageVersionDetail["subagents"]>[number];
 
 function stringifyFrontmatterMarkdown(frontmatter: Record<string, unknown>, body: string) {
   const entries = Object.entries(frontmatter).filter(([, value]) => value !== undefined && value !== null);
@@ -134,6 +135,77 @@ function buildImportedSkillSourceContent(rule: VersionSkillRule) {
   return stringifyFrontmatterMarkdown(fallbackFrontmatter, body);
 }
 
+function readStringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function stringifyCodexAgentToml(subagent: VersionSubagent) {
+  const metadata = asRecord(subagent.metadataJson);
+  const tools = readStringArray(subagent.toolsJson);
+  const instructions = subagent.instructionsMd.replace(/"""/g, '\\"\\"\\"');
+  const model =
+    typeof metadata?.model === "string" && metadata.model.trim()
+      ? metadata.model
+      : subagent.modelHint ?? undefined;
+  const reasoning =
+    typeof metadata?.modelReasoningEffort === "string" && metadata.modelReasoningEffort.trim()
+      ? metadata.modelReasoningEffort
+      : undefined;
+  const sandbox =
+    typeof metadata?.sandboxMode === "string" && metadata.sandboxMode.trim()
+      ? metadata.sandboxMode
+      : subagent.permissionMode ?? undefined;
+
+  return [
+    `name = "${subagent.slug.replace(/"/g, '\\"')}"`,
+    `description = "${subagent.description.replace(/"/g, '\\"')}"`,
+    `developer_instructions = """${instructions}"""`,
+    `tools = [${tools.map((tool) => `"${tool.replace(/"/g, '\\"')}"`).join(", ")}]`,
+    model ? `model = "${model.replace(/"/g, '\\"')}"` : "",
+    reasoning ? `model_reasoning_effort = "${reasoning.replace(/"/g, '\\"')}"` : "",
+    sandbox ? `sandbox_mode = "${sandbox.replace(/"/g, '\\"')}"` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildImportedAgentSourceContent(subagent: VersionSubagent) {
+  const metadata = asRecord(subagent.metadataJson);
+  const sourcePath = typeof metadata?.sourcePath === "string" ? metadata.sourcePath : undefined;
+
+  if (sourcePath?.toLowerCase().endsWith(".toml")) {
+    return stringifyCodexAgentToml(subagent);
+  }
+
+  const storedFrontmatter = asRecord(metadata?.frontmatter);
+
+  return stringifyFrontmatterMarkdown(
+    {
+      ...(storedFrontmatter ?? {}),
+      name:
+        typeof storedFrontmatter?.name === "string" && storedFrontmatter.name.trim()
+          ? storedFrontmatter.name
+          : subagent.slug,
+      description:
+        typeof storedFrontmatter?.description === "string" && storedFrontmatter.description.trim()
+          ? storedFrontmatter.description
+          : subagent.description,
+      tools:
+        storedFrontmatter?.tools ??
+        (readStringArray(subagent.toolsJson).length > 0 ? readStringArray(subagent.toolsJson) : undefined),
+      model:
+        typeof storedFrontmatter?.model === "string" && storedFrontmatter.model.trim()
+          ? storedFrontmatter.model
+          : subagent.modelHint ?? undefined,
+      permissionMode:
+        typeof storedFrontmatter?.permissionMode === "string" && storedFrontmatter.permissionMode.trim()
+          ? storedFrontmatter.permissionMode
+          : subagent.permissionMode ?? undefined,
+    },
+    subagent.instructionsMd,
+  );
+}
+
 function mapImportedWorkspace(version: PackageVersionDetail): ImportedWorkspaceSnapshot {
   return {
     versionId: version.id,
@@ -153,6 +225,7 @@ function mapImportedWorkspace(version: PackageVersionDetail): ImportedWorkspaceS
         slug: subagent.slug,
         sourcePlatform: normalizeSourcePlatform(metadata?.sourcePlatform, sourcePath),
         sourcePath,
+        sourceContent: buildImportedAgentSourceContent(subagent),
       };
     }),
     skillRules: (version.skillRules ?? []).map((rule) => {
@@ -234,7 +307,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
-  const marketplaceClient = new MarketplaceClient();
+  const marketplaceClient = new MarketplaceClient(apiClient);
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
   const importedSkillEditor = new ImportedSkillEditorManager(context, apiClient, async () => {
@@ -666,6 +739,26 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     await importedSkillEditor.openImportedSkill(selection.versionId, skill);
+  });
+
+  register("xupra.openImportedAgent", async (...args: unknown[]) => {
+    const subagentId = typeof args[0] === "string" ? args[0] : undefined;
+    const selection = stateStore.getSelection();
+
+    if (!selection.versionId || typeof subagentId !== "string" || !subagentId.trim()) {
+      return;
+    }
+
+    const versionResponse = await apiClient.getVersion(selection.versionId);
+    const importedWorkspace = mapImportedWorkspace(versionResponse.version);
+    const agent = importedWorkspace.subagents.find((item) => item.id === subagentId);
+
+    if (!agent) {
+      void vscode.window.showWarningMessage("That imported agent is no longer available for the selected version.");
+      return;
+    }
+
+    await importedSkillEditor.openImportedAgent(selection.versionId, agent);
   });
 
   register("xupra.openSettings", async () => {

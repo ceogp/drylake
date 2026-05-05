@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type CanonicalizationStatus = "none" | "succeeded" | "failed";
-type Destination = "cursor" | "codex" | "claude" | "other";
+type Destination = "all" | "cursor" | "codex" | "claude" | "other";
 type EditorScheme = "vscode" | "cursor";
 type TargetPlatform = "cursor" | "codex" | "claude_agents";
+type InstallTarget = TargetPlatform | "all";
 type BillingProvider = "stripe" | "clerk";
 
 type InstallStatus = {
@@ -62,10 +63,11 @@ const destinations: Array<{
   name: string;
   detail: string;
 }> = [
+  { id: "all", name: "All supported tools", detail: "Write Codex, Claude, and Cursor files in one install" },
   { id: "cursor", name: "Cursor", detail: ".cursor/rules/*.mdc" },
   { id: "codex", name: "Codex", detail: ".codex/skills/*/SKILL.md and .codex/agents/*.toml" },
   { id: "claude", name: "Claude", detail: ".claude/agents/*.md" },
-  { id: "other", name: "Other / Custom path", detail: "Choose a format, then pick a workspace folder" },
+  { id: "other", name: "Other / Custom path", detail: "Choose a format, pick a folder, or download a ZIP for another tool" },
 ];
 
 const targetFormats: Array<{
@@ -77,7 +79,11 @@ const targetFormats: Array<{
   { id: "claude_agents", name: "Claude" },
 ];
 
-function targetPlatformFor(destination: Destination, customFormat: TargetPlatform): TargetPlatform {
+function targetPlatformFor(destination: Destination, customFormat: TargetPlatform): InstallTarget {
+  if (destination === "all") {
+    return "all";
+  }
+
   if (destination === "cursor") {
     return "cursor";
   }
@@ -96,7 +102,7 @@ function targetPlatformFor(destination: Destination, customFormat: TargetPlatfor
 function buildInstallUri(params: {
   versionId: string;
   destination: Destination;
-  targetPlatform: TargetPlatform;
+  targetPlatform: InstallTarget;
   editorScheme: EditorScheme;
 }) {
   const query = new URLSearchParams({
@@ -121,7 +127,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
   const [canonicalizationJustRan, setCanonicalizationJustRan] = useState(false);
   const [upgradeDismissed, setUpgradeDismissed] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
-  const [destination, setDestination] = useState<Destination>("cursor");
+  const [destination, setDestination] = useState<Destination>("all");
   const [customFormat, setCustomFormat] = useState<TargetPlatform>("cursor");
 
   const loadStatus = useCallback(
@@ -530,7 +536,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
               Ready to install into {destination === "other" ? "a custom folder" : destinations.find((item) => item.id === destination)?.name}.
             </p>
             <p className="mt-2 text-sm leading-6 text-stone-700">
-              Confirm the write inside VS Code or Cursor. The editor notification is the authoritative success signal.
+              Confirm the write inside VS Code or Cursor. All supported tools writes Codex, Claude, and Cursor outputs together. Choose Other for a custom folder, or download the generated files for any tool that is not listed.
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <a
@@ -635,8 +641,8 @@ function UpgradeModal({
         </p>
         <div className="mt-5 grid gap-3 text-sm text-stone-800">
           <p>AI canonicalization with Kimi converts agents and skills into a portable format.</p>
-          <p>One-click install writes target files into Cursor, Codex, or Claude through the extension.</p>
-          <p>Generated files can also be downloaded for manual placement.</p>
+          <p>One-click install can write Codex, Claude, and Cursor files together through the extension.</p>
+          <p>For other tools, choose a target format and download the generated files for manual placement.</p>
         </div>
         <button
           className="mt-6 w-full rounded-full bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:bg-orange-300"

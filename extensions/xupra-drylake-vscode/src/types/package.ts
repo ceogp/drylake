@@ -60,6 +60,7 @@ export type ImportedWorkspaceSubagent = {
   slug: string;
   sourcePlatform: string;
   sourcePath?: string;
+  sourceContent: string;
 };
 
 export type ImportedWorkspaceSkillRule = {

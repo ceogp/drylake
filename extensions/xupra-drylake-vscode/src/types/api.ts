@@ -52,6 +52,11 @@ export type PackageVersionDetail = {
     id: Id;
     name: string;
     slug: string;
+    description: string;
+    instructionsMd: string;
+    toolsJson?: unknown;
+    modelHint?: string | null;
+    permissionMode?: string | null;
     metadataJson?: Record<string, unknown> | null;
     createdAt: string;
   }>;

@@ -1,3 +1,5 @@
+import type { ApiClient } from "./apiClient";
+
 export type V1Skill = {
   id: string;
   slug: string;
@@ -74,35 +76,11 @@ export type SkillAuditsResponse = {
   audits: AuditEntry[];
 };
 
-class MarketplaceRequestError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-  }
-}
-
 export class MarketplaceClient {
-  private readonly baseUrl = "https://skills.sh";
+  constructor(private readonly apiClient: ApiClient) {}
 
-  private async request<T>(url: string): Promise<T> {
-    let response: Response;
-
-    try {
-      response = await fetch(url);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Network request failed for ${url}. ${message}`);
-    }
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      const suffix = body ? `: ${body}` : "";
-      throw new MarketplaceRequestError(`skills.sh request failed (${response.status}) for ${url}${suffix}`, response.status);
-    }
-
-    return (await response.json()) as T;
+  private request<T>(pathname: string): Promise<T> {
+    return this.apiClient.getSkillsMarketplace<T>(pathname);
   }
 
   listSkills(view: "all-time" | "trending" | "hot" = "trending", page = 0) {
@@ -110,7 +88,7 @@ export class MarketplaceClient {
     params.set("view", view);
     params.set("page", String(page));
 
-    return this.request<SkillsListResponse>(`${this.baseUrl}/api/v1/skills?${params.toString()}`);
+    return this.request<SkillsListResponse>(`/skills?${params.toString()}`);
   }
 
   searchSkills(q: string, limit = 50) {
@@ -118,26 +96,18 @@ export class MarketplaceClient {
     params.set("q", q);
     params.set("limit", String(limit));
 
-    return this.request<SkillsSearchResponse>(`${this.baseUrl}/api/v1/skills/search?${params.toString()}`);
+    return this.request<SkillsSearchResponse>(`/skills/search?${params.toString()}`);
   }
 
   getCuratedSkills() {
-    return this.request<CuratedSkillsResponse>(`${this.baseUrl}/api/v1/skills/curated`);
+    return this.request<CuratedSkillsResponse>("/skills/curated");
   }
 
   getSkillDetail(id: string) {
-    return this.request<SkillDetailResponse>(`${this.baseUrl}/api/v1/skills/${id}`);
+    return this.request<SkillDetailResponse>(`/skills/${encodeURIComponent(id)}`);
   }
 
-  async getSkillAudits(id: string) {
-    try {
-      return await this.request<SkillAuditsResponse>(`${this.baseUrl}/api/v1/skills/audit/${id}`);
-    } catch (error) {
-      if (error instanceof MarketplaceRequestError && error.status === 404) {
-        return { audits: [] };
-      }
-
-      throw error;
-    }
+  getSkillAudits(id: string) {
+    return this.request<SkillAuditsResponse>(`/skills/audit/${encodeURIComponent(id)}`);
   }
 }

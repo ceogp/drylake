@@ -14,12 +14,14 @@ type Context = {
 };
 
 const querySchema = z.object({
-  targetPlatform: z.enum(["codex", "claude_code", "claude_agents", "cursor"]),
+  targetPlatform: z.enum(["all", "codex", "claude_code", "claude_agents", "cursor"]),
   ensureGenerated: z
     .enum(["true", "false"])
     .optional()
     .transform((value) => value === "true"),
 });
+
+const allTargetPlatforms = ["codex", "claude_agents", "cursor"] as const;
 
 export async function GET(request: Request, context: Context) {
   try {
@@ -37,15 +39,21 @@ export async function GET(request: Request, context: Context) {
     const access = await requireVersionAccess(versionId);
     await assertEntitlement(access.context.organization.id, "manual_export");
 
+    const targetPlatforms =
+      parsed.data.targetPlatform === "all" ? allTargetPlatforms : [parsed.data.targetPlatform];
+
     if (parsed.data.ensureGenerated) {
-      await requestExportPreview({
-        versionId,
-        targetPlatform: parsed.data.targetPlatform,
-        createdByUserId: access.context.user.id,
-      });
+      await Promise.all(
+        targetPlatforms.map((targetPlatform) =>
+          requestExportPreview({
+            versionId,
+            targetPlatform,
+            createdByUserId: access.context.user.id,
+          }),
+        ),
+      );
     }
 
-    const prefix = `${parsed.data.targetPlatform}/`;
     const files = (
       await prisma.packageFile.findMany({
         where: {
@@ -54,12 +62,17 @@ export async function GET(request: Request, context: Context) {
         },
         orderBy: { logicalPath: "asc" },
       })
-    ).filter((file) => file.logicalPath.startsWith(prefix));
+    ).filter((file) =>
+      targetPlatforms.some((targetPlatform) => file.logicalPath.startsWith(`${targetPlatform}/`)),
+    );
 
     const generatedFiles = await Promise.all(
       files.map(async (file) => ({
         id: file.id,
-        logicalPath: file.logicalPath.slice(prefix.length),
+        logicalPath:
+          parsed.data.targetPlatform === "all"
+            ? file.logicalPath
+            : file.logicalPath.slice(`${parsed.data.targetPlatform}/`.length),
         targetPlatform: parsed.data.targetPlatform,
         storedLogicalPath: file.logicalPath,
         preview: await readArtifactText(file.storageKey),

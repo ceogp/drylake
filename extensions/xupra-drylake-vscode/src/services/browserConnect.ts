@@ -26,6 +26,7 @@ type PendingRequest = {
 
 const CONNECT_TIMEOUT_MS = 1000 * 60 * 3;
 const SUPPORTED_INSTALL_TARGETS = new Set(["codex", "claude_code", "claude_agents", "cursor"]);
+const ALL_INSTALL_TARGETS = ["codex", "claude_agents", "cursor"];
 
 function buildExternalConnectUrl(apiClient: ApiClient, callbackUri: vscode.Uri) {
   const url = new URL(apiClient.openWebUrl("/extensions/connect").toString());
@@ -44,6 +45,10 @@ function normalizeInstallTarget(rawValue: string | null) {
 
   if (value === "claude") {
     return "claude_agents";
+  }
+
+  if (value === "all") {
+    return "all";
   }
 
   return SUPPORTED_INSTALL_TARGETS.has(value) ? value : null;
@@ -208,10 +213,24 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
     await this.stateStore.setSelection({ versionId });
 
     try {
-      const preview = await this.apiClient.exportPreview(versionId, targetPlatform);
-      const generatedFiles = preview.generatedFiles?.length
-        ? preview.generatedFiles
-        : (await this.apiClient.listGeneratedExports(versionId, targetPlatform, true)).generatedFiles;
+      const installTargets = targetPlatform === "all" ? ALL_INSTALL_TARGETS : [targetPlatform];
+      const generatedFilesByPath = new Map<string, { logicalPath: string; preview: string }>();
+
+      for (const installTarget of installTargets) {
+        const preview = await this.apiClient.exportPreview(versionId, installTarget);
+        const generatedFiles = preview.generatedFiles?.length
+          ? preview.generatedFiles
+          : (await this.apiClient.listGeneratedExports(versionId, installTarget, true)).generatedFiles;
+
+        for (const file of generatedFiles) {
+          generatedFilesByPath.set(file.logicalPath, {
+            logicalPath: file.logicalPath,
+            preview: file.preview,
+          });
+        }
+      }
+
+      const generatedFiles = Array.from(generatedFilesByPath.values());
 
       if (generatedFiles.length === 0) {
         void vscode.window.showWarningMessage(`No generated files are available for ${targetPlatform}.`);

@@ -47,6 +47,11 @@ type BasicInboundMessage = {
 type InboundMessage =
   | BasicInboundMessage
   | {
+      type: "openImportedAgent";
+      requestId: string;
+      subagentId: string;
+    }
+  | {
       type: "openImportedSkill";
       requestId: string;
       skillRuleId: string;
@@ -125,6 +130,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
             break;
           case "openImportedSkill":
             await vscode.commands.executeCommand("xupra.openImportedSkill", message.skillRuleId);
+            break;
+          case "openImportedAgent":
+            await vscode.commands.executeCommand("xupra.openImportedAgent", message.subagentId);
             break;
         }
       } catch (error) {
@@ -648,6 +656,10 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
           return '<button type="button" class="file-item file-button" data-open-imported-skill-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>';
         }
 
+        if (options.actionType === 'openImportedAgent' && openId) {
+          return '<button type="button" class="file-item file-button" data-open-imported-agent-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>';
+        }
+
         return '<div class="file-item">' + itemHtml + '</div>';
       }).join("");
 
@@ -693,6 +705,8 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         readTitle: function(entry) { return entry.name || entry.slug || 'Imported agent'; },
         readMeta: function(entry) { return entry.sourcePath || entry.slug || ''; },
         readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
+        readId: function(entry) { return entry.id || ''; },
+        actionType: 'openImportedAgent',
       });
 
       html += renderImportedEntries(skills, {
@@ -785,6 +799,16 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     });
 
     document.addEventListener("click", function(event) {
+      const agentBtn = event.target.closest("[data-open-imported-agent-id]");
+      if (agentBtn) {
+        vscode.postMessage({
+          type: "openImportedAgent",
+          requestId: uuid(),
+          subagentId: agentBtn.dataset.openImportedAgentId,
+        });
+        return;
+      }
+
       const skillBtn = event.target.closest("[data-open-imported-skill-id]");
       if (skillBtn) {
         vscode.postMessage({
