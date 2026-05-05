@@ -2,7 +2,12 @@ import * as vscode from "vscode";
 
 import type { ApiClient } from "../services/apiClient";
 import type { StateStore } from "../services/stateStore";
-import type { DetectedWorkspaceFile, EntitlementMap, SelectedContext } from "../types/package";
+import type {
+  DetectedWorkspaceFile,
+  EntitlementMap,
+  ImportedWorkspaceSnapshot,
+  SelectedContext,
+} from "../types/package";
 
 export type SidebarState = {
   connected: boolean;
@@ -12,14 +17,7 @@ export type SidebarState = {
   orgTier?: string;
   entitlements?: EntitlementMap;
   detectedFiles: DetectedWorkspaceFile[];
-  importedWorkspace: {
-    agents: number;
-    agentPlatforms: string[];
-    skillRules: number;
-    skillRulePlatforms: string[];
-    rawFiles: number;
-    rawFilePlatforms: string[];
-  } | null;
+  importedWorkspace: ImportedWorkspaceSnapshot | null;
   selection: SelectedContext;
   isLoading: boolean;
 };
@@ -339,6 +337,35 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       margin-bottom: 4px;
     }
 
+    .item-stack {
+      display: flex;
+      min-width: 0;
+      flex: 1;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .item-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .item-meta {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--vscode-descriptionForeground);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.82em;
+    }
+
+    .selection-hint {
+      color: var(--vscode-descriptionForeground);
+      line-height: 1.4;
+    }
+
     .action-row {
       display: flex;
       gap: 8px;
@@ -563,18 +590,119 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       }).join("") + '</span>';
     }
 
+    function uniquePlatforms(items, readPlatform) {
+      const seen = new Set();
+      return items.reduce(function(platforms, item) {
+        const platform = String(readPlatform(item) || "").toLowerCase();
+
+        if (!platform || platform === "generic" || seen.has(platform)) {
+          return platforms;
+        }
+
+        seen.add(platform);
+        platforms.push(platform);
+        return platforms;
+      }, []);
+    }
+
+    function renderImportedEntries(entries, options) {
+      if (!Array.isArray(entries) || entries.length === 0) {
+        return "";
+      }
+
+      const limit = options.limit || 5;
+      const visibleEntries = entries.slice(0, limit);
+      const platforms = uniquePlatforms(entries, options.readPlatform);
+      let html = '<div class="file-group">';
+      html += '<div class="section-header"><span class="section-label">' + escapeHtml(options.label) + '</span><span class="section-count">' + entries.length + '</span></div>';
+
+      if (platforms.length > 0) {
+        html += renderPlatformTags(platforms);
+      }
+
+      html += visibleEntries.map(function(entry) {
+        const title = options.readTitle(entry);
+        const meta = options.readMeta(entry);
+        const tag = options.readTag(entry);
+        return '<div class="file-item"><div class="item-stack"><span class="item-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</span>' + (meta ? '<span class="item-meta" title="' + escapeHtml(meta) + '">' + escapeHtml(meta) + '</span>' : '') + '</div>' + (tag ? '<span class="file-tag">' + escapeHtml(tag) + '</span>' : '') + '</div>';
+      }).join("");
+
+      if (entries.length > visibleEntries.length) {
+        html += '<div class="more-line">+' + (entries.length - visibleEntries.length) + ' more</div>';
+      }
+
+      return html + '</div>';
+    }
+
     function renderImportedWorkspace(state) {
       const workspace = state.importedWorkspace;
       let html = '<div class="section"><div class="section-header"><span class="section-label">Imported skills &amp; agents</span></div>';
 
       if (!workspace) {
-        html += '<div class="empty-state">Import a workspace to review imported agents, skills, rules, and source files.</div>';
+        if (!state.selection || !state.selection.versionId) {
+          html += '<div class="selection-hint">Choose a target version, then import a workspace to review imported agents, skills, rules, and source files.</div>';
+        } else {
+          html += '<div class="empty-state">No imported workspace is loaded for the selected version yet. Run an import or refresh after the import job completes.</div>';
+        }
         return html + '</div>';
       }
 
-      html += '<div class="group-item"><span class="group-label">Agents</span>' + renderPlatformTags(workspace.agentPlatforms || []) + '<span class="group-count">' + Number(workspace.agents || 0) + '</span></div>';
-      html += '<div class="group-item"><span class="group-label">Skill rules</span>' + renderPlatformTags(workspace.skillRulePlatforms || []) + '<span class="group-count">' + Number(workspace.skillRules || 0) + '</span></div>';
-      html += '<div class="group-item"><span class="group-label">Raw files</span>' + renderPlatformTags(workspace.rawFilePlatforms || []) + '<span class="group-count">' + Number(workspace.rawFiles || 0) + '</span></div>';
+      const skills = (workspace.skillRules || []).filter(function(rule) {
+        return String(rule.kind || "").toLowerCase() === "skill";
+      });
+      const rules = (workspace.skillRules || []).filter(function(rule) {
+        return String(rule.kind || "").toLowerCase() === "rule";
+      });
+      const promptFragments = (workspace.skillRules || []).filter(function(rule) {
+        const kind = String(rule.kind || "").toLowerCase();
+        return kind && kind !== "skill" && kind !== "rule";
+      });
+
+      if ((workspace.subagents || []).length === 0 && skills.length === 0 && rules.length === 0 && promptFragments.length === 0 && (workspace.files || []).length === 0) {
+        html += '<div class="empty-state">The selected version has no imported agents, skills, rules, or raw files yet.</div>';
+        return html + '</div>';
+      }
+
+      html += renderImportedEntries(workspace.subagents || [], {
+        label: 'Agents',
+        readPlatform: function(entry) { return entry.sourcePlatform; },
+        readTitle: function(entry) { return entry.name || entry.slug || 'Imported agent'; },
+        readMeta: function(entry) { return entry.sourcePath || entry.slug || ''; },
+        readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
+      });
+
+      html += renderImportedEntries(skills, {
+        label: 'Skills',
+        readPlatform: function(entry) { return entry.sourcePlatform; },
+        readTitle: function(entry) { return entry.name || 'Imported skill'; },
+        readMeta: function(entry) { return entry.sourcePath || ''; },
+        readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
+      });
+
+      html += renderImportedEntries(rules, {
+        label: 'Rules',
+        readPlatform: function(entry) { return entry.sourcePlatform; },
+        readTitle: function(entry) { return entry.name || 'Imported rule'; },
+        readMeta: function(entry) { return entry.sourcePath || ''; },
+        readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
+      });
+
+      html += renderImportedEntries(promptFragments, {
+        label: 'Prompt Fragments',
+        readPlatform: function(entry) { return entry.sourcePlatform; },
+        readTitle: function(entry) { return entry.name || 'Imported prompt'; },
+        readMeta: function(entry) { return entry.sourcePath || ''; },
+        readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
+      });
+
+      html += renderImportedEntries(workspace.files || [], {
+        label: 'Raw Files',
+        readPlatform: function(entry) { return entry.sourcePlatform; },
+        readTitle: function(entry) { return entry.logicalPath || 'Raw file'; },
+        readMeta: function(entry) { return entry.sourceFormat || ''; },
+        readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
+      });
+
       return html + '</div>';
     }
 

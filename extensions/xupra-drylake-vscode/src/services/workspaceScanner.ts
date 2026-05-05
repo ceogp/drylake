@@ -14,15 +14,31 @@ const PATTERNS = [
   ".claude/skills/**/SKILL.md",
   ".claude/agents/**/*.md",
   ".cursor/skills/**/SKILL.md",
-  ".cursor/rules/**/*.mdc",
-  "**/*.md",
-  "**/*.py"
+  ".cursor/rules/**/*.mdc"
 ];
 
-const EXCLUDE_PATTERN = "**/{node_modules,.git,.next,dist,build,out,coverage}/**";
+const EXCLUDE_PATTERN = "**/{node_modules,.git,.next,dist,build,out,coverage,storage,.venv,__pycache__,google-cloud-sdk,generated_export,raw_source,deployment_output,worker-smoke,.system}/**";
 const MAX_FILES_PER_GLOBAL_ROOT = 200;
 const MAX_FILES_PER_SELECTED_FOLDER = 1000;
-const EXCLUDED_FOLDER_NAMES = new Set(["node_modules", ".git", ".next", "dist", "build", "out", "coverage"]);
+const EXCLUDED_FOLDER_NAMES = new Set([
+  "node_modules",
+  ".git",
+  ".next",
+  "dist",
+  "build",
+  "out",
+  "coverage",
+  "storage",
+  ".venv",
+  "__pycache__",
+  "google-cloud-sdk",
+  "generated_export",
+  "raw_source",
+  "deployment_output",
+  "worker-smoke",
+  ".system",
+]);
+const IGNORED_LOGICAL_PATH_PATTERN = /(^|\/)(node_modules|\.git|\.next|dist|build|out|coverage|storage|\.venv|__pycache__|google-cloud-sdk|generated_export|raw_source|deployment_output|worker-smoke|\.system)(\/|$)/i;
 
 const GLOBAL_SCAN_ROOTS = [
   {
@@ -63,6 +79,10 @@ function getConfiguredPatterns(configuration?: vscode.WorkspaceConfiguration) {
   return [...new Set([...PATTERNS, ...configuredPatterns.map((pattern) => pattern.trim()).filter(Boolean)])];
 }
 
+function shouldIgnoreLogicalPath(logicalPath: string) {
+  return IGNORED_LOGICAL_PATH_PATTERN.test(logicalPath.replace(/\\/g, "/"));
+}
+
 export async function scanWorkspaceFiles(configuration?: vscode.WorkspaceConfiguration) {
   const seen = new Set<string>();
   const results: Array<{ logicalPath: string; content: string; category: DetectedWorkspaceFile["category"] }> = [];
@@ -72,6 +92,10 @@ export async function scanWorkspaceFiles(configuration?: vscode.WorkspaceConfigu
 
     for (const file of files) {
       const logicalPath = vscode.workspace.asRelativePath(file, false).replace(/\\/g, "/");
+
+      if (shouldIgnoreLogicalPath(logicalPath)) {
+        continue;
+      }
 
       if (seen.has(logicalPath)) {
         continue;
@@ -90,6 +114,10 @@ export async function scanWorkspaceFiles(configuration?: vscode.WorkspaceConfigu
     const globalFiles = await scanGlobalAgentFiles();
 
     for (const file of globalFiles) {
+      if (shouldIgnoreLogicalPath(file.logicalPath)) {
+        continue;
+      }
+
       if (seen.has(file.logicalPath)) {
         continue;
       }
@@ -169,6 +197,10 @@ async function findGlobalFiles(
         return;
       }
 
+      if (fileType === vscode.FileType.Directory && EXCLUDED_FOLDER_NAMES.has(name)) {
+        continue;
+      }
+
       const childUri = vscode.Uri.joinPath(currentUri, name);
       const relativePath = path.relative(rootUri.fsPath, childUri.fsPath).replace(/\\/g, "/");
 
@@ -219,7 +251,13 @@ async function findSelectedFolderFiles(rootUri: vscode.Uri, limit: number) {
         continue;
       }
 
-      if (fileType === vscode.FileType.File && isSupportedFolderImportFile(rootUri, childUri)) {
+      const logicalPath = getLogicalPathForSelectedFolder(rootUri, childUri);
+
+      if (
+        fileType === vscode.FileType.File &&
+        !shouldIgnoreLogicalPath(logicalPath) &&
+        isSupportedFolderImportFile(rootUri, childUri)
+      ) {
         files.push(childUri);
       }
     }

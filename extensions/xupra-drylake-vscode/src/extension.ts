@@ -256,22 +256,7 @@ export async function activate(context: vscode.ExtensionContext) {
       orgTier: connection.organizationTier,
       entitlements: connection.entitlements,
       detectedFiles,
-      importedWorkspace: importedWorkspace
-        ? {
-            agents: importedWorkspace.subagents.length,
-            agentPlatforms: [
-              ...new Set(importedWorkspace.subagents.map((subagent) => subagent.sourcePlatform).filter(Boolean)),
-            ],
-            skillRules: importedWorkspace.skillRules.length,
-            skillRulePlatforms: [
-              ...new Set(importedWorkspace.skillRules.map((skillRule) => skillRule.sourcePlatform).filter(Boolean)),
-            ],
-            rawFiles: importedWorkspace.files.length,
-            rawFilePlatforms: [
-              ...new Set(importedWorkspace.files.map((file) => file.sourcePlatform).filter(Boolean)),
-            ],
-          }
-        : null,
+      importedWorkspace,
       selection,
       isLoading: false,
     });

@@ -52,6 +52,24 @@ type JobResponse = {
   };
 };
 
+type TransformJobResponse = {
+  ok: boolean;
+  transformJob?: {
+    id: string;
+    status: string;
+    resultJson?: {
+      imported?: JobResponse["imported"];
+      warnings?: string[];
+    } | null;
+    errorJson?: {
+      message?: string;
+    } | null;
+  };
+  error?: {
+    message?: string;
+  };
+};
+
 type SourceFileRecord = {
   dbId: string;
   logicalPath: string;
@@ -79,6 +97,8 @@ type PendingBrowserFile = {
   logicalPath: string;
   category: "instruction" | "agent" | "skill" | "rule" | "source";
 };
+
+type BrowserImportMode = "folder" | "manual";
 
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes < 0) {
@@ -153,15 +173,17 @@ function isSystemDefault(logicalPath: string) {
   return /(^|\/)\.system(\/|$)/i.test(logicalPath);
 }
 
+const IGNORED_PATH_PATTERN = /(^|\/)(node_modules|\.git|\.next|dist|build|out|coverage|storage|\.venv|__pycache__|google-cloud-sdk|generated_export|raw_source|deployment_output|worker-smoke|\.system)(\/|$)/i;
+
 function normalizeLogicalPath(rawValue: string) {
   return normalizeImportLogicalPath(rawValue);
 }
 
 function isIgnoredPath(logicalPath: string) {
-  return /(^|\/)(node_modules|\.git|\.next|dist|build|out|coverage)(\/|$)/i.test(logicalPath);
+  return IGNORED_PATH_PATTERN.test(logicalPath) || isSystemDefault(logicalPath);
 }
 
-function classifySupportedPath(logicalPath: string): PendingBrowserFile["category"] | null {
+function classifySupportedPath(logicalPath: string, mode: BrowserImportMode): PendingBrowserFile["category"] | null {
   const normalized = normalizeLogicalPath(logicalPath);
 
   if (!normalized || isIgnoredPath(normalized)) {
@@ -184,14 +206,14 @@ function classifySupportedPath(logicalPath: string): PendingBrowserFile["categor
     return "rule";
   }
 
-  if (/\.(md|py|txt|json|yaml|yml|toml)$/i.test(normalized)) {
+  if (mode === "manual" && /\.(md|py|txt|json|yaml|yml|toml)$/i.test(normalized)) {
     return "source";
   }
 
   return null;
 }
 
-function toPendingBrowserFiles(fileList: FileList | File[] | null) {
+function toPendingBrowserFiles(fileList: FileList | File[] | null, mode: BrowserImportMode) {
   if (!fileList) {
     return [];
   }
@@ -199,7 +221,7 @@ function toPendingBrowserFiles(fileList: FileList | File[] | null) {
   return Array.from(fileList)
     .map((file) => {
       const logicalPath = normalizeLogicalPath(file.webkitRelativePath || file.name);
-      const category = classifySupportedPath(logicalPath);
+      const category = classifySupportedPath(logicalPath, mode);
 
       if (!category) {
         return null;
@@ -242,6 +264,10 @@ function sourceFileUrl(versionId: string, fileId: string, mode: "content" | "dow
   });
 
   return `/api/v1/versions/${versionId}/files?${params.toString()}`;
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 export function VersionTools({
@@ -359,7 +385,25 @@ export function VersionTools({
         return;
       }
 
-      const imported = importPayload.imported;
+      let imported = importPayload.imported;
+
+      if (!imported && importPayload.job?.id) {
+        setStatusMessage("Import parser is running. Waiting for parsed skills and agents...");
+        const completedJob = await waitForTransformJob(importPayload.job.id);
+
+        if (completedJob.status === "failed" || completedJob.status === "cancelled") {
+          setStatusMessage(completedJob.errorJson?.message ?? "Upload succeeded, but import parsing failed.");
+          return;
+        }
+
+        if (completedJob.status !== "succeeded") {
+          setStatusMessage("Upload succeeded, but import parsing is still running. Refresh this page after the job finishes.");
+          return;
+        }
+
+        imported = completedJob.resultJson?.imported;
+      }
+
       setStatusMessage(
         imported
           ? `Uploaded ${uploadPayload.files?.length ?? files.length} source files. Parsed ${imported.subagents} agents, ${imported.skills} skills, and ${imported.rules} rules.`
@@ -383,15 +427,47 @@ export function VersionTools({
     }
   }
 
+  async function waitForTransformJob(jobId: string) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const response = await fetch(`/api/v1/transform-jobs/${jobId}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as TransformJobResponse;
+
+      if (!response.ok || !payload.ok || !payload.transformJob) {
+        throw new Error(payload.error?.message ?? "Failed to read import job status.");
+      }
+
+      if (["succeeded", "failed", "cancelled"].includes(payload.transformJob.status)) {
+        return payload.transformJob;
+      }
+
+      await delay(1500);
+    }
+
+    const response = await fetch(`/api/v1/transform-jobs/${jobId}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    const payload = (await response.json()) as TransformJobResponse;
+
+    if (!response.ok || !payload.ok || !payload.transformJob) {
+      throw new Error(payload.error?.message ?? "Failed to read import job status.");
+    }
+
+    return payload.transformJob;
+  }
+
   function importFolderFiles(fileList: FileList | null) {
-    const files = toPendingBrowserFiles(fileList);
+    const files = toPendingBrowserFiles(fileList, "folder");
     setPendingFolderFiles(files);
     setStatusMessage(files.length > 0 ? `${describePendingFiles(files)} found. Uploading...` : "No supported source files were found in that folder.");
     void uploadPendingFiles(files);
   }
 
   function importSelectedFiles(fileList: FileList | null) {
-    const files = toPendingBrowserFiles(fileList);
+    const files = toPendingBrowserFiles(fileList, "manual");
     setPendingManualFiles(files);
     setStatusMessage(files.length > 0 ? `${describePendingFiles(files)} found. Uploading...` : "No supported source files were found in those files.");
     void uploadPendingFiles(files);
