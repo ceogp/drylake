@@ -68,6 +68,7 @@ export type ImportedWorkspaceSkillRule = {
   kind: string;
   sourcePlatform: string;
   sourcePath?: string;
+  sourceContent: string;
 };
 
 export type ImportedWorkspaceSnapshot = {

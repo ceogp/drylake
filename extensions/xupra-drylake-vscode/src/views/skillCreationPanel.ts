@@ -47,10 +47,10 @@ type OutboundMessage =
     };
 
 const LOGICAL_PATH_BY_PLATFORM: Record<string, (slug: string) => string> = {
-  claude_code: (slug) => `.claude/agents/${slug}.md`,
-  claude_agents: (slug) => `.claude/agents/${slug}.md`,
-  codex: (slug) => `.codex/agents/${slug}.md`,
-  cursor: (slug) => `.cursor/rules/${slug}.mdc`,
+  claude_code: (slug) => `.claude/skills/${slug}/SKILL.md`,
+  claude_agents: (slug) => `.claude/skills/${slug}/SKILL.md`,
+  codex: (slug) => `.codex/skills/${slug}/SKILL.md`,
+  cursor: (slug) => `.cursor/skills/${slug}/SKILL.md`,
 };
 
 function slugForSkillName(skillName: string) {
@@ -59,7 +59,7 @@ function slugForSkillName(skillName: string) {
 
 function logicalPathForPlatform(targetPlatform: string, skillName: string) {
   const slug = slugForSkillName(skillName);
-  return (LOGICAL_PATH_BY_PLATFORM[targetPlatform] ?? ((value: string) => `skills/${value}.md`))(slug);
+  return (LOGICAL_PATH_BY_PLATFORM[targetPlatform] ?? ((value: string) => `skills/${value}/SKILL.md`))(slug);
 }
 
 export class SkillCreationPanel {
@@ -358,6 +358,12 @@ export class SkillCreationPanel {
       color: var(--vscode-descriptionForeground);
     }
 
+    .intro {
+      margin: 0;
+      color: var(--vscode-descriptionForeground);
+      line-height: 1.5;
+    }
+
     .error {
       padding: 8px 10px;
       border: 1px solid var(--vscode-panel-border);
@@ -375,6 +381,7 @@ export class SkillCreationPanel {
 <body data-extension-path="${extensionPath}">
   <main class="panel">
     <h2>Create New Skill</h2>
+    <p class="intro">Create a system-specific skill manually for free, or generate a draft with AI on Pro.</p>
 
     <div class="field">
       <label for="skill-name">Skill name</label>
@@ -401,7 +408,10 @@ export class SkillCreationPanel {
       <textarea id="skill-context"></textarea>
     </div>
 
-    <button id="generate-btn">Generate with AI</button>
+    <div class="actions">
+      <button id="start-blank-btn">Start Blank Skill</button>
+      <button id="generate-btn">Generate with AI (Pro)</button>
+    </div>
     <div id="loading" class="status" style="display:none">Generating skill…</div>
     <div id="error-message" class="error" style="display:none"></div>
 
@@ -438,6 +448,7 @@ export class SkillCreationPanel {
     const skillDescription = document.getElementById("skill-description");
     const targetPlatform = document.getElementById("target-platform");
     const skillContext = document.getElementById("skill-context");
+    const startBlankBtn = document.getElementById("start-blank-btn");
     const generateBtn = document.getElementById("generate-btn");
     const loading = document.getElementById("loading");
     const outputArea = document.getElementById("output-area");
@@ -455,6 +466,64 @@ export class SkillCreationPanel {
       errorMessage.textContent = "";
       errorMessage.style.display = "none";
     }
+
+    function escapeYaml(value) {
+      return String(value ?? "").replace(/"/g, '\\"');
+    }
+
+    function buildBlankSkillTemplate() {
+      const name = skillName.value.trim() || "New Skill";
+      const description = skillDescription.value.trim() || "Describe when to use this skill.";
+      const platform = targetPlatform.value || "claude_code";
+      const extraContext = skillContext.value.trim();
+      const contextSection = extraContext
+        ? ["", "Context:", extraContext]
+        : [];
+
+      return [
+        "---",
+        'name: "' + escapeYaml(name) + '"',
+        'description: "' + escapeYaml(description) + '"',
+        'targetPlatform: "' + escapeYaml(platform) + '"',
+        "---",
+        "",
+        '# ' + name,
+        "",
+        description,
+        ...contextSection,
+        "",
+        "Use this skill when:",
+        "- The task matches the description above.",
+        "",
+        "Workflow:",
+        "1. Confirm the goal and constraints.",
+        "2. Perform the task using the target system's expected conventions.",
+        "3. Review the output before finishing.",
+        "",
+        "Checks:",
+        "- Output is correct for the selected system.",
+        "- Unsafe or unrelated changes were not introduced.",
+      ].join("\n");
+    }
+
+    function showOutput(content, focusEditor) {
+      outputArea.style.display = "flex";
+      skillOutput.value = content;
+      if (focusEditor) {
+        skillOutput.focus();
+      }
+    }
+
+    startBlankBtn.addEventListener("click", function() {
+      clearError();
+      if (!skillOutput.value.trim()) {
+        showOutput(buildBlankSkillTemplate(), true);
+        return;
+      }
+
+      outputArea.style.display = "flex";
+      skillOutput.focus();
+    });
 
     generateBtn.addEventListener("click", function() {
       clearError();
@@ -495,17 +564,18 @@ export class SkillCreationPanel {
 
       if (message.type === "stateUpdate") {
         loading.style.display = message.isLoading ? "block" : "none";
+        startBlankBtn.disabled = Boolean(message.isLoading);
         generateBtn.disabled = Boolean(message.isLoading);
       }
 
       if (message.type === "result" && message.content) {
-        skillOutput.value = message.content;
-        outputArea.style.display = "flex";
+        showOutput(message.content, false);
         clearError();
       }
 
       if (message.type === "error") {
         loading.style.display = "none";
+        startBlankBtn.disabled = false;
         generateBtn.disabled = false;
 
         if (message.message === "upgrade_required") {

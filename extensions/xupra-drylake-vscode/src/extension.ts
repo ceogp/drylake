@@ -13,6 +13,7 @@ import { ApiClient } from "./services/apiClient";
 import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
 import { requireManualExportEntitlement } from "./services/featureGates";
+import { ImportedSkillEditorManager } from "./services/importedSkillEditor";
 import { MarketplaceClient } from "./services/marketplaceClient";
 import { StateStore } from "./services/stateStore";
 import { scanWorkspaceFiles } from "./services/workspaceScanner";
@@ -76,6 +77,63 @@ function normalizeSourcePlatform(platform: unknown, sourcePath?: string) {
   return inferSourcePlatformFromPath(sourcePath);
 }
 
+function stringifyFrontmatterValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value
+      .filter((item) => item !== undefined && item !== null)
+      .map((item) => stringifyFrontmatterValue(item))
+      .join(", ")}]`;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return `"${text.replace(/"/g, '\\"')}"`;
+}
+
+type VersionSkillRule = NonNullable<PackageVersionDetail["skillRules"]>[number];
+
+function stringifyFrontmatterMarkdown(frontmatter: Record<string, unknown>, body: string) {
+  const entries = Object.entries(frontmatter).filter(([, value]) => value !== undefined && value !== null);
+  const trimmedBody = body.trim();
+
+  if (entries.length === 0) {
+    return trimmedBody;
+  }
+
+  return [
+    "---",
+    ...entries.map(([key, value]) => `${key}: ${stringifyFrontmatterValue(value)}`),
+    "---",
+    "",
+    trimmedBody,
+  ].join("\n");
+}
+
+function buildImportedSkillSourceContent(rule: VersionSkillRule) {
+  const metadata = asRecord(rule.metadataJson);
+  const sourcePath = typeof metadata?.sourcePath === "string" ? metadata.sourcePath : undefined;
+  const storedFrontmatter = asRecord(metadata?.frontmatter);
+  const body = typeof rule.bodyMd === "string" ? rule.bodyMd : "";
+
+  if (storedFrontmatter) {
+    return stringifyFrontmatterMarkdown(storedFrontmatter, body);
+  }
+
+  const fallbackFrontmatter: Record<string, unknown> = {
+    name: rule.name,
+    targetPlatform: normalizeSourcePlatform(metadata?.sourcePlatform, sourcePath),
+  };
+
+  if (typeof metadata?.description === "string" && metadata.description.trim()) {
+    fallbackFrontmatter.description = metadata.description;
+  }
+
+  return stringifyFrontmatterMarkdown(fallbackFrontmatter, body);
+}
+
 function mapImportedWorkspace(version: PackageVersionDetail): ImportedWorkspaceSnapshot {
   return {
     versionId: version.id,
@@ -106,6 +164,7 @@ function mapImportedWorkspace(version: PackageVersionDetail): ImportedWorkspaceS
         kind: rule.kind,
         sourcePlatform: normalizeSourcePlatform(metadata?.sourcePlatform, sourcePath),
         sourcePath,
+        sourceContent: buildImportedSkillSourceContent(rule),
       };
     }),
   };
@@ -178,6 +237,9 @@ export async function activate(context: vscode.ExtensionContext) {
   const marketplaceClient = new MarketplaceClient();
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
+  const importedSkillEditor = new ImportedSkillEditorManager(context, apiClient, async () => {
+    await syncWorkspaceView();
+  });
   const jobsView = new JobTreeProvider();
   const helpView = new HelpTreeProvider();
   const logger = getLogger();
@@ -286,6 +348,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(statusBar);
   context.subscriptions.push(browserConnect.register());
+  context.subscriptions.push(importedSkillEditor);
   context.subscriptions.push(vscode.window.registerWebviewViewProvider("xupra.projects", workspaceSidebar, {
     webviewOptions: { retainContextWhenHidden: true }
   }));
@@ -581,6 +644,28 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("xupra.browseSkills", async () => {
     SkillsMarketplacePanel.createOrShow(context, marketplaceClient, apiClient, stateStore);
+  });
+
+  register("xupra.openImportedSkill", async (...args: unknown[]) => {
+    const skillRuleId = typeof args[0] === "string" ? args[0] : undefined;
+    const selection = stateStore.getSelection();
+
+    if (!selection.versionId || typeof skillRuleId !== "string" || !skillRuleId.trim()) {
+      return;
+    }
+
+    const versionResponse = await apiClient.getVersion(selection.versionId);
+    const importedWorkspace = mapImportedWorkspace(versionResponse.version);
+    const skill = importedWorkspace.skillRules.find(
+      (item) => item.id === skillRuleId && String(item.kind).toLowerCase() === "skill",
+    );
+
+    if (!skill) {
+      void vscode.window.showWarningMessage("That imported skill is no longer available for the selected version.");
+      return;
+    }
+
+    await importedSkillEditor.openImportedSkill(selection.versionId, skill);
   });
 
   register("xupra.openSettings", async () => {

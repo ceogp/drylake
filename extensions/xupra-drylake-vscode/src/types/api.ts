@@ -59,6 +59,7 @@ export type PackageVersionDetail = {
     id: Id;
     name: string;
     kind: string;
+    bodyMd: string;
     metadataJson?: Record<string, unknown> | null;
     createdAt: string;
   }>;

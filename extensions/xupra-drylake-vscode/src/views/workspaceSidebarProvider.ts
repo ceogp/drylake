@@ -37,12 +37,20 @@ type InboundAction =
   | "exportPreview"
   | "deploy";
 
-type InboundMessage = {
+type BasicInboundMessage = {
   [Action in InboundAction]: {
     type: Action;
     requestId: string;
   };
 }[InboundAction];
+
+type InboundMessage =
+  | BasicInboundMessage
+  | {
+      type: "openImportedSkill";
+      requestId: string;
+      skillRuleId: string;
+    };
 
 type OutboundMessage =
   | {
@@ -114,6 +122,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
             break;
           case "deploy":
             await vscode.commands.executeCommand("xupra.deploy");
+            break;
+          case "openImportedSkill":
+            await vscode.commands.executeCommand("xupra.openImportedSkill", message.skillRuleId);
             break;
         }
       } catch (error) {
@@ -307,6 +318,12 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       border: 1px solid var(--vscode-panel-border);
       border-radius: 5px;
       background: var(--vscode-editor-background);
+    }
+
+    .file-button {
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
     }
 
     .file-path {
@@ -624,7 +641,14 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         const title = options.readTitle(entry);
         const meta = options.readMeta(entry);
         const tag = options.readTag(entry);
-        return '<div class="file-item"><div class="item-stack"><span class="item-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</span>' + (meta ? '<span class="item-meta" title="' + escapeHtml(meta) + '">' + escapeHtml(meta) + '</span>' : '') + '</div>' + (tag ? '<span class="file-tag">' + escapeHtml(tag) + '</span>' : '') + '</div>';
+        const openId = options.readId ? options.readId(entry) : "";
+        const itemHtml = '<div class="item-stack"><span class="item-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</span>' + (meta ? '<span class="item-meta" title="' + escapeHtml(meta) + '">' + escapeHtml(meta) + '</span>' : '') + '</div>' + (tag ? '<span class="file-tag">' + escapeHtml(tag) + '</span>' : '');
+
+        if (options.actionType === 'openImportedSkill' && openId) {
+          return '<button type="button" class="file-item file-button" data-open-imported-skill-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>';
+        }
+
+        return '<div class="file-item">' + itemHtml + '</div>';
       }).join("");
 
       if (entries.length > visibleEntries.length) {
@@ -677,6 +701,8 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         readTitle: function(entry) { return entry.name || 'Imported skill'; },
         readMeta: function(entry) { return entry.sourcePath || ''; },
         readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
+        readId: function(entry) { return entry.id || ''; },
+        actionType: 'openImportedSkill',
       });
 
       html += renderImportedEntries(rules, {
@@ -759,6 +785,16 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     });
 
     document.addEventListener("click", function(event) {
+      const skillBtn = event.target.closest("[data-open-imported-skill-id]");
+      if (skillBtn) {
+        vscode.postMessage({
+          type: "openImportedSkill",
+          requestId: uuid(),
+          skillRuleId: skillBtn.dataset.openImportedSkillId,
+        });
+        return;
+      }
+
       const btn = event.target.closest("[data-action]");
       if (!btn) {
         return;
