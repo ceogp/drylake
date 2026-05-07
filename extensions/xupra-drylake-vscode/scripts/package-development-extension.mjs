@@ -16,7 +16,8 @@ const DEV_DISPLAY_NAME = process.env.XUPRA_DEVELOPMENT_DISPLAY_NAME ?? "Xupra Dr
 const DEV_PACKAGE_NAME = "drylake-development";
 const DEV_EXTENSION_ID = "xupra.drylake-development";
 const DEV_PREFIX = "xupraDev";
-const DEV_OUTPUT = path.join(extensionRoot, `${DEV_PACKAGE_NAME}-0.1.4.vsix`);
+const devVsixDir = path.join(extensionRoot, "development-vsix");
+const DEV_OUTPUT = path.join(devVsixDir, `${DEV_PACKAGE_NAME}-0.1.4.vsix`);
 const OWNER_DEV_EMAIL = "owner@xupra.local";
 const OWNER_DEV_EMAIL_PLACEHOLDER = "__XUPRA_OWNER_DEV_EMAIL__";
 
@@ -123,6 +124,7 @@ function run(command, args, options = {}) {
 async function main() {
   await fs.rm(buildRoot, { recursive: true, force: true });
   await fs.mkdir(buildRoot, { recursive: true });
+  await fs.mkdir(devVsixDir, { recursive: true });
 
   await Promise.all([
     copyDirectory(path.join(extensionRoot, "media"), path.join(buildRoot, "media")),
