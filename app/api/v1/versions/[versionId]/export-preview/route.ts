@@ -3,7 +3,7 @@ import { z } from "zod";
 import { created, forbidden, fromZodError, internalError, unauthorized } from "@/lib/api/http";
 import { requireVersionAccess } from "@/lib/services/access";
 import { assertEntitlement } from "@/lib/services/entitlements";
-import { requestExportPreview } from "@/lib/services/import-export";
+import { EXPORT_TARGETS, requestExportPreview, type SupportedTarget } from "@/lib/services/import-export";
 
 type Context = {
   params: Promise<{
@@ -12,7 +12,7 @@ type Context = {
 };
 
 const exportSchema = z.object({
-  targetPlatform: z.enum(["codex", "claude_code", "claude_agents", "cursor"]),
+  targetPlatform: z.enum([...EXPORT_TARGETS] as unknown as [string, ...string[]]),
 });
 
 export async function POST(request: Request, context: Context) {
@@ -30,7 +30,7 @@ export async function POST(request: Request, context: Context) {
 
     const result = await requestExportPreview({
       versionId,
-      targetPlatform: parsed.data.targetPlatform,
+      targetPlatform: parsed.data.targetPlatform as SupportedTarget,
       createdByUserId: appContext.user.id,
     });
 

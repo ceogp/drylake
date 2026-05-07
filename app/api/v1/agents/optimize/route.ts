@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { optimizeAgentWithAi } from "@/lib/services/agent-generation";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { assertEntitlement } from "@/lib/services/entitlements";
+import { EXPORT_TARGETS } from "@/lib/services/import-export";
 import {
   EXTENSION_TOKEN_HEADER,
   verifyExtensionAccessToken,
@@ -12,7 +13,7 @@ import {
 
 const payloadSchema = z.object({
   content: z.string().min(1),
-  targetPlatform: z.enum(["codex", "claude_code", "claude_agents", "cursor"]),
+  targetPlatform: z.enum([...EXPORT_TARGETS] as unknown as [string, ...string[]]),
   fileName: z.string().trim().max(512).optional(),
   repoContext: z.string().trim().max(8000).optional(),
 });
