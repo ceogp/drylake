@@ -73,6 +73,17 @@ const GLOBAL_SCAN_ROOTS = [
   },
 ] as const;
 
+const GLOBAL_SCAN_FILES = [
+  {
+    absolutePath: () => path.join(os.homedir(), ".codex", "AGENTS.md"),
+    logicalPath: ".codex/AGENTS.md",
+  },
+  {
+    absolutePath: () => path.join(os.homedir(), ".claude", "CLAUDE.md"),
+    logicalPath: ".claude/CLAUDE.md",
+  },
+] as const;
+
 function getConfiguredPatterns(configuration?: vscode.WorkspaceConfiguration) {
   const configuredPatterns = configuration?.get<string[]>("additionalScanPatterns", []) ?? [];
 
@@ -152,6 +163,22 @@ export async function scanSelectedFolderFiles(rootUri: vscode.Uri) {
 
 async function scanGlobalAgentFiles() {
   const results: Array<{ logicalPath: string; content: string; category: DetectedWorkspaceFile["category"] }> = [];
+
+  for (const file of GLOBAL_SCAN_FILES) {
+    const fileUri = vscode.Uri.file(file.absolutePath());
+
+    try {
+      await vscode.workspace.fs.stat(fileUri);
+    } catch {
+      continue;
+    }
+
+    results.push({
+      logicalPath: file.logicalPath,
+      content: await readWorkspaceFile(fileUri),
+      category: classifyWorkspaceFile(file.logicalPath),
+    });
+  }
 
   for (const root of GLOBAL_SCAN_ROOTS) {
     const rootUri = vscode.Uri.file(root.absolutePath());
@@ -275,6 +302,10 @@ function isSupportedFolderImportFile(rootUri: vscode.Uri, fileUri: vscode.Uri) {
     return true;
   }
 
+  if (logicalPath === ".codex/agents.md" || logicalPath === ".claude/claude.md") {
+    return true;
+  }
+
   if (baseName === "skill.md" && /(^|\/)(\.agents|\.codex|\.claude|\.cursor)?\/?skills\//i.test(logicalPath)) {
     return true;
   }
@@ -321,7 +352,12 @@ export function getWorkspaceDisplayName() {
 }
 
 export function classifyWorkspaceFile(logicalPath: string): DetectedWorkspaceFile["category"] {
-  if (logicalPath === "AGENTS.md" || logicalPath === "CLAUDE.md") {
+  if (
+    logicalPath === "AGENTS.md" ||
+    logicalPath === "CLAUDE.md" ||
+    /^\.codex\/AGENTS\.md$/i.test(logicalPath) ||
+    /^\.claude\/CLAUDE\.md$/i.test(logicalPath)
+  ) {
     return "instruction";
   }
 

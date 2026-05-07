@@ -360,7 +360,7 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
 
     try {
       const installTargets = targetPlatform === "all" ? ALL_INSTALL_TARGETS : [targetPlatform];
-      const generatedFilesByPath = new Map<string, { logicalPath: string; preview: string }>();
+      const generatedFilesByPath = new Map<string, { logicalPath: string; preview: string; targetPlatform: string }>();
 
       for (const installTarget of installTargets) {
         const preview = await this.apiClient.exportPreview(versionId, installTarget);
@@ -369,9 +369,10 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
           : (await this.apiClient.listGeneratedExports(versionId, installTarget, true)).generatedFiles;
 
         for (const file of generatedFiles) {
-          generatedFilesByPath.set(file.logicalPath, {
+          generatedFilesByPath.set(`${installTarget}:${file.logicalPath}`, {
             logicalPath: file.logicalPath,
             preview: file.preview,
+            targetPlatform: installTarget,
           });
         }
       }
@@ -391,14 +392,19 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
         }
 
         const details: string[] = [];
-        if (summary.codexProfiles.length > 0) {
+        if (summary.codexAgents.length > 0) {
           details.push(
-            `Codex profiles: ${summary.codexProfiles.join(", ")}. Run codex exec -C . -p <profile> \"<prompt>\"`,
+            `Codex agents: ${summary.codexAgents.join(", ")}. Ask Codex to use the named Xupra agent`,
           );
         }
         if (summary.claudeAgents.length > 0) {
           details.push(
             `Claude agents: ${summary.claudeAgents.join(", ")}. Run claude --agent <name> or ask Claude to use that subagent`,
+          );
+        }
+        if (summary.cursorRules.length > 0 || summary.cursorSkills.length > 0) {
+          details.push(
+            `Cursor rules: ${summary.cursorRules.join(", ") || "none"}. Cursor skills: ${summary.cursorSkills.join(", ") || "none"}`,
           );
         }
 

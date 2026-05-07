@@ -485,8 +485,34 @@ function stringifyCodexAgentsMd(version: VersionWithRelations) {
   const rules = version.skillRules
     .map((rule) => `## ${rule.name}\n\n${rule.bodyMd.trim()}`)
     .join("\n\n");
+  const subagents = version.subagents
+    .map((subagent) => {
+      const toolList = Array.isArray(subagent.toolsJson)
+        ? (subagent.toolsJson as string[]).join(", ")
+        : "";
 
-  return [`# ${description}`, instructions, rules].filter(Boolean).join("\n\n");
+      return [
+        `### ${subagent.name || subagent.slug}`,
+        subagent.description,
+        `Invoke by asking Codex to use the "${subagent.slug}" Xupra agent for matching work.`,
+        toolList ? `Tools: ${toolList}` : "",
+        subagent.modelHint ? `Model: ${subagent.modelHint}` : "",
+        subagent.permissionMode ? `Permission mode: ${subagent.permissionMode}` : "",
+        subagent.instructionsMd.trim(),
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    })
+    .join("\n\n");
+  const subagentRegistry = subagents
+    ? [
+        "## Xupra Installed Agents",
+        "These agents were installed by Xupra DryLake. When the user asks for one of these agents by name, follow that agent's instructions for the task.",
+        subagents,
+      ].join("\n\n")
+    : "";
+
+  return [`# ${description}`, instructions, subagentRegistry, rules].filter(Boolean).join("\n\n");
 }
 
 function mergeToolLists(existing: unknown, next: string[]) {
@@ -540,11 +566,11 @@ function compatibilityForTarget(version: VersionWithRelations, targetPlatform: S
 
   switch (targetPlatform) {
     case "codex":
-      if (!hasInstructions && !hasSkills && !rawNames.has("AGENTS.md")) {
-        unsupported.push("Codex export needs instructions, skills, or an imported AGENTS.md file.");
+      if (!hasInstructions && !hasSubagents && !hasSkills && !rawNames.has("AGENTS.md")) {
+        unsupported.push("Codex export needs instructions, agents, skills, or an imported AGENTS.md file.");
       }
       if (hasSubagents) {
-        warnings.push("Subagents will be exported as Codex custom agent TOML files and should be reviewed.");
+        warnings.push("Subagents will be exported as Codex guidance plus custom agent TOML files and should be reviewed.");
       }
       break;
     case "claude_code":
@@ -561,8 +587,8 @@ function compatibilityForTarget(version: VersionWithRelations, targetPlatform: S
       }
       break;
     case "cursor":
-      if (!hasInstructions && !hasRules && !hasSkills) {
-        unsupported.push("Cursor export needs instructions, rules, or skills.");
+      if (!hasInstructions && !hasSubagents && !hasRules && !hasSkills) {
+        unsupported.push("Cursor export needs instructions, agents, rules, or skills.");
       }
       if (hasSubagents) {
         warnings.push("Subagents will be flattened into Cursor rule content because Cursor is rule-centric.");

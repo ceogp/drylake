@@ -105,12 +105,7 @@ function buildInstallUri(params: {
   targetPlatform: InstallTarget;
   editorScheme: EditorScheme;
 }) {
-  const mode =
-    params.destination === "other"
-      ? "custom-path"
-      : params.destination === "codex" || params.destination === "claude"
-        ? "runtime-home"
-        : "workspace-root";
+  const mode = params.destination === "other" ? "custom-path" : "runtime-home";
 
   const query = new URLSearchParams({
     versionId: params.versionId,
@@ -544,10 +539,14 @@ export function InstallFlow({ versionId }: { versionId: string }) {
             </p>
             <p className="mt-2 text-sm leading-6 text-stone-700">
               {destination === "codex"
-                ? "Confirm the write inside VS Code or Cursor. Codex installs go to your home runtime under ~/.codex/agents and Xupra also creates named Codex profiles in ~/.codex/config.toml so the agent has a stable -p invocation path."
+                ? "Confirm the write inside VS Code or Cursor. Codex installs go to your home runtime under ~/.codex so AGENTS.md, agents, and skills are available to Codex globally."
                 : destination === "claude"
                   ? "Confirm the write inside VS Code or Cursor. Claude installs go to your home runtime under ~/.claude/agents so the subagent is available across projects."
-                  : "Confirm the write inside VS Code or Cursor. All supported tools writes Codex, Claude, and Cursor outputs together. Choose Other for a custom folder, or download the generated files for any tool that is not listed."}
+                  : destination === "cursor"
+                    ? "Confirm the write inside VS Code or Cursor. Cursor installs go to your home runtime under ~/.cursor/rules and ~/.cursor/skills."
+                    : destination === "all"
+                      ? "Confirm the write inside VS Code or Cursor. Xupra installs Codex, Claude, and Cursor outputs into ~/.codex, ~/.claude, and ~/.cursor."
+                      : "Confirm the write inside VS Code or Cursor. Choose Other only for an explicit custom folder, or download the generated files for any tool that is not listed."}
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <a
