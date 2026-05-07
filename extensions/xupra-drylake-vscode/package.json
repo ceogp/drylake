@@ -21,10 +21,9 @@
     "vscode": "^1.100.0"
   },
   "categories": [
-    "AI",
-    "Chat",
-    "Machine Learning",
-    "Other"
+    "Other",
+    "Productivity",
+    "Machine Learning"
   ],
   "keywords": [
     "agents",
