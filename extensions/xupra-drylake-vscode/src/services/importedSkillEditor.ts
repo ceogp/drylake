@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import os from "node:os";
 import * as vscode from "vscode";
 
 import type { ImportedWorkspaceSkillRule, ImportedWorkspaceSubagent } from "../types/package";
@@ -57,6 +58,32 @@ function fallbackAgentPath(agent: ImportedWorkspaceSubagent) {
   }
 }
 
+function defaultRuntimeLogicalPath(rawValue: string) {
+  const logicalPath = normalizeLogicalPath(rawValue);
+
+  if (logicalPath === "AGENTS.md") {
+    return ".codex/AGENTS.md";
+  }
+
+  if (logicalPath === "CLAUDE.md") {
+    return ".claude/CLAUDE.md";
+  }
+
+  if (logicalPath.startsWith(".agents/skills/")) {
+    return `.codex/skills/${logicalPath.slice(".agents/skills/".length)}`;
+  }
+
+  if (
+    logicalPath.startsWith(".codex/") ||
+    logicalPath.startsWith(".claude/") ||
+    logicalPath.startsWith(".cursor/")
+  ) {
+    return logicalPath;
+  }
+
+  return null;
+}
+
 export class ImportedSkillEditorManager implements vscode.Disposable {
   private readonly managedDocuments = new Map<string, ManagedSkillDocument>();
   private readonly disposables: vscode.Disposable[] = [];
@@ -113,6 +140,29 @@ export class ImportedSkillEditorManager implements vscode.Disposable {
       return;
     }
 
+    const runtimeFile = this.resolveDefaultRuntimeFile(logicalPath);
+
+    if (runtimeFile) {
+      const existingRuntimeFile = await this.findFile(runtimeFile);
+
+      if (!existingRuntimeFile) {
+        await this.writeFile(runtimeFile, content);
+      }
+
+      this.managedDocuments.set(runtimeFile.toString(), {
+        versionId,
+        logicalPath,
+        label,
+      });
+
+      const document = await vscode.workspace.openTextDocument(runtimeFile);
+      await vscode.window.showTextDocument(document, { preview: false });
+      void vscode.window.showInformationMessage(
+        `Opened default runtime ${label} ${logicalPath}. Save to sync changes back to Xupra.`,
+      );
+      return;
+    }
+
     const managedFile = await this.writeManagedFile(versionId, logicalPath, content);
     this.managedDocuments.set(managedFile.toString(), {
       versionId,
@@ -134,6 +184,20 @@ export class ImportedSkillEditorManager implements vscode.Disposable {
 
     const target = vscode.Uri.joinPath(rootUri, ...safeLogicalPathSegments(logicalPath));
 
+    return this.findFile(target);
+  }
+
+  private resolveDefaultRuntimeFile(logicalPath: string) {
+    const runtimeLogicalPath = defaultRuntimeLogicalPath(logicalPath);
+
+    if (!runtimeLogicalPath) {
+      return null;
+    }
+
+    return vscode.Uri.joinPath(vscode.Uri.file(os.homedir()), ...safeLogicalPathSegments(runtimeLogicalPath));
+  }
+
+  private async findFile(target: vscode.Uri) {
     try {
       const stat = await vscode.workspace.fs.stat(target);
       return stat.type === vscode.FileType.File ? target : null;
@@ -142,14 +206,19 @@ export class ImportedSkillEditorManager implements vscode.Disposable {
     }
   }
 
+  private async writeFile(fileUri: vscode.Uri, content: string) {
+    const directory = vscode.Uri.file(path.dirname(fileUri.fsPath));
+
+    await vscode.workspace.fs.createDirectory(directory);
+    await vscode.workspace.fs.writeFile(fileUri, Buffer.from(content, "utf8"));
+  }
+
   private async writeManagedFile(versionId: string, logicalPath: string, content: string) {
     const root = vscode.Uri.joinPath(this.context.globalStorageUri, "editable-imports", versionId);
     const segments = safeLogicalPathSegments(logicalPath);
     const fileUri = vscode.Uri.joinPath(root, ...segments);
-    const directory = segments.length > 1 ? vscode.Uri.joinPath(root, ...segments.slice(0, -1)) : root;
 
-    await vscode.workspace.fs.createDirectory(directory);
-    await vscode.workspace.fs.writeFile(fileUri, Buffer.from(content, "utf8"));
+    await this.writeFile(fileUri, content);
 
     return fileUri;
   }
