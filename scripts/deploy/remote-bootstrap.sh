@@ -61,13 +61,29 @@ prune_release_directories() {
   done
 }
 
-cleanup_npm_cache() {
+cleanup_npm_cache_if_requested() {
+  if [ "${CLEAN_NPM_CACHE_ON_DEPLOY:-false}" != "true" ]; then
+    return
+  fi
+
   sudo -u "$APP_USER" npm cache clean --force >/dev/null 2>&1 || true
   rm -rf -- "/home/$APP_USER/.npm/_cacache" 2>/dev/null || true
 }
 
-apt-get update
-apt-get install -y ca-certificates curl git build-essential nginx
+missing_system_tools=""
+for tool in curl git make gcc g++ nginx; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    missing_system_tools="$missing_system_tools $tool"
+  fi
+done
+
+if [ -n "$missing_system_tools" ]; then
+  echo "Installing missing system tools:$missing_system_tools"
+  apt-get update
+  apt-get install -y ca-certificates curl git build-essential nginx
+else
+  echo "System deploy tools already available."
+fi
 
 if ! command -v node >/dev/null 2>&1; then
   install_node_runtime
@@ -143,7 +159,7 @@ mkdir -p "$APP_DIR/releases" "$APP_DIR/shared" "$APP_DIR/shared/storage"
 chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
 
 prune_release_directories 1
-cleanup_npm_cache
+cleanup_npm_cache_if_requested
 
 release_name="$(date +%Y%m%d%H%M%S)"
 release_dir="$APP_DIR/releases/$release_name"
@@ -212,12 +228,12 @@ certificate_dir="/etc/letsencrypt/live/$certificate_name"
 certificate_fullchain="$certificate_dir/fullchain.pem"
 certificate_privkey="$certificate_dir/privkey.pem"
 
-sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev && npx prisma generate && npx prisma migrate deploy && npx tsx prisma/seed.ts && npm run build"
+sudo -u "$APP_USER" bash -lc "cd '$release_dir' && set -a && source ./.env && set +a && npm ci --include=dev --prefer-offline --no-audit --fund=false && npx prisma generate && npx prisma migrate deploy && npx tsx prisma/seed.ts && npm run build"
 
 ln -sfn "$release_dir" "$APP_DIR/current"
 release_activated="1"
 prune_release_directories 2
-cleanup_npm_cache
+cleanup_npm_cache_if_requested
 rm -f -- "$RELEASE_TAR" "$ENV_FILE"
 
 service_after="network.target"

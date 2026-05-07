@@ -288,7 +288,7 @@
       },
       {
         "command": "xupra.exportPreview",
-        "title": "Xupra DryLake: Export Preview"
+        "title": "Xupra DryLake: Preview Generated Files"
       },
       {
         "command": "xupra.pullPackage",

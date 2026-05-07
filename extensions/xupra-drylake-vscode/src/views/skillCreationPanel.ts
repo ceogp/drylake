@@ -361,7 +361,16 @@ export class SkillCreationPanel {
 
       const document = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(root, ...logicalPath.split("/").filter(Boolean)));
       await vscode.window.showTextDocument(document, { preview: false });
-      void vscode.window.showInformationMessage(`${params.label} opened at ${logicalPath}. Save it, then import to sync it to Xupra.`);
+      void vscode.window
+        .showInformationMessage(
+          `${params.label} opened at ${logicalPath}.`,
+          "Sync to Xupra",
+        )
+        .then((choice) => {
+          if (choice === "Sync to Xupra") {
+            void vscode.commands.executeCommand("xupra.importWorkspace");
+          }
+        });
       await this._postMessage({ type: "result", requestId: params.requestId });
     } catch (error) {
       await this._postMessage({

@@ -50,6 +50,11 @@ const serverEnvSchema = z.object({
   STRIPE_ENTERPRISE_PRICE_ID: z.string().optional(),
   BILLING_PROVIDER: z.enum(["stripe", "clerk"]).default("stripe"),
   BILLING_ENFORCEMENT_MODE: z.enum(["development", "strict"]).default("development"),
+  XUPRA_RELEASE_SHA: z.string().optional(),
+  XUPRA_RELEASE_SHORT_SHA: z.string().optional(),
+  XUPRA_RELEASE_REF: z.string().optional(),
+  XUPRA_RELEASE_PIPELINE_ID: z.string().optional(),
+  XUPRA_RELEASE_DEPLOYED_AT: z.string().optional(),
 });
 
 const parsed = serverEnvSchema.safeParse(process.env);

@@ -24,6 +24,14 @@ export async function createExtensionAuthRequest(input: {
     },
   });
 
+  console.info("[extension-auth] code_created", {
+    requestId: request.id,
+    userId: input.userId,
+    organizationId: input.organizationId,
+    editor: input.editor,
+    expiresAt: request.expiresAt.toISOString(),
+  });
+
   return {
     code: request.code,
     expiresAt: request.expiresAt.toISOString(),
@@ -44,10 +52,23 @@ export async function exchangeExtensionAuthRequest(code: string) {
   });
 
   if (!request) {
+    console.info("[extension-auth] exchange_failed", { reason: "not_found" });
     return null;
   }
 
-  if (request.exchangedAt || request.expiresAt.getTime() <= Date.now()) {
+  if (request.exchangedAt) {
+    console.info("[extension-auth] exchange_failed", {
+      requestId: request.id,
+      reason: "already_used",
+    });
+    return null;
+  }
+
+  if (request.expiresAt.getTime() <= Date.now()) {
+    console.info("[extension-auth] exchange_failed", {
+      requestId: request.id,
+      reason: "expired",
+    });
     return null;
   }
 
@@ -65,6 +86,10 @@ export async function exchangeExtensionAuthRequest(code: string) {
   });
 
   if (exchangeResult.count !== 1) {
+    console.info("[extension-auth] exchange_failed", {
+      requestId: request.id,
+      reason: "race_lost",
+    });
     return null;
   }
 
@@ -72,6 +97,13 @@ export async function exchangeExtensionAuthRequest(code: string) {
     userId: request.user.id,
     email: request.user.email,
     organizationId: request.organization.id,
+  });
+
+  console.info("[extension-auth] code_exchanged", {
+    requestId: request.id,
+    userId: request.user.id,
+    organizationId: request.organization.id,
+    editor: request.editor,
   });
 
   return {

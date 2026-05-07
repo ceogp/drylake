@@ -7,6 +7,7 @@ import { ApiClient } from "./apiClient";
 import { normalizeEntitlements } from "./connectionState";
 import { writeGeneratedFilesToWorkspace } from "./fileSync";
 import { StateStore } from "./stateStore";
+import { getLogger } from "../utils/logging";
 
 type BrowserConnectResult =
   | {
@@ -27,6 +28,13 @@ type PendingRequest = {
 const CONNECT_TIMEOUT_MS = 1000 * 60 * 3;
 const SUPPORTED_INSTALL_TARGETS = new Set(["codex", "claude_code", "claude_agents", "cursor"]);
 const ALL_INSTALL_TARGETS = ["codex", "claude_agents", "cursor"];
+const logger = getLogger();
+
+function logConnectStage(stage: string, details?: Record<string, unknown>) {
+  logger.info(
+    `Browser connect ${stage}${details ? ` ${JSON.stringify(details)}` : ""}`,
+  );
+}
 
 function buildExternalConnectUrl(apiClient: ApiClient, callbackUri: vscode.Uri) {
   const url = new URL(apiClient.openWebUrl("/extensions/connect").toString());
@@ -120,10 +128,18 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
     const state = query.get("state");
     const error = query.get("error");
     const message = query.get("message");
+    const matchesPendingState = Boolean(this.pending && state === this.pending.state);
+
+    logConnectStage("callback_received", {
+      hasCode: Boolean(code),
+      hasState: Boolean(state),
+      matchesPendingState,
+    });
 
     if (!code) {
       if (this.pending && state === this.pending.state) {
         clearTimeout(this.pending.timeout);
+        logConnectStage("missing_code", { error, message });
         this.pending.resolve({
           kind: "error",
           message: message ?? error ?? "The browser callback did not include a connect code.",
@@ -135,6 +151,7 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
 
     if (this.pending && state === this.pending.state) {
       clearTimeout(this.pending.timeout);
+      logConnectStage("code_received");
       this.pending.resolve({
         kind: "success",
         code,
@@ -143,9 +160,13 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       return;
     }
 
+    logConnectStage("state_mismatch_or_unsolicited_callback", {
+      hasPendingRequest: Boolean(this.pending),
+    });
     const exchanged = await this.apiClient.exchangeBrowserConnectCode(code).catch(() => null);
 
     if (!exchanged) {
+      logConnectStage("exchange_failed");
       void vscode.window.showWarningMessage(
         "Xupra DryLake received a browser callback, but the connection code could not be exchanged. Run Connect again.",
       );
@@ -164,6 +185,10 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       userEmail: exchanged.user.email,
       userAvatarUrl: exchanged.user.imageUrl ?? undefined,
       authMode: "clerk",
+    });
+    logConnectStage("exchange_succeeded", {
+      organizationId: exchanged.organization.id,
+      editor: exchanged.editor,
     });
     const tierLabel = exchanged.organization.tier
       ? exchanged.organization.tier.charAt(0).toUpperCase() + exchanged.organization.tier.slice(1).toLowerCase()
@@ -300,6 +325,10 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       const timeout = setTimeout(() => {
         if (this.pending?.state === state) {
           this.pending = undefined;
+          logConnectStage("timeout");
+          void vscode.window.showWarningMessage(
+            "Xupra did not receive the browser sign-in callback. Use Return to Editor on the connect page or the manual token fallback.",
+          );
           resolve(null);
         }
       }, CONNECT_TIMEOUT_MS);
@@ -314,6 +343,7 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
 
     try {
       const opened = await vscode.env.openExternal(connectUrl);
+      logConnectStage("browser_opened", { opened });
 
       if (!opened && pendingRequest?.state === state) {
         clearTimeout(pendingRequest.timeout);

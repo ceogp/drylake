@@ -3,6 +3,9 @@ import * as vscode from "vscode";
 import { ApiClient } from "./apiClient";
 import { BrowserConnectCoordinator } from "./browserConnect";
 import { StateStore } from "./stateStore";
+import { getLogger } from "../utils/logging";
+
+const logger = getLogger();
 
 async function promptForAccessToken(apiClient: ApiClient) {
   const openConnectPage = "Open Connect Page";
@@ -61,9 +64,23 @@ export async function connectSession(
   const browserResult = await browserConnect.start();
 
   if (browserResult?.kind === "success") {
-    const exchanged = await apiClient.exchangeBrowserConnectCode(browserResult.code);
+    logger.info("Browser connect exchange_started");
+    const exchanged = await apiClient.exchangeBrowserConnectCode(browserResult.code).catch((error) => {
+      logger.error(
+        `Browser connect exchange_failed ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      throw error;
+    });
     apiClient.setAccessToken(exchanged.token.token);
     await stateStore.setAccessToken(exchanged.token.token);
+    logger.info(
+      `Browser connect exchange_succeeded ${JSON.stringify({
+        organizationId: exchanged.organization.id,
+        editor: exchanged.editor,
+      })}`,
+    );
     const result = await apiClient.connect(undefined, undefined, exchanged.token.token);
     return result;
   }

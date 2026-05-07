@@ -38,6 +38,17 @@ check() {
 }
 
 check "health" "200" "$app_base_url/api/v1/health"
+
+health_payload="$(curl --max-time 15 -fsS "$app_base_url/api/v1/health" || true)"
+if [ -n "$health_payload" ]; then
+  printf '%s' "$health_payload" | node -e '
+    const input = require("node:fs").readFileSync(0, "utf8");
+    const payload = JSON.parse(input);
+    const release = payload.release || {};
+    console.log(`Verified release: ${release.shortSha || "unknown"} ref=${release.ref || "unknown"} pipeline=${release.pipelineId || "unknown"} deployedAt=${release.deployedAt || "unknown"}`);
+  ' || true
+fi
+
 check "extension install" "200" "$app_base_url/extensions/install"
 check "extension connect" "200" "$app_base_url/extensions/connect"
 check "stripe webhook empty body" "400" -X POST -d '' "$app_base_url/api/stripe/webhook"

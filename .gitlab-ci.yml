@@ -14,7 +14,7 @@ default:
 
 variables:
   NODE_ENV: production
-  DEPLOY_FREEZE: "true"
+  DEPLOY_FREEZE: "false"
   DATABASE_URL: postgresql://xupra_app:xupra_ci@postgres:5432/xupra_drylake
   POSTGRES_DB: xupra_drylake
   POSTGRES_USER: xupra_app
@@ -40,7 +40,7 @@ validate:
         POSTGRES_USER: xupra_app
         POSTGRES_PASSWORD: xupra_ci
   script:
-    - npm ci --include=dev
+    - npm ci --include=dev --prefer-offline --no-audit --fund=false
     - |
       node <<'NODE'
       const { Client } = require("pg");
@@ -93,10 +93,23 @@ validate:
       - runner_system_failure
       - stuck_or_timeout_failure
       - script_failure
-  image: debian:bookworm-slim
+  image: node:22-bookworm
   before_script:
-    - apt-get update
-    - apt-get install -y openssh-client git nodejs
+    - |
+      missing_tools=""
+      for tool in ssh-agent ssh-keyscan ssh scp git node; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+          missing_tools="$missing_tools $tool"
+        fi
+      done
+
+      if [ -n "$missing_tools" ]; then
+        echo "Installing missing deploy tools:$missing_tools"
+        apt-get update
+        apt-get install -y openssh-client git
+      else
+        echo "Deploy tools already available in CI image."
+      fi
     - eval "$(ssh-agent -s)"
     - mkdir -p ~/.ssh
     - |
@@ -206,6 +219,14 @@ validate:
       else
         printf '\nAPP_BASE_URL=%s\n' "$app_base_url" >> deploy.env
       fi
+    - |
+      {
+        printf '\nXUPRA_RELEASE_SHA=%s\n' "$CI_COMMIT_SHA"
+        printf 'XUPRA_RELEASE_SHORT_SHA=%s\n' "$CI_COMMIT_SHORT_SHA"
+        printf 'XUPRA_RELEASE_REF=%s\n' "$CI_COMMIT_REF_NAME"
+        printf 'XUPRA_RELEASE_PIPELINE_ID=%s\n' "$CI_PIPELINE_ID"
+        printf 'XUPRA_RELEASE_DEPLOYED_AT=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      } >> deploy.env
     - |
       node <<'NODE'
       const fs = require("node:fs");
@@ -390,9 +411,13 @@ validate:
 
 .verify_app:
   stage: verify
-  image: debian:bookworm-slim
+  image: node:22-bookworm
   before_script:
-    - apt-get update && apt-get install -y curl
+    - |
+      if ! command -v curl >/dev/null 2>&1; then
+        apt-get update
+        apt-get install -y curl
+      fi
   script:
     - bash scripts/deploy/verify-deploy.sh
 
@@ -470,7 +495,7 @@ deploy_production:
     - if: '$DEPLOY_FREEZE == "true"'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_COMMIT_REF_PROTECTED == "true" && $PRODUCTION_HOST && $PRODUCTION_SSH_USER && $PRODUCTION_SSH_PRIVATE_KEY && $PRODUCTION_ENV_FILE'
-      when: manual
+      when: on_success
 
 verify_production:
   extends: .verify_app

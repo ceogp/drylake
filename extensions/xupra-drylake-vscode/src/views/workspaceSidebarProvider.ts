@@ -33,7 +33,8 @@ type InboundAction =
   | "signOut"
   | "refreshPlan"
   | "createAgent"
-  | "exportPreview";
+  | "exportPreview"
+  ;
 
 type BasicInboundMessage = {
   [Action in InboundAction]: {
@@ -127,6 +128,10 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
             await vscode.commands.executeCommand("xupra.openImportedAgent", message.subagentId);
             break;
         }
+        await webviewView.webview.postMessage({
+          type: "result",
+          requestId: message.requestId,
+        } satisfies OutboundMessage);
       } catch (error) {
         const outbound: OutboundMessage = {
           type: "error",
@@ -190,6 +195,11 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
 
     button {
       font: inherit;
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: 0.65;
     }
 
     .panel {
@@ -512,6 +522,8 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       agent_config: "Config",
       source: "Source"
     };
+    let latestState = { connected: false, detectedFiles: [], importedWorkspace: null, selection: {}, isLoading: true };
+    let pendingAction = null;
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -547,7 +559,8 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
 
       if (count === 0) {
         html += '<div class="empty-state">No supported files detected yet.</div>';
-        html += '<div class="action-row"><button class="action-btn primary" data-action="importDefaultLocations">Import Default Locations</button></div>';
+        const isDefaultSyncing = pendingAction === "importDefaultLocations";
+        html += '<div class="action-row"><button class="action-btn primary" data-action="importDefaultLocations"' + (isDefaultSyncing ? " disabled" : "") + '>' + (isDefaultSyncing ? "Syncing..." : "Sync Default Locations") + '</button></div>';
         return html + '</div>';
       }
 
@@ -577,7 +590,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         html += '</div>';
       });
 
-      html += '<div class="action-row"><button class="action-btn primary" data-action="importWorkspace">Import</button><button class="action-btn" data-action="importFolder">From Folder</button></div>';
+      const isSyncing = pendingAction === "importWorkspace";
+      const isFolderSyncing = pendingAction === "importFolder";
+      html += '<div class="action-row"><button class="action-btn primary" data-action="importWorkspace"' + (isSyncing ? " disabled" : "") + '>' + (isSyncing ? "Syncing..." : "Sync to Xupra") + '</button><button class="action-btn" data-action="importFolder"' + (isFolderSyncing ? " disabled" : "") + '>' + (isFolderSyncing ? "Syncing..." : "From Folder") + '</button></div>';
       return html + '</div>';
     }
 
@@ -778,12 +793,18 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         return;
       }
 
+      latestState = state || latestState;
       root.innerHTML = state && state.connected ? renderConnected(state) : renderDisconnected(state || {});
     }
 
     window.addEventListener("message", function(event) {
       if (event.data.type === "stateUpdate") {
         render(event.data.state);
+      }
+
+      if (event.data.type === "result" || event.data.type === "error") {
+        pendingAction = null;
+        render(latestState);
       }
     });
 
@@ -809,10 +830,12 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       }
 
       const btn = event.target.closest("[data-action]");
-      if (!btn) {
+      if (!btn || btn.disabled) {
         return;
       }
 
+      pendingAction = btn.dataset.action;
+      render(latestState);
       vscode.postMessage({ type: btn.dataset.action, requestId: uuid() });
     });
 

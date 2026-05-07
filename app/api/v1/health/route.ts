@@ -23,6 +23,13 @@ export async function GET() {
     service: "xupra-drylake",
     status: "ok",
     environment: env.NODE_ENV,
+    release: {
+      sha: env.XUPRA_RELEASE_SHA ?? null,
+      shortSha: env.XUPRA_RELEASE_SHORT_SHA ?? null,
+      ref: env.XUPRA_RELEASE_REF ?? null,
+      pipelineId: env.XUPRA_RELEASE_PIPELINE_ID ?? null,
+      deployedAt: env.XUPRA_RELEASE_DEPLOYED_AT ?? null,
+    },
     connections: {
       database: db,
       authMode: auth.mode,
