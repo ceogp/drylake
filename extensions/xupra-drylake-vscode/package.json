@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "Xupra DryLake",
   "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": false,
   "publisher": "xupra",
   "license": "UNLICENSED",
@@ -404,6 +404,7 @@
     "check:cursor": "node scripts/check-cursor-compatibility.mjs",
     "prepackage": "npm run build",
     "package:vsix": "npx @vscode/vsce package --allow-star-activation",
+    "package:development": "node scripts/package-development-extension.mjs",
     "install:vsix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-vsix.ps1",
     "reinstall:vsix": "npm run package:vsix && npm run install:vsix",
     "uninstall:vscode": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-vscode-extension.ps1"

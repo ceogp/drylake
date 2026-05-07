@@ -464,6 +464,10 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
 
     .item-optimize {
       color: var(--vscode-charts-yellow, var(--vscode-foreground));
+      font-size: 11px;
+      line-height: 1;
+      padding: 4px 6px;
+      white-space: nowrap;
     }
 
     .item-optimize:hover {
@@ -797,7 +801,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         const optimizePath = options.readOptimizePath ? options.readOptimizePath(entry) : "";
         const itemHtml = '<div class="item-stack"><span class="item-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</span>' + (meta ? '<span class="item-meta" title="' + escapeHtml(meta) + '">' + escapeHtml(meta) + '</span>' : '') + '</div>' + (tag ? '<span class="file-tag">' + escapeHtml(tag) + '</span>' : '');
         const optimizeHtml = optimizePath
-          ? '<button type="button" class="item-trash item-optimize" title="Optimize with Xupra AI (Pro)" data-optimize-path="' + escapeHtml(optimizePath) + '" aria-label="Optimize with Xupra AI">\u{2728}</button>'
+          ? '<button type="button" class="item-trash item-optimize" title="Optimize with Xupra AI (Pro)" data-optimize-path="' + escapeHtml(optimizePath) + '" aria-label="Improve with Xupra AI">improve w/ Xupra AI</button>'
           : '';
 
         if (options.actionType === 'openImportedSkill' && openId) {
