@@ -125,7 +125,9 @@ export default async function AdminUserPage({
               <tbody>
                 {user.extensionAuthRequests.map((request) => (
                   <tr className="border-b border-stone-100" key={request.id}>
-                    <td className="px-3 py-4">{request.organization.name}</td>
+                    <td className="px-3 py-4">
+                      {request.organization?.name ?? "Pending browser approval"}
+                    </td>
                     <td className="px-3 py-4">{request.editor}</td>
                     <td className="px-3 py-4 text-xs text-stone-500">{formatDate(request.createdAt)}</td>
                     <td className="px-3 py-4 text-xs text-stone-500">{formatDate(request.expiresAt)}</td>

@@ -1,10 +1,14 @@
 import Link from "next/link";
 
+import { ExtensionConnectApprovalCard } from "@/components/extension-connect-approval-card";
 import { ExtensionConnectAuthButtons } from "@/components/extension-connect-auth-buttons";
 import { ExtensionBrowserReturn } from "@/components/extension-browser-return";
 import { ExtensionConnectCard } from "@/components/extension-connect-card";
 import { ConnectedWorkspaceCard } from "@/components/connected-workspace-card";
-import { createExtensionAuthRequest } from "@/lib/services/extension-auth-requests";
+import {
+  createExtensionAuthRequest,
+  getExtensionAuthRequestStatus,
+} from "@/lib/services/extension-auth-requests";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { getPrimaryWorkspacePath } from "@/lib/services/workspace";
 
@@ -15,10 +19,10 @@ const allowedCallbackProtocols = new Set(["vscode:", "vscode-insiders:", "cursor
 
 const steps = [
   "Click Connect in VS Code or Cursor.",
-  "The extension opens this page in your browser.",
+  "The extension opens this approval request in your browser.",
   "Sign up or sign in if needed.",
-  "Xupra creates your starter workspace automatically.",
-  "The browser returns to the editor so you can scan, import, and review the repo first.",
+  "Approve the editor connection for your current account and workspace.",
+  "The editor finishes connecting even if the browser cannot hand control back.",
 ];
 
 function normalizeSearchValue(value: string | string[] | undefined) {
@@ -52,6 +56,8 @@ function buildConnectPath(
   editor: "vscode" | "cursor",
   options?: {
     manual?: boolean;
+    requestId?: string;
+    state?: string;
   },
 ) {
   const params = new URLSearchParams();
@@ -62,6 +68,14 @@ function buildConnectPath(
 
   params.set("editor", editor);
 
+  if (options?.requestId) {
+    params.set("requestId", options.requestId);
+  }
+
+  if (options?.state) {
+    params.set("state", options.state);
+  }
+
   if (options?.manual) {
     params.set("manual", "1");
   }
@@ -69,8 +83,13 @@ function buildConnectPath(
   return `/extensions/connect?${params.toString()}`;
 }
 
-function buildReconnectPath(callback: string | null, editor: "vscode" | "cursor") {
-  return buildConnectPath(callback, editor);
+function buildReconnectPath(
+  callback: string | null,
+  editor: "vscode" | "cursor",
+  requestId: string,
+  state: string,
+) {
+  return buildConnectPath(callback, editor, { requestId, state });
 }
 
 function buildManualFallbackPath(callback: string | null, editor: "vscode" | "cursor") {
@@ -97,13 +116,22 @@ export default async function ExtensionConnectPage({
   const callback = getValidCallback(normalizeSearchValue(resolvedSearchParams.callback));
   const editor = getEditor(resolvedSearchParams.editor);
   const manualMode = isManualMode(resolvedSearchParams.manual);
-  const reconnectPath = buildReconnectPath(callback, editor);
+  const requestId = normalizeSearchValue(resolvedSearchParams.requestId).trim();
+  const callbackState = normalizeSearchValue(resolvedSearchParams.state).trim();
+  const reconnectPath = buildReconnectPath(callback, editor, requestId, callbackState);
   const manualFallbackPath = buildManualFallbackPath(callback, editor);
   const context = await getCurrentAppContext();
   const workspaceHref = context ? (await getPrimaryWorkspacePath()) ?? "/app" : "/app";
   const signedInLabel = context?.user.profile?.displayName ?? context?.user.email ?? "";
+  const connectRequest = requestId ? await getExtensionAuthRequestStatus(requestId) : null;
+  const requestOwnedByDifferentSession = Boolean(
+    context &&
+      connectRequest &&
+      ((connectRequest.userId && connectRequest.userId !== context.user.id) ||
+        (connectRequest.organizationId && connectRequest.organizationId !== context.organization.id)),
+  );
   const browserRequest =
-    callback && context && !manualMode
+    callback && context && !manualMode && !requestId
       ? await createExtensionAuthRequest({
           userId: context.user.id,
           organizationId: context.organization.id,
@@ -140,7 +168,73 @@ export default async function ExtensionConnectPage({
         </div>
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          {callback && browserRequest ? (
+          {requestId ? !context ? (
+            <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
+                Sign In To Approve
+              </p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+                Finish account setup, then approve this editor connection
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-stone-700">
+                If you are already signed in, this page will come right back to the approval screen.
+                The editor keeps waiting for approval in the background.
+              </p>
+              <ExtensionConnectAuthButtons reconnectPath={reconnectPath} />
+              <p className="mt-4 text-xs leading-6 text-stone-500">
+                If browser approval still fails, manual token fallback remains available.
+              </p>
+            </section>
+          ) : !connectRequest ? (
+            <section className="rounded-[2rem] border border-red-200 bg-red-50 p-7 shadow-sm">
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-red-700">
+                Request Missing
+              </p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+                This editor connection request no longer exists
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-stone-700">
+                Start Connect again from VS Code or Cursor to create a fresh approval request.
+              </p>
+            </section>
+          ) : requestOwnedByDifferentSession ? (
+            <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-7 shadow-sm">
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-amber-700">
+                Switch Account
+              </p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+                This browser session does not match the editor approval request
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-stone-700">
+                Switch to the same Xupra account and organization that should own this editor
+                connection, or start a new connect request from the editor.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                  href={workspaceHref}
+                >
+                  Open Dashboard
+                </Link>
+                <Link
+                  className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                  href={manualFallbackPath}
+                >
+                  Manual Fallback
+                </Link>
+              </div>
+            </section>
+          ) : (
+            <ExtensionConnectApprovalCard
+              callback={callback}
+              editor={connectRequest.editor}
+              initialApprovedAt={connectRequest.approvedAt}
+              initialStatus={connectRequest.status}
+              requestId={connectRequest.id}
+              state={callbackState || null}
+              workspaceHref={workspaceHref}
+            />
+          ) : callback && browserRequest ? (
             <ExtensionBrowserReturn
               callback={callback}
               code={browserRequest.code}
@@ -156,12 +250,12 @@ export default async function ExtensionConnectPage({
                 Finish account setup, then go right back to the editor
               </h2>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                Use any email. Xupra creates your starter workspace automatically, then returns you
-                to VS Code or Cursor so you can import the repo first and decide on upgrades later.
+                Use any email. Xupra creates your starter workspace automatically, then brings you
+                back here so you can approve the editor connection.
               </p>
               <ExtensionConnectAuthButtons reconnectPath={reconnectPath} />
               <p className="mt-4 text-xs leading-6 text-stone-500">
-                If the browser return does not work later, manual token fallback is still available.
+                If the browser cannot reopen the editor later, manual token fallback is still available.
               </p>
             </section>
           ) : !context ? (
@@ -225,10 +319,10 @@ export default async function ExtensionConnectPage({
               <span className="font-mono text-xs">xupra.additionalScanPatterns</span>.
             </div>
 
-            {!callback || manualMode ? (
+            {!requestId && (!callback || manualMode) ? (
               <div className="mt-4 rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
                 This screen is the fallback path. The normal customer flow starts inside the
-                extension and returns to the editor automatically.
+                extension and the editor completes auth once browser approval is granted.
               </div>
             ) : null}
           </article>

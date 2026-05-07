@@ -330,12 +330,18 @@ model AuditEvent {
 model ExtensionAuthRequest {
   id             String       @id @default(cuid())
   code           String       @unique
-  organizationId String
-  userId         String
+  organizationId String?
+  userId         String?
   editor         String
+  status         String       @default("pending")
   expiresAt      DateTime
+  approvedAt     DateTime?
+  deniedAt       DateTime?
   exchangedAt    DateTime?
+  pollTokenHash  String?
   createdAt      DateTime     @default(now())
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, expiresAt])
 }

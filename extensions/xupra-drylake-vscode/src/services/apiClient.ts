@@ -14,6 +14,29 @@ import type {
 
 type JsonValue = Record<string, unknown>;
 
+type BrowserConnectSessionPayload = {
+  token: {
+    token: string;
+    expiresAt: string;
+  };
+  user: {
+    id: string;
+    email: string;
+    imageUrl?: string | null;
+  };
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    tier: string;
+  };
+  entitlements?: Record<string, boolean>;
+  subscription?: {
+    status: string;
+  };
+  editor: "vscode" | "cursor";
+};
+
 const LEGACY_HOSTS = new Set(["52.196.86.96"]);
 const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
 
@@ -102,31 +125,34 @@ export class ApiClient {
   }
 
   async exchangeBrowserConnectCode(code: string) {
-    return this.request<{
-      token: {
-        token: string;
-        expiresAt: string;
-      };
-      user: {
-        id: string;
-        email: string;
-        imageUrl?: string | null;
-      };
-      organization: {
-        id: string;
-        name: string;
-        slug: string;
-        tier: string;
-      };
-      entitlements?: Record<string, boolean>;
-      subscription?: {
-        status: string;
-      };
-      editor: "vscode" | "cursor";
-    }>("/api/v1/extension/connect/exchange", {
+    return this.request<BrowserConnectSessionPayload>("/api/v1/extension/connect/exchange", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code }),
+    });
+  }
+
+  async startBrowserConnect(editor: "vscode" | "cursor") {
+    return this.request<{
+      requestId: string;
+      pollToken: string;
+      expiresAt: string;
+      editor: "vscode" | "cursor";
+    }>("/api/v1/extension/connect/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ editor }),
+    });
+  }
+
+  async pollBrowserConnect(requestId: string, pollToken: string) {
+    return this.request<
+      | { status: "pending" | "denied" | "expired" | "consumed" }
+      | ({ status: "approved" } & BrowserConnectSessionPayload)
+    >(`/api/v1/extension/connect/poll?requestId=${encodeURIComponent(requestId)}`, {
+      headers: {
+        "x-xupra-connect-poll-token": pollToken,
+      },
     });
   }
 

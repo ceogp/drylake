@@ -63,25 +63,20 @@ export async function connectSession(
 
   const browserResult = await browserConnect.start();
 
-  if (browserResult?.kind === "success") {
-    logger.info("Browser connect exchange_started");
-    const exchanged = await apiClient.exchangeBrowserConnectCode(browserResult.code).catch((error) => {
-      logger.error(
-        `Browser connect exchange_failed ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-      throw error;
-    });
-    apiClient.setAccessToken(exchanged.token.token);
-    await stateStore.setAccessToken(exchanged.token.token);
+  if (browserResult?.kind === "approved") {
+    apiClient.setAccessToken(browserResult.session.token.token);
+    await stateStore.setAccessToken(browserResult.session.token.token);
     logger.info(
-      `Browser connect exchange_succeeded ${JSON.stringify({
-        organizationId: exchanged.organization.id,
-        editor: exchanged.editor,
+      `Browser connect poll_succeeded ${JSON.stringify({
+        organizationId: browserResult.session.organization.id,
+        editor: browserResult.session.editor,
       })}`,
     );
-    const result = await apiClient.connect(undefined, undefined, exchanged.token.token);
+    const result = await apiClient.connect(
+      undefined,
+      undefined,
+      browserResult.session.token.token,
+    );
     return result;
   }
 

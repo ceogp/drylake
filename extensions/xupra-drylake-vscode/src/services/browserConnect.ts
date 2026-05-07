@@ -11,8 +11,29 @@ import { getLogger } from "../utils/logging";
 
 type BrowserConnectResult =
   | {
-      kind: "success";
-      code: string;
+      kind: "approved";
+      session: {
+        token: {
+          token: string;
+          expiresAt: string;
+        };
+        user: {
+          id: string;
+          email: string;
+          imageUrl?: string | null;
+        };
+        organization: {
+          id: string;
+          name: string;
+          slug: string;
+          tier: string;
+        };
+        entitlements?: Record<string, boolean>;
+        subscription?: {
+          status: string;
+        };
+        editor: "vscode" | "cursor";
+      };
     }
   | {
       kind: "error";
@@ -21,11 +42,14 @@ type BrowserConnectResult =
 
 type PendingRequest = {
   state: string;
+  requestId: string;
+  pollToken: string;
   resolve: (result: BrowserConnectResult | null) => void;
   timeout: NodeJS.Timeout;
 };
 
 const CONNECT_TIMEOUT_MS = 1000 * 60 * 3;
+const CONNECT_POLL_INTERVAL_MS = 1500;
 const SUPPORTED_INSTALL_TARGETS = new Set(["codex", "claude_code", "claude_agents", "cursor"]);
 const ALL_INSTALL_TARGETS = ["codex", "claude_agents", "cursor"];
 const logger = getLogger();
@@ -36,12 +60,23 @@ function logConnectStage(stage: string, details?: Record<string, unknown>) {
   );
 }
 
-function buildExternalConnectUrl(apiClient: ApiClient, callbackUri: vscode.Uri) {
+function buildExternalConnectUrl(
+  apiClient: ApiClient,
+  callbackUri: vscode.Uri,
+  requestId: string,
+  state: string,
+) {
   const url = new URL(apiClient.openWebUrl("/extensions/connect").toString());
   url.searchParams.set("callback", callbackUri.toString());
   url.searchParams.set("editor", vscode.env.uriScheme === "cursor" ? "cursor" : "vscode");
+  url.searchParams.set("requestId", requestId);
+  url.searchParams.set("state", state);
   url.searchParams.set("request", Date.now().toString());
   return vscode.Uri.parse(url.toString());
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function normalizeInstallTarget(rawValue: string | null) {
@@ -96,6 +131,89 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
     return vscode.window.registerUriHandler(this);
   }
 
+  private async applyConnectedSession(exchanged: NonNullable<BrowserConnectResult & { kind: "approved" }> ["session"]) {
+    this.apiClient.setAccessToken(exchanged.token.token);
+    await this.stateStore.setAccessToken(exchanged.token.token);
+    await this.stateStore.setConnection({
+      organizationId: exchanged.organization.id,
+      organizationName: exchanged.organization.name,
+      organizationSlug: exchanged.organization.slug,
+      organizationTier: exchanged.organization.tier,
+      entitlements: normalizeEntitlements(exchanged.entitlements),
+      subscriptionStatus: exchanged.subscription?.status,
+      userEmail: exchanged.user.email,
+      userAvatarUrl: exchanged.user.imageUrl ?? undefined,
+      authMode: "clerk",
+    });
+    logConnectStage("exchange_succeeded", {
+      organizationId: exchanged.organization.id,
+      editor: exchanged.editor,
+    });
+    const tierLabel = exchanged.organization.tier
+      ? exchanged.organization.tier.charAt(0).toUpperCase() + exchanged.organization.tier.slice(1).toLowerCase()
+      : "Free";
+    void vscode.window.showInformationMessage(
+      `Connected to Xupra DryLake as ${exchanged.user.email} (${tierLabel} plan).`,
+    );
+    void vscode.commands.executeCommand("xupra.refreshProjects");
+  }
+
+  private async pollPendingRequest(pendingRequest: PendingRequest) {
+    while (this.pending === pendingRequest) {
+      try {
+        const pollResult = await this.apiClient.pollBrowserConnect(
+          pendingRequest.requestId,
+          pendingRequest.pollToken,
+        );
+
+        if (this.pending !== pendingRequest) {
+          return;
+        }
+
+        if (pollResult.status === "pending") {
+          await sleep(CONNECT_POLL_INTERVAL_MS);
+          continue;
+        }
+
+        clearTimeout(pendingRequest.timeout);
+        this.pending = undefined;
+
+        if (pollResult.status === "approved") {
+          logConnectStage("poll_approved", { requestId: pendingRequest.requestId });
+          pendingRequest.resolve({
+            kind: "approved",
+            session: pollResult,
+          });
+          return;
+        }
+
+        const messages: Record<"denied" | "expired" | "consumed", string> = {
+          denied: "The browser denied the Xupra connection request. Start Connect again from the editor.",
+          expired:
+            "The Xupra browser approval request expired. Start Connect again from the editor.",
+          consumed:
+            "This Xupra browser approval request was already completed. Start Connect again if this editor is still disconnected.",
+        };
+
+        logConnectStage("poll_finished_without_session", {
+          requestId: pendingRequest.requestId,
+          status: pollResult.status,
+        });
+        pendingRequest.resolve({
+          kind: "error",
+          message: messages[pollResult.status],
+        });
+        return;
+      } catch (error) {
+        logConnectStage("poll_retry", {
+          requestId: pendingRequest.requestId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        await sleep(CONNECT_POLL_INTERVAL_MS);
+      }
+    }
+  }
+
   async handleUri(uri: vscode.Uri): Promise<void> {
     if (uri.path === "/import") {
       await vscode.commands.executeCommand("xupra.projects.focus");
@@ -128,15 +246,22 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
     const state = query.get("state");
     const error = query.get("error");
     const message = query.get("message");
+    const approved = query.get("approved") === "1" || query.get("connected") === "1";
     const matchesPendingState = Boolean(this.pending && state === this.pending.state);
 
     logConnectStage("callback_received", {
       hasCode: Boolean(code),
       hasState: Boolean(state),
+      approved,
       matchesPendingState,
     });
 
     if (!code) {
+      if (approved && this.pending && state === this.pending.state) {
+        logConnectStage("focus_callback_received");
+        return;
+      }
+
       if (this.pending && state === this.pending.state) {
         clearTimeout(this.pending.timeout);
         logConnectStage("missing_code", { error, message });
@@ -150,13 +275,27 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
     }
 
     if (this.pending && state === this.pending.state) {
-      clearTimeout(this.pending.timeout);
-      logConnectStage("code_received");
-      this.pending.resolve({
-        kind: "success",
-        code,
-      });
+      const pendingRequest = this.pending;
+      clearTimeout(pendingRequest.timeout);
       this.pending = undefined;
+      logConnectStage("legacy_code_received");
+
+      const exchanged = await this.apiClient.exchangeBrowserConnectCode(code).catch(() => null);
+
+      if (!exchanged) {
+        logConnectStage("exchange_failed");
+        pendingRequest.resolve({
+          kind: "error",
+          message:
+            "Xupra DryLake received a browser callback, but the connection code could not be exchanged. Run Connect again.",
+        });
+        return;
+      }
+
+      pendingRequest.resolve({
+        kind: "approved",
+        session: exchanged,
+      });
       return;
     }
 
@@ -173,30 +312,7 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       return;
     }
 
-    this.apiClient.setAccessToken(exchanged.token.token);
-    await this.stateStore.setAccessToken(exchanged.token.token);
-    await this.stateStore.setConnection({
-      organizationId: exchanged.organization.id,
-      organizationName: exchanged.organization.name,
-      organizationSlug: exchanged.organization.slug,
-      organizationTier: exchanged.organization.tier,
-      entitlements: normalizeEntitlements(exchanged.entitlements),
-      subscriptionStatus: exchanged.subscription?.status,
-      userEmail: exchanged.user.email,
-      userAvatarUrl: exchanged.user.imageUrl ?? undefined,
-      authMode: "clerk",
-    });
-    logConnectStage("exchange_succeeded", {
-      organizationId: exchanged.organization.id,
-      editor: exchanged.editor,
-    });
-    const tierLabel = exchanged.organization.tier
-      ? exchanged.organization.tier.charAt(0).toUpperCase() + exchanged.organization.tier.slice(1).toLowerCase()
-      : "Free";
-    void vscode.window.showInformationMessage(
-      `Connected to Xupra DryLake as ${exchanged.user.email} (${tierLabel} plan).`,
-    );
-    void vscode.commands.executeCommand("xupra.refreshProjects");
+    await this.applyConnectedSession(exchanged);
   }
 
   private async handleInstallUri(uri: vscode.Uri) {
@@ -318,7 +434,14 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       `${vscode.env.uriScheme}://${this.context.extension.id}/auth-complete?state=${encodeURIComponent(state)}`,
     );
     const externalCallbackUri = await vscode.env.asExternalUri(internalCallbackUri);
-    const connectUrl = buildExternalConnectUrl(this.apiClient, externalCallbackUri);
+    const editor = vscode.env.uriScheme === "cursor" ? "cursor" : "vscode";
+    const connectRequest = await this.apiClient.startBrowserConnect(editor);
+    const connectUrl = buildExternalConnectUrl(
+      this.apiClient,
+      externalCallbackUri,
+      connectRequest.requestId,
+      state,
+    );
     let pendingRequest: PendingRequest | undefined;
 
     const resultPromise = new Promise<BrowserConnectResult | null>((resolve) => {
@@ -327,7 +450,7 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
           this.pending = undefined;
           logConnectStage("timeout");
           void vscode.window.showWarningMessage(
-            "Xupra did not receive the browser sign-in callback. Use Return to Editor on the connect page or the manual token fallback.",
+            "Xupra did not receive browser approval before the request expired. Start Connect again or use the manual token fallback.",
           );
           resolve(null);
         }
@@ -335,10 +458,13 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
 
       pendingRequest = {
         state,
+        requestId: connectRequest.requestId,
+        pollToken: connectRequest.pollToken,
         resolve,
         timeout,
       };
       this.pending = pendingRequest;
+      void this.pollPendingRequest(pendingRequest);
     });
 
     try {
