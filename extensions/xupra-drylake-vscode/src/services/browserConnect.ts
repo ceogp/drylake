@@ -6,6 +6,7 @@ import * as vscode from "vscode";
 import { ApiClient } from "./apiClient";
 import { normalizeEntitlements } from "./connectionState";
 import { writeGeneratedFilesToWorkspace } from "./fileSync";
+import { installGeneratedFilesToRuntimeHome } from "./runtimeInstall";
 import { StateStore } from "./stateStore";
 import { getLogger } from "../utils/logging";
 
@@ -100,6 +101,10 @@ function normalizeInstallTarget(rawValue: string | null) {
 function normalizeInstallMode(rawValue: string | null) {
   if (!rawValue || rawValue === "workspace-root") {
     return "workspace-root";
+  }
+
+  if (rawValue === "runtime-home") {
+    return "runtime-home";
   }
 
   if (rawValue === "custom-path") {
@@ -375,6 +380,32 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
 
       if (generatedFiles.length === 0) {
         void vscode.window.showWarningMessage(`No generated files are available for ${targetPlatform}.`);
+        return;
+      }
+
+      if (mode === "runtime-home") {
+        const summary = await installGeneratedFilesToRuntimeHome(generatedFiles);
+
+        if (!summary) {
+          return;
+        }
+
+        const details: string[] = [];
+        if (summary.codexProfiles.length > 0) {
+          details.push(
+            `Codex profiles: ${summary.codexProfiles.join(", ")}. Run codex exec -C . -p <profile> \"<prompt>\"`,
+          );
+        }
+        if (summary.claudeAgents.length > 0) {
+          details.push(
+            `Claude agents: ${summary.claudeAgents.join(", ")}. Run claude --agent <name> or ask Claude to use that subagent`,
+          );
+        }
+
+        const suffix = details.length > 0 ? ` ${details.join(". ")}.` : "";
+        void vscode.window.showInformationMessage(
+          `Installed ${summary.writtenCount} files into ${summary.installRoot}.${suffix}`,
+        );
         return;
       }
 

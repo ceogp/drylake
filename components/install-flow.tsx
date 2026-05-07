@@ -105,10 +105,17 @@ function buildInstallUri(params: {
   targetPlatform: InstallTarget;
   editorScheme: EditorScheme;
 }) {
+  const mode =
+    params.destination === "other"
+      ? "custom-path"
+      : params.destination === "codex" || params.destination === "claude"
+        ? "runtime-home"
+        : "workspace-root";
+
   const query = new URLSearchParams({
     versionId: params.versionId,
     targetPlatform: params.targetPlatform,
-    mode: params.destination === "other" ? "custom-path" : "workspace-root",
+    mode,
   });
 
   return `${params.editorScheme}://xupra.drylake/install?${query.toString()}`;
@@ -536,7 +543,11 @@ export function InstallFlow({ versionId }: { versionId: string }) {
               Ready to install into {destination === "other" ? "a custom folder" : destinations.find((item) => item.id === destination)?.name}.
             </p>
             <p className="mt-2 text-sm leading-6 text-stone-700">
-              Confirm the write inside VS Code or Cursor. All supported tools writes Codex, Claude, and Cursor outputs together. Choose Other for a custom folder, or download the generated files for any tool that is not listed.
+              {destination === "codex"
+                ? "Confirm the write inside VS Code or Cursor. Codex installs go to your home runtime under ~/.codex/agents and Xupra also creates named Codex profiles in ~/.codex/config.toml so the agent has a stable -p invocation path."
+                : destination === "claude"
+                  ? "Confirm the write inside VS Code or Cursor. Claude installs go to your home runtime under ~/.claude/agents so the subagent is available across projects."
+                  : "Confirm the write inside VS Code or Cursor. All supported tools writes Codex, Claude, and Cursor outputs together. Choose Other for a custom folder, or download the generated files for any tool that is not listed."}
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <a
