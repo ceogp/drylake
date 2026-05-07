@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "Xupra DryLake",
   "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "publisher": "xupra",
   "license": "UNLICENSED",
@@ -58,6 +58,9 @@
     "onCommand:xupra.resetWorkspaceState",
     "onCommand:xupra.checkCompatibility",
     "onCommand:xupra.exportPreview",
+    "onCommand:xupra.uninstallImportedAgent",
+    "onCommand:xupra.uninstallImportedSkill",
+    "onCommand:xupra.clearImportCache",
     "onCommand:xupra.pullPackage",
     "onCommand:xupra.createAgent",
     "onCommand:xupra.openWebApp",
@@ -337,6 +340,18 @@
       {
         "command": "xupra.openGetStarted",
         "title": "Xupra DryLake: Open Import Page"
+      },
+      {
+        "command": "xupra.uninstallImportedAgent",
+        "title": "Xupra DryLake: Uninstall Imported Agent (Delete Runtime File)"
+      },
+      {
+        "command": "xupra.uninstallImportedSkill",
+        "title": "Xupra DryLake: Uninstall Imported Skill (Delete Runtime File)"
+      },
+      {
+        "command": "xupra.clearImportCache",
+        "title": "Xupra DryLake: Clear Stale Import Cache"
       },
       {
         "command": "xupra.openWalkthrough",

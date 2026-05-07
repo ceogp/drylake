@@ -211,9 +211,10 @@ function parseCodexAgentToml(content: string) {
 }
 
 function stringifyCodexCustomAgent(subagent: VersionWithRelations["subagents"][number]) {
-  const tools = Array.isArray(subagent.toolsJson)
-    ? `[${(subagent.toolsJson as string[]).map((tool) => `"${tool}"`).join(", ")}]`
-    : "[]";
+  // Codex custom agent schema (https://developers.openai.com/codex/subagents) only
+  // defines: name, description, developer_instructions, nickname_candidates, model,
+  // model_reasoning_effort, sandbox_mode, mcp_servers, skills.config. Do not emit
+  // unsupported keys like `tools`; Codex may reject the file as the schema tightens.
   const developerInstructions = subagent.instructionsMd.replace(/"""/g, '\\"\\"\\"');
   const metadata =
     subagent.metadataJson && typeof subagent.metadataJson === "object"
@@ -229,7 +230,6 @@ function stringifyCodexCustomAgent(subagent: VersionWithRelations["subagents"][n
     `name = "${subagent.slug}"`,
     `description = "${subagent.description.replace(/"/g, '\\"')}"`,
     `developer_instructions = """${developerInstructions}"""`,
-    `tools = ${tools}`,
     model ? `model = "${model}"` : "",
     modelReasoningEffort ? `model_reasoning_effort = "${modelReasoningEffort}"` : "",
     sandboxMode ? `sandbox_mode = "${sandboxMode}"` : "",
@@ -487,15 +487,10 @@ function stringifyCodexAgentsMd(version: VersionWithRelations) {
     .join("\n\n");
   const subagents = version.subagents
     .map((subagent) => {
-      const toolList = Array.isArray(subagent.toolsJson)
-        ? (subagent.toolsJson as string[]).join(", ")
-        : "";
-
       return [
         `### ${subagent.name || subagent.slug}`,
         subagent.description,
         `Invoke by asking Codex to use the "${subagent.slug}" Xupra agent for matching work.`,
-        toolList ? `Tools: ${toolList}` : "",
         subagent.modelHint ? `Model: ${subagent.modelHint}` : "",
         subagent.permissionMode ? `Permission mode: ${subagent.permissionMode}` : "",
         subagent.instructionsMd.trim(),

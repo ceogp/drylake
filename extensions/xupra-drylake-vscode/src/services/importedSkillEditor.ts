@@ -124,6 +124,72 @@ export class ImportedSkillEditorManager implements vscode.Disposable {
     });
   }
 
+  async uninstallImportedSkill(skill: ImportedWorkspaceSkillRule) {
+    const logicalPath = normalizeLogicalPath(skill.sourcePath || fallbackSkillPath(skill));
+    await this.uninstallImportedItem(logicalPath, "skill", skill.name || logicalPath);
+  }
+
+  async uninstallImportedAgent(agent: ImportedWorkspaceSubagent) {
+    const logicalPath = normalizeLogicalPath(agent.sourcePath || fallbackAgentPath(agent));
+    await this.uninstallImportedItem(logicalPath, "agent", agent.name || agent.slug || logicalPath);
+  }
+
+  private async uninstallImportedItem(logicalPath: string, label: string, displayName: string) {
+    const targets: vscode.Uri[] = [];
+
+    const workspaceFile = await this.findWorkspaceFile(logicalPath);
+    if (workspaceFile) {
+      targets.push(workspaceFile);
+    }
+
+    const runtimeFile = this.resolveDefaultRuntimeFile(logicalPath);
+    if (runtimeFile) {
+      const existing = await this.findFile(runtimeFile);
+      if (existing) {
+        targets.push(existing);
+      }
+    }
+
+    if (targets.length === 0) {
+      void vscode.window.showInformationMessage(
+        `${displayName}: no installed runtime file found for ${logicalPath}. Nothing to uninstall.`,
+      );
+      return;
+    }
+
+    const targetList = targets.map((uri) => uri.fsPath).join("\n");
+    const choice = await vscode.window.showWarningMessage(
+      `Uninstall ${label} "${displayName}"? This deletes the runtime file from disk:\n\n${targetList}\n\nThe imported record in Xupra is preserved as audit history. You can reinstall by clicking the row.`,
+      { modal: true },
+      "Delete",
+    );
+
+    if (choice !== "Delete") {
+      return;
+    }
+
+    const failures: string[] = [];
+    for (const target of targets) {
+      try {
+        await vscode.workspace.fs.delete(target, { useTrash: false });
+        this.managedDocuments.delete(target.toString());
+      } catch (error) {
+        failures.push(
+          `${target.fsPath}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    if (failures.length > 0) {
+      void vscode.window.showErrorMessage(`Failed to uninstall ${label}: ${failures.join("; ")}`);
+      return;
+    }
+
+    void vscode.window.showInformationMessage(
+      `Uninstalled ${label} "${displayName}". Deleted ${targets.length} file(s).`,
+    );
+  }
+
   private async openImportedItem(params: {
     versionId: string;
     logicalPath: string;

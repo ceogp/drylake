@@ -54,6 +54,20 @@ type InboundMessage =
       type: "openImportedSkill";
       requestId: string;
       skillRuleId: string;
+    }
+  | {
+      type: "uninstallImportedAgent";
+      requestId: string;
+      subagentId: string;
+    }
+  | {
+      type: "uninstallImportedSkill";
+      requestId: string;
+      skillRuleId: string;
+    }
+  | {
+      type: "clearImportCache";
+      requestId: string;
     };
 
 type OutboundMessage =
@@ -127,6 +141,15 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
           case "openImportedAgent":
             await vscode.commands.executeCommand("xupra.openImportedAgent", message.subagentId);
             break;
+          case "uninstallImportedAgent":
+            await vscode.commands.executeCommand("xupra.uninstallImportedAgent", message.subagentId);
+            break;
+          case "uninstallImportedSkill":
+            await vscode.commands.executeCommand("xupra.uninstallImportedSkill", message.skillRuleId);
+            break;
+          case "clearImportCache":
+            await vscode.commands.executeCommand("xupra.clearImportCache");
+            break;
         }
         await webviewView.webview.postMessage({
           type: "result",
@@ -195,6 +218,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
 
     button {
       font: inherit;
+      color: var(--vscode-foreground);
     }
 
     button:disabled {
@@ -334,6 +358,32 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       width: 100%;
       text-align: left;
       cursor: pointer;
+      color: var(--vscode-foreground);
+      font: inherit;
+    }
+
+    .item-trash {
+      flex: 0 0 auto;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      margin-left: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--vscode-descriptionForeground);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .item-trash:hover {
+      color: var(--vscode-errorForeground, var(--vscode-foreground));
+      background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+      border-color: var(--vscode-panel-border);
     }
 
     .file-path {
@@ -377,6 +427,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      color: inherit;
     }
 
     .item-meta {
@@ -660,11 +711,13 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         const itemHtml = '<div class="item-stack"><span class="item-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</span>' + (meta ? '<span class="item-meta" title="' + escapeHtml(meta) + '">' + escapeHtml(meta) + '</span>' : '') + '</div>' + (tag ? '<span class="file-tag">' + escapeHtml(tag) + '</span>' : '');
 
         if (options.actionType === 'openImportedSkill' && openId) {
-          return '<button type="button" class="file-item file-button" data-open-imported-skill-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>';
+          const trashHtml = '<button type="button" class="item-trash" title="Uninstall (delete runtime file)" data-uninstall-imported-skill-id="' + escapeHtml(openId) + '" aria-label="Uninstall imported skill">\u{1F5D1}</button>';
+          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-imported-skill-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + trashHtml + '</div>';
         }
 
         if (options.actionType === 'openImportedAgent' && openId) {
-          return '<button type="button" class="file-item file-button" data-open-imported-agent-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>';
+          const trashHtml = '<button type="button" class="item-trash" title="Uninstall (delete runtime file)" data-uninstall-imported-agent-id="' + escapeHtml(openId) + '" aria-label="Uninstall imported agent">\u{1F5D1}</button>';
+          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-imported-agent-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + trashHtml + '</div>';
         }
 
         return '<div class="file-item">' + itemHtml + '</div>';
@@ -809,6 +862,28 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     });
 
     document.addEventListener("click", function(event) {
+      const uninstallAgentBtn = event.target.closest("[data-uninstall-imported-agent-id]");
+      if (uninstallAgentBtn) {
+        event.stopPropagation();
+        vscode.postMessage({
+          type: "uninstallImportedAgent",
+          requestId: uuid(),
+          subagentId: uninstallAgentBtn.dataset.uninstallImportedAgentId,
+        });
+        return;
+      }
+
+      const uninstallSkillBtn = event.target.closest("[data-uninstall-imported-skill-id]");
+      if (uninstallSkillBtn) {
+        event.stopPropagation();
+        vscode.postMessage({
+          type: "uninstallImportedSkill",
+          requestId: uuid(),
+          skillRuleId: uninstallSkillBtn.dataset.uninstallImportedSkillId,
+        });
+        return;
+      }
+
       const agentBtn = event.target.closest("[data-open-imported-agent-id]");
       if (agentBtn) {
         vscode.postMessage({

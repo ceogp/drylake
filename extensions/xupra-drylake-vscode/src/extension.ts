@@ -743,6 +743,66 @@ export async function activate(context: vscode.ExtensionContext) {
     await importedSkillEditor.openImportedAgent(selection.versionId, agent);
   });
 
+  register("xupra.uninstallImportedAgent", async (...args: unknown[]) => {
+    const subagentId = typeof args[0] === "string" ? args[0] : undefined;
+    const selection = stateStore.getSelection();
+
+    if (!selection.versionId || typeof subagentId !== "string" || !subagentId.trim()) {
+      return;
+    }
+
+    const versionResponse = await apiClient.getVersion(selection.versionId);
+    const importedWorkspace = mapImportedWorkspace(versionResponse.version);
+    const agent = importedWorkspace.subagents.find((item) => item.id === subagentId);
+
+    if (!agent) {
+      void vscode.window.showWarningMessage("That imported agent is no longer available for the selected version.");
+      return;
+    }
+
+    await importedSkillEditor.uninstallImportedAgent(agent);
+  });
+
+  register("xupra.uninstallImportedSkill", async (...args: unknown[]) => {
+    const skillRuleId = typeof args[0] === "string" ? args[0] : undefined;
+    const selection = stateStore.getSelection();
+
+    if (!selection.versionId || typeof skillRuleId !== "string" || !skillRuleId.trim()) {
+      return;
+    }
+
+    const versionResponse = await apiClient.getVersion(selection.versionId);
+    const importedWorkspace = mapImportedWorkspace(versionResponse.version);
+    const skill = importedWorkspace.skillRules.find(
+      (item) => item.id === skillRuleId && String(item.kind).toLowerCase() === "skill",
+    );
+
+    if (!skill) {
+      void vscode.window.showWarningMessage("That imported skill is no longer available for the selected version.");
+      return;
+    }
+
+    await importedSkillEditor.uninstallImportedSkill(skill);
+  });
+
+  register("xupra.clearImportCache", async () => {
+    const cacheRoot = vscode.Uri.joinPath(context.globalStorageUri, "editable-imports");
+    try {
+      await vscode.workspace.fs.delete(cacheRoot, { recursive: true, useTrash: false });
+      void vscode.window.showInformationMessage(
+        `Cleared Xupra import cache: ${cacheRoot.fsPath}`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // FileNotFound is the common no-op case; treat as success.
+      if (/not\s*found|ENOENT|FileNotFound/i.test(message)) {
+        void vscode.window.showInformationMessage("No Xupra import cache to clear.");
+        return;
+      }
+      void vscode.window.showErrorMessage(`Failed to clear import cache: ${message}`);
+    }
+  });
+
   register("xupra.openSettings", async () => {
     await vscode.commands.executeCommand(
       "workbench.action.openSettings",
