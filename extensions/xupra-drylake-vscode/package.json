@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "Xupra DryLake",
   "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": false,
   "publisher": "xupra",
   "license": "UNLICENSED",
@@ -61,6 +61,7 @@
     "onCommand:xupra.uninstallImportedAgent",
     "onCommand:xupra.uninstallImportedSkill",
     "onCommand:xupra.clearImportCache",
+    "onCommand:xupra.optimizeFile",
     "onCommand:xupra.pullPackage",
     "onCommand:xupra.createAgent",
     "onCommand:xupra.openWebApp",
@@ -354,6 +355,10 @@
         "title": "Xupra DryLake: Clear Stale Import Cache"
       },
       {
+        "command": "xupra.optimizeFile",
+        "title": "Xupra DryLake: Optimize with Xupra AI (Pro)"
+      },
+      {
         "command": "xupra.openWalkthrough",
         "title": "Xupra DryLake: Open Walkthrough"
       }
@@ -374,6 +379,20 @@
           "command": "xupra.openSettings",
           "when": "view == xupra.help",
           "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "xupra.optimizeFile",
+          "when": "resourceFilename == AGENTS.md || resourceFilename == CLAUDE.md || resourceExtname == .toml && resourcePath =~ /\\.codex[\\\\/]agents[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.claude[\\\\/]agents[\\\\/]/ || resourceExtname == .mdc && resourcePath =~ /\\.cursor[\\\\/]rules[\\\\/]/",
+          "group": "navigation@9"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "xupra.optimizeFile",
+          "when": "resourceFilename == AGENTS.md || resourceFilename == CLAUDE.md || resourceExtname == .toml && resourcePath =~ /\\.codex[\\\\/]agents[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.claude[\\\\/]agents[\\\\/]/ || resourceExtname == .mdc && resourcePath =~ /\\.cursor[\\\\/]rules[\\\\/]/",
+          "group": "7_modification"
         }
       ]
     }

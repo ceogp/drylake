@@ -291,4 +291,17 @@ export class ApiClient {
     });
   }
 
+  async optimizeAgent(params: {
+    content: string;
+    targetPlatform: string;
+    fileName?: string;
+    repoContext?: string;
+  }) {
+    return this.request<{ optimized: { content: string } }>("/api/v1/agents/optimize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
 }

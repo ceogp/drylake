@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import os from "node:os";
 
 import type { ApiClient } from "../services/apiClient";
 import type { StateStore } from "../services/stateStore";
@@ -68,6 +69,16 @@ type InboundMessage =
   | {
       type: "clearImportCache";
       requestId: string;
+    }
+  | {
+      type: "optimizeFile";
+      requestId: string;
+      logicalPath: string;
+    }
+  | {
+      type: "openRawFile";
+      requestId: string;
+      logicalPath: string;
     };
 
 type OutboundMessage =
@@ -150,6 +161,29 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
           case "clearImportCache":
             await vscode.commands.executeCommand("xupra.clearImportCache");
             break;
+          case "optimizeFile": {
+            const uri = await this.resolveLogicalPathUri(message.logicalPath);
+            if (!uri) {
+              void vscode.window.showWarningMessage(
+                `Could not locate ${message.logicalPath} in the workspace or runtime directories.`,
+              );
+              break;
+            }
+            await vscode.commands.executeCommand("xupra.optimizeFile", uri);
+            break;
+          }
+          case "openRawFile": {
+            const uri = await this.resolveLogicalPathUri(message.logicalPath);
+            if (!uri) {
+              void vscode.window.showWarningMessage(
+                `Could not locate ${message.logicalPath}. The file may have been deleted.`,
+              );
+              break;
+            }
+            const document = await vscode.workspace.openTextDocument(uri);
+            await vscode.window.showTextDocument(document, { preview: false });
+            break;
+          }
         }
         await webviewView.webview.postMessage({
           type: "result",
@@ -175,6 +209,48 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
 
     const message: OutboundMessage = { type: "stateUpdate", state };
     void this._view.webview.postMessage(message);
+  }
+
+  private async resolveLogicalPathUri(logicalPath: string): Promise<vscode.Uri | null> {
+    const normalized = logicalPath.replace(/\\/g, "/").replace(/^\/+/, "");
+    if (!normalized) {
+      return null;
+    }
+
+    const segments = normalized.split("/").filter(Boolean);
+
+    const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (root) {
+      const candidate = vscode.Uri.joinPath(root, ...segments);
+      try {
+        await vscode.workspace.fs.stat(candidate);
+        return candidate;
+      } catch {
+        // fall through to runtime locations
+      }
+    }
+
+    const homeUri = vscode.Uri.file(os.homedir());
+    const runtimeCandidates: string[][] = [];
+    if (segments[0] === ".codex" || segments[0] === ".claude" || segments[0] === ".cursor") {
+      runtimeCandidates.push(segments);
+    } else if (normalized === "AGENTS.md") {
+      runtimeCandidates.push([".codex", "AGENTS.md"]);
+    } else if (normalized === "CLAUDE.md") {
+      runtimeCandidates.push([".claude", "CLAUDE.md"]);
+    }
+
+    for (const candidateSegments of runtimeCandidates) {
+      const candidate = vscode.Uri.joinPath(homeUri, ...candidateSegments);
+      try {
+        await vscode.workspace.fs.stat(candidate);
+        return candidate;
+      } catch {
+        // try next candidate
+      }
+    }
+
+    return null;
   }
 
   private _buildState(): SidebarState {
@@ -382,6 +458,16 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
 
     .item-trash:hover {
       color: var(--vscode-errorForeground, var(--vscode-foreground));
+      background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+      border-color: var(--vscode-panel-border);
+    }
+
+    .item-optimize {
+      color: var(--vscode-charts-yellow, var(--vscode-foreground));
+    }
+
+    .item-optimize:hover {
+      color: var(--vscode-charts-yellow, var(--vscode-button-background));
       background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
       border-color: var(--vscode-panel-border);
     }
@@ -708,16 +794,24 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         const meta = options.readMeta(entry);
         const tag = options.readTag(entry);
         const openId = options.readId ? options.readId(entry) : "";
+        const optimizePath = options.readOptimizePath ? options.readOptimizePath(entry) : "";
         const itemHtml = '<div class="item-stack"><span class="item-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</span>' + (meta ? '<span class="item-meta" title="' + escapeHtml(meta) + '">' + escapeHtml(meta) + '</span>' : '') + '</div>' + (tag ? '<span class="file-tag">' + escapeHtml(tag) + '</span>' : '');
+        const optimizeHtml = optimizePath
+          ? '<button type="button" class="item-trash item-optimize" title="Optimize with Xupra AI (Pro)" data-optimize-path="' + escapeHtml(optimizePath) + '" aria-label="Optimize with Xupra AI">\u{2728}</button>'
+          : '';
 
         if (options.actionType === 'openImportedSkill' && openId) {
           const trashHtml = '<button type="button" class="item-trash" title="Uninstall (delete runtime file)" data-uninstall-imported-skill-id="' + escapeHtml(openId) + '" aria-label="Uninstall imported skill">\u{1F5D1}</button>';
-          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-imported-skill-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + trashHtml + '</div>';
+          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-imported-skill-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + optimizeHtml + trashHtml + '</div>';
         }
 
         if (options.actionType === 'openImportedAgent' && openId) {
           const trashHtml = '<button type="button" class="item-trash" title="Uninstall (delete runtime file)" data-uninstall-imported-agent-id="' + escapeHtml(openId) + '" aria-label="Uninstall imported agent">\u{1F5D1}</button>';
-          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-imported-agent-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + trashHtml + '</div>';
+          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-imported-agent-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + optimizeHtml + trashHtml + '</div>';
+        }
+
+        if (options.actionType === 'openRawFile' && optimizePath) {
+          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-raw-path="' + escapeHtml(optimizePath) + '">' + itemHtml + '</button>' + optimizeHtml + '</div>';
         }
 
         return '<div class="file-item">' + itemHtml + '</div>';
@@ -766,6 +860,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         readMeta: function(entry) { return entry.sourcePath || entry.slug || ''; },
         readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
         readId: function(entry) { return entry.id || ''; },
+        readOptimizePath: function(entry) { return entry.sourcePath || ''; },
         actionType: 'openImportedAgent',
       });
 
@@ -776,6 +871,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         readMeta: function(entry) { return entry.sourcePath || ''; },
         readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
         readId: function(entry) { return entry.id || ''; },
+        readOptimizePath: function(entry) { return entry.sourcePath || ''; },
         actionType: 'openImportedSkill',
       });
 
@@ -801,6 +897,8 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         readTitle: function(entry) { return entry.logicalPath || 'Raw file'; },
         readMeta: function(entry) { return entry.sourceFormat || ''; },
         readTag: function(entry) { return formatPlatform(entry.sourcePlatform); },
+        readOptimizePath: function(entry) { return entry.logicalPath || ''; },
+        actionType: 'openRawFile',
       });
 
       return html + '</div>';
@@ -862,6 +960,17 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     });
 
     document.addEventListener("click", function(event) {
+      const optimizeBtn = event.target.closest("[data-optimize-path]");
+      if (optimizeBtn) {
+        event.stopPropagation();
+        vscode.postMessage({
+          type: "optimizeFile",
+          requestId: uuid(),
+          logicalPath: optimizeBtn.dataset.optimizePath,
+        });
+        return;
+      }
+
       const uninstallAgentBtn = event.target.closest("[data-uninstall-imported-agent-id]");
       if (uninstallAgentBtn) {
         event.stopPropagation();
@@ -880,6 +989,16 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
           type: "uninstallImportedSkill",
           requestId: uuid(),
           skillRuleId: uninstallSkillBtn.dataset.uninstallImportedSkillId,
+        });
+        return;
+      }
+
+      const rawFileBtn = event.target.closest("[data-open-raw-path]");
+      if (rawFileBtn) {
+        vscode.postMessage({
+          type: "openRawFile",
+          requestId: uuid(),
+          logicalPath: rawFileBtn.dataset.openRawPath,
         });
         return;
       }

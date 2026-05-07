@@ -13,6 +13,11 @@ import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
 import { requireManualExportEntitlement } from "./services/featureGates";
 import { ImportedSkillEditorManager } from "./services/importedSkillEditor";
+import {
+  collectRepoContext,
+  inferTargetPlatformFromUri,
+  OptimizationContentProvider,
+} from "./services/optimization";
 import { StateStore } from "./services/stateStore";
 import { scanWorkspaceFiles } from "./services/workspaceScanner";
 import type { PackageVersionDetail } from "./types/api";
@@ -309,6 +314,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const importedSkillEditor = new ImportedSkillEditorManager(context, apiClient, async () => {
     await syncWorkspaceView();
   });
+  const optimizationContentProvider = new OptimizationContentProvider();
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(
+      OptimizationContentProvider.scheme,
+      optimizationContentProvider,
+    ),
+  );
   const jobsView = new JobTreeProvider();
   const helpView = new HelpTreeProvider();
   const logger = getLogger();
@@ -800,6 +812,134 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       void vscode.window.showErrorMessage(`Failed to clear import cache: ${message}`);
+    }
+  });
+
+  register("xupra.optimizeFile", async (...args: unknown[]) => {
+    let targetUri: vscode.Uri | undefined;
+
+    const first = args[0];
+    if (first instanceof vscode.Uri) {
+      targetUri = first;
+    } else if (typeof first === "string") {
+      try {
+        targetUri = vscode.Uri.parse(first);
+      } catch {
+        targetUri = undefined;
+      }
+    } else if (first && typeof first === "object" && "fsPath" in (first as Record<string, unknown>)) {
+      const maybe = (first as { fsPath?: unknown }).fsPath;
+      if (typeof maybe === "string") {
+        targetUri = vscode.Uri.file(maybe);
+      }
+    }
+
+    if (!targetUri) {
+      const active = vscode.window.activeTextEditor?.document.uri;
+      if (active && active.scheme !== "xupra-optimized") {
+        targetUri = active;
+      }
+    }
+
+    if (!targetUri) {
+      void vscode.window.showWarningMessage("Open a file first, then run Optimize with Xupra AI.");
+      return;
+    }
+
+    const hasEntitlement = await requireManualExportEntitlement(
+      apiClient,
+      stateStore,
+      "Xupra AI optimization",
+    );
+
+    if (!hasEntitlement) {
+      return;
+    }
+
+    const targetPlatform = inferTargetPlatformFromUri(targetUri);
+    if (!targetPlatform) {
+      void vscode.window.showWarningMessage(
+        "Could not infer the target platform from this file. Optimize works on Codex, Claude, and Cursor agent or skill files.",
+      );
+      return;
+    }
+
+    const fileName = targetUri.path.split("/").pop() ?? "file";
+    let originalContent: string;
+    try {
+      const bytes = await vscode.workspace.fs.readFile(targetUri);
+      originalContent = new TextDecoder("utf-8").decode(bytes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Could not read file: ${message}`);
+      return;
+    }
+
+    if (!originalContent.trim()) {
+      void vscode.window.showWarningMessage("File is empty — nothing to optimize.");
+      return;
+    }
+
+    const repoContext = await collectRepoContext();
+
+    let optimizedContent: string;
+    try {
+      const result = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `Optimizing ${fileName} with Xupra AI...`,
+          cancellable: false,
+        },
+        () =>
+          apiClient.optimizeAgent({
+            content: originalContent,
+            targetPlatform,
+            fileName,
+            repoContext,
+          }),
+      );
+      optimizedContent = result.optimized.content;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Optimization failed: ${message}`);
+      return;
+    }
+
+    if (optimizedContent.trim() === originalContent.trim()) {
+      void vscode.window.showInformationMessage("Xupra AI did not suggest changes for this file.");
+      return;
+    }
+
+    const optimizedUri = optimizationContentProvider.register(targetUri, optimizedContent);
+    await vscode.commands.executeCommand(
+      "vscode.diff",
+      targetUri,
+      optimizedUri,
+      `${fileName} ↔ Xupra AI optimization`,
+      { preview: true },
+    );
+
+    const choice = await vscode.window.showInformationMessage(
+      `Apply Xupra AI optimization to ${fileName}? A backup will be saved next to the file.`,
+      { modal: true },
+      "Apply",
+      "Discard",
+    );
+
+    if (choice !== "Apply") {
+      return;
+    }
+
+    try {
+      const backupUri = targetUri.with({ path: `${targetUri.path}.bak` });
+      await vscode.workspace.fs.writeFile(backupUri, new TextEncoder().encode(originalContent));
+      await vscode.workspace.fs.writeFile(targetUri, new TextEncoder().encode(optimizedContent));
+      void vscode.window.showInformationMessage(
+        `Applied optimization to ${fileName}. Backup at ${backupUri.path.split("/").pop()}.`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Failed to write optimized file: ${message}`);
     }
   });
 

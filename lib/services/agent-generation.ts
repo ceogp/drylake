@@ -62,7 +62,8 @@ function buildAgentPrompt(params: GenerateAgentParams) {
 
   if (params.targetPlatform === "codex") {
     lines.push(
-      "- Return valid TOML with name, description, tools, and developer_instructions.",
+      "- Return valid TOML with name, description, and developer_instructions only.",
+      "- Do not emit a `tools` field — it is not part of the Codex subagent schema.",
       "- Put the main agent instructions inside developer_instructions as a multiline string.",
     );
   } else if (params.targetPlatform === "cursor") {
@@ -162,7 +163,6 @@ function normalizeCodexAgent(content: string, params: GenerateAgentParams) {
   return [
     `name = "${escapeTomlString(params.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "agent")}"`,
     `description = "${escapeTomlString(params.description)}"`,
-    "tools = []",
     'developer_instructions = """',
     body.replace(/"""/g, '\\"\\"\\"'),
     '"""',
@@ -196,5 +196,61 @@ export async function generateAgentWithAi(params: GenerateAgentParams): Promise<
     description: params.description,
     targetPlatform: params.targetPlatform,
     content: normalizeAgentContent(rawContent, params),
+  };
+}
+
+export type OptimizeAgentParams = {
+  content: string;
+  targetPlatform: string;
+  fileName?: string;
+  repoContext?: string;
+};
+
+const agentOptimizationSystemPrompt =
+  "You are an expert at refining AI coding agent and skill files. You will receive an existing target-specific file. Improve clarity, specificity, structure, and actionable guidance while preserving the user's intent, voice, and any project-specific names. Keep the file in the same target format. Return only the improved file content with no commentary, no markdown fences, and no provider names.";
+
+function buildAgentOptimizationPrompt(params: OptimizeAgentParams) {
+  const lines = [
+    "Improve the existing agent/skill/rule file below.",
+    "",
+    `Target format: ${platformDescription(params.targetPlatform)} (${params.targetPlatform})`,
+  ];
+
+  if (params.fileName) {
+    lines.push(`File: ${params.fileName}`);
+  }
+
+  if (params.repoContext?.trim()) {
+    lines.push("", "Repository context (for tailoring):", params.repoContext.trim().slice(0, 4000));
+  }
+
+  lines.push(
+    "",
+    "Requirements:",
+    "- Preserve the file's existing intent, role, and any concrete repo references.",
+    "- Tighten language, remove ambiguity, and add explicit operating rules where useful.",
+    "- Keep all valid frontmatter / TOML keys intact and well-formed.",
+    "- Do not introduce unsupported fields. For Codex TOML, do not emit a `tools` field.",
+    "- Do not add commentary about what you changed.",
+    "- Return only the full updated file content.",
+    "",
+    "Existing file content:",
+    "----- BEGIN FILE -----",
+    params.content,
+    "----- END FILE -----",
+  );
+
+  return lines.join("\n");
+}
+
+export async function optimizeAgentWithAi(params: OptimizeAgentParams): Promise<{ content: string }> {
+  const rawContent = await generateAiText({
+    systemPrompt: agentOptimizationSystemPrompt,
+    userPrompt: buildAgentOptimizationPrompt(params),
+    taskLabel: "agent optimization",
+  });
+
+  return {
+    content: scrubProviderNames(unwrapFence(rawContent)).trim() + "\n",
   };
 }
