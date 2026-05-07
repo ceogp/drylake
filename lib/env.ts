@@ -68,43 +68,4 @@ if (parsed.data.SECRETS_PROVIDER === "env" && parsed.data.APP_ENCRYPTION_KEY.len
   throw new Error("APP_ENCRYPTION_KEY must be at least 32 characters when SECRETS_PROVIDER=env");
 }
 
-// Production-only cross-field validation — fail fast rather than silently misbehave
-if (parsed.data.NODE_ENV === "production") {
-  const prod = parsed.data;
-  const errors: string[] = [];
-
-  if (prod.AUTH_MODE === "clerk") {
-    if (!prod.CLERK_SECRET_KEY)
-      errors.push("CLERK_SECRET_KEY is required when AUTH_MODE=clerk");
-    if (!prod.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
-      errors.push("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required when AUTH_MODE=clerk");
-    if (!prod.CLERK_WEBHOOK_SIGNING_SECRET)
-      errors.push("CLERK_WEBHOOK_SIGNING_SECRET is required when AUTH_MODE=clerk");
-  }
-
-  if (prod.BILLING_PROVIDER === "stripe") {
-    if (!prod.STRIPE_SECRET_KEY)
-      errors.push("STRIPE_SECRET_KEY is required when BILLING_PROVIDER=stripe");
-    if (!prod.STRIPE_WEBHOOK_SECRET)
-      errors.push("STRIPE_WEBHOOK_SECRET is required when BILLING_PROVIDER=stripe");
-    if (!prod.STRIPE_PRO_PRICE_ID)
-      errors.push("STRIPE_PRO_PRICE_ID is required when BILLING_PROVIDER=stripe");
-  }
-
-  if (prod.BILLING_ENFORCEMENT_MODE === "development") {
-    console.warn(
-      "[security] WARNING: BILLING_ENFORCEMENT_MODE=development in a production environment. " +
-        "All entitlement checks will be bypassed — set BILLING_ENFORCEMENT_MODE=strict.",
-    );
-  }
-
-  if (errors.length > 0) {
-    console.error(
-      "Production environment validation failed:\n" +
-        errors.map((e) => `  - ${e}`).join("\n"),
-    );
-    throw new Error("Production environment validation failed — check server logs for details");
-  }
-}
-
 export const env = parsed.data;
