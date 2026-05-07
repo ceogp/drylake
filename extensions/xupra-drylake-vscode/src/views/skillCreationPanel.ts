@@ -351,7 +351,20 @@ export class SkillCreationPanel {
       const root = vscode.workspace.workspaceFolders?.[0]?.uri;
 
       if (!root) {
-        throw new Error("No workspace folder is open.");
+        await this._postMessage({
+          type: "error",
+          requestId: params.requestId,
+          message:
+            "Open a folder in VS Code first, then try Create Agent again. Xupra writes the new agent file into your workspace.",
+        });
+        const choice = await vscode.window.showWarningMessage(
+          "Create Agent needs an open folder. Pick a folder to write the new agent into.",
+          "Open Folder…",
+        );
+        if (choice === "Open Folder…") {
+          await vscode.commands.executeCommand("vscode.openFolder");
+        }
+        return;
       }
 
       const logicalPath = await this._nextAvailableLogicalPath(root, requestedLogicalPath);

@@ -219,6 +219,17 @@ export class ApiClient {
     );
   }
 
+  async fetchVersionFile(versionId: string, logicalPath: string) {
+    const search = new URLSearchParams({ logicalPath });
+    return this.request<{
+      logicalPath: string;
+      kind: string;
+      mimeType: string;
+      sizeBytes: number;
+      content: string;
+    }>(`/api/v1/extension/versions/${versionId}/file?${search.toString()}`);
+  }
+
   async listGeneratedExports(versionId: string, targetPlatform: string, ensureGenerated = false) {
     const params = new URLSearchParams();
     params.set("targetPlatform", targetPlatform);

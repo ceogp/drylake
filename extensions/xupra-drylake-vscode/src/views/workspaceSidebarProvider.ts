@@ -37,6 +37,7 @@ type InboundAction =
   | "refreshPlan"
   | "createAgent"
   | "exportPreview"
+  | "installToRuntime"
   ;
 
 type BasicInboundMessage = {
@@ -167,6 +168,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
           case "exportPreview":
             await vscode.commands.executeCommand("xupra.exportPreview");
             break;
+          case "installToRuntime":
+            await vscode.commands.executeCommand("xupra.installToRuntime");
+            break;
           case "openImportedSkill":
             await vscode.commands.executeCommand("xupra.openImportedSkill", message.skillRuleId);
             break;
@@ -269,6 +273,16 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       } catch {
         // try next candidate
       }
+    }
+
+    // Final fallback: server-backed read-only virtual document.
+    const versionId = this.stateStore.getSelection().versionId;
+    if (versionId) {
+      return vscode.Uri.from({
+        scheme: "xupra-imported",
+        authority: versionId,
+        path: "/" + normalized,
+      });
     }
 
     return null;
@@ -957,6 +971,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       return '<div class="section"><div class="section-header"><span class="section-label">Actions</span></div><div class="actions-section">'
         + '<button class="big-action" data-action="createAgent">Create Agent</button>'
         + '<button class="' + exportClass + '" data-action="exportPreview">Preview Generated Files' + (isPro ? "" : lockSuffix) + '</button>'
+        + '<button class="' + exportClass + '" data-action="installToRuntime">Install to platforms' + (isPro ? "" : lockSuffix) + '</button>'
         + '</div></div>';
     }
 

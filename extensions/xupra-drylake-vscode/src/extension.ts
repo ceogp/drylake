@@ -16,8 +16,11 @@ import { ImportedSkillEditorManager } from "./services/importedSkillEditor";
 import {
   collectRepoContext,
   inferTargetPlatformFromUri,
+  pickTargetPlatform,
+  ImportedContentProvider,
   OptimizationContentProvider,
 } from "./services/optimization";
+import { installGeneratedFilesToRuntimeHome } from "./services/runtimeInstall";
 import { StateStore } from "./services/stateStore";
 import { scanWorkspaceFiles } from "./services/workspaceScanner";
 import type { PackageVersionDetail } from "./types/api";
@@ -319,6 +322,16 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.registerTextDocumentContentProvider(
       OptimizationContentProvider.scheme,
       optimizationContentProvider,
+    ),
+  );
+  const importedContentProvider = new ImportedContentProvider(async (versionId, logicalPath) => {
+    const result = await apiClient.fetchVersionFile(versionId, logicalPath);
+    return result.content ?? "";
+  });
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(
+      ImportedContentProvider.scheme,
+      importedContentProvider,
     ),
   );
   const jobsView = new JobTreeProvider();
@@ -701,6 +714,119 @@ export async function activate(context: vscode.ExtensionContext) {
     await syncWorkspaceView();
   });
 
+  register("xupra.installToRuntime", async () => {
+    const hasEntitlement = await requireManualExportEntitlement(
+      apiClient,
+      stateStore,
+      "Install to platforms",
+    );
+    if (!hasEntitlement) {
+      return;
+    }
+
+    const selection = stateStore.getSelection();
+    if (!selection.versionId) {
+      void vscode.window.showWarningMessage(
+        "Pick a target version in the sidebar first, then run Install to platforms.",
+      );
+      return;
+    }
+
+    type TargetChoice = "codex" | "claude_code" | "claude_agents" | "cursor" | "all";
+    const items: Array<vscode.QuickPickItem & { value: TargetChoice }> = [
+      { label: "Install to all platforms", description: "Codex, Claude Code, Claude Agents, Cursor", value: "all" },
+      { label: "Codex", description: "~/.codex/agents/*.toml, ~/.codex/AGENTS.md, ~/.codex/skills/*", value: "codex" },
+      { label: "Claude Code", description: "~/.claude/CLAUDE.md, ~/.claude/skills/*", value: "claude_code" },
+      { label: "Claude Agents", description: "~/.claude/agents/*.md", value: "claude_agents" },
+      { label: "Cursor", description: "~/.cursor/rules/*.mdc, ~/.cursor/skills/*", value: "cursor" },
+    ];
+
+    const picked = await vscode.window.showQuickPick(items, {
+      placeHolder: "Where should Xupra install the canonicalized agent files?",
+      ignoreFocusOut: true,
+    });
+
+    if (!picked) return;
+
+    const targets: Array<"codex" | "claude_code" | "claude_agents" | "cursor"> =
+      picked.value === "all" ? ["codex", "claude_code", "claude_agents", "cursor"] : [picked.value];
+
+    const filesByKey = new Map<
+      string,
+      { logicalPath: string; preview: string; targetPlatform: string }
+    >();
+
+    try {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Building canonicalized files...",
+          cancellable: false,
+        },
+        async () => {
+          for (const target of targets) {
+            const preview = await apiClient.exportPreview(selection.versionId!, target);
+            const generatedFiles = preview.generatedFiles?.length
+              ? preview.generatedFiles
+              : (await apiClient.listGeneratedExports(selection.versionId!, target, true)).generatedFiles;
+
+            for (const file of generatedFiles) {
+              filesByKey.set(`${target}:${file.logicalPath}`, {
+                logicalPath: file.logicalPath,
+                preview: file.preview,
+                targetPlatform: target,
+              });
+            }
+          }
+        },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Failed to build canonicalized files: ${message}`);
+      return;
+    }
+
+    const generatedFiles = Array.from(filesByKey.values());
+    if (generatedFiles.length === 0) {
+      void vscode.window.showWarningMessage(
+        "No generated files were produced. Canonicalize the version on the web first, then try again.",
+      );
+      return;
+    }
+
+    let summary;
+    try {
+      summary = await installGeneratedFilesToRuntimeHome(generatedFiles);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Install failed: ${message}`);
+      return;
+    }
+
+    if (!summary) {
+      // user cancelled the confirmation
+      return;
+    }
+
+    const lines: string[] = [];
+    if (summary.codexAgents.length > 0) {
+      lines.push(`Codex agents: ${summary.codexAgents.join(", ")}`);
+    }
+    if (summary.claudeAgents.length > 0) {
+      lines.push(`Claude agents: ${summary.claudeAgents.join(", ")}`);
+    }
+    if (summary.cursorRules.length > 0) {
+      lines.push(`Cursor rules: ${summary.cursorRules.join(", ")}`);
+    }
+    if (summary.cursorSkills.length > 0) {
+      lines.push(`Cursor skills: ${summary.cursorSkills.join(", ")}`);
+    }
+
+    void vscode.window.showInformationMessage(
+      `Installed ${summary.writtenCount} files into ${summary.installRoot} (.codex / .claude / .cursor). ${lines.join(" | ")}`,
+    );
+  });
+
   register("xupra.pullPackage", async () => {
     await pullPackageCommand(apiClient, configuration, stateStore);
   });
@@ -856,19 +982,25 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const targetPlatform = inferTargetPlatformFromUri(targetUri);
+    let targetPlatform = inferTargetPlatformFromUri(targetUri);
     if (!targetPlatform) {
-      void vscode.window.showWarningMessage(
-        "Could not infer the target platform from this file. Optimize works on Codex, Claude, and Cursor agent or skill files.",
-      );
-      return;
+      const picked = await pickTargetPlatform(null);
+      if (!picked) {
+        return;
+      }
+      targetPlatform = picked;
     }
 
     const fileName = targetUri.path.split("/").pop() ?? "file";
     let originalContent: string;
     try {
-      const bytes = await vscode.workspace.fs.readFile(targetUri);
-      originalContent = new TextDecoder("utf-8").decode(bytes);
+      if (targetUri.scheme === ImportedContentProvider.scheme) {
+        const document = await vscode.workspace.openTextDocument(targetUri);
+        originalContent = document.getText();
+      } else {
+        const bytes = await vscode.workspace.fs.readFile(targetUri);
+        originalContent = new TextDecoder("utf-8").decode(bytes);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       void vscode.window.showErrorMessage(`Could not read file: ${message}`);
@@ -927,6 +1059,13 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     if (choice !== "Apply") {
+      return;
+    }
+
+    if (targetUri.scheme === ImportedContentProvider.scheme) {
+      void vscode.window.showInformationMessage(
+        "This file was loaded from your imported snapshot, so Xupra cannot write back to disk. Use 'Install to platforms' from the sidebar to materialize agents into ~/.codex, ~/.claude, or ~/.cursor.",
+      );
       return;
     }
 
