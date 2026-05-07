@@ -463,17 +463,30 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .item-optimize {
-      color: var(--vscode-charts-yellow, var(--vscode-foreground));
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-secondaryBackground, var(--vscode-editorWidget-background));
+      border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+      border-radius: 4px;
       font-size: 11px;
+      font-weight: 500;
       line-height: 1;
-      padding: 4px 6px;
+      padding: 5px 9px;
       white-space: nowrap;
+      cursor: pointer;
+      align-self: flex-start;
+      margin: 4px 8px 8px 8px;
     }
 
     .item-optimize:hover {
-      color: var(--vscode-charts-yellow, var(--vscode-button-background));
-      background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
-      border-color: var(--vscode-panel-border);
+      background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+      border-color: var(--vscode-focusBorder, var(--vscode-panel-border));
+      color: var(--vscode-button-foreground);
+    }
+
+    .item-optimize:hover {
+      background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+      border-color: var(--vscode-focusBorder, var(--vscode-panel-border));
+      color: var(--vscode-button-foreground);
     }
 
     .file-path {
@@ -801,21 +814,21 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         const optimizePath = options.readOptimizePath ? options.readOptimizePath(entry) : "";
         const itemHtml = '<div class="item-stack"><span class="item-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</span>' + (meta ? '<span class="item-meta" title="' + escapeHtml(meta) + '">' + escapeHtml(meta) + '</span>' : '') + '</div>' + (tag ? '<span class="file-tag">' + escapeHtml(tag) + '</span>' : '');
         const optimizeHtml = optimizePath
-          ? '<button type="button" class="item-trash item-optimize" title="Optimize with Xupra AI (Pro)" data-optimize-path="' + escapeHtml(optimizePath) + '" aria-label="Improve with Xupra AI">improve w/ Xupra AI</button>'
+          ? '<button type="button" class="item-optimize" title="Optimize with Xupra AI (Pro)" data-optimize-path="' + escapeHtml(optimizePath) + '" aria-label="Improve with Xupra AI">✨ improve w/ Xupra AI</button>'
           : '';
 
         if (options.actionType === 'openImportedSkill' && openId) {
           const trashHtml = '<button type="button" class="item-trash" title="Uninstall (delete runtime file)" data-uninstall-imported-skill-id="' + escapeHtml(openId) + '" aria-label="Uninstall imported skill">\u{1F5D1}</button>';
-          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-imported-skill-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + optimizeHtml + trashHtml + '</div>';
+          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;flex-direction:column;align-items:stretch;gap:0;"><div style="display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;min-width:0;" data-open-imported-skill-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + trashHtml + '</div>' + optimizeHtml + '</div>';
         }
 
         if (options.actionType === 'openImportedAgent' && openId) {
           const trashHtml = '<button type="button" class="item-trash" title="Uninstall (delete runtime file)" data-uninstall-imported-agent-id="' + escapeHtml(openId) + '" aria-label="Uninstall imported agent">\u{1F5D1}</button>';
-          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-imported-agent-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + optimizeHtml + trashHtml + '</div>';
+          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;flex-direction:column;align-items:stretch;gap:0;"><div style="display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;min-width:0;" data-open-imported-agent-id="' + escapeHtml(openId) + '">' + itemHtml + '</button>' + trashHtml + '</div>' + optimizeHtml + '</div>';
         }
 
         if (options.actionType === 'openRawFile' && optimizePath) {
-          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;" data-open-raw-path="' + escapeHtml(optimizePath) + '">' + itemHtml + '</button>' + optimizeHtml + '</div>';
+          return '<div class="file-item" style="padding:0;border:none;background:transparent;display:flex;flex-direction:column;align-items:stretch;gap:0;"><button type="button" class="file-item file-button" style="flex:1;min-width:0;" data-open-raw-path="' + escapeHtml(optimizePath) + '">' + itemHtml + '</button>' + optimizeHtml + '</div>';
         }
 
         return '<div class="file-item">' + itemHtml + '</div>';
