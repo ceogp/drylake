@@ -410,7 +410,7 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
 
         const suffix = details.length > 0 ? ` ${details.join(". ")}.` : "";
         void vscode.window.showInformationMessage(
-          `Installed ${summary.writtenCount} files into ${summary.installRoot}.${suffix}`,
+          `Installed ${summary.writtenCount} files into the default vendor directories under ${summary.installRoot} (.codex, .claude, .cursor), not the current workspace.${suffix}`,
         );
         return;
       }

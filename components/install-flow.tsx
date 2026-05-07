@@ -63,10 +63,26 @@ const destinations: Array<{
   name: string;
   detail: string;
 }> = [
-  { id: "all", name: "All supported tools", detail: "Write Codex, Claude, and Cursor files in one install" },
-  { id: "cursor", name: "Cursor", detail: ".cursor/rules/*.mdc" },
-  { id: "codex", name: "Codex", detail: ".codex/skills/*/SKILL.md and .codex/agents/*.toml" },
-  { id: "claude", name: "Claude", detail: ".claude/agents/*.md" },
+  {
+    id: "all",
+    name: "All supported tools",
+    detail: "Default install to ~/.codex, ~/.claude, and ~/.cursor in one run",
+  },
+  {
+    id: "cursor",
+    name: "Cursor",
+    detail: "Default install to ~/.cursor/rules and ~/.cursor/skills",
+  },
+  {
+    id: "codex",
+    name: "Codex",
+    detail: "Default install to ~/.codex/AGENTS.md, ~/.codex/skills, and ~/.codex/agents",
+  },
+  {
+    id: "claude",
+    name: "Claude",
+    detail: "Default install to ~/.claude/CLAUDE.md, ~/.claude/agents, and ~/.claude/skills",
+  },
   { id: "other", name: "Other / Custom path", detail: "Choose a format, pick a folder, or download a ZIP for another tool" },
 ];
 
@@ -539,14 +555,14 @@ export function InstallFlow({ versionId }: { versionId: string }) {
             </p>
             <p className="mt-2 text-sm leading-6 text-stone-700">
               {destination === "codex"
-                ? "Confirm the write inside VS Code or Cursor. Codex installs go to your home runtime under ~/.codex so AGENTS.md, agents, and skills are available to Codex globally."
+                ? "Confirm the write inside VS Code or Cursor. This writes directly to Codex's default home directory under ~/.codex, not to your repo or another folder. Xupra places AGENTS.md, skills, and agents there so Codex can pick them up from the standard location."
                 : destination === "claude"
-                  ? "Confirm the write inside VS Code or Cursor. Claude installs go to your home runtime under ~/.claude/agents so the subagent is available across projects."
+                  ? "Confirm the write inside VS Code or Cursor. This writes directly to Claude's default home directory under ~/.claude, not to your repo or another folder. Xupra places CLAUDE.md, agents, and skills there so they are available from the standard location."
                   : destination === "cursor"
-                    ? "Confirm the write inside VS Code or Cursor. Cursor installs go to your home runtime under ~/.cursor/rules and ~/.cursor/skills."
+                    ? "Confirm the write inside VS Code or Cursor. This writes directly to Cursor's default home directory under ~/.cursor, not to your repo or another folder. Xupra places rules and skills there at the standard location."
                     : destination === "all"
-                      ? "Confirm the write inside VS Code or Cursor. Xupra installs Codex, Claude, and Cursor outputs into ~/.codex, ~/.claude, and ~/.cursor."
-                      : "Confirm the write inside VS Code or Cursor. Choose Other only for an explicit custom folder, or download the generated files for any tool that is not listed."}
+                      ? "Confirm the write inside VS Code or Cursor. This writes directly to the default home directories for every supported tool: ~/.codex, ~/.claude, and ~/.cursor. It does not install into your repo unless you explicitly choose Other / Custom path."
+                      : "Confirm the write inside VS Code or Cursor. Choose Other only when you want an explicit custom folder instead of the default vendor directories, or download the generated files for any tool that is not listed."}
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <a

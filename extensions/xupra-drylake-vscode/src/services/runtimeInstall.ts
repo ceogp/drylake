@@ -125,7 +125,7 @@ export async function installGeneratedFilesToRuntimeHome(files: GeneratedInstall
   const writtenCount = await writeGeneratedFilesToWorkspace(mappedFiles, {
     confirmBeforeWrite: true,
     rootUri: homeUri,
-    confirmationLabel: `${os.homedir()} vendor runtime directories (.codex, .claude, .cursor)`,
+    confirmationLabel: `the default vendor runtime directories under ${os.homedir()} (.codex, .claude, .cursor)`,
   });
 
   if (writtenCount === 0) {
