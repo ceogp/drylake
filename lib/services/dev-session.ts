@@ -125,7 +125,7 @@ export async function ensureStarterWorkspace(input: {
         origin: STARTER_VERSION_ORIGIN,
         manifestJson: {
           name: starterPackageName,
-          targetPlatforms: ["codex", "claude_code", "claude_agents", "cursor"],
+          targetPlatforms: ["codex", "claude_code", "claude_agents", "cursor", "windsurf", "cline", "roo", "copilot", "gemini", "junie", "warp", "generic"],
           starterTemplate: true,
         },
         agentDefinitionJson: {
