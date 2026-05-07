@@ -2,11 +2,20 @@ import { z } from "zod";
 
 import { created, forbidden, fromZodError, internalError, unauthorized } from "@/lib/api/http";
 import { getAuthSessionSummary, getAuthSetup } from "@/lib/services/auth";
+import { syncSubscriptionFromClerk } from "@/lib/services/billing-sync";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { ensureDevSession } from "@/lib/services/dev-session";
 import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
 import { verifyExtensionAccessToken } from "@/lib/services/extension-tokens";
 import { prisma } from "@/lib/prisma";
+
+async function syncSafely(organizationId: string) {
+  try {
+    await syncSubscriptionFromClerk(organizationId);
+  } catch (error) {
+    console.warn("[extension/connect] billing sync failed", error);
+  }
+}
 
 const payloadSchema = z.object({
   email: z.email().optional(),
@@ -53,6 +62,12 @@ export async function POST(request: Request) {
         return unauthorized("The extension token no longer maps to an active workspace.");
       }
 
+      await syncSafely(membership.organizationId);
+      const refreshedOrganization = await prisma.organization.findUnique({
+        where: { id: membership.organizationId },
+        select: { id: true, name: true, slug: true, tier: true },
+      });
+      const organizationView = refreshedOrganization ?? membership.organization;
       const { subscription, entitlements } = await getEntitlementsForOrganization(membership.organizationId);
 
       return created({
@@ -75,10 +90,10 @@ export async function POST(request: Request) {
           imageUrl: user.profile?.avatarUrl ?? null,
         },
         organization: {
-          id: membership.organization.id,
-          name: membership.organization.name,
-          slug: membership.organization.slug,
-          tier: membership.organization.tier,
+          id: organizationView.id,
+          name: organizationView.name,
+          slug: organizationView.slug,
+          tier: organizationView.tier,
         },
         entitlements,
         subscription: {
@@ -95,6 +110,11 @@ export async function POST(request: Request) {
         return unauthorized("The active session is not associated with an organization.");
       }
 
+      await syncSafely(organizationId);
+      const refreshedOrg = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { id: true, name: true, slug: true, tier: true },
+      });
       const { subscription, entitlements } = await getEntitlementsForOrganization(organizationId);
 
       return created({
@@ -112,10 +132,11 @@ export async function POST(request: Request) {
               id: appContext.organization.id,
               name: appContext.organization.name,
               slug: appContext.organization.slug,
-              tier: appContext.organization.tier,
+              tier: refreshedOrg?.tier ?? appContext.organization.tier,
             }
           : {
               id: auth.session.organizationId,
+              tier: refreshedOrg?.tier,
             },
         entitlements,
         subscription: {
