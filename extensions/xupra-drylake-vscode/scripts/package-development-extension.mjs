@@ -11,13 +11,12 @@ const __dirname = path.dirname(__filename);
 const extensionRoot = path.resolve(__dirname, "..");
 const buildRoot = path.join(extensionRoot, ".development-extension");
 
-const DEV_BASE_URL = (process.env.XUPRA_DEVELOPMENT_BASE_URL ?? "https://drylake-dev.xupracorp.com").replace(/\/+$/, "");
+const DEV_BASE_URL = (process.env.XUPRA_DEVELOPMENT_BASE_URL ?? "https://dev.xupracorp.com").replace(/\/+$/, "");
 const DEV_DISPLAY_NAME = process.env.XUPRA_DEVELOPMENT_DISPLAY_NAME ?? "Xupra DryLake Development";
 const DEV_PACKAGE_NAME = "drylake-development";
 const DEV_EXTENSION_ID = "xupra.drylake-development";
 const DEV_PREFIX = "xupraDev";
 const devVsixDir = path.join(extensionRoot, "development-vsix");
-const DEV_OUTPUT = path.join(devVsixDir, `${DEV_PACKAGE_NAME}-0.1.4.vsix`);
 const OWNER_DEV_EMAIL = "owner@xupra.local";
 const OWNER_DEV_EMAIL_PLACEHOLDER = "__XUPRA_OWNER_DEV_EMAIL__";
 
@@ -122,6 +121,9 @@ function run(command, args, options = {}) {
 }
 
 async function main() {
+  const sourcePackage = JSON.parse(await fs.readFile(path.join(extensionRoot, "package.json"), "utf8"));
+  const devOutput = path.join(devVsixDir, `${DEV_PACKAGE_NAME}-${sourcePackage.version}.vsix`);
+
   await fs.rm(buildRoot, { recursive: true, force: true });
   await fs.mkdir(buildRoot, { recursive: true });
   await fs.mkdir(devVsixDir, { recursive: true });
@@ -153,13 +155,13 @@ async function main() {
 
   const packageCommand = existsSync(vsceBin) ? vsceBin : "npx";
   const packageArgs = existsSync(vsceBin)
-    ? ["package", "--allow-star-activation", "--out", DEV_OUTPUT]
-    : ["@vscode/vsce", "package", "--allow-star-activation", "--out", DEV_OUTPUT];
+    ? ["package", "--allow-star-activation", "--out", devOutput]
+    : ["@vscode/vsce", "package", "--allow-star-activation", "--out", devOutput];
 
   run(packageCommand, packageArgs, { cwd: buildRoot });
 
   console.log("");
-  console.log(`Created ${DEV_OUTPUT}`);
+  console.log(`Created ${devOutput}`);
   console.log(`Extension ID: ${DEV_EXTENSION_ID}`);
   console.log(`Configuration namespace: ${DEV_PREFIX}`);
   console.log(`Default backend: ${DEV_BASE_URL}`);
