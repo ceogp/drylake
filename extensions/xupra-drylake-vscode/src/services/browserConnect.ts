@@ -52,7 +52,7 @@ type PendingRequest = {
 const CONNECT_TIMEOUT_MS = 1000 * 60 * 3;
 const CONNECT_POLL_INTERVAL_MS = 1500;
 const SUPPORTED_INSTALL_TARGETS = new Set(["codex", "claude_code", "claude_agents", "cursor"]);
-const ALL_INSTALL_TARGETS = ["codex", "claude_agents", "cursor"];
+const ALL_INSTALL_TARGETS = ["codex", "claude_code", "claude_agents", "cursor"];
 const logger = getLogger();
 
 function logConnectStage(stage: string, details?: Record<string, unknown>) {
