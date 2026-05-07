@@ -495,7 +495,7 @@ deploy_production:
     - if: '$DEPLOY_FREEZE == "true"'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_COMMIT_REF_PROTECTED == "true" && $PRODUCTION_HOST && $PRODUCTION_SSH_USER && $PRODUCTION_SSH_PRIVATE_KEY && $PRODUCTION_ENV_FILE'
-      when: on_success
+      when: manual
 
 verify_production:
   extends: .verify_app
