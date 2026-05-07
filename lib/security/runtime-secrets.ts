@@ -68,3 +68,40 @@ export async function getAppEncryptionSecret() {
 
   return value;
 }
+
+// ---------------------------------------------------------------------------
+// Auth & billing secrets — pulled from AWS Secrets Manager when
+// SECRETS_PROVIDER=aws_secrets_manager, otherwise fall back to env vars.
+// ---------------------------------------------------------------------------
+
+export async function getClerkSecretKey() {
+  return getRuntimeSecret({
+    name: "clerk-secret-key",
+    fallback: env.CLERK_SECRET_KEY,
+    required: env.AUTH_MODE === "clerk",
+  });
+}
+
+export async function getClerkWebhookSecret() {
+  return getRuntimeSecret({
+    name: "clerk-webhook-signing-secret",
+    fallback: env.CLERK_WEBHOOK_SIGNING_SECRET,
+    required: env.AUTH_MODE === "clerk",
+  });
+}
+
+export async function getStripeSecretKey() {
+  return getRuntimeSecret({
+    name: "stripe-secret-key",
+    fallback: env.STRIPE_SECRET_KEY,
+    required: env.BILLING_PROVIDER === "stripe",
+  });
+}
+
+export async function getStripeWebhookSecret() {
+  return getRuntimeSecret({
+    name: "stripe-webhook-secret",
+    fallback: env.STRIPE_WEBHOOK_SECRET,
+    required: env.BILLING_PROVIDER === "stripe",
+  });
+}
