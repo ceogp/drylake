@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { created, forbidden, fromZodError, internalError, unauthorized } from "@/lib/api/http";
 import { getAuthSessionSummary, getAuthSetup } from "@/lib/services/auth";
-import { syncSubscriptionFromClerk } from "@/lib/services/billing-sync";
+import { syncSubscriptionFromClerk, syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { ensureDevSession } from "@/lib/services/dev-session";
 import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
@@ -13,7 +13,12 @@ async function syncSafely(organizationId: string) {
   try {
     await syncSubscriptionFromClerk(organizationId);
   } catch (error) {
-    console.warn("[extension/connect] billing sync failed", error);
+    console.warn("[connect] clerk sync failed", { organizationId, error });
+  }
+  try {
+    await syncSubscriptionFromStripe(organizationId);
+  } catch (error) {
+    console.warn("[connect] stripe sync failed", { organizationId, error });
   }
 }
 

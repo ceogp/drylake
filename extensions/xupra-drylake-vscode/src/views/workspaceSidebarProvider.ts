@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 import os from "node:os";
+import fs from "node:fs";
+import path from "node:path";
 
 import type { ApiClient } from "../services/apiClient";
 import type { StateStore } from "../services/stateStore";
@@ -96,6 +98,25 @@ type OutboundMessage =
       requestId: string;
       message: string;
     };
+
+function loadXupraMarkDataUri(): string {
+  // Bundled extension lives at <ext>/dist/extension.js, media/ is a sibling of dist/.
+  const candidates = [
+    path.join(__dirname, "..", "media", "xupra-mark.webp"),
+    path.join(__dirname, "media", "xupra-mark.webp"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      const buffer = fs.readFileSync(candidate);
+      return "data:image/webp;base64," + buffer.toString("base64");
+    } catch {
+      // try next
+    }
+  }
+  return "";
+}
+
+const XUPRA_MARK_DATA_URI = loadXupraMarkDataUri();
 
 export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
@@ -463,12 +484,15 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .item-optimize {
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-secondaryBackground, var(--vscode-editorWidget-background));
-      border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #ffffff;
+      background: #E85420;
+      border: 1px solid #C24315;
       border-radius: 4px;
       font-size: 11px;
-      font-weight: 500;
+      font-weight: 600;
       line-height: 1;
       padding: 5px 9px;
       white-space: nowrap;
@@ -478,15 +502,17 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .item-optimize:hover {
-      background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
-      border-color: var(--vscode-focusBorder, var(--vscode-panel-border));
-      color: var(--vscode-button-foreground);
+      background: #FF6A36;
+      border-color: #E85420;
+      color: #ffffff;
     }
 
-    .item-optimize:hover {
-      background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
-      border-color: var(--vscode-focusBorder, var(--vscode-panel-border));
-      color: var(--vscode-button-foreground);
+    .item-optimize .optimize-mark {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      object-fit: cover;
+      display: inline-block;
     }
 
     .file-path {
@@ -659,6 +685,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
   <div id="root"></div>
   <script>
     const vscode = acquireVsCodeApi();
+    const XUPRA_MARK_DATA_URI = ${JSON.stringify(XUPRA_MARK_DATA_URI)};
 
     function uuid() {
       if (crypto && typeof crypto.randomUUID === "function") {
@@ -814,7 +841,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         const optimizePath = options.readOptimizePath ? options.readOptimizePath(entry) : "";
         const itemHtml = '<div class="item-stack"><span class="item-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</span>' + (meta ? '<span class="item-meta" title="' + escapeHtml(meta) + '">' + escapeHtml(meta) + '</span>' : '') + '</div>' + (tag ? '<span class="file-tag">' + escapeHtml(tag) + '</span>' : '');
         const optimizeHtml = optimizePath
-          ? '<button type="button" class="item-optimize" title="Optimize with Xupra AI (Pro)" data-optimize-path="' + escapeHtml(optimizePath) + '" aria-label="Improve with Xupra AI">✨ improve w/ Xupra AI</button>'
+          ? '<button type="button" class="item-optimize" title="Optimize with Xupra AI (Pro)" data-optimize-path="' + escapeHtml(optimizePath) + '" aria-label="Improve with Xupra AI">' + (XUPRA_MARK_DATA_URI ? '<img class="optimize-mark" src="' + XUPRA_MARK_DATA_URI + '" alt="" />' : '') + '<span>improve w/ Xupra AI</span></button>'
           : '';
 
         if (options.actionType === 'openImportedSkill' && openId) {

@@ -5,7 +5,7 @@ import { createCheckoutAction, openBillingPortalAction } from "@/app/actions";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getIsPlatformAdmin } from "@/lib/services/access";
-import { syncSubscriptionFromClerk } from "@/lib/services/billing-sync";
+import { syncSubscriptionFromClerk, syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
 import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 import { getSetupStatus } from "@/lib/services/setup";
@@ -14,7 +14,12 @@ async function syncSafely(organizationId: string) {
   try {
     await syncSubscriptionFromClerk(organizationId);
   } catch (error) {
-    console.warn("[billing/page] subscription sync failed", error);
+    console.warn("[billing] clerk sync failed", { organizationId, error });
+  }
+  try {
+    await syncSubscriptionFromStripe(organizationId);
+  } catch (error) {
+    console.warn("[billing] stripe sync failed", { organizationId, error });
   }
 }
 
