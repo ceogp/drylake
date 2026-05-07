@@ -10,22 +10,7 @@ import { readArtifactText, saveArtifactText } from "@/lib/storage/artifacts";
 import { normalizeImportLogicalPath } from "@/lib/utils/import-paths";
 import { toSlug } from "@/lib/utils/slug";
 
-export const EXPORT_TARGETS = [
-  "codex",
-  "claude_code",
-  "claude_agents",
-  "cursor",
-  "windsurf",
-  "cline",
-  "roo",
-  "copilot",
-  "gemini",
-  "junie",
-  "warp",
-  "generic",
-] as const;
-
-export type SupportedTarget = (typeof EXPORT_TARGETS)[number];
+type SupportedTarget = "codex" | "claude_code" | "claude_agents" | "cursor";
 
 type VersionWithRelations = PackageVersion & {
   files: PackageFile[];
@@ -604,25 +589,6 @@ function compatibilityForTarget(version: VersionWithRelations, targetPlatform: S
         warnings.push("Subagents will be flattened into Cursor rule content because Cursor is rule-centric.");
       }
       break;
-    case "windsurf":
-    case "cline":
-    case "roo":
-      if (!hasInstructions && !hasSubagents && !hasRules && !hasSkills) {
-        unsupported.push(`${targetPlatform} export needs instructions, agents, rules, or skills.`);
-      }
-      if (hasSubagents) {
-        warnings.push("Subagents will be flattened into rule files because this platform is rule-centric.");
-      }
-      break;
-    case "copilot":
-    case "gemini":
-    case "junie":
-    case "warp":
-    case "generic":
-      if (!hasInstructions && !hasSubagents && !hasRules && !hasSkills) {
-        unsupported.push(`${targetPlatform} export needs instructions, agents, rules, or skills.`);
-      }
-      break;
   }
 
   const status = unsupported.length > 0 ? "unsupported" : warnings.length > 0 ? "warning" : "supported";
@@ -876,55 +842,12 @@ export async function buildExportPreview(params: {
       }
 
       await addGeneratedFile("AGENTS.md", stringifyCodexAgentsMd(version));
-      await addGeneratedFile(".cursorrules", stringifyCodexAgentsMd(version));
       for (const skill of skills) {
         await addGeneratedFile(
           `.cursor/skills/${toSlug(skill.name)}/SKILL.md`,
           stringifySkillMarkdown(skill),
         );
       }
-      break;
-    case "windsurf":
-    case "cline":
-    case "roo": {
-      const ruleDir =
-        params.targetPlatform === "windsurf"
-          ? ".windsurf/rules"
-          : params.targetPlatform === "cline"
-            ? ".clinerules"
-            : ".roo/rules";
-
-      await addGeneratedFile(`${ruleDir}/xupra-core.md`, stringifyCodexAgentsMd(version));
-
-      for (const rule of version.skillRules.filter((item) => item.kind === "rule")) {
-        await addGeneratedFile(
-          `${ruleDir}/${toSlug(rule.name) || "rule"}.md`,
-          `# ${rule.name}\n\n${rule.bodyMd.trim()}\n`,
-        );
-      }
-
-      for (const skill of skills) {
-        await addGeneratedFile(
-          `${ruleDir}/skills/${toSlug(skill.name)}.md`,
-          stringifySkillMarkdown(skill),
-        );
-      }
-      break;
-    }
-    case "copilot":
-      await addGeneratedFile(".github/copilot-instructions.md", stringifyCodexAgentsMd(version));
-      break;
-    case "gemini":
-      await addGeneratedFile("GEMINI.md", stringifyCodexAgentsMd(version));
-      break;
-    case "junie":
-      await addGeneratedFile(".junie/guidelines.md", stringifyCodexAgentsMd(version));
-      break;
-    case "warp":
-      await addGeneratedFile("WARP.md", stringifyCodexAgentsMd(version));
-      break;
-    case "generic":
-      await addGeneratedFile(".rules", stringifyCodexAgentsMd(version));
       break;
   }
 

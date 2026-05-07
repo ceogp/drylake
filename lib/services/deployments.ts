@@ -8,7 +8,7 @@ import { env } from "@/lib/env";
 import { recordAuditEvent } from "@/lib/services/audit";
 import { readCredentialForJob } from "@/lib/services/credentials";
 import { assertEntitlement } from "@/lib/services/entitlements";
-import { buildExportPreview, type SupportedTarget } from "@/lib/services/import-export";
+import { buildExportPreview } from "@/lib/services/import-export";
 import { notifyOrganizationIntegrations } from "@/lib/services/integrations";
 import { saveArtifactText } from "@/lib/storage/artifacts";
 
@@ -235,7 +235,7 @@ export async function processDeploymentJob(deploymentJobId: string) {
 
     const exportResult = await buildExportPreview({
       versionId: version.id,
-      targetPlatform: target.platform as SupportedTarget,
+      targetPlatform: target.platform as "codex" | "claude_code" | "claude_agents" | "cursor",
       createdByUserId: deploymentJob.createdByUserId,
     });
 
