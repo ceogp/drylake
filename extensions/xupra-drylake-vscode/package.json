@@ -1,14 +1,14 @@
 {
   "name": "drylake",
-  "displayName": "Xupra DryLake",
-  "description": "Build an agent package once and generate target-specific files for Codex, Claude Code, Cursor, Claude Agents, and more.",
-  "version": "0.1.9",
+  "displayName": "DryLake Agent Portability",
+  "description": "Scan, validate, and translate AGENTS.md, CLAUDE.md, Cursor rules, Claude skills, and Codex configs across AI coding tools.",
+  "version": "0.1.10",
   "private": false,
   "publisher": "xupracorp",
   "license": "UNLICENSED",
   "preview": false,
   "icon": "media/icon.png",
-  "homepage": "https://drylake.xupracorp.com/app",
+  "homepage": "https://drylake.xupracorp.com",
   "bugs": {
     "url": "https://gitlab.com/gmkdigitalmedia1/drylake/-/issues"
   },
@@ -21,20 +21,34 @@
     "vscode": "^1.100.0"
   },
   "categories": [
-    "AI",
-    "Chat",
     "Machine Learning",
     "Other"
   ],
   "keywords": [
-    "agents",
-    "skills",
-    "codex",
+    "agents-md",
+    "AGENTS.md",
+    "claude-code",
+    "claude",
     "cursor",
-    "claude code",
-    "claude agents",
-    "prompt portability",
-    "agent transfer"
+    "cursor-rules",
+    "codex",
+    "codex-cli",
+    "ai-agents",
+    "agent-config",
+    "agent-portability",
+    "prompt-engineering",
+    "rules",
+    "skills",
+    "workspace-scan",
+    "yaml",
+    "drylake",
+    "xupra",
+    "windsurf",
+    "cline",
+    "roocode",
+    "gemini-cli",
+    "copilot",
+    "devtools"
   ],
   "galleryBanner": {
     "color": "#f6ebdc",
@@ -114,6 +128,18 @@
           },
           "default": [],
           "description": "Additional file patterns for unusual agent locations."
+        },
+        "xupra.scan.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.env",
+            "**/.env.*",
+            "**/secrets/**"
+          ],
+          "description": "Additional glob patterns excluded from the workspace scan. Built-in excludes for node_modules, .git, dist, build, etc. always apply."
         },
         "xupra.openDashboardAfterConnect": {
           "type": "boolean",

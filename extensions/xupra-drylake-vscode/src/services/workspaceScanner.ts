@@ -90,6 +90,18 @@ function getConfiguredPatterns(configuration?: vscode.WorkspaceConfiguration) {
   return [...new Set([...PATTERNS, ...configuredPatterns.map((pattern) => pattern.trim()).filter(Boolean)])];
 }
 
+function getExcludePattern(configuration?: vscode.WorkspaceConfiguration) {
+  const userExcludes = (configuration?.get<string[]>("scan.exclude", []) ?? [])
+    .map((pattern) => pattern.trim())
+    .filter(Boolean);
+
+  if (userExcludes.length === 0) {
+    return EXCLUDE_PATTERN;
+  }
+
+  return `{${EXCLUDE_PATTERN},${userExcludes.join(",")}}`;
+}
+
 function shouldIgnoreLogicalPath(logicalPath: string) {
   return IGNORED_LOGICAL_PATH_PATTERN.test(logicalPath.replace(/\\/g, "/"));
 }
@@ -98,8 +110,10 @@ export async function scanWorkspaceFiles(configuration?: vscode.WorkspaceConfigu
   const seen = new Set<string>();
   const results: Array<{ logicalPath: string; content: string; category: DetectedWorkspaceFile["category"] }> = [];
 
+  const excludePattern = getExcludePattern(configuration);
+
   for (const pattern of getConfiguredPatterns(configuration)) {
-    const files = await vscode.workspace.findFiles(pattern, EXCLUDE_PATTERN, 200);
+    const files = await vscode.workspace.findFiles(pattern, excludePattern, 200);
 
     for (const file of files) {
       const logicalPath = vscode.workspace.asRelativePath(file, false).replace(/\\/g, "/");
