@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake Agent Portability",
   "description": "Scan, validate, and translate AGENTS.md, CLAUDE.md, Cursor rules, Claude skills, and Codex configs across AI coding tools.",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "private": false,
   "publisher": "xupracorp",
   "license": "UNLICENSED",
@@ -21,7 +21,6 @@
     "vscode": "^1.100.0"
   },
   "categories": [
-    "Machine Learning",
     "Other"
   ],
   "keywords": [
