@@ -42,7 +42,9 @@ You can add custom patterns with `xupra.additionalScanPatterns`.
 
 ## Supported targets
 
-DryLake currently scans, validates, previews, and writes files for Codex, Claude Code, Claude Agents, and Cursor.
+DryLake currently scans, validates, previews, and writes files for Codex, Claude Code,
+Claude Agents, Cursor, Windsurf, Cline, Roo Code, GitHub Copilot, Gemini CLI,
+JetBrains Junie, Warp, and generic `.rules` files.
 
 ## Privacy and file handling
 

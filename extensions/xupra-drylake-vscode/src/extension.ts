@@ -70,6 +70,38 @@ function inferSourcePlatformFromPath(logicalPath?: string) {
     return "cursor";
   }
 
+  if (normalized.startsWith(".windsurf/")) {
+    return "windsurf";
+  }
+
+  if (normalized === ".clinerules" || normalized.startsWith(".clinerules/")) {
+    return "cline";
+  }
+
+  if (normalized === ".roorules" || normalized.startsWith(".roo/")) {
+    return "roo";
+  }
+
+  if (normalized === ".github/copilot-instructions.md" || normalized.startsWith(".github/instructions/")) {
+    return "copilot";
+  }
+
+  if (normalized === "gemini.md") {
+    return "gemini";
+  }
+
+  if (normalized === ".junie/guidelines.md") {
+    return "junie";
+  }
+
+  if (normalized === "warp.md") {
+    return "warp";
+  }
+
+  if (normalized === ".rules") {
+    return "generic";
+  }
+
   return "generic";
 }
 

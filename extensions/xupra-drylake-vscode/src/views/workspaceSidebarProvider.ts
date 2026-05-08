@@ -797,6 +797,13 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         claude_agents: "Claude Agents",
         codex: "Codex",
         cursor: "Cursor",
+        windsurf: "Windsurf",
+        cline: "Cline",
+        roo: "Roo Code",
+        copilot: "GitHub Copilot",
+        gemini: "Gemini CLI",
+        junie: "JetBrains Junie",
+        warp: "Warp",
         generic: "Generic"
       };
       const normalized = String(slug || "");

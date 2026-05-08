@@ -45,6 +45,14 @@ const LOGICAL_PATH_BY_PLATFORM: Record<string, (slug: string) => string> = {
   claude_agents: (slug) => `.claude/agents/${slug}.md`,
   codex: (slug) => `.codex/agents/${slug}.toml`,
   cursor: (slug) => `.cursor/rules/${slug}.mdc`,
+  windsurf: (slug) => `.windsurf/rules/${slug}.md`,
+  cline: (slug) => `.clinerules/${slug}.md`,
+  roo: (slug) => `.roo/rules/${slug}.md`,
+  copilot: () => ".github/copilot-instructions.md",
+  gemini: () => "GEMINI.md",
+  junie: () => ".junie/guidelines.md",
+  warp: () => "WARP.md",
+  generic: () => ".rules",
 };
 
 function slugForAgentName(agentName: string) {
@@ -551,6 +559,14 @@ export class SkillCreationPanel {
         <option value="codex">Codex</option>
         <option value="cursor">Cursor</option>
         <option value="claude_agents">Claude Agents</option>
+        <option value="windsurf">Windsurf</option>
+        <option value="cline">Cline</option>
+        <option value="roo">Roo Code</option>
+        <option value="copilot">GitHub Copilot</option>
+        <option value="gemini">Gemini CLI</option>
+        <option value="junie">JetBrains Junie</option>
+        <option value="warp">Warp</option>
+        <option value="generic">Generic .rules</option>
       </select>
     </div>
 

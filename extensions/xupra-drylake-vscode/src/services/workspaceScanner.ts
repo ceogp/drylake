@@ -14,7 +14,18 @@ const PATTERNS = [
   ".claude/skills/**/SKILL.md",
   ".claude/agents/**/*.md",
   ".cursor/skills/**/SKILL.md",
-  ".cursor/rules/**/*.mdc"
+  ".cursor/rules/**/*.mdc",
+  ".windsurf/rules/**/*.md",
+  ".clinerules",
+  ".clinerules/**/*.md",
+  ".roo/rules/**/*.md",
+  ".roorules",
+  ".github/copilot-instructions.md",
+  ".github/instructions/**/*.instructions.md",
+  "GEMINI.md",
+  ".junie/guidelines.md",
+  "WARP.md",
+  ".rules"
 ];
 
 const EXCLUDE_PATTERN = "**/{node_modules,.git,.next,dist,build,out,coverage,storage,.venv,__pycache__,google-cloud-sdk,generated_export,raw_source,deployment_output,worker-smoke,.system}/**";
@@ -336,6 +347,21 @@ function isSupportedFolderImportFile(rootUri: vscode.Uri, fileUri: vscode.Uri) {
     return true;
   }
 
+  if (
+    /\.windsurf\/rules\/.+\.md$/i.test(logicalPath) ||
+    /\.clinerules(?:\/.+\.md)?$/i.test(logicalPath) ||
+    /\.roo\/rules\/.+\.md$/i.test(logicalPath) ||
+    logicalPath === ".roorules" ||
+    logicalPath === ".github/copilot-instructions.md" ||
+    /\.github\/instructions\/.+\.instructions\.md$/i.test(logicalPath) ||
+    logicalPath === "gemini.md" ||
+    logicalPath === ".junie/guidelines.md" ||
+    logicalPath === "warp.md" ||
+    logicalPath === ".rules"
+  ) {
+    return true;
+  }
+
   return false;
 }
 
@@ -347,7 +373,17 @@ function getLogicalPathForSelectedFolder(rootUri: vscode.Uri, fileUri: vscode.Ur
   for (let index = rootParts.length - 1; index >= 0; index -= 1) {
     const part = rootParts[index];
 
-    if (part === ".agents" || part === ".codex" || part === ".claude" || part === ".cursor") {
+    if (
+      part === ".agents" ||
+      part === ".codex" ||
+      part === ".claude" ||
+      part === ".cursor" ||
+      part === ".windsurf" ||
+      part === ".clinerules" ||
+      part === ".roo" ||
+      part === ".github" ||
+      part === ".junie"
+    ) {
       hiddenRootIndex = index;
       break;
     }
@@ -385,6 +421,22 @@ export function classifyWorkspaceFile(logicalPath: string): DetectedWorkspaceFil
 
   if (/\/?\.cursor\/rules\/.+\.mdc$/i.test(logicalPath)) {
     return "rule";
+  }
+
+  if (
+    /\/?\.windsurf\/rules\/.+\.md$/i.test(logicalPath) ||
+    /\/?\.clinerules(?:\/.+\.md)?$/i.test(logicalPath) ||
+    /\/?\.roo\/rules\/.+\.md$/i.test(logicalPath) ||
+    /\/?\.roorules$/i.test(logicalPath) ||
+    /\/?\.github\/(?:copilot-instructions\.md|instructions\/.+\.instructions\.md)$/i.test(logicalPath) ||
+    /\/?\.junie\/guidelines\.md$/i.test(logicalPath) ||
+    /\/?\.rules$/i.test(logicalPath)
+  ) {
+    return "rule";
+  }
+
+  if (/\/?(GEMINI|WARP)\.md$/i.test(logicalPath)) {
+    return "instruction";
   }
 
   if (/\/?(\.agents\/skills|\.codex\/skills|\.claude\/skills|\.cursor\/skills)\/.+\/SKILL\.md$/i.test(logicalPath)) {

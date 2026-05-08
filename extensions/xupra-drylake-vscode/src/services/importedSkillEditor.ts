@@ -38,6 +38,20 @@ function fallbackSkillPath(skill: ImportedWorkspaceSkillRule) {
       return `.codex/skills/${slug}/SKILL.md`;
     case "cursor":
       return `.cursor/skills/${slug}/SKILL.md`;
+    case "windsurf":
+      return `.windsurf/rules/skills/${slug}.md`;
+    case "cline":
+      return `.clinerules/skills/${slug}.md`;
+    case "roo":
+      return `.roo/rules/skills/${slug}.md`;
+    case "copilot":
+      return `.github/instructions/${slug}.instructions.md`;
+    case "gemini":
+      return `GEMINI-${slug}.md`;
+    case "junie":
+      return `.junie/${slug}.md`;
+    case "warp":
+      return `WARP-${slug}.md`;
     case "claude_agents":
     case "claude_code":
     default:
@@ -51,6 +65,22 @@ function fallbackAgentPath(agent: ImportedWorkspaceSubagent) {
       return `.codex/agents/${agent.slug}.toml`;
     case "cursor":
       return `.cursor/rules/${agent.slug}.mdc`;
+    case "windsurf":
+      return `.windsurf/rules/${agent.slug}.md`;
+    case "cline":
+      return `.clinerules/${agent.slug}.md`;
+    case "roo":
+      return `.roo/rules/${agent.slug}.md`;
+    case "copilot":
+      return ".github/copilot-instructions.md";
+    case "gemini":
+      return "GEMINI.md";
+    case "junie":
+      return ".junie/guidelines.md";
+    case "warp":
+      return "WARP.md";
+    case "generic":
+      return ".rules";
     case "claude_agents":
     case "claude_code":
     default:
@@ -76,8 +106,17 @@ function defaultRuntimeLogicalPath(rawValue: string) {
   if (
     logicalPath.startsWith(".codex/") ||
     logicalPath.startsWith(".claude/") ||
-    logicalPath.startsWith(".cursor/")
+    logicalPath.startsWith(".cursor/") ||
+    logicalPath.startsWith(".windsurf/") ||
+    logicalPath.startsWith(".clinerules/") ||
+    logicalPath.startsWith(".roo/") ||
+    logicalPath.startsWith(".github/") ||
+    logicalPath.startsWith(".junie/")
   ) {
+    return logicalPath;
+  }
+
+  if ([".clinerules", ".roorules", ".rules", "GEMINI.md", "WARP.md"].includes(logicalPath)) {
     return logicalPath;
   }
 

@@ -90,9 +90,29 @@ const CLAUDE_SKILL = /(^|\/)\.claude\/(skills|commands)\/.+/i;
 const CURSOR_RULE = /(^|\/)\.cursor\/rules\/.+\.mdc?$/i;
 const CURSOR_SKILL = /(^|\/)\.cursor\/(skills|commands)\/.+/i;
 const CURSOR_ANY = /(^|\/)\.cursor\//i;
+const WINDSURF_RULE = /(^|\/)\.windsurf\/rules\/.+\.md$/i;
+const CLINE_RULE = /(^|\/)\.clinerules(?:\/.+\.md)?$/i;
+const ROO_RULE = /(^|\/)(?:\.roo\/rules\/.+\.md|\.roorules)$/i;
+const COPILOT_INSTRUCTIONS = /(^|\/)\.github\/(?:copilot-instructions\.md|instructions\/.+\.instructions\.md)$/i;
+const GEMINI_MD = /(^|\/)GEMINI\.md$/i;
+const JUNIE_GUIDELINES = /(^|\/)\.junie\/guidelines\.md$/i;
+const WARP_MD = /(^|\/)WARP\.md$/i;
+const GENERIC_RULES = /(^|\/)\.rules$/i;
 const AGENTS_DIR = /(^|\/)\.agents\//i;
 
-export type InferredPlatform = "codex" | "claude_code" | "claude_agents" | "cursor";
+export type InferredPlatform =
+  | "codex"
+  | "claude_code"
+  | "claude_agents"
+  | "cursor"
+  | "windsurf"
+  | "cline"
+  | "roo"
+  | "copilot"
+  | "gemini"
+  | "junie"
+  | "warp"
+  | "generic";
 
 export function inferTargetPlatformFromUri(uri: vscode.Uri): InferredPlatform | null {
   const normalized = uri.path.replace(/\\/g, "/");
@@ -109,6 +129,30 @@ export function inferTargetPlatformFromUri(uri: vscode.Uri): InferredPlatform | 
   if (CURSOR_RULE.test(normalized) || CURSOR_SKILL.test(normalized) || CURSOR_ANY.test(normalized)) {
     return "cursor";
   }
+  if (WINDSURF_RULE.test(normalized)) {
+    return "windsurf";
+  }
+  if (CLINE_RULE.test(normalized)) {
+    return "cline";
+  }
+  if (ROO_RULE.test(normalized)) {
+    return "roo";
+  }
+  if (COPILOT_INSTRUCTIONS.test(normalized)) {
+    return "copilot";
+  }
+  if (GEMINI_MD.test(normalized)) {
+    return "gemini";
+  }
+  if (JUNIE_GUIDELINES.test(normalized)) {
+    return "junie";
+  }
+  if (WARP_MD.test(normalized)) {
+    return "warp";
+  }
+  if (GENERIC_RULES.test(normalized)) {
+    return "generic";
+  }
   if (AGENTS_DIR.test(normalized)) {
     return "codex";
   }
@@ -121,6 +165,14 @@ export async function pickTargetPlatform(currentBest?: InferredPlatform | null):
     { label: "Claude Code", description: "CLAUDE.md / .claude/skills/*", value: "claude_code" },
     { label: "Claude Agents", description: ".claude/agents/*.md", value: "claude_agents" },
     { label: "Cursor", description: ".cursor/rules/*.mdc", value: "cursor" },
+    { label: "Windsurf", description: ".windsurf/rules/*.md", value: "windsurf" },
+    { label: "Cline", description: ".clinerules or .clinerules/*.md", value: "cline" },
+    { label: "Roo Code", description: ".roo/rules/*.md or .roorules", value: "roo" },
+    { label: "GitHub Copilot", description: ".github/copilot-instructions.md", value: "copilot" },
+    { label: "Gemini CLI", description: "GEMINI.md", value: "gemini" },
+    { label: "JetBrains Junie", description: ".junie/guidelines.md", value: "junie" },
+    { label: "Warp", description: "WARP.md", value: "warp" },
+    { label: "Generic .rules", description: ".rules", value: "generic" },
   ];
   const picked = await vscode.window.showQuickPick(items, {
     placeHolder: currentBest

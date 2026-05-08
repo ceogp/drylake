@@ -149,7 +149,15 @@
             "codex",
             "claude_code",
             "claude_agents",
-            "cursor"
+            "cursor",
+            "windsurf",
+            "cline",
+            "roo",
+            "copilot",
+            "gemini",
+            "junie",
+            "warp",
+            "generic"
           ],
           "default": "claude_code",
           "description": "Default target platform for compatibility and export actions."
@@ -348,14 +356,14 @@
       "editor/title": [
         {
           "command": "xupra.optimizeFile",
-          "when": "resourceFilename == AGENTS.md || resourceFilename == CLAUDE.md || resourceExtname == .toml && resourcePath =~ /\\.codex[\\\\/]agents[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.claude[\\\\/]agents[\\\\/]/ || resourceExtname == .mdc && resourcePath =~ /\\.cursor[\\\\/]rules[\\\\/]/",
+          "when": "resourceFilename == AGENTS.md || resourceFilename == CLAUDE.md || resourceFilename == GEMINI.md || resourceFilename == WARP.md || resourceFilename == .rules || resourceFilename == .roorules || resourceFilename == .clinerules || resourceExtname == .toml && resourcePath =~ /\\.codex[\\\\/]agents[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.claude[\\\\/]agents[\\\\/]/ || resourceExtname == .mdc && resourcePath =~ /\\.cursor[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.windsurf[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.clinerules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.roo[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.github[\\\\/](copilot-instructions\\.md|instructions[\\\\/])/ || resourceExtname == .md && resourcePath =~ /\\.junie[\\\\/]guidelines\\.md/",
           "group": "navigation@9"
         }
       ],
       "explorer/context": [
         {
           "command": "xupra.optimizeFile",
-          "when": "resourceFilename == AGENTS.md || resourceFilename == CLAUDE.md || resourceExtname == .toml && resourcePath =~ /\\.codex[\\\\/]agents[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.claude[\\\\/]agents[\\\\/]/ || resourceExtname == .mdc && resourcePath =~ /\\.cursor[\\\\/]rules[\\\\/]/",
+          "when": "resourceFilename == AGENTS.md || resourceFilename == CLAUDE.md || resourceFilename == GEMINI.md || resourceFilename == WARP.md || resourceFilename == .rules || resourceFilename == .roorules || resourceFilename == .clinerules || resourceExtname == .toml && resourcePath =~ /\\.codex[\\\\/]agents[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.claude[\\\\/]agents[\\\\/]/ || resourceExtname == .mdc && resourcePath =~ /\\.cursor[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.windsurf[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.clinerules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.roo[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.github[\\\\/](copilot-instructions\\.md|instructions[\\\\/])/ || resourceExtname == .md && resourcePath =~ /\\.junie[\\\\/]guidelines\\.md/",
           "group": "7_modification"
         }
       ]
