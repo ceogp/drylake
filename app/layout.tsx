@@ -30,8 +30,19 @@ const monoFont = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Xupra DryLake",
-  description: "Agent transfer and deployment control plane",
+  title: {
+    default: "Xupra",
+    template: "%s | Xupra",
+  },
+  description: "Xupra KK builds AI infrastructure products including DryLake, the agent portability platform.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/icon.svg",
+  },
 };
 
 export default async function RootLayout({
@@ -71,6 +82,9 @@ export default async function RootLayout({
             </div>
           </Link>
           <nav className="hidden items-center gap-5 text-sm text-stone-600 md:flex">
+            <Link className="transition hover:text-stone-950" href="/about">
+              About
+            </Link>
             <a className="transition hover:text-stone-950" href={dryLakeOrigin}>
               DryLake
             </a>
