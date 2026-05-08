@@ -1,58 +1,95 @@
-# Xupra DryLake for VS Code
+# DryLake Agent Portability
 
-Move agent files between tools without rebuilding them by hand.
+Move AI agent instructions between Claude Code, Cursor, Codex, and other AI coding tools without rewriting them by hand.
+
+DryLake scans your workspace and home directory for the agent and rule files used by today's AI coding tools, validates them, and translates them to the format each tool expects. Build the prompt once, ship it everywhere.
 
 ![DryLake workflow](https://drylake.xupracorp.com/marketplace/drylake-workflow.png)
 
 ![DryLake architecture](https://drylake.xupracorp.com/marketplace/drylake-architecture.png)
 
-## Quick start
+## Why use it?
+
+- One source of truth for `AGENTS.md`, `CLAUDE.md`, Cursor rules, Claude skills, and Codex configs.
+- Stop hand-editing the same instructions in five different formats every time something changes.
+- Catch broken or unsupported rules before they reach the agent at runtime.
+- Reuse skills and agents across teammates, repos, and machines.
+
+## 30-second start
 
 1. Install the extension.
-2. Open the Command Palette.
-3. Click `Xupra DryLake: Connect`.
-4. Sign in in your browser.
-5. Come back to VS Code.
-6. Click `Xupra DryLake: Scan Workspace`.
-7. Click `Xupra DryLake: Import Workspace`.
+2. Open the Command Palette and run `Xupra DryLake: Scan Workspace` to preview what DryLake found.
+3. Run `Xupra DryLake: Connect` if you want to sync to a workspace and translate to other targets.
+4. Run `Xupra DryLake: Import Workspace` to upload the detected files.
+5. Run `Xupra DryLake: Check Compatibility` or `Xupra DryLake: Export Preview` to see the translated output for each target.
 
-That is the normal setup.
+No account is required for the local scan and preview.
 
-## What to click next
+## Supported inputs
 
-- Want to see if files work on a target: `Xupra DryLake: Check Compatibility`
-- Want generated output files: `Xupra DryLake: Export Preview`
-- Want generated files written into your repo: `Xupra DryLake: Pull Package Files`
-- Want runtime files installed directly: `Xupra DryLake: Install to Runtime`
-- Want to trigger a deployment job: `Xupra DryLake: Deploy`
+DryLake automatically detects:
+
+- `AGENTS.md` and `CLAUDE.md` at the repo root and at the home-directory level (`~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md`).
+- Claude skills: `.claude/skills/**/SKILL.md` and `~/.claude/skills/**/SKILL.md`.
+- Claude sub-agents: `.claude/agents/**/*.md` and `~/.claude/agents/**/*.md`.
+- Cursor rules: `.cursor/rules/**/*.mdc` and `~/.cursor/rules/**/*.mdc`.
+- Cursor skills: `.cursor/skills/**/SKILL.md` and `~/.cursor/skills/**/SKILL.md`.
+- Codex agents: `.codex/agents/**/*.toml` and `~/.codex/agents/**/*.toml`.
+- Codex skills: `.codex/skills/**/SKILL.md` and `~/.codex/skills/**/SKILL.md`.
+- Generic skills under `.agents/skills/**/SKILL.md`.
+
+You can add custom patterns with `xupra.additionalScanPatterns`.
 
 ## Supported targets
 
-- Export and compatibility: Codex, Claude Code, Claude Agents, Cursor, Windsurf, Cline, Roo, GitHub Copilot, Gemini, Junie, Warp, and generic rules
-- Direct install from the extension: Codex, Claude Code, Claude Agents, and Cursor
+DryLake can validate, translate, and export to:
 
-## What it scans automatically
+- **Claude-style**: Claude Code, Claude Agents, Claude Skills.
+- **Cursor**: Cursor rules and skills.
+- **Codex**: Codex CLI agents and skills.
+- **Other agentic tools**: Windsurf, Cline, Roo Code, GitHub Copilot, Gemini CLI, Junie, Warp, and a generic rules format for anything else.
 
-Xupra looks for common files like:
-- `AGENTS.md`
-- `CLAUDE.md`
-- `.claude/skills/**/SKILL.md`
-- `.claude/agents/**/*.md`
-- `.cursor/skills/**/SKILL.md`
-- `.cursor/rules/**/*.mdc`
-- loose `*.md` and `*.py` files
+Direct install from the extension is available today for Codex, Claude Code, Claude Agents, and Cursor. The other targets are exposed through Export Preview and Pull Package Files.
 
-If your repo uses custom locations, add them in `xupra.additionalScanPatterns`.
+## Main settings
 
+| Setting | Purpose |
+| --- | --- |
+| `xupra.baseUrl` | Backend URL. Defaults to `https://drylake.xupracorp.com`. |
+| `xupra.includeGlobalAgentFiles` | Scan `~/.codex`, `~/.claude`, `~/.cursor` in addition to the workspace. |
+| `xupra.additionalScanPatterns` | Add extra glob patterns for non-standard agent locations. |
+| `xupra.scan.exclude` | Extra glob patterns to exclude. Built-in excludes for `node_modules`, `.git`, `dist`, `build`, etc. always apply. Defaults exclude `**/.env`, `**/.env.*`, and `**/secrets/**`. |
+| `xupra.defaultTargetPlatform` | Default target for Compatibility and Export. |
+| `xupra.confirmBeforeWriteback` | Ask before writing generated files into your workspace. |
 
-## Main setting
+## Privacy and file handling
 
-- Set `xupra.baseUrl` to `https://drylake.xupracorp.com`
+- The local scan runs entirely inside VS Code. Nothing is uploaded until you run `Import Workspace` or `Export Preview`.
+- DryLake reads only the file types listed under **Supported inputs** plus any patterns you add to `xupra.additionalScanPatterns`. It never scans `*.py` or other source code.
+- Built-in excludes always skip `node_modules`, `.git`, `.next`, `dist`, `build`, `out`, `coverage`, `storage`, `.venv`, `__pycache__`, and other heavy or sensitive directories.
+- Add your own patterns to `xupra.scan.exclude` to keep additional paths out of the scan. The defaults already exclude `.env` files and `secrets/` folders.
+- When you run `Import Workspace` the matched files are sent to your configured `xupra.baseUrl` so you can compare, translate, and share them. You can review the file list in the Workspace view before importing.
+- Sign out at any time with `Xupra DryLake: Sign Out`.
 
+## Troubleshooting
 
-## If Connect does not connect to the browser
+- **Browser sign-in does not return to VS Code**: run `Xupra DryLake: Connect` again, or use `Xupra DryLake: Paste Extension Token` for the manual fallback.
+- **A file you expected was not detected**: confirm it matches one of the patterns above, or add it to `xupra.additionalScanPatterns`.
+- **A path you do not want imported keeps appearing**: add a glob to `xupra.scan.exclude`.
+- **Need to start over**: run `Xupra DryLake: Sign Out`, then `Xupra DryLake: Connect`.
 
-- Run `Xupra DryLake: Connect` again
-- Sign out of the website and then sign out of the extension, then sign in again from the browser.
-- If the browser handoff still fails, use the manual token fallback
-- Open `Xupra DryLake: Contact Support` if you get stuck
+---
+
+## Contributing and local extension development
+
+Source: <https://gitlab.com/gmkdigitalmedia1/drylake>
+
+Build locally:
+
+```sh
+cd extensions/xupra-drylake-vscode
+node esbuild.mjs
+npx --yes @vscode/vsce@latest package --allow-star-activation
+```
+
+Issues and feature requests: <https://gitlab.com/gmkdigitalmedia1/drylake/-/issues>
