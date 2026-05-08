@@ -33,16 +33,6 @@ export class HelpTreeProvider implements vscode.TreeDataProvider<HelpItem> {
   getChildren() {
     return [
       {
-        label: "Walkthrough",
-        description: "Open the Xupra walkthrough in VS Code",
-        command: "xupra.openWalkthrough"
-      },
-      {
-        label: "Import From IDE",
-        description: "Open the browser page that returns to the editor import flow",
-        command: "xupra.openInstallGuide"
-      },
-      {
         label: "Connect Extension",
         description: "Open the browser connect page or fallback flow",
         command: "xupra.openConnectPage"
@@ -66,11 +56,6 @@ export class HelpTreeProvider implements vscode.TreeDataProvider<HelpItem> {
         label: "Billing",
         description: "Open billing and plan management",
         command: "xupra.openBilling"
-      },
-      {
-        label: "Supported Targets",
-        description: "Codex, Claude Code, Claude Agents, Cursor",
-        command: "xupra.openSupportedTargets"
       },
       {
         label: "Workflow",

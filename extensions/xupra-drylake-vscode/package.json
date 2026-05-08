@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake Agent Portability",
   "description": "Scan, validate, and translate AGENTS.md, CLAUDE.md, Cursor rules, Claude skills, and Codex configs across AI coding tools.",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": false,
   "publisher": "xupracorp",
   "license": "UNLICENSED",
@@ -86,11 +86,9 @@
     "onCommand:xupra.openBilling",
     "onCommand:xupra.contactSupport",
     "onCommand:xupra.openHowItWorks",
-    "onCommand:xupra.openSupportedTargets",
     "onCommand:xupra.openInstallGuide",
     "onCommand:xupra.openConnectPage",
-    "onCommand:xupra.openGetStarted",
-    "onCommand:xupra.openWalkthrough"
+    "onCommand:xupra.openGetStarted"
   ],
   "contributes": {
     "configuration": {
@@ -212,63 +210,6 @@
         "when": "true"
       }
     ],
-    "walkthroughs": [
-      {
-        "id": "xupra.getStarted",
-        "title": "Get Started With Xupra DryLake",
-        "description": "Install, connect, return to VS Code, and move your first agent package without rebuilding it by hand.",
-        "steps": [
-          {
-            "id": "xupra.connect",
-            "title": "Connect Xupra",
-            "description": "Start in VS Code. Click the button below and Xupra opens your browser for sign-in or sign-up.\n\n[Connect Xupra](command:xupra.connect)",
-            "media": {
-              "image": "media/readme-connect.svg",
-              "altText": "Connect Xupra from VS Code and continue in the browser."
-            },
-            "completionEvents": [
-              "onCommand:xupra.connect"
-            ]
-          },
-          {
-            "id": "xupra.return",
-            "title": "Return To VS Code Signed In",
-            "description": "After browser sign-in, Xupra returns directly to VS Code or Cursor and stores the extension session automatically.",
-            "media": {
-              "image": "media/readme-connect.svg",
-              "altText": "Browser sign-in returns directly to VS Code."
-            },
-            "completionEvents": [
-              "onContext:xupra.connected"
-            ]
-          },
-          {
-            "id": "xupra.scan",
-            "title": "Import Skills And Agents",
-            "description": "Xupra finds supported repo and global agent files, uploads them, and imports them into your Xupra workspace.\n\n[Import Skills And Agents](command:xupra.importWorkspace)",
-            "media": {
-              "image": "media/readme-workflow.svg",
-              "altText": "Import skills and agents."
-            },
-            "completionEvents": [
-              "onCommand:xupra.importWorkspace"
-            ]
-          },
-          {
-            "id": "xupra.import",
-            "title": "Review What Imported",
-            "description": "After import, Xupra shows raw files, agents, skills, and rules in the extension and web workspace.\n\n[Open Xupra App](command:xupra.openWebApp)",
-            "media": {
-              "image": "media/readme-workflow.svg",
-              "altText": "Review imported files."
-            },
-            "completionEvents": [
-              "onCommand:xupra.importWorkspace"
-            ]
-          }
-        ]
-      }
-    ],
     "commands": [
       {
         "command": "xupra.connect",
@@ -359,12 +300,8 @@
         "title": "Xupra DryLake: How It Works"
       },
       {
-        "command": "xupra.openSupportedTargets",
-        "title": "Xupra DryLake: Supported Targets"
-      },
-      {
         "command": "xupra.openInstallGuide",
-        "title": "Xupra DryLake: Open Import From IDE"
+        "title": "Xupra DryLake: Open Install Page"
       },
       {
         "command": "xupra.openConnectPage",
@@ -389,10 +326,6 @@
       {
         "command": "xupra.optimizeFile",
         "title": "Xupra DryLake: Optimize with Xupra AI (Pro)"
-      },
-      {
-        "command": "xupra.openWalkthrough",
-        "title": "Xupra DryLake: Open Walkthrough"
       }
     ],
     "menus": {

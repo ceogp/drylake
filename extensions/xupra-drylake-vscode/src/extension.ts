@@ -304,7 +304,6 @@ async function migrateLegacyBaseUrl(configuration: vscode.WorkspaceConfiguration
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-  const WALKTHROUGH_STATE_KEY = "xupra.walkthroughOpened";
   let configuration = vscode.workspace.getConfiguration("xupra");
   const migratedBaseUrl = await migrateLegacyBaseUrl(configuration);
   if (migratedBaseUrl) {
@@ -534,10 +533,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const register = (command: string, callback: (...args: unknown[]) => unknown) => {
     context.subscriptions.push(vscode.commands.registerCommand(command, callback));
   };
-
-  register("xupra.openWalkthrough", async () => {
-    await vscode.commands.executeCommand("workbench.action.openWalkthrough", `${context.extension.id}#xupra.getStarted`, false);
-  });
 
   register("xupra.connect", async () => {
     await vscode.commands.executeCommand("xupra.projects.focus");
@@ -1106,10 +1101,6 @@ export async function activate(context: vscode.ExtensionContext) {
     HowItWorksPanel.createOrShow(context, "workflow");
   });
 
-  register("xupra.openSupportedTargets", () => {
-    HowItWorksPanel.createOrShow(context, "targets");
-  });
-
   register("xupra.openInstallGuide", async () => {
     await vscode.env.openExternal(apiClient.openWebUrl("/extensions/install"));
   });
@@ -1143,12 +1134,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const initialProjects = stateStore.getConnection().userEmail ? await refreshProjectsSafely("startup") : [];
   await syncWorkspaceView(initialProjects);
-
-  if (!context.globalState.get<boolean>(WALKTHROUGH_STATE_KEY)) {
-    await context.globalState.update(WALKTHROUGH_STATE_KEY, true);
-    await vscode.commands.executeCommand("xupra.projects.focus");
-    await vscode.commands.executeCommand("workbench.action.openWalkthrough", `${context.extension.id}#xupra.getStarted`, false);
-  }
 
   if (configuration.get<boolean>("autoScanOnOpen")) {
     void vscode.commands.executeCommand("xupra.importWorkspace");

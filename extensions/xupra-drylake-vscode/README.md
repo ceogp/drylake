@@ -42,25 +42,7 @@ You can add custom patterns with `xupra.additionalScanPatterns`.
 
 ## Supported targets
 
-DryLake can validate, translate, and export to:
-
-- **Claude-style**: Claude Code, Claude Agents, Claude Skills.
-- **Cursor**: Cursor rules and skills.
-- **Codex**: Codex CLI agents and skills.
-- **Other agentic tools**: Windsurf, Cline, Roo Code, GitHub Copilot, Gemini CLI, Junie, Warp, and a generic rules format for anything else.
-
-Direct install from the extension is available today for Codex, Claude Code, Claude Agents, and Cursor. The other targets are exposed through Export Preview and Pull Package Files.
-
-## Main settings
-
-| Setting | Purpose |
-| --- | --- |
-| `xupra.baseUrl` | Backend URL. Defaults to `https://drylake.xupracorp.com`. |
-| `xupra.includeGlobalAgentFiles` | Scan `~/.codex`, `~/.claude`, `~/.cursor` in addition to the workspace. |
-| `xupra.additionalScanPatterns` | Add extra glob patterns for non-standard agent locations. |
-| `xupra.scan.exclude` | Extra glob patterns to exclude. Built-in excludes for `node_modules`, `.git`, `dist`, `build`, etc. always apply. Defaults exclude `**/.env`, `**/.env.*`, and `**/secrets/**`. |
-| `xupra.defaultTargetPlatform` | Default target for Compatibility and Export. |
-| `xupra.confirmBeforeWriteback` | Ask before writing generated files into your workspace. |
+DryLake currently scans, validates, previews, and writes files for Codex, Claude Code, Claude Agents, and Cursor.
 
 ## Privacy and file handling
 
