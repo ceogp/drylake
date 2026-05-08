@@ -1,29 +1,30 @@
 {
   "name": "drylake",
   "displayName": "Xupra DryLake",
-  "description": "Move agents, skills, rules, and configs between Codex, Claude Code, Cursor, and Claude Agents without rebuilding them by hand.",
-  "version": "0.1.8",
+  "description": "Build an agent package once and generate target-specific files for Codex, Claude Code, Cursor, Claude Agents, and more.",
+  "version": "0.1.9",
   "private": false,
-  "publisher": "xupra",
+  "publisher": "xupracorp",
   "license": "UNLICENSED",
-  "preview": true,
+  "preview": false,
   "icon": "media/icon.png",
   "homepage": "https://drylake.xupracorp.com/app",
   "bugs": {
-    "url": "https://gitlab.com/xupraplatform/drylake/-/issues"
+    "url": "https://gitlab.com/gmkdigitalmedia1/drylake/-/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/xupraplatform/drylake.git",
+    "url": "https://gitlab.com/gmkdigitalmedia1/drylake.git",
     "directory": "extensions/xupra-drylake-vscode"
   },
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
-    "Other",
-    "Productivity",
-    "Machine Learning"
+    "AI",
+    "Chat",
+    "Machine Learning",
+    "Other"
   ],
   "keywords": [
     "agents",
@@ -36,7 +37,7 @@
     "agent transfer"
   ],
   "galleryBanner": {
-    "color": "#fff7ed",
+    "color": "#f6ebdc",
     "theme": "light"
   },
   "main": "./dist/extension.js",
