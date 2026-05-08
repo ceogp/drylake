@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-type HelpSection = "workflow" | "targets";
+type HelpSection = "workflow";
 
 const sections: Record<HelpSection, { title: string; eyebrow: string; body: string; items: string[] }> = {
   workflow: {
@@ -12,17 +12,6 @@ const sections: Record<HelpSection, { title: string; eyebrow: string; body: stri
       "Review normalized agents, skills, rules, and raw files in the workspace.",
       "Run compatibility checks before export preview.",
       "Export generated files back into the target IDE format.",
-    ],
-  },
-  targets: {
-    title: "Supported Targets",
-    eyebrow: "Compatibility",
-    body: "DryLake focuses on the agent file formats most commonly used across current coding assistants and IDE workflows.",
-    items: [
-      "Codex: AGENTS.md, .codex skills, and related agent configuration.",
-      "Claude Code: CLAUDE.md and .claude workspace files.",
-      "Claude Agents: agent definitions and supporting instruction files.",
-      "Cursor: .cursor rules and project-level agent guidance.",
     ],
   },
 };
