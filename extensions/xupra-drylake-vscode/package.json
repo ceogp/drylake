@@ -1,53 +1,60 @@
 {
   "name": "drylake",
-  "displayName": "DryLake Agent Portability",
-  "description": "Scan, validate, and translate AGENTS.md, CLAUDE.md, Cursor rules, Claude skills, and Codex configs across AI coding tools.",
-  "version": "0.1.12",
+  "displayName": "DryLake Agent Config Sync for Claude, Codex & Cursor",
+  "description": "Sync, validate, and translate AGENTS.md, CLAUDE.md, Cursor rules, Claude skills, and Codex configs across AI coding tools.",
+  "version": "0.1.13",
   "private": false,
   "publisher": "xupracorp",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE.txt",
   "preview": false,
   "icon": "media/icon.png",
-  "homepage": "https://drylake.xupracorp.com",
+  "homepage": "https://xupracorp.com/drylake",
   "bugs": {
-    "url": "https://gitlab.com/gmkdigitalmedia1/drylake/-/issues"
+    "url": "https://github.com/xupracorp/drylake/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/gmkdigitalmedia1/drylake.git",
+    "url": "https://github.com/xupracorp/drylake.git",
     "directory": "extensions/xupra-drylake-vscode"
   },
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
+    "Machine Learning",
     "Other"
   ],
   "keywords": [
+    "ai",
+    "agent",
+    "agents",
+    "mcp",
+    "prompt",
+    "prompts",
+    "copilot",
+    "workspace",
+    "settings",
+    "sync",
+    "backup",
+    "restore",
+    "export",
+    "import",
+    "profile",
+    "profiles",
+    "templates",
+    "team",
+    "onboarding",
+    "automation",
+    "devtools",
+    "configuration",
+    "portable",
+    "vscode",
+    "cursor",
+    "claude",
+    "codex",
     "agents-md",
     "AGENTS.md",
-    "claude-code",
-    "claude",
-    "cursor",
-    "cursor-rules",
-    "codex",
-    "codex-cli",
-    "ai-agents",
-    "agent-config",
-    "agent-portability",
-    "prompt-engineering",
-    "rules",
-    "skills",
-    "workspace-scan",
-    "yaml",
-    "drylake",
-    "xupra",
-    "windsurf",
-    "cline",
-    "roocode",
-    "gemini-cli",
-    "copilot",
-    "devtools"
+    "drylake"
   ],
   "galleryBanner": {
     "color": "#f6ebdc",
@@ -91,7 +98,7 @@
   ],
   "contributes": {
     "configuration": {
-      "title": "Xupra DryLake",
+      "title": "DryLake",
       "properties": {
         "xupra.baseUrl": {
           "type": "string",
@@ -188,7 +195,7 @@
       "activitybar": [
         {
           "id": "xupra",
-          "title": "Xupra DryLake",
+          "title": "DryLake",
           "icon": "media/icon.svg"
         }
       ]
@@ -220,119 +227,119 @@
     "commands": [
       {
         "command": "xupra.connect",
-        "title": "Xupra DryLake: Connect"
+        "title": "DryLake: Connect"
       },
       {
         "command": "xupra.pasteToken",
-        "title": "Xupra DryLake: Paste Extension Token"
+        "title": "DryLake: Paste Extension Token"
       },
       {
         "command": "xupra.openWebApp",
-        "title": "Xupra DryLake: Open Web App"
+        "title": "DryLake: Open Web App"
       },
       {
         "command": "xupra.refreshProjects",
-        "title": "Xupra DryLake: Refresh Projects"
+        "title": "DryLake: Refresh Projects"
       },
       {
         "command": "xupra.refreshPlan",
-        "title": "Xupra DryLake: Refresh Plan"
+        "title": "DryLake: Refresh Plan"
       },
       {
         "command": "xupra.signOut",
-        "title": "Xupra DryLake: Sign Out"
+        "title": "DryLake: Sign Out"
       },
       {
         "command": "xupra.scanWorkspace",
-        "title": "Xupra DryLake: Scan Workspace"
+        "title": "DryLake: Scan Agent Configs"
       },
       {
         "command": "xupra.importWorkspace",
-        "title": "Xupra DryLake: Import Workspace"
+        "title": "DryLake: Import Agent Configs"
       },
       {
         "command": "xupra.importDefaultLocations",
-        "title": "Xupra DryLake: Import Default Locations"
+        "title": "DryLake: Import Default Agent Configs"
       },
       {
         "command": "xupra.importFolder",
-        "title": "Xupra DryLake: Import From Folder"
+        "title": "DryLake: Import Agent Configs From Folder"
       },
       {
         "command": "xupra.resetWorkspaceState",
-        "title": "Xupra DryLake: Reset Workspace State"
+        "title": "DryLake: Reset Workspace State"
       },
       {
         "command": "xupra.checkCompatibility",
-        "title": "Xupra DryLake: Check Compatibility"
+        "title": "DryLake: Validate Agent Configs"
       },
       {
         "command": "xupra.exportPreview",
-        "title": "Xupra DryLake: Preview Generated Files"
+        "title": "DryLake: Preview Agent Config Changes"
       },
       {
         "command": "xupra.installToRuntime",
-        "title": "Xupra DryLake: Install Agents to Codex/Claude/Cursor"
+        "title": "DryLake: Sync Agent Configs to Claude/Codex/Cursor"
       },
       {
         "command": "xupra.pullPackage",
-        "title": "Xupra DryLake: Pull Generated Files Into Workspace"
+        "title": "DryLake: Pull Generated Agent Files Into Workspace"
       },
       {
         "command": "xupra.showRecentJobs",
-        "title": "Xupra DryLake: Show Recent Jobs"
+        "title": "DryLake: Show Recent Jobs"
       },
       {
         "command": "xupra.createAgent",
-        "title": "Xupra DryLake: Create Agent"
+        "title": "DryLake: Create Agent"
       },
       {
         "command": "xupra.openSettings",
-        "title": "Xupra DryLake: Open Extension Settings"
+        "title": "DryLake: Open Extension Settings"
       },
       {
         "command": "xupra.openAccountSettings",
-        "title": "Xupra DryLake: Open Account Settings"
+        "title": "DryLake: Open Account Settings"
       },
       {
         "command": "xupra.openBilling",
-        "title": "Xupra DryLake: Open Billing"
+        "title": "DryLake: Open Billing"
       },
       {
         "command": "xupra.contactSupport",
-        "title": "Xupra DryLake: Contact Support"
+        "title": "DryLake: Contact Support"
       },
       {
         "command": "xupra.openHowItWorks",
-        "title": "Xupra DryLake: How It Works"
+        "title": "DryLake: How It Works"
       },
       {
         "command": "xupra.openInstallGuide",
-        "title": "Xupra DryLake: Open Install Page"
+        "title": "DryLake: Open Install Page"
       },
       {
         "command": "xupra.openConnectPage",
-        "title": "Xupra DryLake: Open Extension Connect Page"
+        "title": "DryLake: Open Extension Connect Page"
       },
       {
         "command": "xupra.openGetStarted",
-        "title": "Xupra DryLake: Open Import Page"
+        "title": "DryLake: Open Import Page"
       },
       {
         "command": "xupra.uninstallImportedAgent",
-        "title": "Xupra DryLake: Uninstall Imported Agent (Delete Runtime File)"
+        "title": "DryLake: Uninstall Imported Agent (Delete Runtime File)"
       },
       {
         "command": "xupra.uninstallImportedSkill",
-        "title": "Xupra DryLake: Uninstall Imported Skill (Delete Runtime File)"
+        "title": "DryLake: Uninstall Imported Skill (Delete Runtime File)"
       },
       {
         "command": "xupra.clearImportCache",
-        "title": "Xupra DryLake: Clear Stale Import Cache"
+        "title": "DryLake: Clear Stale Import Cache"
       },
       {
         "command": "xupra.optimizeFile",
-        "title": "Xupra DryLake: Optimize with Xupra AI (Pro)"
+        "title": "DryLake: Optimize with Xupra AI (Pro)"
       }
     ],
     "menus": {
