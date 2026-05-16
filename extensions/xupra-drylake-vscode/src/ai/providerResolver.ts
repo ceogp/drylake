@@ -8,12 +8,18 @@ import type { ConnectionState } from "../types/package";
 
 export async function resolveDryLakeAiProvider(params: {
   configuration: vscode.WorkspaceConfiguration;
+  backendConfiguration?: vscode.WorkspaceConfiguration;
   readConnection: () => ConnectionState;
   readAccessToken: () => Promise<string | undefined>;
 }): Promise<DryLakeAiProvider> {
   const configured = String(params.configuration.get("aiProvider", "auto")) as DryLakeProviderId | "auto";
   const providers: Record<DryLakeProviderId, DryLakeAiProvider> = {
-    "xupra-pro-ai": new XupraCloudProvider(params.configuration, params.readConnection, params.readAccessToken),
+    "xupra-pro-ai": new XupraCloudProvider(
+      params.configuration,
+      params.readConnection,
+      params.readAccessToken,
+      params.backendConfiguration,
+    ),
     "user-ide-ai": new VscodeLmProvider(),
     "external-ai-prompt": new ClipboardProvider(),
   };

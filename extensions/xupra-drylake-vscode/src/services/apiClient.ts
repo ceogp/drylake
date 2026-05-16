@@ -38,9 +38,9 @@ type BrowserConnectSessionPayload = {
 };
 
 const LEGACY_HOSTS = new Set(["52.196.86.96"]);
-const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
+export const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
 
-function normalizeBaseUrl(rawValue: string) {
+export function normalizeBaseUrl(rawValue: string) {
   const trimmed = rawValue.trim().replace(/\/+$/, "");
 
   if (!trimmed) {

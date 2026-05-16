@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake: AI Coding Agent",
   "description": "Turn tickets and bug reports into safe AI coding steps for Claude Code, Codex, Cursor, Copilot, and your preferred AI tool.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",

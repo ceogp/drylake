@@ -26,6 +26,28 @@ function configuration(values: Record<string, unknown>) {
   };
 }
 
+function proConnection() {
+  return {
+    userEmail: "owner@example.com",
+    entitlements: {
+      xupra_pro_ai: true,
+      session_cloud_sync: false,
+      pr_summary_generation: false,
+    },
+  };
+}
+
+function mockRunbookFetch(runbook = createStarterXu({ prompt: "Build app", mode: "build-app" })) {
+  return vi.fn(async (...fetchArgs: Parameters<typeof fetch>) => {
+    void fetchArgs;
+
+    return new Response(JSON.stringify({ content: renderXu(runbook) }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+}
+
 describe("AI providers", () => {
   it("generates External AI Prompt content and parses returned .xu", async () => {
     const provider = new ClipboardProvider();
@@ -66,25 +88,10 @@ describe("AI providers", () => {
   it("posts all Xupra Pro AI runbook requests to /api/v1 endpoints", async () => {
     const provider = new XupraCloudProvider(
       configuration({ apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
-      () => ({
-        userEmail: "owner@example.com",
-        entitlements: {
-          xupra_pro_ai: true,
-          session_cloud_sync: false,
-          pr_summary_generation: false,
-        },
-      }),
+      proConnection,
       async () => "token",
     );
-    const runbook = createStarterXu({ prompt: "Build app", mode: "build-app" });
-    const fetchMock = vi.fn(async (...fetchArgs: Parameters<typeof fetch>) => {
-      void fetchArgs;
-
-      return new Response(JSON.stringify({ content: renderXu(runbook) }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
+    const fetchMock = mockRunbookFetch();
     const originalFetch = globalThis.fetch;
 
     globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -110,6 +117,56 @@ describe("AI providers", () => {
       "https://drylake.xupracorp.com/api/v1/drylake/runbooks/refine-architecture",
       "https://drylake.xupracorp.com/api/v1/drylake/runbooks/generate-phases",
     ]);
+  });
+
+  it("uses xupra.baseUrl for Xupra Pro AI requests when no drylake API override is configured", async () => {
+    const provider = new XupraCloudProvider(
+      configuration({ apiBaseUrl: "" }) as never,
+      proConnection,
+      async () => "token",
+      configuration({ baseUrl: "https://staging.drylake.xupracorp.com/" }) as never,
+    );
+    const fetchMock = mockRunbookFetch();
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      await provider.generateDraftRunbook({
+        prompt: "Build app",
+        mode: "build-app",
+        workspaceSummary: "Workspace: test",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(fetchMock.mock.calls[0][0]).toBe("https://staging.drylake.xupracorp.com/api/v1/drylake/runbooks/draft");
+  });
+
+  it("keeps drylake.apiBaseUrl as an explicit Xupra Pro AI request override", async () => {
+    const provider = new XupraCloudProvider(
+      configuration({ apiBaseUrl: "http://localhost:3008/" }) as never,
+      proConnection,
+      async () => "token",
+      configuration({ baseUrl: "https://staging.drylake.xupracorp.com" }) as never,
+    );
+    const fetchMock = mockRunbookFetch();
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      await provider.generateDraftRunbook({
+        prompt: "Build app",
+        mode: "build-app",
+        workspaceSummary: "Workspace: test",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:3008/api/v1/drylake/runbooks/draft");
   });
 
   it("falls back to External AI Prompt when configured auto has no integrated model", async () => {

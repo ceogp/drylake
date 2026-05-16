@@ -6,9 +6,8 @@ import type {
   GenerateDraftRunbookInput,
   GenerateDraftRunbookResult,
 } from "../DryLakeAiProvider";
+import { DEFAULT_BASE_URL, normalizeBaseUrl } from "../../services/apiClient";
 import type { ConnectionState } from "../../types/package";
-
-const DEFAULT_API_BASE_URL = "https://drylake.xupracorp.com";
 
 type Endpoint =
   | "/api/v1/drylake/runbooks/draft"
@@ -16,13 +15,17 @@ type Endpoint =
   | "/api/v1/drylake/runbooks/refine-architecture"
   | "/api/v1/drylake/runbooks/generate-phases";
 
-function normalizeBaseUrl(value: string) {
-  return value.trim().replace(/\/+$/, "");
-}
+function resolveBaseUrl(
+  configuration: vscode.WorkspaceConfiguration,
+  backendConfiguration: vscode.WorkspaceConfiguration,
+) {
+  const override = String(configuration.get("apiBaseUrl", "")).trim();
 
-function resolveBaseUrl(configuration: vscode.WorkspaceConfiguration) {
-  const configured = normalizeBaseUrl(String(configuration.get("apiBaseUrl", "")));
-  return configured || DEFAULT_API_BASE_URL;
+  if (override) {
+    return normalizeBaseUrl(override);
+  }
+
+  return normalizeBaseUrl(String(backendConfiguration.get("baseUrl", DEFAULT_BASE_URL)));
 }
 
 export class XupraCloudProvider implements DryLakeAiProvider {
@@ -33,6 +36,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
     private readonly configuration: vscode.WorkspaceConfiguration,
     private readonly readConnection: () => ConnectionState,
     private readonly readAccessToken: () => Promise<string | undefined>,
+    private readonly backendConfiguration: vscode.WorkspaceConfiguration = configuration,
   ) {}
 
   async isAvailable() {
@@ -52,7 +56,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       return { message: availability.reason };
     }
 
-    const baseUrl = resolveBaseUrl(this.configuration);
+    const baseUrl = resolveBaseUrl(this.configuration, this.backendConfiguration);
     const token = await this.readAccessToken();
 
     try {

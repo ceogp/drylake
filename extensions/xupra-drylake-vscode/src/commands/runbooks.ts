@@ -101,6 +101,7 @@ async function pickMode(arg?: unknown): Promise<XuMode | undefined> {
 async function resolveProvider(stateStore: StateStore): Promise<DryLakeAiProvider> {
   return resolveDryLakeAiProvider({
     configuration: vscode.workspace.getConfiguration("drylake"),
+    backendConfiguration: vscode.workspace.getConfiguration("xupra"),
     readConnection: () => stateStore.getConnection(),
     readAccessToken: () => stateStore.getAccessToken(),
   });
