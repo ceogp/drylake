@@ -1,13 +1,13 @@
 import type { ExtensionConnection } from "../types/api";
-import type { ConnectionState, EntitlementMap } from "../types/package";
+import type { ConnectionState, EntitlementKey, EntitlementMap } from "../types/package";
 
 const DEFAULT_ENTITLEMENTS: EntitlementMap = {
-  manual_export: false,
-  deployment_jobs: false,
-  credential_vault: false,
-  slack_controls: false,
-  advanced_reporting: false,
+  xupra_pro_ai: false,
+  session_cloud_sync: false,
+  pr_summary_generation: false,
 };
+
+const ENTITLEMENT_KEYS: EntitlementKey[] = ["xupra_pro_ai", "session_cloud_sync", "pr_summary_generation"];
 
 export function normalizeEntitlements(value: unknown): EntitlementMap {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -15,8 +15,10 @@ export function normalizeEntitlements(value: unknown): EntitlementMap {
   }
 
   const entitlements: EntitlementMap = { ...DEFAULT_ENTITLEMENTS };
+  const raw = value as Record<string, unknown>;
 
-  for (const [key, enabled] of Object.entries(value)) {
+  for (const key of ENTITLEMENT_KEYS) {
+    const enabled = raw[key];
     if (typeof enabled === "boolean") {
       entitlements[key] = enabled;
     }
@@ -39,6 +41,6 @@ export function connectionStateFromExtensionConnection(result: ExtensionConnecti
   };
 }
 
-export function connectionHasEntitlement(connection: ConnectionState, key: string) {
+export function connectionHasEntitlement(connection: ConnectionState, key: EntitlementKey) {
   return Boolean(connection.entitlements?.[key]);
 }

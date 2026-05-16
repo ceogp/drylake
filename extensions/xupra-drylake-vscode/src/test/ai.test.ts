@@ -43,17 +43,24 @@ describe("AI providers", () => {
     expect(parsed.runbook?.intent.purpose).toBe("Build the app.");
   });
 
-  it("refuses Xupra Pro AI production hosts", async () => {
+  it("allows Xupra Pro AI when the account has the new entitlement", async () => {
     const provider = new XupraCloudProvider(
-      configuration({ environment: "development", apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
-      () => ({ userEmail: "owner@example.com", organizationTier: "pro" }),
+      configuration({ environment: "production", apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
+      () => ({
+        userEmail: "owner@example.com",
+        organizationTier: "free",
+        entitlements: {
+          xupra_pro_ai: true,
+          session_cloud_sync: false,
+          pr_summary_generation: false,
+        },
+      }),
       async () => "token",
     );
 
     const availability = await provider.isAvailable();
 
-    expect(availability.available).toBe(false);
-    expect(availability.reason).toContain("production host");
+    expect(availability.available).toBe(true);
   });
 
   it("falls back to External AI Prompt when configured auto has no integrated model", async () => {

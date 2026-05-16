@@ -8,7 +8,7 @@ import type {
 } from "../DryLakeAiProvider";
 import type { ConnectionState } from "../../types/package";
 
-const PRODUCTION_HOSTS = new Set(["drylake.xupracorp.com", "xupracorp.com", "www.xupracorp.com"]);
+const DEFAULT_API_BASE_URL = "https://drylake.xupracorp.com";
 
 type Endpoint =
   | "/v1/drylake/runbooks/draft"
@@ -20,13 +20,9 @@ function normalizeBaseUrl(value: string) {
   return value.trim().replace(/\/+$/, "");
 }
 
-function isProductionHost(rawUrl: string) {
-  try {
-    const parsed = new URL(rawUrl);
-    return PRODUCTION_HOSTS.has(parsed.hostname);
-  } catch {
-    return false;
-  }
+function resolveBaseUrl(configuration: vscode.WorkspaceConfiguration) {
+  const configured = normalizeBaseUrl(String(configuration.get("apiBaseUrl", "")));
+  return configured || DEFAULT_API_BASE_URL;
 }
 
 export class XupraCloudProvider implements DryLakeAiProvider {
@@ -40,25 +36,11 @@ export class XupraCloudProvider implements DryLakeAiProvider {
   ) {}
 
   async isAvailable() {
-    const environment = String(this.configuration.get("environment", "development"));
-    const baseUrl = normalizeBaseUrl(String(this.configuration.get("apiBaseUrl", "")));
     const connection = this.readConnection();
-    const tier = connection.organizationTier?.toLowerCase();
+    const hasXupraProAi = Boolean(connection.entitlements?.xupra_pro_ai);
 
-    if (environment !== "development") {
-      return { available: false, reason: "Xupra Pro AI is enabled only for development in this build." };
-    }
-
-    if (!baseUrl) {
-      return { available: false, reason: "Set drylake.apiBaseUrl to use Xupra Pro AI on development." };
-    }
-
-    if (isProductionHost(baseUrl)) {
-      return { available: false, reason: "Xupra Pro AI refused a production host." };
-    }
-
-    if (!connection.userEmail || (tier !== "pro" && tier !== "enterprise")) {
-      return { available: false, reason: "Connect a Pro Xupra account to use Xupra Pro AI." };
+    if (!connection.userEmail || !hasXupraProAi) {
+      return { available: false, reason: "Connect a Xupra account with Xupra Pro AI access to use this provider." };
     }
 
     return { available: true };
@@ -70,7 +52,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       return { message: availability.reason };
     }
 
-    const baseUrl = normalizeBaseUrl(String(this.configuration.get("apiBaseUrl", "")));
+    const baseUrl = resolveBaseUrl(this.configuration);
     const token = await this.readAccessToken();
 
     try {
@@ -83,23 +65,40 @@ export class XupraCloudProvider implements DryLakeAiProvider {
         body: JSON.stringify(input),
       });
 
-      if (!response.ok) {
-        return { message: `Xupra Pro AI is not available on this development server (${response.status}).` };
-      }
-
       const text = await response.text();
       let content = text;
+      let payload:
+        | { runbook?: unknown; xu?: unknown; content?: string; yaml?: string; error?: { message?: string } }
+        | undefined;
 
       try {
-        const payload = JSON.parse(text) as { runbook?: unknown; xu?: unknown; content?: string; yaml?: string };
+        payload = JSON.parse(text) as {
+          runbook?: unknown;
+          xu?: unknown;
+          content?: string;
+          yaml?: string;
+          error?: { message?: string };
+        };
+      } catch {
+        payload = undefined;
+      }
+
+      if (!response.ok) {
+        return {
+          message:
+            typeof payload?.error?.message === "string"
+              ? payload.error.message
+              : `Xupra Pro AI request failed (${response.status}).`,
+        };
+      }
+
+      if (payload) {
         content =
           typeof payload.content === "string"
             ? payload.content
             : typeof payload.yaml === "string"
               ? payload.yaml
               : JSON.stringify(payload.runbook ?? payload);
-      } catch {
-        // Plain YAML responses are supported.
       }
 
       const parsed = parseAiRunbookResponse(content);
@@ -115,8 +114,8 @@ export class XupraCloudProvider implements DryLakeAiProvider {
     } catch (error) {
       return {
         message: error instanceof Error
-          ? `Xupra Pro AI is not available on this development server: ${error.message}`
-          : "Xupra Pro AI is not available on this development server.",
+          ? `Xupra Pro AI request failed: ${error.message}`
+          : "Xupra Pro AI request failed.",
       };
     }
   }
