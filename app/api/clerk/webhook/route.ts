@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyWebhook, type WebhookEvent } from "@clerk/backend/webhooks";
 
 import { prisma } from "@/lib/prisma";
+import { entitlementsForTier } from "@/lib/services/billing";
 
 const activePaidStatuses = new Set([
   "active",
@@ -9,22 +10,6 @@ const activePaidStatuses = new Set([
   "pastDue",
   "upcoming",
 ]);
-
-const paidEntitlements = {
-  manual_export: true,
-  deployment_jobs: true,
-  credential_vault: true,
-  slack_controls: true,
-  advanced_reporting: true,
-};
-
-const freeEntitlements = {
-  manual_export: false,
-  deployment_jobs: false,
-  credential_vault: false,
-  slack_controls: false,
-  advanced_reporting: false,
-};
 
 type BillingSnapshot = {
   status: string;
@@ -203,7 +188,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, skipped: "no_organization_match" });
     }
 
-    const entitlements = snapshot.tier === "free" ? freeEntitlements : paidEntitlements;
+    const entitlements = entitlementsForTier(snapshot.tier);
 
     await prisma.subscription.upsert({
       where: { organizationId },

@@ -103,7 +103,7 @@ export default async function IntegrationsPage() {
             </h2>
             <div className="mt-5 space-y-3 text-sm leading-7 text-stone-700">
               <p>Current tier: {subscription?.tier ?? "free"}</p>
-              <p>Slack controls included: {entitlements.slack_controls ? "yes" : "no"}</p>
+              <p>Xupra Pro AI included: {entitlements.xupra_pro_ai ? "yes" : "no"}</p>
               <p>
                 Manual integration setup has been removed from the main UI. The first-run product
                 path should end with visible imported files, not webhook configuration.

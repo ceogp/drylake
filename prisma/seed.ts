@@ -80,11 +80,9 @@ async function main() {
         maxVersionsPerPackage: 25,
       },
       entitlementsJson: {
-        manual_export: true,
-        deployment_jobs: false,
-        credential_vault: false,
-        slack_controls: false,
-        advanced_reporting: false,
+        xupra_pro_ai: false,
+        session_cloud_sync: false,
+        pr_summary_generation: false,
       },
     },
     create: {
@@ -98,11 +96,9 @@ async function main() {
         maxVersionsPerPackage: 25,
       },
       entitlementsJson: {
-        manual_export: true,
-        deployment_jobs: false,
-        credential_vault: false,
-        slack_controls: false,
-        advanced_reporting: false,
+        xupra_pro_ai: false,
+        session_cloud_sync: false,
+        pr_summary_generation: false,
       },
     },
   });

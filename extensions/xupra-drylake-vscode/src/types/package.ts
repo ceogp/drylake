@@ -4,7 +4,12 @@ export type SelectedContext = {
   versionId?: string;
 };
 
-export type EntitlementMap = Record<string, boolean>;
+export type EntitlementKey =
+  | "xupra_pro_ai"
+  | "session_cloud_sync"
+  | "pr_summary_generation";
+
+export type EntitlementMap = Record<EntitlementKey, boolean>;
 
 export type ConnectionState = {
   organizationId?: string;

@@ -1,21 +1,19 @@
-import { z } from "zod";
-
 import { forbidden, fromZodError, internalError, ok, unauthorized } from "@/lib/api/http";
-import { generateAgentWithAi } from "@/lib/services/agent-generation";
 import { assertEntitlement } from "@/lib/services/entitlements";
-import { getRequestOrganizationId, INVALID_EXTENSION_TOKEN_ERROR, REQUEST_AUTHENTICATION_REQUIRED_ERROR } from "@/lib/services/request-organization";
-
-const payloadSchema = z.object({
-  name: z.string().trim().min(1),
-  description: z.string().trim().min(1),
-  targetPlatform: z.string().trim().min(1),
-  context: z.string().trim().optional(),
-});
+import {
+  refineRunbookPurposePrompt,
+  runbookGenerationInputSchema,
+} from "@/lib/services/runbook-generation";
+import {
+  getRequestOrganizationId,
+  INVALID_EXTENSION_TOKEN_ERROR,
+  REQUEST_AUTHENTICATION_REQUIRED_ERROR,
+} from "@/lib/services/request-organization";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const parsed = payloadSchema.safeParse(body);
+    const parsed = runbookGenerationInputSchema.safeParse(body);
 
     if (!parsed.success) {
       return fromZodError(parsed.error);
@@ -26,19 +24,16 @@ export async function POST(request: Request) {
     try {
       await assertEntitlement(organizationId, "xupra_pro_ai");
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === "Organization is not entitled to use xupra_pro_ai"
-      ) {
-        return forbidden("Xupra Pro AI agent generation requires a Pro plan.");
+      if (error instanceof Error && error.message === "Organization is not entitled to use xupra_pro_ai") {
+        return forbidden("Xupra Pro AI requires a Pro plan.");
       }
 
       throw error;
     }
 
-    const agent = await generateAgentWithAi(parsed.data);
+    const result = await refineRunbookPurposePrompt(parsed.data);
 
-    return ok({ agent });
+    return ok(result);
   } catch (error) {
     if (error instanceof Error && error.message === REQUEST_AUTHENTICATION_REQUIRED_ERROR) {
       return unauthorized();
@@ -49,6 +44,6 @@ export async function POST(request: Request) {
     }
 
     console.error(error);
-    return internalError("Failed to generate agent");
+    return internalError("Failed to refine DryLake runbook purpose");
   }
 }

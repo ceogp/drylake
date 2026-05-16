@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 
 import type { ApiClient } from "../services/apiClient";
-import { requireManualExportEntitlement } from "../services/featureGates";
+import { requireXupraProAiEntitlement } from "../services/featureGates";
 import { writeGeneratedFilesToWorkspace } from "../services/fileSync";
 import type { StateStore } from "../services/stateStore";
 
@@ -306,7 +306,7 @@ export class SkillCreationPanel {
     await this._postMessage({ type: "stateUpdate", isLoading: true });
 
     try {
-      const hasEntitlement = await requireManualExportEntitlement(
+      const hasEntitlement = await requireXupraProAiEntitlement(
         this._apiClient,
         this._stateStore,
         "Xupra AI agent generation",

@@ -1,23 +1,41 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createStarterXu } from "../xu/createStarterXu";
 import { ControlRoomProvider } from "../webview/controlRoomProvider";
+import type { ApplicationBuildRunbook } from "../xu/types";
 
-let messageHandler: ((message: { command?: string; args?: unknown[]; copy?: string }) => Promise<void>) | undefined;
+type TestMessage = {
+  command?: string;
+  args?: unknown[];
+  copy?: string;
+  view?: unknown;
+  phaseId?: unknown;
+  agent?: unknown;
+  status?: unknown;
+};
+
+let messageHandler: ((message: TestMessage) => Promise<void>) | undefined;
+let panel: { webview: { html: string; onDidReceiveMessage: ReturnType<typeof vi.fn> } } | undefined;
+let storedView: unknown;
 const executed: Array<{ command: string; args: unknown[] }> = [];
 
 vi.mock("vscode", () => ({
   ViewColumn: { One: 1 },
   window: {
-    createWebviewPanel: vi.fn(() => ({
-      reveal: vi.fn(),
-      onDidDispose: vi.fn(),
-      webview: {
-        html: "",
-        onDidReceiveMessage: vi.fn((handler) => {
-          messageHandler = handler;
-        }),
-      },
-    })),
+    createWebviewPanel: vi.fn(() => {
+      panel = {
+        reveal: vi.fn(),
+        onDidDispose: vi.fn(),
+        webview: {
+          html: "",
+          onDidReceiveMessage: vi.fn((handler) => {
+            messageHandler = handler;
+          }),
+        },
+      } as never;
+
+      return panel;
+    }),
     showInformationMessage: vi.fn(),
   },
   commands: {
@@ -32,10 +50,41 @@ vi.mock("vscode", () => ({
   },
 }));
 
+function context() {
+  return {
+    subscriptions: [],
+    workspaceState: {
+      get: vi.fn(() => storedView),
+      update: vi.fn(async (_key: string, value: unknown) => {
+        storedView = value;
+      }),
+    },
+  };
+}
+
+function runbook(): ApplicationBuildRunbook {
+  const value = createStarterXu({ prompt: "Build kanban", mode: "build-app" });
+  value.handoff.defaultAgent = "copilot";
+  value.phases = [
+    { ...value.phases[0], id: "todo", title: "Todo phase", status: "pending", agent: "codex" },
+    { ...value.phases[1], id: "active", title: "Active phase", status: "active" },
+    { ...value.phases[2], id: "approved", title: "Approved phase", status: "approved" },
+    { ...value.phases[3], id: "done", title: "Done phase", status: "complete" },
+  ];
+  return value;
+}
+
+beforeEach(() => {
+  executed.length = 0;
+  messageHandler = undefined;
+  panel = undefined;
+  storedView = undefined;
+});
+
 describe("Control Room webview", () => {
   it("routes purpose approval messages to the command handler", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => null } as never);
-    await provider.createOrShow({ subscriptions: [] } as never);
+    await provider.createOrShow(context() as never);
 
     await messageHandler?.({ command: "drylake.approvePurpose" });
 
@@ -44,11 +93,58 @@ describe("Control Room webview", () => {
 
   it("routes architecture approval messages to the command handler", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => null } as never);
-    await provider.createOrShow({ subscriptions: [] } as never);
+    await provider.createOrShow(context() as never);
 
     await messageHandler?.({ command: "drylake.approveArchitecture" });
 
     expect(executed).toContainEqual({ command: "drylake.approveArchitecture", args: [] });
+  });
+
+  it("renders kanban columns with phases distributed by status", async () => {
+    storedView = "kanban";
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain('class="kanban"');
+    expect(html).toContain('data-drop-status="pending"');
+    expect(html).toContain('data-drop-status="active"');
+    expect(html).toContain('data-drop-status="complete"');
+    expect(html).toContain('data-phase-id="todo" draggable="true"');
+    expect(html).toContain('data-phase-id="active" draggable="true"');
+    expect(html).toContain('data-phase-id="approved" draggable="true"');
+    expect(html).toContain('data-phase-id="done" draggable="true"');
+    expect(html).toContain("Approved phase");
+    expect(html).toContain("Drop phase here");
+  });
+
+  it("routes kanban drop messages to phase status updates", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({ command: "drylake.updatePhaseStatus", phaseId: "todo", status: "active" });
+
+    expect(executed).toContainEqual({ command: "drylake.updatePhaseStatus", args: ["todo", "active"] });
+  });
+
+  it("routes kanban agent dropdown messages to phase agent updates", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({ command: "drylake.updatePhaseAgent", phaseId: "active", agent: "cursor" });
+
+    expect(executed).toContainEqual({ command: "drylake.updatePhaseAgent", args: ["active", "cursor"] });
+  });
+
+  it("persists kanban view selection across refreshes", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({ command: "drylake.setControlRoomView", view: "kanban" });
+
+    expect(storedView).toBe("kanban");
+    expect(panel?.webview.html).toContain('class="kanban"');
   });
 });
 

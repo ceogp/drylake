@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake: AI Coding Agent",
   "description": "Turn tickets and bug reports into safe AI coding steps for Claude Code, Codex, Cursor, Copilot, and your preferred AI tool.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
@@ -71,12 +71,12 @@
             "production"
           ],
           "default": "development",
-          "description": "Controls whether runbook AI requests may target development or production environments. Development is the default for this build."
+          "description": "Legacy compatibility setting for older DryLake builds. Xupra Pro AI now targets the configured backend URL directly."
         },
         "drylake.apiBaseUrl": {
           "type": "string",
           "default": "",
-          "description": "Development API URL used by Xupra Pro AI for runbook generation."
+          "description": "Optional API base URL override for Xupra Pro AI runbook generation. Leave empty to use the default DryLake backend."
         },
         "drylake.aiProvider": {
           "type": "string",
@@ -93,7 +93,7 @@
             "External AI Prompt"
           ],
           "default": "auto",
-          "description": "Provider preference for DryLake AI Coding Agent. Auto tries Xupra Pro AI when development access is configured, then User IDE AI, then External AI Prompt."
+          "description": "Provider preference for DryLake AI Coding Agent. Auto tries Xupra Pro AI when your account has access, then User IDE AI, then External AI Prompt."
         },
         "drylake.userIdeAiAdapter": {
           "type": "string",
@@ -464,7 +464,7 @@
     "typecheck": "tsc --noEmit",
     "check:cursor": "node scripts/check-cursor-compatibility.mjs",
     "prepackage": "npm run build",
-    "package:vsix": "npx @vscode/vsce package --allow-star-activation",
+    "package:vsix": "npx @vscode/vsce package --allow-star-activation --allow-missing-repository",
     "package:development": "node scripts/package-development-extension.mjs",
     "install:vsix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-vsix.ps1",
     "reinstall:vsix": "npm run package:vsix && npm run install:vsix",

@@ -16,27 +16,21 @@ export function entitlementsForTier(tier: string) {
   switch (tier) {
     case "pro":
       return {
-        manual_export: true,
-        deployment_jobs: true,
-        credential_vault: true,
-        slack_controls: true,
-        advanced_reporting: true,
+        xupra_pro_ai: true,
+        session_cloud_sync: true,
+        pr_summary_generation: true,
       };
     case "enterprise":
       return {
-        manual_export: true,
-        deployment_jobs: true,
-        credential_vault: true,
-        slack_controls: true,
-        advanced_reporting: true,
+        xupra_pro_ai: true,
+        session_cloud_sync: true,
+        pr_summary_generation: true,
       };
     default:
       return {
-        manual_export: false,
-        deployment_jobs: false,
-        credential_vault: false,
-        slack_controls: false,
-        advanced_reporting: false,
+        xupra_pro_ai: false,
+        session_cloud_sync: false,
+        pr_summary_generation: false,
       };
   }
 }

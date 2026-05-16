@@ -6,9 +6,18 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getIsPlatformAdmin } from "@/lib/services/access";
 import { syncSubscriptionFromClerk, syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
-import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
+import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/services/entitlements";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 import { getSetupStatus } from "@/lib/services/setup";
+
+const BILLING_SUBTITLE =
+  "Use the free plan for local Build Sessions, or upgrade to Pro to unlock Xupra-hosted AI plan generation.";
+
+const ENTITLEMENT_ITEMS: Array<{ key: EntitlementKey; label: string }> = [
+  { key: "xupra_pro_ai", label: "Xupra Pro AI" },
+  { key: "session_cloud_sync", label: "Session Cloud Sync" },
+  { key: "pr_summary_generation", label: "PR Summary Generation" },
+];
 
 async function syncSafely(organizationId: string) {
   try {
@@ -46,6 +55,16 @@ function getSafeReturnPath(value: string | string[] | undefined) {
   }
 }
 
+function getPublicTierLabel(tier: string | null | undefined) {
+  const normalized = (tier ?? "free").toLowerCase();
+
+  if (normalized === "enterprise") {
+    return "Pro";
+  }
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 export default async function BillingPage({
   searchParams,
 }: {
@@ -80,8 +99,7 @@ export default async function BillingPage({
               Choose your plan with Clerk Billing.
             </h1>
             <p className="max-w-3xl text-lg leading-8 text-stone-700">
-              This flow is powered by Clerk Billing. Use free for upload-only usage, or choose a paid
-              plan to unlock all product features.
+              {BILLING_SUBTITLE}
             </p>
           </div>
 
@@ -110,7 +128,7 @@ export default async function BillingPage({
             <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current local mirror</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-                {subscription?.tier ?? "free"}
+                {getPublicTierLabel(subscription?.tier)}
               </h2>
               <p className="mt-2 text-sm leading-7 text-stone-700">Status: {subscription?.status ?? "trial"}</p>
               <p className="text-sm leading-7 text-stone-700">
@@ -121,14 +139,18 @@ export default async function BillingPage({
             <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Entitlements</p>
               <div className="mt-5 grid gap-3">
-                {Object.entries(entitlements).map(([key, value]) => (
+                {ENTITLEMENT_ITEMS.map(({ key, label }) => {
+                  const value = Boolean(entitlements[key]);
+
+                  return (
                   <div key={key} className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{key}</span>
+                      <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
                       <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </article>
           </section>
@@ -146,7 +168,7 @@ export default async function BillingPage({
             Choose your plan.
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            Use the free plan for upload-only access, or upgrade to Pro to unlock all features.
+            {BILLING_SUBTITLE}
           </p>
         </div>
 
@@ -154,7 +176,7 @@ export default async function BillingPage({
           <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current plan</p>
             <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-              {subscription?.tier ?? "free"}
+              {getPublicTierLabel(subscription?.tier)}
             </h2>
             <p className="mt-2 text-sm leading-7 text-stone-700">Status: {subscription?.status ?? "trial"}</p>
             <p className="text-sm leading-7 text-stone-700">
@@ -168,15 +190,6 @@ export default async function BillingPage({
                   Upgrade To Pro ($10/mo)
                 </button>
               </form>
-              {env.STRIPE_ENTERPRISE_PRICE_ID ? (
-                <form action={createCheckoutAction}>
-                  <input name="organizationId" type="hidden" value={organizationId} />
-                  <input name="plan" type="hidden" value="enterprise" />
-                  <button className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" type="submit">
-                    Enterprise Checkout
-                  </button>
-                </form>
-              ) : null}
               {subscription?.stripeCustomerId ? (
                 <form action={openBillingPortalAction}>
                   <input name="organizationId" type="hidden" value={organizationId} />
@@ -196,14 +209,18 @@ export default async function BillingPage({
           <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Entitlements</p>
             <div className="mt-5 grid gap-3">
-              {Object.entries(entitlements).map(([key, value]) => (
+              {ENTITLEMENT_ITEMS.map(({ key, label }) => {
+                const value = Boolean(entitlements[key]);
+
+                return (
                 <div key={key} className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{key}</span>
+                    <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
                     <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </article>
         </section>
@@ -227,13 +244,10 @@ export default async function BillingPage({
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Tier Model</p>
             <div className="mt-4 grid gap-3">
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
-                Free: upload skills and workspace info only
+                Free: Local Build Sessions, User IDE AI, External AI Prompt
               </div>
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
-                Pro ($10/month): unlock all product features
-              </div>
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
-                Enterprise: optional custom enterprise contract path
+                Pro ($10/month): Everything in Free + Xupra-hosted AI plan generation
               </div>
             </div>
           </article>

@@ -6,8 +6,8 @@ import { StateStore } from "./stateStore";
 
 const UPGRADE_ACTION = "Upgrade to Pro";
 
-export function hasManualExportEntitlement(stateStore: StateStore) {
-  return connectionHasEntitlement(stateStore.getConnection(), "manual_export");
+export function hasXupraProAiEntitlement(stateStore: StateStore) {
+  return connectionHasEntitlement(stateStore.getConnection(), "xupra_pro_ai");
 }
 
 export async function promptForUpgrade(apiClient: ApiClient, message: string, stateStore: StateStore) {
@@ -19,12 +19,12 @@ export async function promptForUpgrade(apiClient: ApiClient, message: string, st
   }
 }
 
-export async function requireManualExportEntitlement(
+export async function requireXupraProAiEntitlement(
   apiClient: ApiClient,
   stateStore: StateStore,
   featureLabel: string,
 ) {
-  if (hasManualExportEntitlement(stateStore)) {
+  if (hasXupraProAiEntitlement(stateStore)) {
     return true;
   }
 

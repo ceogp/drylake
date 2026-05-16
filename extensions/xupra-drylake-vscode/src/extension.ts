@@ -25,7 +25,7 @@ import { signOutCommand } from "./commands/signOut";
 import { ApiClient } from "./services/apiClient";
 import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
-import { requireManualExportEntitlement } from "./services/featureGates";
+import { requireXupraProAiEntitlement } from "./services/featureGates";
 import { ImportedSkillEditorManager } from "./services/importedSkillEditor";
 import {
   collectRepoContext,
@@ -858,7 +858,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.exportPreview", async () => {
-    const hasEntitlement = await requireManualExportEntitlement(apiClient, stateStore, "Preview Generated Files");
+    const hasEntitlement = await requireXupraProAiEntitlement(apiClient, stateStore, "Preview Generated Files");
     if (!hasEntitlement) {
       return;
     }
@@ -868,7 +868,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("xupra.installToRuntime", async () => {
-    const hasEntitlement = await requireManualExportEntitlement(
+    const hasEntitlement = await requireXupraProAiEntitlement(
       apiClient,
       stateStore,
       "Install to platforms",
@@ -1125,7 +1125,7 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const hasEntitlement = await requireManualExportEntitlement(
+    const hasEntitlement = await requireXupraProAiEntitlement(
       apiClient,
       stateStore,
       "Xupra AI optimization",
