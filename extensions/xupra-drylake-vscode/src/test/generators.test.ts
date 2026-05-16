@@ -68,6 +68,34 @@ describe("runbook generators", () => {
     expect(renderPhasePrompt(value, value.phases[1])).toContain("You are running as Claude Code.");
   });
 
+  it("uses active build-session provider for no-agent phase prompts", () => {
+    const value = runbook();
+
+    expect(
+      renderPhasePrompt(value, value.phases[1], {
+        activeProvider: {
+          providerId: "user-ide-ai",
+          providerLabel: "User IDE AI",
+        },
+      }),
+    ).toContain("Use the active DryLake build-session provider: User IDE AI.");
+  });
+
+  it("keeps explicit phase agent ahead of active build-session provider", () => {
+    const value = runbook();
+    value.phases[0].agent = "codex";
+
+    const prompt = renderPhasePrompt(value, value.phases[0], {
+      activeProvider: {
+        providerId: "user-ide-ai",
+        providerLabel: "User IDE AI",
+      },
+    });
+
+    expect(prompt).toContain("You are running as Codex CLI.");
+    expect(prompt).not.toContain("Use the active DryLake build-session provider: User IDE AI.");
+  });
+
   it("renders native agent files with generated headers", () => {
     const value = runbook();
     const outputs = [

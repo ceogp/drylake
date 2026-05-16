@@ -451,7 +451,8 @@ export async function exportHandoffPromptCommand(deps: RunbookCommandDeps) {
     return;
   }
 
-  const content = renderPhasePrompt(current.runbook, phase);
+  const buildSession = deps.stateStore.getBuildSession();
+  const content = renderPhasePrompt(current.runbook, phase, { activeProvider: buildSession });
   await vscode.env.clipboard.writeText(content);
   const document = await vscode.workspace.openTextDocument({ language: "markdown", content });
   await vscode.window.showTextDocument(document, { preview: false });
