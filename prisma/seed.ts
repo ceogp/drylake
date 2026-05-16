@@ -80,7 +80,7 @@ async function main() {
         maxVersionsPerPackage: 25,
       },
       entitlementsJson: {
-        xupra_pro_ai: true,
+        xupra_pro_ai: false,
         session_cloud_sync: false,
         pr_summary_generation: false,
       },
@@ -96,7 +96,7 @@ async function main() {
         maxVersionsPerPackage: 25,
       },
       entitlementsJson: {
-        xupra_pro_ai: true,
+        xupra_pro_ai: false,
         session_cloud_sync: false,
         pr_summary_generation: false,
       },

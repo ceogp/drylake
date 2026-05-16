@@ -1,3 +1,4 @@
+import { dump } from "js-yaml";
 import { z } from "zod";
 
 import { generateAiText } from "@/lib/services/ai-text";
@@ -47,15 +48,39 @@ function runbookContractLines() {
   ];
 }
 
-function stringifyCurrentRunbook(currentRunbook: RunbookGenerationInput["currentRunbook"]) {
+function stableJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stableJsonValue);
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => [key, stableJsonValue(child)]),
+  );
+}
+
+function serializeCurrentRunbook(currentRunbook: RunbookGenerationInput["currentRunbook"]) {
   if (!currentRunbook) {
     return "No current runbook provided.";
   }
 
   try {
-    return JSON.stringify(currentRunbook, null, 2);
+    return dump(stableJsonValue(currentRunbook), {
+      sortKeys: true,
+      noRefs: true,
+      lineWidth: 120,
+    }).trim();
   } catch {
-    return "Current runbook provided but could not be serialized. Preserve any existing approved structure when revising.";
+    try {
+      return JSON.stringify(stableJsonValue(currentRunbook), null, 2);
+    } catch {
+      return "Current runbook provided but could not be serialized. Preserve any existing approved structure when revising.";
+    }
   }
 }
 
@@ -74,8 +99,8 @@ function basePromptSections(input: RunbookGenerationInput) {
     "Workspace summary:",
     input.workspaceSummary || "No workspace summary available.",
     "",
-    "Current runbook context:",
-    stringifyCurrentRunbook(input.currentRunbook),
+    "Current runbook context to preserve and revise when present:",
+    serializeCurrentRunbook(input.currentRunbook),
   ].join("\n");
 }
 
@@ -115,6 +140,7 @@ export async function refineRunbookPurposePrompt(input: RunbookGenerationInput) 
       basePromptSections(input),
       "",
       "Revise the current runbook.",
+      "Use the provided current runbook document as the source of truth when it is present; do not regenerate a fresh unrelated runbook.",
       "Focus this revision on intent.purpose, intent.users, intent.goals, intent.nonGoals, and intent.constraints.",
       "Preserve architecture, provisioning, phases, checks, agentTargets, and handoff unless the user prompt clearly requires changes.",
     ].join("\n"),
@@ -129,6 +155,7 @@ export async function refineRunbookArchitecturePrompt(input: RunbookGenerationIn
       basePromptSections(input),
       "",
       "Revise the current runbook.",
+      "Use the provided current runbook document as the source of truth when it is present; keep unchanged sections stable.",
       "Focus this revision on architecture.summary, architecture.decisions, architecture.risks, architecture.assumptions, and provisioning readiness.",
       "Keep approval gates explicit and preserve intent, phases, checks, agentTargets, and handoff unless the user prompt requires updates.",
     ].join("\n"),
@@ -143,6 +170,7 @@ export async function generateRunbookPhasePlanPrompt(input: RunbookGenerationInp
       basePromptSections(input),
       "",
       "Revise the current runbook.",
+      "Use the provided current runbook document as the source of truth when it is present; keep prior approved sections unless the new request requires a change.",
       "Focus this revision on phase-by-phase execution planning and acceptance criteria.",
       "Ensure there are at least five phases and every phase has gate, status, objective, inputs, outputs, steps, and acceptance.",
       "Keep checks, agentTargets, and handoff aligned with the execution plan.",
