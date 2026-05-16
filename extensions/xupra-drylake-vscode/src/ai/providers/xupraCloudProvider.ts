@@ -11,10 +11,10 @@ import type { ConnectionState } from "../../types/package";
 const DEFAULT_API_BASE_URL = "https://drylake.xupracorp.com";
 
 type Endpoint =
-  | "/v1/drylake/runbooks/draft"
-  | "/v1/drylake/runbooks/refine-purpose"
-  | "/v1/drylake/runbooks/refine-architecture"
-  | "/v1/drylake/runbooks/generate-phases";
+  | "/api/v1/drylake/runbooks/draft"
+  | "/api/v1/drylake/runbooks/refine-purpose"
+  | "/api/v1/drylake/runbooks/refine-architecture"
+  | "/api/v1/drylake/runbooks/generate-phases";
 
 function normalizeBaseUrl(value: string) {
   return value.trim().replace(/\/+$/, "");
@@ -121,19 +121,19 @@ export class XupraCloudProvider implements DryLakeAiProvider {
   }
 
   generateDraftRunbook(input: GenerateDraftRunbookInput) {
-    return this.post("/v1/drylake/runbooks/draft", input);
+    return this.post("/api/v1/drylake/runbooks/draft", input);
   }
 
   refinePurpose(input: GenerateDraftRunbookInput) {
-    return this.post("/v1/drylake/runbooks/refine-purpose", input);
+    return this.post("/api/v1/drylake/runbooks/refine-purpose", input);
   }
 
   refineArchitecture(input: GenerateDraftRunbookInput) {
-    return this.post("/v1/drylake/runbooks/refine-architecture", input);
+    return this.post("/api/v1/drylake/runbooks/refine-architecture", input);
   }
 
   generatePhasePlan(input: GenerateDraftRunbookInput) {
-    return this.post("/v1/drylake/runbooks/generate-phases", input);
+    return this.post("/api/v1/drylake/runbooks/generate-phases", input);
   }
 }
 
