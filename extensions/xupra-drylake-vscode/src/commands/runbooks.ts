@@ -421,7 +421,8 @@ export async function generateAgentFilesCommand(deps: RunbookCommandDeps) {
   }
 
   const root = workspaceRoot();
-  const files = renderGeneratedFiles(current.runbook);
+  const buildSession = deps.stateStore.getBuildSession();
+  const files = renderGeneratedFiles(current.runbook, { activeProvider: buildSession });
   const plan = await planGeneratedFiles(files, (logicalPath) => readWorkspaceExisting(root, logicalPath));
   const summary = summarizeGeneratedFilePlan(plan);
   const choice = await vscode.window.showInformationMessage(

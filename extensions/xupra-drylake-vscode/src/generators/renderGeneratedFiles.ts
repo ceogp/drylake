@@ -6,14 +6,21 @@ import { renderCursorRules } from "./renderCursorRules";
 import { renderOpenClawSkill } from "./renderOpenClawSkill";
 import { renderPhasePrompt } from "./renderPhasePrompt";
 import { renderRunbookMd } from "./renderRunbookMd";
-import type { ApplicationBuildRunbook } from "../xu/types";
+import type { ApplicationBuildRunbook, BuildSessionState } from "../xu/types";
 
 export type GeneratedRunbookFile = {
   logicalPath: string;
   content: string;
 };
 
-export function renderGeneratedFiles(runbook: ApplicationBuildRunbook): GeneratedRunbookFile[] {
+export type RenderGeneratedFilesOptions = {
+  activeProvider?: Pick<BuildSessionState, "providerId" | "providerLabel"> | null;
+};
+
+export function renderGeneratedFiles(
+  runbook: ApplicationBuildRunbook,
+  options: RenderGeneratedFilesOptions = {},
+): GeneratedRunbookFile[] {
   const files: GeneratedRunbookFile[] = [
     {
       logicalPath: ".drylake/generated/RUNBOOK.md",
@@ -21,7 +28,7 @@ export function renderGeneratedFiles(runbook: ApplicationBuildRunbook): Generate
     },
     ...runbook.phases.map((phase) => ({
       logicalPath: `.drylake/generated/phase-${phase.id}.md`,
-      content: renderPhasePrompt(runbook, phase),
+      content: renderPhasePrompt(runbook, phase, { activeProvider: options.activeProvider }),
     })),
   ];
 
