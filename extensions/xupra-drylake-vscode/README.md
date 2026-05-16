@@ -1,77 +1,120 @@
-# DryLake Agent Portability
+# DryLake: AI Coding Agent for Complex Code Changes
 
-Move AI agent instructions between Claude Code, Cursor, Codex, and other AI coding tools without rewriting them by hand.
+Turn tickets, bugs, and feature requests into clear AI coding plans inside VS Code.
 
-DryLake scans your workspace and home directory for the agent and rule files used by today's AI coding tools, validates them, and translates them to the format each tool expects. Build the prompt once, ship it everywhere.
+DryLake helps you guide Claude Code, Codex, Cursor, GitHub Copilot, and other AI coding tools through larger repo changes without losing the plan.
+
+- Plan the change before your AI tool starts coding.
+- Break risky work into smaller, reviewable steps.
+- Keep scope, files, tests, and shipping notes in one place.
+- Run each step with the AI coding tool you already use.
+- Finish with a clean validation and handoff summary.
+
+```text
+Ticket or bug -> Build Session -> AI coding step -> validation -> ship
+```
 
 ![DryLake workflow](https://drylake.xupracorp.com/marketplace/drylake-workflow.png)
 
-![DryLake architecture](https://drylake.xupracorp.com/marketplace/drylake-architecture.png)
+## Get Started In 30 Seconds
 
-## Why use it?
+1. Install DryLake from the VS Code Marketplace.
+2. Run `DryLake: Start Build Session`.
+3. Paste a ticket, bug report, feature request, or product spec.
+4. Review the plan DryLake creates for the change.
+5. Run the first coding step with Claude Code, Codex, Cursor, GitHub Copilot, or External AI Prompt mode.
+6. Validate the result, then move to the next step.
 
-- One source of truth for `AGENTS.md`, `CLAUDE.md`, Cursor rules, Claude skills, and Codex configs.
-- Stop hand-editing the same instructions in five different formats every time something changes.
-- Catch broken or unsupported rules before they reach the agent at runtime.
-- Reuse skills and agents across teammates, repos, and machines.
+No account is required to start a local build session or use External AI Prompt mode.
 
-## 30-second start
+## Why Developers Use DryLake
 
-1. Install the extension.
-2. Open the Command Palette and run `Xupra DryLake: Scan Workspace` to preview what DryLake found.
-3. Run `Xupra DryLake: Connect` if you want to sync to a workspace and translate to other targets.
-4. Run `Xupra DryLake: Import Workspace` to upload the detected files.
-5. Run `Xupra DryLake: Check Compatibility` or `Xupra DryLake: Export Preview` to see the translated output for each target.
+AI coding tools are powerful, but bigger repo changes still get messy fast.
 
-No account is required for the local scan and preview.
+DryLake is built for the work that does not fit in one prompt:
 
-## Supported inputs
+- A feature touches multiple files and the AI starts drifting.
+- A bug fix needs architecture context before code changes.
+- A refactor needs a safe order of operations.
+- Tests and validation get forgotten after the first AI response.
+- You need to resume the job later without re-explaining everything.
 
-DryLake automatically detects:
+DryLake gives that work a structure you can review, run, and hand off.
 
-- `AGENTS.md` and `CLAUDE.md` at the repo root and at the home-directory level (`~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md`).
-- Claude skills: `.claude/skills/**/SKILL.md` and `~/.claude/skills/**/SKILL.md`.
-- Claude sub-agents: `.claude/agents/**/*.md` and `~/.claude/agents/**/*.md`.
-- Cursor rules: `.cursor/rules/**/*.mdc` and `~/.cursor/rules/**/*.mdc`.
-- Cursor skills: `.cursor/skills/**/SKILL.md` and `~/.cursor/skills/**/SKILL.md`.
-- Codex agents: `.codex/agents/**/*.toml` and `~/.codex/agents/**/*.toml`.
-- Codex skills: `.codex/skills/**/SKILL.md` and `~/.codex/skills/**/SKILL.md`.
-- Generic skills under `.agents/skills/**/SKILL.md`.
+## Build Sessions
 
-You can add custom patterns with `xupra.additionalScanPatterns`.
+A Build Session is one organized coding task inside VS Code.
 
-## Supported targets
+Start with a ticket, bug, or plain-language task. DryLake turns it into a practical plan with the purpose, affected surfaces, coding steps, validation checks, and shipping notes needed to keep the work moving.
 
-DryLake currently scans, validates, previews, and writes files for Codex, Claude Code, Claude Agents, and Cursor.
+Use Build Sessions when you want AI help without handing a messy repo change to a single disposable chat thread.
 
-## Privacy and file handling
+## Works With Your AI Coding Tools
 
-- The local scan runs entirely inside VS Code. Nothing is uploaded until you run `Import Workspace` or `Export Preview`.
-- DryLake reads only the file types listed under **Supported inputs** plus any patterns you add to `xupra.additionalScanPatterns`. It never scans `*.py` or other source code.
-- Built-in excludes always skip `node_modules`, `.git`, `.next`, `dist`, `build`, `out`, `coverage`, `storage`, `.venv`, `__pycache__`, and other heavy or sensitive directories.
-- Add your own patterns to `xupra.scan.exclude` to keep additional paths out of the scan. The defaults already exclude `.env` files and `secrets/` folders.
-- When you run `Import Workspace` the matched files are sent to your configured `xupra.baseUrl` so you can compare, translate, and share them. You can review the file list in the Workspace view before importing.
-- Sign out at any time with `Xupra DryLake: Sign Out`.
+DryLake is designed to guide the tools developers already use:
 
-## Troubleshooting
+- Claude Code
+- Codex
+- Cursor
+- GitHub Copilot
+- External AI tools through copied coding steps
 
-- **Browser sign-in does not return to VS Code**: run `Xupra DryLake: Connect` again, or use `Xupra DryLake: Paste Extension Token` for the manual fallback.
-- **A file you expected was not detected**: confirm it matches one of the patterns above, or add it to `xupra.additionalScanPatterns`.
-- **A path you do not want imported keeps appearing**: add a glob to `xupra.scan.exclude`.
-- **Need to start over**: run `Xupra DryLake: Sign Out`, then `Xupra DryLake: Connect`.
+DryLake does not try to replace every coding assistant. It helps keep the work clear enough for those assistants to be more useful on complex tasks.
 
----
+## Built For Real Repo Work
 
-## Contributing and local extension development
+Use DryLake to organize and run:
 
-Source: <https://gitlab.com/gmkdigitalmedia1/drylake>
+- Multi-file feature work
+- Bug investigations and fixes
+- Refactors with clear checkpoints
+- Test planning and validation passes
+- PR or implementation summaries
+- Agent instruction updates when the repo needs them
 
-Build locally:
+The main goal is simple: turn unclear coding work into a sequence your AI tool can actually follow.
 
-```sh
-cd extensions/xupra-drylake-vscode
-node esbuild.mjs
-npx --yes @vscode/vsce@latest package --allow-star-activation
-```
+## Review Before Coding
 
-Issues and feature requests: <https://gitlab.com/gmkdigitalmedia1/drylake/-/issues>
+DryLake puts the plan in front of you before implementation work starts.
+
+You can review the task purpose, architecture direction, affected files, risks, and validation steps before running the next AI coding step. That makes it easier to keep control of larger changes and avoid broad edits that do not match the repo.
+
+## Local And Flexible
+
+DryLake can start useful work without requiring your own AI backend.
+
+- Use External AI Prompt mode to copy focused coding steps into your preferred tool.
+- Use VS Code's available language model support when your editor provides it.
+- Connect to Xupra workflows when you want account-backed import, export, or optimization features.
+
+## Advanced Features
+
+DryLake can also help with agent instruction files and preview workflows when you need them.
+
+- Scan existing `AGENTS.md`, `CLAUDE.md`, Cursor rules, Codex files, and related agent instructions.
+- Preview files before writing them into root or runtime locations.
+- Create handoff notes, validation checklists, and AI-ready coding steps.
+- Keep generated previews separate until you approve writeback.
+
+These features support the coding workflow, but they are not the main story. The main story is helping you turn a real development task into shippable AI-assisted work.
+
+## Privacy And Control
+
+- DryLake does not export secrets by default.
+- The local scan runs inside VS Code.
+- You control when import, export, and writeback actions run.
+- Preview files are kept separate until you approve them.
+- Extension tokens are stored in VS Code SecretStorage.
+- Heavy and sensitive folders such as `node_modules`, `.git`, `.next`, `dist`, `build`, `coverage`, and `.venv` are excluded by default.
+
+## Support
+
+- Homepage: <https://drylake.xupracorp.com/>
+- About Xupra: <https://drylake.xupracorp.com/about>
+- Support: <mailto:support@xupracorp.com>
+- License: see `LICENSE.txt`
+
+## Non-affiliation
+
+DryLake is not affiliated with Anthropic, OpenAI, GitHub, Microsoft, Cursor, OpenClaw, Cline, Roo, Windsurf, Traycer, Blackbox, Zencoder, or their respective owners.

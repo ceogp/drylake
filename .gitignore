@@ -5,6 +5,7 @@
 /extensions/*/node_modules
 /extensions/*/dist
 /extensions/xupra-drylake-vscode/.development-extension/
+/extensions/xupra-drylake-vscode/development-vsix/
 *.vsix
 /.pnp
 .pnp.*

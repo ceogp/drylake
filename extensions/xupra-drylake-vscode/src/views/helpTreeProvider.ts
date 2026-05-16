@@ -25,6 +25,8 @@ export class HelpTreeProvider implements vscode.TreeDataProvider<HelpItem> {
         title: element.label,
         arguments: element.arguments ?? []
       };
+    } else {
+      item.contextValue = "disabled";
     }
 
     return item;
@@ -71,6 +73,34 @@ export class HelpTreeProvider implements vscode.TreeDataProvider<HelpItem> {
         label: "Contact Support",
         description: "Email support@xupracorp.com",
         command: "xupra.contactSupport"
+      },
+      {
+        label: "— Advanced Tools —"
+      },
+      {
+        label: "Import Agent Configs",
+        description: "Import workspace agent instructions into Xupra",
+        command: "xupra.importWorkspace"
+      },
+      {
+        label: "Sync Agent Configs",
+        description: "Install generated configs to local agent runtimes",
+        command: "xupra.installToRuntime"
+      },
+      {
+        label: "Validate Agent Configs",
+        description: "Check compatibility across supported agent tools",
+        command: "xupra.checkCompatibility"
+      },
+      {
+        label: "Preview Agent Config Changes",
+        description: "Preview generated config changes before writeback",
+        command: "xupra.exportPreview"
+      },
+      {
+        label: "Pull Generated Agent Files",
+        description: "Pull generated files into the workspace",
+        command: "xupra.pullPackage"
       }
     ];
   }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { runDeploymentJob } from "@/lib/services/deployments";
-import { buildExportPreview } from "@/lib/services/import-export";
+import { buildExportPreview, type SupportedTarget } from "@/lib/services/import-export";
 import { resolveIntegrationActorUser } from "@/lib/services/integration-actor";
 
 function twiml(message: string) {
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
 
       const result = await buildExportPreview({
         versionId: arg1,
-        targetPlatform: arg2 as "codex" | "claude_code" | "claude_agents" | "cursor",
+        targetPlatform: arg2 as SupportedTarget,
         createdByUserId: user.id,
       });
 

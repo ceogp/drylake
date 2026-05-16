@@ -4,7 +4,7 @@ import { forbidden, fromZodError, internalError, notFound, unauthorized } from "
 import { prisma } from "@/lib/prisma";
 import { requireVersionAccess } from "@/lib/services/access";
 import { assertEntitlement } from "@/lib/services/entitlements";
-import { requestExportPreview } from "@/lib/services/import-export";
+import { EXPORT_TARGETS, requestExportPreview, type SupportedTarget } from "@/lib/services/import-export";
 import { readArtifactText } from "@/lib/storage/artifacts";
 import { createZipArchive } from "@/lib/utils/zip";
 
@@ -15,14 +15,14 @@ type Context = {
 };
 
 const querySchema = z.object({
-  targetPlatform: z.enum(["all", "codex", "claude_code", "claude_agents", "cursor"]),
+  targetPlatform: z.enum(["all", ...EXPORT_TARGETS] as unknown as [string, ...string[]]),
   ensureGenerated: z
     .enum(["true", "false"])
     .optional()
     .transform((value) => value === "true"),
 });
 
-const allTargetPlatforms = ["codex", "claude_agents", "cursor"] as const;
+const allTargetPlatforms = EXPORT_TARGETS;
 
 export async function GET(request: Request, context: Context) {
   try {
@@ -48,7 +48,7 @@ export async function GET(request: Request, context: Context) {
         targetPlatforms.map((targetPlatform) =>
           requestExportPreview({
             versionId,
-            targetPlatform,
+            targetPlatform: targetPlatform as SupportedTarget,
             createdByUserId: access.context.user.id,
           }),
         ),

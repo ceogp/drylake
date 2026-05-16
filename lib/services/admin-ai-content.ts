@@ -5,7 +5,20 @@ import { readArtifactText } from "@/lib/storage/artifacts";
 
 const defaultPageSize = 25;
 const maxPageSize = 100;
-const exportTargets = new Set(["codex", "claude_code", "claude_agents", "cursor"]);
+const exportTargets = new Set([
+  "codex",
+  "claude_code",
+  "claude_agents",
+  "cursor",
+  "windsurf",
+  "cline",
+  "roo",
+  "copilot",
+  "gemini",
+  "junie",
+  "warp",
+  "generic",
+]);
 
 const userSummarySelect = {
   id: true,

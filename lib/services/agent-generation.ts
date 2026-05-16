@@ -32,6 +32,22 @@ function platformDescription(targetPlatform: string) {
       return "Codex custom agent TOML in .codex/agents/<slug>.toml";
     case "cursor":
       return "Cursor rule/agent MDC in .cursor/rules/<slug>.mdc";
+    case "windsurf":
+      return "Windsurf rule markdown in .windsurf/rules/<slug>.md";
+    case "cline":
+      return "Cline rule markdown in .clinerules/<slug>.md or a .clinerules file";
+    case "roo":
+      return "Roo Code rule markdown in .roo/rules/<slug>.md or a .roorules file";
+    case "copilot":
+      return "GitHub Copilot custom instructions in .github/copilot-instructions.md";
+    case "gemini":
+      return "Gemini CLI project instructions in GEMINI.md";
+    case "junie":
+      return "JetBrains Junie guidelines in .junie/guidelines.md";
+    case "warp":
+      return "Warp project instructions in WARP.md";
+    case "generic":
+      return "generic .rules project instruction file";
     default:
       return "portable markdown agent file";
   }

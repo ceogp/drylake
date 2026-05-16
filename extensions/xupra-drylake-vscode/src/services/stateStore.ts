@@ -6,6 +6,8 @@ import type {
   LastImportSummary,
   SelectedContext,
 } from "../types/package";
+import type { BuildSessionState } from "../xu/types";
+import type { ApplicationBuildRunbook, XuPhaseAgent } from "../xu/types";
 
 const KEY = "xupra.selectedContext";
 const CONNECTION_KEY = "xupra.connection";
@@ -13,6 +15,13 @@ const DETECTED_FILES_KEY = "xupra.detectedFiles";
 const ACCESS_TOKEN_KEY = "xupra.extensionAccessToken";
 const LAST_IMPORT_KEY = "xupra.lastImport";
 const AWAITING_PLAN_REFRESH_KEY = "xupra.awaitingPlanRefreshUntil";
+const BUILD_SESSION_KEY = "drylake.buildSession";
+
+export type ActivePhaseSummary = {
+  phaseId: string;
+  phaseTitle: string;
+  agent?: XuPhaseAgent;
+};
 
 export class StateStore {
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -81,6 +90,32 @@ export class StateStore {
 
   async clearLastImport() {
     await this.context.workspaceState.update(LAST_IMPORT_KEY, null);
+  }
+
+  getBuildSession(): BuildSessionState | null {
+    return this.context.workspaceState.get<BuildSessionState | null>(BUILD_SESSION_KEY, null);
+  }
+
+  async setBuildSession(session: BuildSessionState) {
+    await this.context.workspaceState.update(BUILD_SESSION_KEY, session);
+  }
+
+  async clearBuildSession() {
+    await this.context.workspaceState.update(BUILD_SESSION_KEY, null);
+  }
+
+  getActivePhaseSummary(runbook: ApplicationBuildRunbook | null | undefined): ActivePhaseSummary | null {
+    const phase = runbook?.phases.find((item) => item.status !== "complete") ?? runbook?.phases[0];
+
+    if (!phase) {
+      return null;
+    }
+
+    return {
+      phaseId: phase.id,
+      phaseTitle: phase.title,
+      agent: phase.agent,
+    };
   }
 
   async getAccessToken() {

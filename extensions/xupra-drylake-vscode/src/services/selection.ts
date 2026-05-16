@@ -170,7 +170,15 @@ export async function chooseTargetPlatform(
     { label: "Codex", value: "codex" },
     { label: "Claude Code", value: "claude_code" },
     { label: "Claude Agents", value: "claude_agents" },
-    { label: "Cursor", value: "cursor" }
+    { label: "Cursor", value: "cursor" },
+    { label: "Windsurf", value: "windsurf" },
+    { label: "Cline", value: "cline" },
+    { label: "Roo Code", value: "roo" },
+    { label: "GitHub Copilot", value: "copilot" },
+    { label: "Gemini CLI", value: "gemini" },
+    { label: "JetBrains Junie", value: "junie" },
+    { label: "Warp", value: "warp" },
+    { label: "Generic .rules", value: "generic" }
   ];
 
   return vscode.window.showQuickPick(options, {
