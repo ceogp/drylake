@@ -6,7 +6,7 @@ export const runbookGenerationInputSchema = z.object({
   prompt: z.string().trim().min(1),
   mode: z.string().trim().min(1),
   workspaceSummary: z.string().trim().min(1),
-  currentRunbook: z.record(z.string(), z.unknown()).optional(),
+  currentRunbook: z.object({}).catchall(z.unknown()).optional(),
 });
 
 export type RunbookGenerationInput = z.infer<typeof runbookGenerationInputSchema>;
@@ -17,16 +17,15 @@ const RUNBOOK_SYSTEM_PROMPT = [
   "Do not wrap the response in Markdown fences.",
 ].join(" ");
 
-export function buildRunbookDraftPrompt(input: RunbookGenerationInput) {
+function runbookContractLines() {
   return [
-    "You are generating a DryLake .xu runbook.",
-    "Return only YAML. Do not wrap it in Markdown fences.",
-    "",
     "Required YAML contract:",
     "xu: 1",
     "kind: ApplicationBuildRunbook",
     "metadata.name: kebab-case project name",
+    "metadata.owner: owning editor, team, or workflow label",
     "metadata.status: draft",
+    "metadata.mode: build-app | phases | plan | review",
     "intent.rawPrompt, intent.purpose, intent.users, intent.goals, intent.nonGoals, intent.constraints",
     "confirmation.required: true",
     "confirmation.status: pending",
@@ -34,13 +33,38 @@ export function buildRunbookDraftPrompt(input: RunbookGenerationInput) {
     "confirmation.userApprovedArchitecture: false",
     "confirmation.userApprovedProvisioning: false",
     "architecture.status: proposed",
-    "architecture.summary, architecture.decisions, architecture.risks, architecture.assumptions",
+    "architecture.summary, architecture.decisions[{ id, choice, rationale }], architecture.risks, architecture.assumptions",
     "provisioning.status: draft",
     "provisioning.commands, provisioning.filesToCreate, provisioning.environmentVariables, provisioning.externalServices",
     "provisioning.safety.requiresApprovalBeforeExecution: true",
     "provisioning.safety.executeAutomatically: false",
-    "phases: at least five phases with id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
+    "phases: at least five phases",
+    "each phase must include id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
     "phase.agent optional enum: claude-code, codex, cursor, copilot, external-ai-prompt",
+    "checks.install, checks.dev, checks.build, checks.test, checks.lint",
+    "agentTargets.agentsMd, agentTargets.claudeMd, agentTargets.copilotInstructions, agentTargets.cursorRules, agentTargets.codexSkill, agentTargets.openclawSkill",
+    "handoff.defaultAgent, handoff.instructions",
+  ];
+}
+
+function stringifyCurrentRunbook(currentRunbook: RunbookGenerationInput["currentRunbook"]) {
+  if (!currentRunbook) {
+    return "No current runbook provided.";
+  }
+
+  try {
+    return JSON.stringify(currentRunbook, null, 2);
+  } catch {
+    return "Current runbook provided but could not be serialized. Preserve any existing approved structure when revising.";
+  }
+}
+
+function basePromptSections(input: RunbookGenerationInput) {
+  return [
+    "You are generating a DryLake .xu runbook.",
+    "Return only YAML. Do not wrap it in Markdown fences.",
+    "",
+    ...runbookContractLines(),
     "",
     `Mode: ${input.mode}`,
     "",
@@ -49,31 +73,79 @@ export function buildRunbookDraftPrompt(input: RunbookGenerationInput) {
     "",
     "Workspace summary:",
     input.workspaceSummary || "No workspace summary available.",
+    "",
+    "Current runbook context:",
+    stringifyCurrentRunbook(input.currentRunbook),
   ].join("\n");
 }
 
-export function refineRunbookPurposePrompt(input: RunbookGenerationInput) {
-  return `${buildRunbookDraftPrompt(input)}\n\nFocus this revision on purpose, users, goals, non-goals, and constraints.`;
-}
-
-export function refineRunbookArchitecturePrompt(input: RunbookGenerationInput) {
-  return `${buildRunbookDraftPrompt(input)}\n\nFocus this revision on architecture summary, decisions, risks, assumptions, and provisioning preview.`;
-}
-
-export function generateRunbookPhasePlanPrompt(input: RunbookGenerationInput) {
-  return `${buildRunbookDraftPrompt(input)}\n\nFocus this revision on phase-by-phase execution planning and acceptance criteria.`;
-}
-
-export async function generateRunbookContent(params: {
+async function generateRunbookYaml(params: {
   input: RunbookGenerationInput;
   taskLabel: string;
-  buildPrompt: (input: RunbookGenerationInput) => string;
+  prompt: string;
 }) {
   const content = await generateAiText({
     systemPrompt: RUNBOOK_SYSTEM_PROMPT,
-    userPrompt: params.buildPrompt(params.input),
+    userPrompt: params.prompt,
     taskLabel: params.taskLabel,
   });
 
   return { content };
+}
+
+export async function buildRunbookDraftPrompt(input: RunbookGenerationInput) {
+  return generateRunbookYaml({
+    input,
+    taskLabel: "runbook draft",
+    prompt: [
+      basePromptSections(input),
+      "",
+      "Create a complete draft runbook that is immediately usable by the DryLake parser and generators.",
+      "Include realistic checks, agentTargets, and handoff instructions.",
+      "Do not omit owner, checks, agentTargets, or handoff.",
+    ].join("\n"),
+  });
+}
+
+export async function refineRunbookPurposePrompt(input: RunbookGenerationInput) {
+  return generateRunbookYaml({
+    input,
+    taskLabel: "runbook purpose refinement",
+    prompt: [
+      basePromptSections(input),
+      "",
+      "Revise the current runbook.",
+      "Focus this revision on intent.purpose, intent.users, intent.goals, intent.nonGoals, and intent.constraints.",
+      "Preserve architecture, provisioning, phases, checks, agentTargets, and handoff unless the user prompt clearly requires changes.",
+    ].join("\n"),
+  });
+}
+
+export async function refineRunbookArchitecturePrompt(input: RunbookGenerationInput) {
+  return generateRunbookYaml({
+    input,
+    taskLabel: "runbook architecture refinement",
+    prompt: [
+      basePromptSections(input),
+      "",
+      "Revise the current runbook.",
+      "Focus this revision on architecture.summary, architecture.decisions, architecture.risks, architecture.assumptions, and provisioning readiness.",
+      "Keep approval gates explicit and preserve intent, phases, checks, agentTargets, and handoff unless the user prompt requires updates.",
+    ].join("\n"),
+  });
+}
+
+export async function generateRunbookPhasePlanPrompt(input: RunbookGenerationInput) {
+  return generateRunbookYaml({
+    input,
+    taskLabel: "runbook phase plan",
+    prompt: [
+      basePromptSections(input),
+      "",
+      "Revise the current runbook.",
+      "Focus this revision on phase-by-phase execution planning and acceptance criteria.",
+      "Ensure there are at least five phases and every phase has gate, status, objective, inputs, outputs, steps, and acceptance.",
+      "Keep checks, agentTargets, and handoff aligned with the execution plan.",
+    ].join("\n"),
+  });
 }

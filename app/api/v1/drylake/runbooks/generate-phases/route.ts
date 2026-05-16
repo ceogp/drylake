@@ -1,9 +1,6 @@
-import { NextResponse } from "next/server";
-
-import { forbidden, fromZodError, internalError, unauthorized } from "@/lib/api/http";
+import { forbidden, fromZodError, internalError, ok, unauthorized } from "@/lib/api/http";
 import { assertEntitlement } from "@/lib/services/entitlements";
 import {
-  generateRunbookContent,
   generateRunbookPhasePlanPrompt,
   runbookGenerationInputSchema,
 } from "@/lib/services/runbook-generation";
@@ -34,13 +31,9 @@ export async function POST(request: Request) {
       throw error;
     }
 
-    const result = await generateRunbookContent({
-      input: parsed.data,
-      taskLabel: "runbook phase plan",
-      buildPrompt: generateRunbookPhasePlanPrompt,
-    });
+    const result = await generateRunbookPhasePlanPrompt(parsed.data);
 
-    return NextResponse.json(result);
+    return ok(result);
   } catch (error) {
     if (error instanceof Error && error.message === REQUEST_AUTHENTICATION_REQUIRED_ERROR) {
       return unauthorized();
