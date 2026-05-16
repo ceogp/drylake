@@ -273,11 +273,9 @@ export async function ensureAppSession(input: AppSessionInput): Promise<{
         maxPackagesPerProject: 10,
       },
       entitlementsJson: {
-        manual_export: false,
-        deployment_jobs: false,
-        credential_vault: false,
-        slack_controls: false,
-        advanced_reporting: false,
+        xupra_pro_ai: false,
+        session_cloud_sync: false,
+        pr_summary_generation: false,
       },
     },
     create: {
@@ -290,11 +288,9 @@ export async function ensureAppSession(input: AppSessionInput): Promise<{
         maxPackagesPerProject: 10,
       },
       entitlementsJson: {
-        manual_export: false,
-        deployment_jobs: false,
-        credential_vault: false,
-        slack_controls: false,
-        advanced_reporting: false,
+        xupra_pro_ai: false,
+        session_cloud_sync: false,
+        pr_summary_generation: false,
       },
     },
   });

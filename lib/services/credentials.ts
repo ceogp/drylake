@@ -92,7 +92,7 @@ export async function createCredential(params: {
   secret: string;
   metadata?: CredentialMetadata;
 }) {
-  await assertEntitlement(params.organizationId, "credential_vault");
+  await assertEntitlement(params.organizationId, "xupra_pro_ai");
 
   const encrypted = await encryptSecret(params.secret);
 
@@ -146,7 +146,7 @@ export async function updateCredential(params: {
     where: { id: params.credentialId },
   });
 
-  await assertEntitlement(existing.organizationId, "credential_vault");
+  await assertEntitlement(existing.organizationId, "xupra_pro_ai");
 
   const nextCiphertext =
     typeof params.secret === "string" && params.secret.trim().length > 0
@@ -198,7 +198,7 @@ export async function deleteCredential(params: {
     where: { id: params.credentialId },
   });
 
-  await assertEntitlement(credential.organizationId, "credential_vault");
+  await assertEntitlement(credential.organizationId, "xupra_pro_ai");
 
   await prisma.credentialAccessLog.create({
     data: {
@@ -234,7 +234,7 @@ export async function verifyCredential(params: {
     where: { id: params.credentialId },
   });
 
-  await assertEntitlement(credential.organizationId, "credential_vault");
+  await assertEntitlement(credential.organizationId, "xupra_pro_ai");
 
   const decrypted = await decryptSecret(credential.ciphertext);
   const result = await verifyWithProvider(credential.provider, decrypted.plaintext);

@@ -38,7 +38,7 @@ export async function GET(request: Request, context: Context) {
     }
 
     const access = await requireVersionAccess(versionId);
-    await assertEntitlement(access.context.organization.id, "manual_export");
+    await assertEntitlement(access.context.organization.id, "xupra_pro_ai");
 
     const targetPlatforms =
       parsed.data.targetPlatform === "all" ? allTargetPlatforms : [parsed.data.targetPlatform];
@@ -102,8 +102,8 @@ export async function GET(request: Request, context: Context) {
       return forbidden("You do not have access to that package version.");
     }
 
-    if (error instanceof Error && error.message === "Organization is not entitled to use manual_export") {
-      return forbidden("Manual export requires a paid plan.");
+    if (error instanceof Error && error.message === "Organization is not entitled to use xupra_pro_ai") {
+      return forbidden("This feature requires a Pro plan.");
     }
 
     console.error(error);

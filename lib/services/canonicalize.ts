@@ -384,7 +384,7 @@ export async function canonicalizeVersion(params: {
   });
   const organizationId = version.agentPackage.project.organizationId;
 
-  if (!(await hasEntitlement(organizationId, "manual_export"))) {
+  if (!(await hasEntitlement(organizationId, "xupra_pro_ai"))) {
     throw new CanonicalizationForbiddenError();
   }
 

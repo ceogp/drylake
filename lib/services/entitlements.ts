@@ -2,39 +2,30 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 
 export type EntitlementKey =
-  | "manual_export"
-  | "deployment_jobs"
-  | "credential_vault"
-  | "slack_controls"
-  | "advanced_reporting";
+  | "xupra_pro_ai"
+  | "session_cloud_sync"
+  | "pr_summary_generation";
 
 export type EntitlementMap = Record<EntitlementKey, boolean>;
 
 const DEFAULT_ENTITLEMENTS: Record<string, EntitlementMap> = {
   free: {
-    manual_export: false,
-    deployment_jobs: false,
-    credential_vault: false,
-    slack_controls: false,
-    advanced_reporting: false,
+    xupra_pro_ai: false,
+    session_cloud_sync: false,
+    pr_summary_generation: false,
   },
   pro: {
-    manual_export: true,
-    deployment_jobs: true,
-    credential_vault: true,
-    slack_controls: true,
-    advanced_reporting: true,
-  },
-  enterprise: {
-    manual_export: true,
-    deployment_jobs: true,
-    credential_vault: true,
-    slack_controls: true,
-    advanced_reporting: true,
+    xupra_pro_ai: true,
+    session_cloud_sync: true,
+    pr_summary_generation: true,
   },
 };
 
 function defaultEntitlementsForTier(tier: string) {
+  if (tier === "enterprise") {
+    return DEFAULT_ENTITLEMENTS.pro;
+  }
+
   return DEFAULT_ENTITLEMENTS[tier] ?? DEFAULT_ENTITLEMENTS.free;
 }
 

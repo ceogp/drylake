@@ -25,7 +25,7 @@ export async function GET(_: Request, context: Context) {
     const { versionId } = await context.params;
     const access = await requireVersionAccess(versionId);
     const [isPro, sourceFileCount, canonicalItemCounts, canonicalization] = await Promise.all([
-      hasEntitlement(access.context.organization.id, "manual_export"),
+      hasEntitlement(access.context.organization.id, "xupra_pro_ai"),
       prisma.packageFile.count({
         where: {
           packageVersionId: versionId,

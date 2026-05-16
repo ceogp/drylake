@@ -26,7 +26,7 @@ export async function POST(request: Request, context: Context) {
     }
 
     const { context: appContext } = await requireVersionAccess(versionId);
-    await assertEntitlement(appContext.organization.id, "manual_export");
+    await assertEntitlement(appContext.organization.id, "xupra_pro_ai");
 
     const result = await requestExportPreview({
       versionId,
@@ -58,8 +58,8 @@ export async function POST(request: Request, context: Context) {
       return forbidden("You do not have access to that package version.");
     }
 
-    if (error instanceof Error && error.message === "Organization is not entitled to use manual_export") {
-      return forbidden("Manual export requires a paid plan.");
+    if (error instanceof Error && error.message === "Organization is not entitled to use xupra_pro_ai") {
+      return forbidden("This feature requires a Pro plan.");
     }
 
     console.error(error);

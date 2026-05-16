@@ -92,7 +92,7 @@ export async function createDeploymentTarget(params: {
     where: { id: params.projectId },
   });
 
-  await assertEntitlement(project.organizationId, "deployment_jobs");
+  await assertEntitlement(project.organizationId, "xupra_pro_ai");
 
   if (params.isDefault) {
     await prisma.deploymentTarget.updateMany({
@@ -156,7 +156,7 @@ export async function runDeploymentJob(params: {
     where: { id: params.deploymentTargetId },
   });
 
-  await assertEntitlement(version.agentPackage.project.organizationId, "deployment_jobs");
+  await assertEntitlement(version.agentPackage.project.organizationId, "xupra_pro_ai");
 
   const config = asTargetConfig(target.configJson);
   const deploymentJob = await prisma.deploymentJob.create({
