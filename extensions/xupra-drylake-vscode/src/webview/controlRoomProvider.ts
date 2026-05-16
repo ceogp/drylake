@@ -85,7 +85,7 @@ function renderPhaseCard(phase: XuPhase, fallbackAgent: XuPhaseAgent, options: {
   const draggable = options.draggable ? ' draggable="true"' : "";
   const cardClass = `phase-card ${statusClass(phase.status)}${phase.status === "active" ? " active-phase" : ""}`;
 
-  return `<article class="${cardClass}" data-phase-id="${escapeHtml(phase.id)}"${draggable}>
+  return `<article class="${cardClass}" data-phase-id="${escapeHtml(phase.id)}" data-phase-status="${statusForKanban(phase.status)}"${draggable}>
     <div class="phase-id">${escapeHtml(phase.id)}</div>
     <h3 class="phase-title">${escapeHtml(phase.title)}</h3>
     <span class="badge ${statusClass(phase.status)}">${escapeHtml(STATUS_LABELS[phase.status])}</span>
@@ -100,7 +100,7 @@ function renderPipeline(runbook: ApplicationBuildRunbook) {
 
   return `<section class="pipeline" aria-label="Build Session pipeline">
     ${runbook.phases.map((phase, index) => {
-      const card = renderPhaseCard(phase, fallbackAgent, { draggable: false });
+      const card = renderPhaseCard(phase, fallbackAgent, { draggable: true });
       return index < runbook.phases.length - 1 ? `${card}<div class="arrow" aria-hidden="true">&rarr;</div>` : card;
     }).join("")}
   </section>`;
@@ -150,6 +150,7 @@ type WebviewMessage = {
   copy?: string;
   view?: unknown;
   phaseId?: unknown;
+  afterPhaseId?: unknown;
   agent?: unknown;
   status?: unknown;
 };
@@ -201,6 +202,11 @@ export class ControlRoomProvider {
 
       if (message.command === "drylake.updatePhaseStatus") {
         await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0], message.status ?? message.args?.[1]);
+        return;
+      }
+
+      if (message.command === "drylake.reorderPhase") {
+        await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0], message.afterPhaseId ?? message.args?.[1] ?? null);
         return;
       }
 
@@ -263,6 +269,10 @@ export class ControlRoomProvider {
     .phase-card.complete { opacity: 0.78; }
     .phase-card[draggable="true"] { cursor: grab; }
     .phase-card.dragging { opacity: 0.5; border-style: dashed; }
+    .pipeline .phase-card.drop-before { border-left: 4px solid var(--vscode-button-background); }
+    .pipeline .phase-card.drop-after { border-right: 4px solid var(--vscode-button-background); }
+    .kanban .phase-card.drop-before { border-top: 4px solid var(--vscode-button-background); }
+    .kanban .phase-card.drop-after { border-bottom: 4px solid var(--vscode-button-background); }
     .phase-id { color: var(--vscode-descriptionForeground); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; }
     .phase-title { margin: 5px 0 8px; font-size: 13px; line-height: 1.25; }
     .badge { display: inline-block; margin-bottom: 8px; padding: 2px 7px; border: 1px solid var(--vscode-panel-border); border-radius: 999px; color: var(--vscode-descriptionForeground); font-size: 10px; }
@@ -312,6 +322,34 @@ export class ControlRoomProvider {
     const vscode = acquireVsCodeApi();
     let selectedMode = "build-app";
 
+    function clearDropIndicators() {
+      document.querySelectorAll(".drag-over, .drop-before, .drop-after").forEach((item) => {
+        item.classList.remove("drag-over", "drop-before", "drop-after");
+      });
+    }
+
+    function insertionSide(card, event, orientation) {
+      const rect = card.getBoundingClientRect();
+      if (orientation === "horizontal") {
+        return event.clientX < rect.left + rect.width / 2 ? "before" : "after";
+      }
+
+      return event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+    }
+
+    function previousPhaseId(card) {
+      let previous = card.previousElementSibling;
+      while (previous && !previous.matches(".phase-card[data-phase-id]")) {
+        previous = previous.previousElementSibling;
+      }
+
+      return previous?.dataset.phaseId || null;
+    }
+
+    function afterPhaseIdForCardDrop(card, event, orientation) {
+      return insertionSide(card, event, orientation) === "before" ? previousPhaseId(card) : card.dataset.phaseId;
+    }
+
     document.addEventListener("click", (event) => {
       const viewButton = event.target.closest("[data-view]");
       if (viewButton) {
@@ -354,25 +392,41 @@ export class ControlRoomProvider {
 
       card.classList.add("dragging");
       event.dataTransfer.setData("text/plain", card.dataset.phaseId || "");
+      event.dataTransfer.setData("application/x-drylake-phase-status", card.dataset.phaseStatus || "");
       event.dataTransfer.effectAllowed = "move";
     });
 
     document.addEventListener("dragend", (event) => {
       event.target.closest(".phase-card")?.classList.remove("dragging");
-      document.querySelectorAll(".kanban-column.drag-over").forEach((column) => column.classList.remove("drag-over"));
+      clearDropIndicators();
     });
 
     document.addEventListener("dragover", (event) => {
+      const card = event.target.closest(".phase-card[data-phase-id]");
+      if (card && !card.classList.contains("dragging")) {
+        event.preventDefault();
+        clearDropIndicators();
+        const orientation = card.closest(".pipeline") ? "horizontal" : "vertical";
+        card.classList.add(insertionSide(card, event, orientation) === "before" ? "drop-before" : "drop-after");
+        return;
+      }
+
       const column = event.target.closest("[data-drop-status]");
       if (!column) {
         return;
       }
 
       event.preventDefault();
+      clearDropIndicators();
       column.classList.add("drag-over");
     });
 
     document.addEventListener("dragleave", (event) => {
+      const card = event.target.closest(".phase-card[data-phase-id]");
+      if (card && !card.contains(event.relatedTarget)) {
+        card.classList.remove("drop-before", "drop-after");
+      }
+
       const column = event.target.closest("[data-drop-status]");
       if (column && !column.contains(event.relatedTarget)) {
         column.classList.remove("drag-over");
@@ -380,17 +434,39 @@ export class ControlRoomProvider {
     });
 
     document.addEventListener("drop", (event) => {
+      const phaseId = event.dataTransfer.getData("text/plain");
+      if (!phaseId) {
+        return;
+      }
+
+      const card = event.target.closest(".phase-card[data-phase-id]");
+      if (card && !card.classList.contains("dragging")) {
+        event.preventDefault();
+        const pipeline = card.closest(".pipeline");
+        const column = card.closest("[data-drop-status]");
+        const draggedStatus = event.dataTransfer.getData("application/x-drylake-phase-status");
+
+        if (pipeline || (column && draggedStatus === column.dataset.dropStatus)) {
+          const orientation = pipeline ? "horizontal" : "vertical";
+          vscode.postMessage({ command: "drylake.reorderPhase", phaseId, afterPhaseId: afterPhaseIdForCardDrop(card, event, orientation) });
+          clearDropIndicators();
+          return;
+        }
+
+        if (column) {
+          vscode.postMessage({ command: "drylake.updatePhaseStatus", phaseId, status: column.dataset.dropStatus });
+          clearDropIndicators();
+          return;
+        }
+      }
+
       const column = event.target.closest("[data-drop-status]");
       if (!column) {
         return;
       }
 
       event.preventDefault();
-      column.classList.remove("drag-over");
-      const phaseId = event.dataTransfer.getData("text/plain");
-      if (!phaseId) {
-        return;
-      }
+      clearDropIndicators();
 
       vscode.postMessage({ command: "drylake.updatePhaseStatus", phaseId, status: column.dataset.dropStatus });
     });

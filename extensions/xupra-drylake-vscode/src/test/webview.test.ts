@@ -10,6 +10,7 @@ type TestMessage = {
   copy?: string;
   view?: unknown;
   phaseId?: unknown;
+  afterPhaseId?: unknown;
   agent?: unknown;
   status?: unknown;
 };
@@ -111,12 +112,25 @@ describe("Control Room webview", () => {
     expect(html).toContain('data-drop-status="pending"');
     expect(html).toContain('data-drop-status="active"');
     expect(html).toContain('data-drop-status="complete"');
-    expect(html).toContain('data-phase-id="todo" draggable="true"');
-    expect(html).toContain('data-phase-id="active" draggable="true"');
-    expect(html).toContain('data-phase-id="approved" draggable="true"');
-    expect(html).toContain('data-phase-id="done" draggable="true"');
+    expect(html).toContain('data-phase-id="todo" data-phase-status="pending" draggable="true"');
+    expect(html).toContain('data-phase-id="active" data-phase-status="active" draggable="true"');
+    expect(html).toContain('data-phase-id="approved" data-phase-status="complete" draggable="true"');
+    expect(html).toContain('data-phase-id="done" data-phase-status="complete" draggable="true"');
     expect(html).toContain("Approved phase");
     expect(html).toContain("Drop phase here");
+  });
+
+  it("renders draggable pipeline cards with reorder handlers", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain('class="pipeline"');
+    expect(html).toContain('data-phase-id="todo" data-phase-status="pending" draggable="true"');
+    expect(html).toContain('command: "drylake.reorderPhase"');
+    expect(html).toContain("drop-before");
+    expect(html).toContain("drop-after");
   });
 
   it("routes kanban drop messages to phase status updates", async () => {
@@ -126,6 +140,15 @@ describe("Control Room webview", () => {
     await messageHandler?.({ command: "drylake.updatePhaseStatus", phaseId: "todo", status: "active" });
 
     expect(executed).toContainEqual({ command: "drylake.updatePhaseStatus", args: ["todo", "active"] });
+  });
+
+  it("routes phase reorder messages to phase reorder command", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({ command: "drylake.reorderPhase", phaseId: "active", afterPhaseId: "todo" });
+
+    expect(executed).toContainEqual({ command: "drylake.reorderPhase", args: ["active", "todo"] });
   });
 
   it("routes kanban agent dropdown messages to phase agent updates", async () => {

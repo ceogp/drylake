@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake: AI Coding Agent",
   "description": "Turn tickets and bug reports into safe AI coding steps for Claude Code, Codex, Cursor, Copilot, and your preferred AI tool.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
@@ -295,6 +295,10 @@
         "title": "DryLake: Update Phase Status"
       },
       {
+        "command": "drylake.reorderPhase",
+        "title": "DryLake: Reorder Phase"
+      },
+      {
         "command": "xupra.connect",
         "title": "DryLake: Connect"
       },
@@ -419,6 +423,10 @@
         },
         {
           "command": "drylake.updatePhaseStatus",
+          "when": "false"
+        },
+        {
+          "command": "drylake.reorderPhase",
           "when": "false"
         }
       ],

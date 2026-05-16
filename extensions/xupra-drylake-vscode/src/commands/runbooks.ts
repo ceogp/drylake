@@ -548,6 +548,65 @@ export async function updatePhaseStatusCommand(deps: RunbookCommandDeps, phaseId
   await deps.refreshSidebar();
 }
 
+export async function reorderPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown, afterPhaseIdArg?: unknown) {
+  const phaseId = typeof phaseIdArg === "string" ? phaseIdArg.trim() : "";
+  const afterPhaseId = typeof afterPhaseIdArg === "string" && afterPhaseIdArg.trim()
+    ? afterPhaseIdArg.trim()
+    : null;
+
+  if (!phaseId) {
+    void vscode.window.showWarningMessage("DryLake could not reorder the phase because the request was invalid.");
+    return;
+  }
+
+  if (phaseId === afterPhaseId) {
+    return;
+  }
+
+  const current = await deps.sessionStore.readRunbook();
+  if (!current) {
+    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    return;
+  }
+
+  const phaseIndex = current.runbook.phases.findIndex((phase) => phase.id === phaseId);
+  if (phaseIndex === -1) {
+    void vscode.window.showWarningMessage(`DryLake could not find phase ${phaseId}.`);
+    return;
+  }
+
+  const movingPhase = current.runbook.phases[phaseIndex];
+  const remainingPhases = current.runbook.phases.filter((phase) => phase.id !== phaseId);
+  let insertionIndex = 0;
+
+  if (afterPhaseId) {
+    const afterIndex = remainingPhases.findIndex((phase) => phase.id === afterPhaseId);
+    if (afterIndex === -1) {
+      void vscode.window.showWarningMessage(`DryLake could not find phase ${afterPhaseId}.`);
+      return;
+    }
+
+    insertionIndex = afterIndex + 1;
+  }
+
+  const phases = [
+    ...remainingPhases.slice(0, insertionIndex),
+    movingPhase,
+    ...remainingPhases.slice(insertionIndex),
+  ];
+
+  if (phases.map((phase) => phase.id).join("\u0000") === current.runbook.phases.map((phase) => phase.id).join("\u0000")) {
+    return;
+  }
+
+  await deps.sessionStore.writeRunbook(current.uri, {
+    ...current.runbook,
+    phases,
+  });
+  await deps.controlRoom.refresh();
+  await deps.refreshSidebar();
+}
+
 export async function openRunbookCommand(deps: RunbookCommandDeps) {
   const uri = (await deps.sessionStore.findRunbookUri()) ?? deps.sessionStore.getDefaultRunbookUri();
   try {

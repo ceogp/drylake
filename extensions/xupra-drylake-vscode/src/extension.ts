@@ -15,6 +15,7 @@ import {
   generateDraftRunbookCommand,
   openControlRoomCommand,
   previewProvisioningPlanCommand,
+  reorderPhaseCommand,
   runNextPhaseCommand,
   startBuildSessionCommand,
   updatePhaseAgentCommand,
@@ -691,6 +692,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.updatePhaseStatus", async (...args: unknown[]) => {
     await updatePhaseStatusCommand(runbookDeps, args[0], args[1]);
+  });
+
+  register("drylake.reorderPhase", async (...args: unknown[]) => {
+    await reorderPhaseCommand(runbookDeps, args[0], args[1]);
   });
 
   register("xupra.connect", async () => {
