@@ -13,13 +13,16 @@ import { renderXu } from "../xu/renderXu";
 import { validateXu } from "../xu/validateXu";
 import { XuSessionStore } from "../xu/sessionStore";
 import type { DryLakeAiProvider } from "../ai/DryLakeAiProvider";
+import type { ApiClient } from "../services/apiClient";
 import type { StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
+import { requireXupraProAiEntitlement } from "../services/featureGates";
 import { scanWorkspaceFiles, getWorkspaceDisplayName } from "../services/workspaceScanner";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { ApplicationBuildRunbook, XuMode, XuPhaseAgent, XuStepStatus } from "../xu/types";
 
 type RunbookCommandDeps = {
+  apiClient: ApiClient;
   stateStore: StateStore;
   sessionStore: XuSessionStore;
   controlRoom: ControlRoomProvider;
@@ -183,6 +186,11 @@ async function applyAiDraft(params: {
 
   const availability = await params.provider.isAvailable();
   if (!availability.available && params.provider.id !== "external-ai-prompt") {
+    if (params.provider.id === "xupra-pro-ai" && params.deps.stateStore.getConnection().userEmail) {
+      await requireXupraProAiEntitlement(params.deps.apiClient, params.deps.stateStore, "Xupra Pro AI");
+      return localDraft;
+    }
+
     void vscode.window.showInformationMessage(
       `${params.provider.label} is not available, so DryLake created a local draft runbook.`,
     );

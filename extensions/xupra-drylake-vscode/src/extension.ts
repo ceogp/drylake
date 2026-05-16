@@ -636,6 +636,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   const runbookDeps = {
+    apiClient,
     stateStore,
     sessionStore: xuSessionStore,
     controlRoom,

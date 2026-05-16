@@ -9,7 +9,7 @@ describe("connection entitlements", () => {
         xupra_pro_ai: true,
         session_cloud_sync: true,
         pr_summary_generation: false,
-        manual_export: true,
+        deprecated_entitlement: true,
       }),
     ).toEqual({
       xupra_pro_ai: true,
