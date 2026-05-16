@@ -7,6 +7,20 @@ import { importDefaultLocationsCommand, importFolderCommand, importWorkspaceComm
 import { openWebAppCommand } from "./commands/openWebApp";
 import { pullPackageCommand } from "./commands/pullPackage";
 import { refreshProjectsCommand } from "./commands/refreshProjects";
+import {
+  approveArchitectureCommand,
+  approvePurposeCommand,
+  exportHandoffPromptCommand,
+  generateAgentFilesCommand,
+  generateDraftRunbookCommand,
+  openControlRoomCommand,
+  previewProvisioningPlanCommand,
+  runNextPhaseCommand,
+  startBuildSessionCommand,
+  updatePhaseAgentCommand,
+  updatePhaseStatusCommand,
+  validateXuRunbookCommand,
+} from "./commands/runbooks";
 import { signOutCommand } from "./commands/signOut";
 import { ApiClient } from "./services/apiClient";
 import { BrowserConnectCoordinator } from "./services/browserConnect";
@@ -31,7 +45,9 @@ import { JobTreeProvider } from "./views/jobTreeProvider";
 import { SkillCreationPanel } from "./views/skillCreationPanel";
 import { createStatusBar } from "./views/statusBar";
 import { WorkspaceSidebarProvider } from "./views/workspaceSidebarProvider";
+import { ControlRoomProvider } from "./webview/controlRoomProvider";
 import { getLogger } from "./utils/logging";
+import { XuSessionStore } from "./xu/sessionStore";
 
 const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
 const LEGACY_BASE_URL_HOSTS = new Set(["52.196.86.96"]);
@@ -343,6 +359,8 @@ export async function activate(context: vscode.ExtensionContext) {
   }
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
+  const xuSessionStore = new XuSessionStore();
+  const controlRoom = new ControlRoomProvider(xuSessionStore);
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
   const importedSkillEditor = new ImportedSkillEditorManager(context, apiClient, async () => {
@@ -435,6 +453,37 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }
 
+    let currentRunbookPath: string | undefined;
+    let currentPhase: string | undefined;
+    let currentRunbookName: string | undefined;
+    let currentRunbookStatus: string | undefined;
+    let activePhaseId: string | undefined;
+    let activePhaseTitle: string | undefined;
+    let activePhaseAgent: string | undefined;
+    let approvalStatus = "No runbook";
+    try {
+      const currentRunbook = await xuSessionStore.readRunbook();
+      if (currentRunbook) {
+        currentRunbookPath = vscode.workspace.asRelativePath(currentRunbook.uri, false).replace(/\\/g, "/");
+        currentRunbookName = currentRunbook.runbook.metadata.name;
+        currentRunbookStatus = currentRunbook.runbook.metadata.status;
+        const activeSummary = stateStore.getActivePhaseSummary(currentRunbook.runbook);
+        activePhaseId = activeSummary?.phaseId;
+        activePhaseTitle = activeSummary?.phaseTitle;
+        activePhaseAgent = activeSummary?.agent ?? currentRunbook.runbook.handoff.defaultAgent;
+        currentPhase = activePhaseTitle;
+        approvalStatus = [
+          currentRunbook.runbook.confirmation.userApprovedIntent ? "Purpose approved" : "Purpose pending",
+          currentRunbook.runbook.confirmation.userApprovedArchitecture ? "Architecture approved" : "Architecture pending",
+        ].join(" / ");
+      }
+    } catch {
+      currentRunbookPath = undefined;
+      approvalStatus = "Runbook has diagnostics";
+    }
+
+    const currentSession = stateStore.getBuildSession();
+
     workspaceSidebar.postState({
       connected: Boolean(connection.userEmail),
       userEmail: connection.userEmail,
@@ -445,6 +494,26 @@ export async function activate(context: vscode.ExtensionContext) {
       detectedFiles,
       importedWorkspace,
       selection,
+      runbook: {
+        sessionName: currentRunbookName ?? currentSession?.id,
+        path: currentRunbookPath,
+        status: currentRunbookStatus,
+        phase: currentPhase,
+        activePhaseId,
+        activePhaseTitle,
+        activePhaseAgent,
+        approvalStatus,
+        providerStatus: currentSession?.providerLabel ?? (connection.userEmail ? "User IDE AI / External AI Prompt" : "User IDE AI / External AI Prompt"),
+        generatedFiles: [
+          "RUNBOOK.md",
+          "phase prompts",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "Copilot instructions",
+          "Cursor rules",
+          "Agent skills",
+        ],
+      },
       isLoading: false,
     });
 
@@ -565,6 +634,63 @@ export async function activate(context: vscode.ExtensionContext) {
   const register = (command: string, callback: (...args: unknown[]) => unknown) => {
     context.subscriptions.push(vscode.commands.registerCommand(command, callback));
   };
+
+  const runbookDeps = {
+    stateStore,
+    sessionStore: xuSessionStore,
+    controlRoom,
+    refreshSidebar: async () => {
+      await syncWorkspaceView();
+    },
+  };
+
+  register("drylake.startBuildSession", async (...args: unknown[]) => {
+    await startBuildSessionCommand(runbookDeps, context, args[0], args[1]);
+  });
+
+  register("drylake.openControlRoom", async () => {
+    await openControlRoomCommand(runbookDeps, context);
+  });
+
+  register("drylake.generateDraftRunbook", async () => {
+    await generateDraftRunbookCommand(runbookDeps);
+  });
+
+  register("drylake.validateXuRunbook", async () => {
+    await validateXuRunbookCommand(runbookDeps);
+  });
+
+  register("drylake.approvePurpose", async () => {
+    await approvePurposeCommand(runbookDeps);
+  });
+
+  register("drylake.approveArchitecture", async () => {
+    await approveArchitectureCommand(runbookDeps);
+  });
+
+  register("drylake.previewProvisioningPlan", async () => {
+    await previewProvisioningPlanCommand(runbookDeps);
+  });
+
+  register("drylake.generateAgentFiles", async () => {
+    await generateAgentFilesCommand(runbookDeps);
+  });
+
+  register("drylake.exportHandoffPrompt", async () => {
+    await exportHandoffPromptCommand(runbookDeps);
+  });
+
+  register("drylake.runNextPhase", async () => {
+    await runNextPhaseCommand(runbookDeps);
+  });
+
+  register("drylake.updatePhaseAgent", async (...args: unknown[]) => {
+    await updatePhaseAgentCommand(runbookDeps, args[0], args[1]);
+  });
+
+  register("drylake.updatePhaseStatus", async (...args: unknown[]) => {
+    await updatePhaseStatusCommand(runbookDeps, args[0], args[1]);
+  });
 
   register("xupra.connect", async () => {
     await vscode.commands.executeCommand("xupra.projects.focus");

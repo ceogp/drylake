@@ -22,6 +22,18 @@ export type SidebarState = {
   detectedFiles: DetectedWorkspaceFile[];
   importedWorkspace: ImportedWorkspaceSnapshot | null;
   selection: SelectedContext;
+  runbook?: {
+    sessionName?: string;
+    path?: string;
+    status?: string;
+    phase?: string;
+    activePhaseId?: string;
+    activePhaseTitle?: string;
+    activePhaseAgent?: string;
+    approvalStatus?: string;
+    providerStatus?: string;
+    generatedFiles?: string[];
+  };
   isLoading: boolean;
 };
 
@@ -38,6 +50,13 @@ type InboundAction =
   | "createAgent"
   | "exportPreview"
   | "installToRuntime"
+  | "checkCompatibility"
+  | "pullPackage"
+  | "startBuildSession"
+  | "openControlRoom"
+  | "validateXuRunbook"
+  | "generateAgentFiles"
+  | "exportHandoffPrompt"
   ;
 
 type BasicInboundMessage = {
@@ -171,6 +190,27 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
           case "installToRuntime":
             await vscode.commands.executeCommand("xupra.installToRuntime");
             break;
+          case "checkCompatibility":
+            await vscode.commands.executeCommand("xupra.checkCompatibility");
+            break;
+          case "pullPackage":
+            await vscode.commands.executeCommand("xupra.pullPackage");
+            break;
+          case "startBuildSession":
+            await vscode.commands.executeCommand("drylake.startBuildSession");
+            break;
+          case "openControlRoom":
+            await vscode.commands.executeCommand("drylake.openControlRoom");
+            break;
+          case "validateXuRunbook":
+            await vscode.commands.executeCommand("drylake.validateXuRunbook");
+            break;
+          case "generateAgentFiles":
+            await vscode.commands.executeCommand("drylake.generateAgentFiles");
+            break;
+          case "exportHandoffPrompt":
+            await vscode.commands.executeCommand("drylake.exportHandoffPrompt");
+            break;
           case "openImportedSkill":
             await vscode.commands.executeCommand("xupra.openImportedSkill", message.skillRuleId);
             break;
@@ -303,6 +343,12 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       detectedFiles,
       importedWorkspace: null,
       selection,
+      runbook: {
+        sessionName: this.stateStore.getBuildSession()?.id,
+        approvalStatus: "No runbook",
+        providerStatus: "User IDE AI / External AI Prompt",
+        generatedFiles: [],
+      },
       isLoading: false,
     };
   }
@@ -434,6 +480,36 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       flex-direction: column;
       gap: 8px;
       padding-top: 2px;
+    }
+
+    details.disclosure {
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      background: var(--vscode-editor-background);
+    }
+
+    details.disclosure > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      color: var(--vscode-foreground);
+      cursor: pointer;
+      list-style: none;
+      font-weight: 650;
+    }
+
+    details.disclosure > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .disclosure-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 10px 10px;
+      border-top: 1px solid var(--vscode-panel-border);
     }
 
     .section-header {
@@ -634,6 +710,42 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       color: var(--vscode-descriptionForeground);
     }
 
+    .session-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      background: var(--vscode-editor-background);
+    }
+
+    .session-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .session-meta, .phase-row {
+      color: var(--vscode-descriptionForeground);
+      font-size: 0.88em;
+      line-height: 1.35;
+    }
+
+    .phase-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 7px;
+      border-top: 1px solid var(--vscode-panel-border);
+    }
+
+    .phase-agent {
+      color: var(--vscode-button-background);
+      white-space: nowrap;
+    }
+
     .actions-section {
       display: grid;
       grid-template-columns: 1fr;
@@ -650,6 +762,12 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       border-radius: 5px;
       cursor: pointer;
       text-align: left;
+    }
+
+    .big-action.primary {
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+      border-color: var(--vscode-button-background);
     }
 
     .big-action.locked {
@@ -750,13 +868,11 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     function renderDetectedFiles(state) {
       const files = Array.isArray(state.detectedFiles) ? state.detectedFiles : [];
       const count = files.length;
-      let html = '<div class="section"><div class="section-header"><span class="section-label">Detected files</span><span class="section-count">' + count + '</span></div>';
+      let html = '<details class="disclosure"><summary><span>Detected Agent Files</span><span class="section-count">' + count + '</span></summary><div class="disclosure-body">';
 
       if (count === 0) {
         html += '<div class="empty-state">No supported files detected yet.</div>';
-        const isDefaultSyncing = pendingAction === "importDefaultLocations";
-        html += '<div class="action-row"><button class="action-btn primary" data-action="importDefaultLocations"' + (isDefaultSyncing ? " disabled" : "") + '>' + (isDefaultSyncing ? "Syncing..." : "Sync Default Locations") + '</button></div>';
-        return html + '</div>';
+        return html + '</div></details>';
       }
 
       const categoryOrder = ["instruction", "skill", "subagent", "rule", "agent_config", "source"];
@@ -785,10 +901,29 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         html += '</div>';
       });
 
-      const isSyncing = pendingAction === "importWorkspace";
-      const isFolderSyncing = pendingAction === "importFolder";
-      html += '<div class="action-row"><button class="action-btn primary" data-action="importWorkspace"' + (isSyncing ? " disabled" : "") + '>' + (isSyncing ? "Syncing..." : "Sync to Xupra") + '</button><button class="action-btn" data-action="importFolder"' + (isFolderSyncing ? " disabled" : "") + '>' + (isFolderSyncing ? "Syncing..." : "From Folder") + '</button></div>';
-      return html + '</div>';
+      return html + '</div></details>';
+    }
+
+    function renderBuildSession(state) {
+      const runbook = state.runbook || {};
+      let html = '<div class="section"><div class="section-header"><span class="section-label">BUILD SESSION</span></div>';
+
+      if (!runbook.path && !runbook.sessionName) {
+        html += '<div class="session-card"><div class="session-name">No active Build Session</div><div class="session-meta">Paste a ticket, bug, or feature request to create a guided coding plan.</div><button class="big-action primary" data-action="startBuildSession">Start Build Session</button></div></div>';
+        return html;
+      }
+
+      const sessionName = runbook.sessionName || runbook.path || 'drylake.xu';
+      const status = runbook.status || runbook.approvalStatus || 'draft';
+      const phaseLabel = runbook.activePhaseId ? runbook.activePhaseId + (runbook.activePhaseTitle ? ': ' + runbook.activePhaseTitle : '') : (runbook.phase || 'none');
+      html += '<div class="session-card">';
+      html += '<div class="session-name" title="' + escapeHtml(sessionName) + '">' + escapeHtml(sessionName) + '</div>';
+      html += '<div class="session-meta">' + escapeHtml(status) + ' · ' + escapeHtml(runbook.path || 'drylake.xu') + ' · ' + escapeHtml(runbook.providerStatus || 'User IDE AI / External AI Prompt') + '</div>';
+      html += '<div class="phase-row"><span>Active phase: ' + escapeHtml(phaseLabel) + '</span><span class="phase-agent">' + escapeHtml(runbook.activePhaseAgent || 'session default') + '</span></div>';
+      html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button><button class="action-btn" data-action="exportHandoffPrompt">Run Next Phase</button></div>';
+      html += '<button class="big-action" data-action="startBuildSession">Start New Session</button>';
+      html += '</div></div>';
+      return html;
     }
 
     function formatPlatform(slug) {
@@ -975,24 +1110,31 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       const exportClass = isPro ? "big-action" : "big-action locked";
       const lockSuffix = '<span class="lock-icon">🔒 Pro</span>';
 
-      return '<div class="section"><div class="section-header"><span class="section-label">Actions</span></div><div class="actions-section">'
-        + '<button class="big-action" data-action="createAgent">Create Agent</button>'
-        + '<button class="' + exportClass + '" data-action="exportPreview">Preview Generated Files' + (isPro ? "" : lockSuffix) + '</button>'
-        + '<button class="' + exportClass + '" data-action="installToRuntime">Install to platforms' + (isPro ? "" : lockSuffix) + '</button>'
-        + '</div></div>';
+      return '<details class="disclosure"><summary><span>Advanced</span><span class="section-count">tools</span></summary><div class="disclosure-body actions-section">'
+        + '<button class="big-action" data-action="importWorkspace">Import Agent Configs</button>'
+        + '<button class="big-action" data-action="importDefaultLocations">Import Default Agent Configs</button>'
+        + '<button class="big-action" data-action="importFolder">Import Agent Configs From Folder</button>'
+        + '<button class="big-action" data-action="checkCompatibility">Validate Agent Configs</button>'
+        + '<button class="' + exportClass + '" data-action="exportPreview">Preview Agent Config Changes' + (isPro ? "" : lockSuffix) + '</button>'
+        + '<button class="' + exportClass + '" data-action="installToRuntime">Sync Agent Configs' + (isPro ? "" : lockSuffix) + '</button>'
+        + '<button class="big-action" data-action="pullPackage">Pull Generated Agent Files</button>'
+        + '<button class="big-action" data-action="generateAgentFiles">Preview Build Session Files</button>'
+        + '<button class="big-action" data-action="validateXuRunbook">Validate drylake.xu</button>'
+        + renderImportedWorkspace(state)
+        + '</div></details>';
     }
 
     function renderConnected(state) {
       const tier = state.orgTier || "free";
       const org = state.orgName || "Xupra";
       let html = '<div class="panel">';
+      html += renderBuildSession(state);
       html += '<div><div class="account-bar">' + renderAvatar(state) + '<div class="account-info"><div class="account-email">' + escapeHtml(state.userEmail || "") + '</div><div class="account-org">' + escapeHtml(org) + '</div></div><button class="' + planClass(tier) + '" data-action="refreshPlan">' + escapeHtml(tier) + '</button></div>';
       if (String(tier).toLowerCase() !== "pro" && String(tier).toLowerCase() !== "enterprise") {
         html += '<button class="upgrade-btn" data-action="openBilling">Upgrade</button>';
       }
       html += '</div>';
       html += renderDetectedFiles(state);
-      html += renderImportedWorkspace(state);
       html += renderActions(state);
       html += '<div class="action-row"><button class="action-btn" data-action="openDashboard">Dashboard</button><button class="action-btn" data-action="openSettings">Settings</button><button class="action-btn" data-action="signOut">Sign Out</button></div>';
       html += '</div>';
@@ -1000,8 +1142,14 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     function renderDisconnected(state) {
-      const loading = state && state.isLoading ? "Loading workspace..." : "Connect your Xupra account to import and move agent workspace files.";
-      return '<div class="panel"><div class="connect-cta"><div class="connect-title">Xupra DryLake</div><div class="connect-subtitle">' + escapeHtml(loading) + '</div><button class="action-btn primary" data-action="connect">Connect Xupra</button></div></div>';
+      const loading = state && state.isLoading ? "Loading workspace..." : "Connect Xupra for Pro AI. Local runbooks work without an account.";
+      let html = '<div class="panel">';
+      html += renderBuildSession(state || {});
+      html += '<div class="section"><div class="section-header"><span class="section-label">XUPRA ACCOUNT</span></div><div class="connect-cta"><div class="connect-title">Signed out</div><div class="connect-subtitle">' + escapeHtml(loading) + '</div><button class="action-btn" data-action="connect">Connect Xupra for Pro AI</button></div></div>';
+      html += renderDetectedFiles(state || {});
+      html += renderActions(state || {});
+      html += '</div>';
+      return html;
     }
 
     function render(state) {

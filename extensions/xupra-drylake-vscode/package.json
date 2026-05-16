@@ -1,60 +1,55 @@
 {
   "name": "drylake",
-  "displayName": "DryLake Agent Config Sync for Claude, Codex & Cursor",
-  "description": "Sync, validate, and translate AGENTS.md, CLAUDE.md, Cursor rules, Claude skills, and Codex configs across AI coding tools.",
-  "version": "0.1.13",
+  "displayName": "DryLake: AI Coding Agent",
+  "description": "Turn tickets and bug reports into safe AI coding steps for Claude Code, Codex, Cursor, Copilot, and your preferred AI tool.",
+  "version": "0.2.0",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
   "preview": false,
   "icon": "media/icon.png",
-  "homepage": "https://xupracorp.com/drylake",
+  "homepage": "https://drylake.xupracorp.com/",
   "bugs": {
-    "url": "https://github.com/xupracorp/drylake/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/xupracorp/drylake.git",
-    "directory": "extensions/xupra-drylake-vscode"
+    "url": "https://drylake.xupracorp.com/about"
   },
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
-    "Machine Learning",
-    "Other"
+    "Programming Languages",
+    "Other",
+    "Machine Learning"
   ],
   "keywords": [
     "ai",
-    "agent",
-    "agents",
-    "mcp",
-    "prompt",
-    "prompts",
-    "copilot",
-    "workspace",
-    "settings",
-    "sync",
-    "backup",
-    "restore",
-    "export",
-    "import",
-    "profile",
-    "profiles",
-    "templates",
-    "team",
-    "onboarding",
-    "automation",
-    "devtools",
-    "configuration",
-    "portable",
-    "vscode",
-    "cursor",
+    "ai-coding",
+    "coding-agent",
+    "coding-copilot",
+    "software-engineering",
+    "ticket-to-code",
+    "bug-fix",
+    "feature-development",
+    "refactor",
+    "pull-request",
+    "test-planning",
+    "code-planning",
+    "build-session",
+    "developer-workflow",
+    "repo-context",
+    "repo-aware",
+    "spec-driven",
+    "xupra",
+    "drylake",
     "claude",
+    "claude-code",
     "codex",
-    "agents-md",
-    "AGENTS.md",
-    "drylake"
+    "cursor",
+    "copilot",
+    "github-copilot",
+    "agent-workflow",
+    "validation",
+    "testing",
+    "workspace"
   ],
   "galleryBanner": {
     "color": "#f6ebdc",
@@ -63,43 +58,56 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onStartupFinished",
-    "onUri",
-    "onView:xupra.projects",
-    "onView:xupra.jobs",
-    "onView:xupra.help",
-    "onCommand:xupra.connect",
-    "onCommand:xupra.pasteToken",
-    "onCommand:xupra.scanWorkspace",
-    "onCommand:xupra.refreshProjects",
-    "onCommand:xupra.refreshPlan",
-    "onCommand:xupra.signOut",
-    "onCommand:xupra.importWorkspace",
-    "onCommand:xupra.importDefaultLocations",
-    "onCommand:xupra.importFolder",
-    "onCommand:xupra.resetWorkspaceState",
-    "onCommand:xupra.checkCompatibility",
-    "onCommand:xupra.exportPreview",
-    "onCommand:xupra.installToRuntime",
-    "onCommand:xupra.uninstallImportedAgent",
-    "onCommand:xupra.uninstallImportedSkill",
-    "onCommand:xupra.clearImportCache",
-    "onCommand:xupra.optimizeFile",
-    "onCommand:xupra.pullPackage",
-    "onCommand:xupra.createAgent",
-    "onCommand:xupra.openWebApp",
-    "onCommand:xupra.openSettings",
-    "onCommand:xupra.openAccountSettings",
-    "onCommand:xupra.openBilling",
-    "onCommand:xupra.contactSupport",
-    "onCommand:xupra.openHowItWorks",
-    "onCommand:xupra.openInstallGuide",
-    "onCommand:xupra.openConnectPage",
-    "onCommand:xupra.openGetStarted"
+    "onUri"
   ],
   "contributes": {
     "configuration": {
       "title": "DryLake",
       "properties": {
+        "drylake.environment": {
+          "type": "string",
+          "enum": [
+            "development",
+            "production"
+          ],
+          "default": "development",
+          "description": "Controls whether runbook AI requests may target development or production environments. Development is the default for this build."
+        },
+        "drylake.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Development API URL used by Xupra Pro AI for runbook generation."
+        },
+        "drylake.aiProvider": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "xupra-pro-ai",
+            "user-ide-ai",
+            "external-ai-prompt"
+          ],
+          "enumItemLabels": [
+            "Auto",
+            "Xupra Pro AI",
+            "User IDE AI",
+            "External AI Prompt"
+          ],
+          "default": "auto",
+          "description": "Provider preference for DryLake AI Coding Agent. Auto tries Xupra Pro AI when development access is configured, then User IDE AI, then External AI Prompt."
+        },
+        "drylake.userIdeAiAdapter": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "vs-code-language-model"
+          ],
+          "enumItemLabels": [
+            "Auto",
+            "VS Code Language Model"
+          ],
+          "default": "auto",
+          "description": "Adapter preference for User IDE AI."
+        },
         "xupra.baseUrl": {
           "type": "string",
           "default": "https://drylake.xupracorp.com",
@@ -191,6 +199,19 @@
         }
       }
     },
+    "languages": [
+      {
+        "id": "xu",
+        "aliases": [
+          "Xupra Execution Unit",
+          "xu"
+        ],
+        "extensions": [
+          ".xu"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -225,6 +246,54 @@
       }
     ],
     "commands": [
+      {
+        "command": "drylake.startBuildSession",
+        "title": "DryLake: Start Build Session"
+      },
+      {
+        "command": "drylake.openControlRoom",
+        "title": "DryLake: Open Control Room"
+      },
+      {
+        "command": "drylake.generateDraftRunbook",
+        "title": "DryLake: Generate Draft XU Runbook"
+      },
+      {
+        "command": "drylake.validateXuRunbook",
+        "title": "DryLake: Validate XU Runbook"
+      },
+      {
+        "command": "drylake.approvePurpose",
+        "title": "DryLake: Approve Purpose"
+      },
+      {
+        "command": "drylake.approveArchitecture",
+        "title": "DryLake: Approve Architecture"
+      },
+      {
+        "command": "drylake.previewProvisioningPlan",
+        "title": "DryLake: Preview Provisioning Plan"
+      },
+      {
+        "command": "drylake.generateAgentFiles",
+        "title": "DryLake: Generate Agent Files"
+      },
+      {
+        "command": "drylake.exportHandoffPrompt",
+        "title": "DryLake: Export Agent Handoff Prompt"
+      },
+      {
+        "command": "drylake.runNextPhase",
+        "title": "DryLake: Run Next Phase"
+      },
+      {
+        "command": "drylake.updatePhaseAgent",
+        "title": "DryLake: Update Phase Agent"
+      },
+      {
+        "command": "drylake.updatePhaseStatus",
+        "title": "DryLake: Update Phase Status"
+      },
       {
         "command": "xupra.connect",
         "title": "DryLake: Connect"
@@ -343,6 +412,16 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "drylake.updatePhaseAgent",
+          "when": "false"
+        },
+        {
+          "command": "drylake.updatePhaseStatus",
+          "when": "false"
+        }
+      ],
       "view/title": [
         {
           "command": "xupra.signOut",
@@ -377,6 +456,9 @@
     }
   },
   "scripts": {
+    "compile": "node esbuild.mjs",
+    "test": "vitest run",
+    "lint": "tsc --noEmit",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
@@ -389,10 +471,15 @@
     "uninstall:vscode": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-vscode-extension.ps1"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.15.3",
     "@types/vscode": "^1.100.0",
     "@vscode/vsce": "^3.9.1",
     "esbuild": "^0.25.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.5"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.1"
   }
 }
