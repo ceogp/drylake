@@ -16,11 +16,18 @@ const ACCESS_TOKEN_KEY = "xupra.extensionAccessToken";
 const LAST_IMPORT_KEY = "xupra.lastImport";
 const AWAITING_PLAN_REFRESH_KEY = "xupra.awaitingPlanRefreshUntil";
 const BUILD_SESSION_KEY = "drylake.buildSession";
+const PLANNING_PROVIDER_KEY = "drylake.planningProvider";
 
 export type ActivePhaseSummary = {
   phaseId: string;
   phaseTitle: string;
   agent?: XuPhaseAgent;
+};
+
+export type PlanningProviderInfo = {
+  id: BuildSessionState["providerId"];
+  label: BuildSessionState["providerLabel"];
+  reason?: string;
 };
 
 export class StateStore {
@@ -102,6 +109,14 @@ export class StateStore {
 
   async clearBuildSession() {
     await this.context.workspaceState.update(BUILD_SESSION_KEY, null);
+  }
+
+  getPlanningProvider(): PlanningProviderInfo | null {
+    return this.context.workspaceState.get<PlanningProviderInfo | null>(PLANNING_PROVIDER_KEY, null);
+  }
+
+  async setPlanningProvider(info: PlanningProviderInfo | null): Promise<void> {
+    await this.context.workspaceState.update(PLANNING_PROVIDER_KEY, info);
   }
 
   getActivePhaseSummary(runbook: ApplicationBuildRunbook | null | undefined): ActivePhaseSummary | null {

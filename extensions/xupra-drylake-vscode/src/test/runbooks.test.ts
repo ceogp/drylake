@@ -74,6 +74,7 @@ describe("runbook commands", () => {
         getAccessToken: vi.fn(async () => "token"),
         setAwaitingPlanRefreshUntil: vi.fn(async () => undefined),
         setBuildSession: vi.fn(async () => undefined),
+        setPlanningProvider: vi.fn(async () => undefined),
       },
       sessionStore: {
         ensureRunbook: vi.fn(async () => ({ uri: runbookUri, runbook })),

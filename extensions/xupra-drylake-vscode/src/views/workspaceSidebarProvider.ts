@@ -333,6 +333,8 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     const detectedFiles = this.stateStore.getDetectedFiles();
     const selection = this.stateStore.getSelection();
 
+    const planningProvider = this.stateStore.getPlanningProvider();
+
     return {
       connected: Boolean(connection.userEmail),
       userEmail: connection.userEmail,
@@ -346,7 +348,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       runbook: {
         sessionName: this.stateStore.getBuildSession()?.id,
         approvalStatus: "No runbook",
-        providerStatus: "User IDE AI / External AI Prompt",
+        providerStatus: planningProvider?.label ?? "User IDE AI / External AI Prompt",
         generatedFiles: [],
       },
       isLoading: false,

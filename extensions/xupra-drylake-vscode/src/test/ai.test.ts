@@ -171,23 +171,26 @@ describe("AI providers", () => {
 
   it("falls back to External AI Prompt when configured auto has no integrated model", async () => {
     models = [];
-    const provider = await resolveDryLakeAiProvider({
+    const { provider, reason } = await resolveDryLakeAiProvider({
       configuration: configuration({ aiProvider: "auto", environment: "development", apiBaseUrl: "" }) as never,
       readConnection: () => ({}),
       readAccessToken: async () => undefined,
     });
 
     expect(provider.label).toBe("External AI Prompt");
+    expect(reason).toBeDefined();
+    expect(reason).toMatch(/Xupra Pro AI|User IDE AI/);
   });
 
   it("selects User IDE AI when an editor model is available", async () => {
     models = [{ sendRequest: vi.fn() }];
-    const provider = await resolveDryLakeAiProvider({
+    const { provider, reason } = await resolveDryLakeAiProvider({
       configuration: configuration({ aiProvider: "auto", environment: "development", apiBaseUrl: "" }) as never,
       readConnection: () => ({}),
       readAccessToken: async () => undefined,
     });
 
     expect(provider.label).toBe("User IDE AI");
+    expect(reason).toMatch(/Xupra Pro AI/);
   });
 });

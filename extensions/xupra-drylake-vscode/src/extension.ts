@@ -361,7 +361,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
   const xuSessionStore = new XuSessionStore();
-  const controlRoom = new ControlRoomProvider(xuSessionStore);
+  const controlRoom = new ControlRoomProvider(xuSessionStore, () => stateStore.getPlanningProvider());
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
   const importedSkillEditor = new ImportedSkillEditorManager(context, apiClient, async () => {

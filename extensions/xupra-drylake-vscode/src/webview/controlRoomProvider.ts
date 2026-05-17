@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
+import type { PlanningProviderInfo } from "../services/stateStore";
 import type { ApplicationBuildRunbook, XuMode, XuPhase, XuPhaseAgent, XuStepStatus } from "../xu/types";
 
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
@@ -144,6 +145,21 @@ function renderEmptyState() {
   </section>`;
 }
 
+function renderPlanningProviderBanner(info: PlanningProviderInfo | null) {
+  if (!info) {
+    return "";
+  }
+
+  const reason = info.reason ? `<span class="planning-banner-reason">${escapeHtml(info.reason)}</span>` : "";
+  const tone = info.id === "external-ai-prompt" ? "fallback" : info.id === "xupra-pro-ai" ? "pro" : "ide";
+
+  return `<section class="planning-banner ${tone}" aria-label="Planning AI">
+    <span class="planning-banner-eyebrow">Planning AI</span>
+    <strong class="planning-banner-label">${escapeHtml(info.label)}</strong>
+    ${reason}
+  </section>`;
+}
+
 type WebviewMessage = {
   command?: string;
   args?: unknown[];
@@ -155,11 +171,16 @@ type WebviewMessage = {
   status?: unknown;
 };
 
+type PlanningProviderReader = () => PlanningProviderInfo | null;
+
 export class ControlRoomProvider {
   private panel?: vscode.WebviewPanel;
   private context?: vscode.ExtensionContext;
 
-  constructor(private readonly sessionStore: XuSessionStore) {}
+  constructor(
+    private readonly sessionStore: XuSessionStore,
+    private readonly readPlanningProvider: PlanningProviderReader = () => null,
+  ) {}
 
   async createOrShow(context: vscode.ExtensionContext) {
     this.context = context;
@@ -239,6 +260,8 @@ export class ControlRoomProvider {
 
   private renderHtml(runbook: ApplicationBuildRunbook | null) {
     const view = this.currentView();
+    const planningProvider = this.readPlanningProvider();
+    const banner = renderPlanningProviderBanner(planningProvider);
     const body = runbook ? (view === "kanban" ? renderKanban(runbook) : renderPipeline(runbook)) : renderEmptyState();
 
     return `<!DOCTYPE html>
@@ -297,6 +320,12 @@ export class ControlRoomProvider {
     .mode-card { min-height: 92px; color: var(--vscode-foreground); background: var(--vscode-editor-background); border-color: var(--vscode-panel-border); text-align: left; }
     .mode-card.selected { border-color: var(--vscode-button-background); }
     .mode-card strong { display: block; margin-bottom: 6px; }
+    .planning-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; margin: 0 0 16px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); font-size: 12px; }
+    .planning-banner.pro { border-color: var(--vscode-button-background); }
+    .planning-banner.fallback { border-color: var(--vscode-editorWarning-foreground, var(--vscode-panel-border)); }
+    .planning-banner-eyebrow { color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 10px; letter-spacing: 0.14em; }
+    .planning-banner-label { color: var(--vscode-foreground); }
+    .planning-banner-reason { color: var(--vscode-descriptionForeground); flex-basis: 100%; }
     @media (max-width: 860px) { header { flex-direction: column; } .kanban, .mode-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -316,6 +345,7 @@ export class ControlRoomProvider {
         <button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>
       </div>
     </header>
+    ${banner}
     ${body}
   </main>
   <script>

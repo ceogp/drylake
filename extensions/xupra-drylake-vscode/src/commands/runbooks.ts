@@ -99,12 +99,20 @@ async function pickMode(arg?: unknown): Promise<XuMode | undefined> {
 }
 
 async function resolveProvider(stateStore: StateStore): Promise<DryLakeAiProvider> {
-  return resolveDryLakeAiProvider({
+  const resolution = await resolveDryLakeAiProvider({
     configuration: vscode.workspace.getConfiguration("drylake"),
     backendConfiguration: vscode.workspace.getConfiguration("xupra"),
     readConnection: () => stateStore.getConnection(),
     readAccessToken: () => stateStore.getAccessToken(),
   });
+
+  await stateStore.setPlanningProvider({
+    id: resolution.provider.id,
+    label: resolution.provider.label,
+    reason: resolution.reason,
+  });
+
+  return resolution.provider;
 }
 
 async function buildWorkspaceSummary() {
