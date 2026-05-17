@@ -2,6 +2,8 @@ import * as vscode from "vscode";
 
 import { parseAiRunbookResponse } from "../parseAiRunbookResponse";
 import type {
+  ClarifyIntentInput,
+  ClarifyIntentResult,
   DryLakeAiProvider,
   GenerateDraftRunbookInput,
   GenerateDraftRunbookResult,
@@ -138,6 +140,56 @@ export class XupraCloudProvider implements DryLakeAiProvider {
 
   generatePhasePlan(input: GenerateDraftRunbookInput) {
     return this.post("/api/v1/drylake/runbooks/generate-phases", input);
+  }
+
+  async clarifyIntent(input: ClarifyIntentInput): Promise<ClarifyIntentResult> {
+    const availability = await this.isAvailable();
+    if (!availability.available) {
+      return { message: availability.reason };
+    }
+
+    const baseUrl = resolveBaseUrl(this.configuration, this.backendConfiguration);
+    const token = await this.readAccessToken();
+
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/drylake/runbooks/clarify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "x-xupra-extension-token": token } : {}),
+        },
+        body: JSON.stringify(input),
+      });
+
+      const text = await response.text();
+      let payload: { questions?: unknown; error?: { message?: string } } | undefined;
+      try {
+        payload = JSON.parse(text) as { questions?: unknown; error?: { message?: string } };
+      } catch {
+        payload = undefined;
+      }
+
+      if (!response.ok) {
+        return {
+          message:
+            typeof payload?.error?.message === "string"
+              ? payload.error.message
+              : `Xupra Pro AI clarify request failed (${response.status}).`,
+        };
+      }
+
+      const questions = Array.isArray(payload?.questions)
+        ? payload.questions.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        : [];
+
+      return { questions };
+    } catch (error) {
+      return {
+        message: error instanceof Error
+          ? `Xupra Pro AI clarify request failed: ${error.message}`
+          : "Xupra Pro AI clarify request failed.",
+      };
+    }
   }
 }
 

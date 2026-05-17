@@ -20,6 +20,18 @@ export type GenerateDraftRunbookResult = {
   message?: string;
 };
 
+export type ClarifyIntentInput = {
+  prompt: string;
+  mode: XuMode;
+  workspaceSummary: string;
+};
+
+export type ClarifyIntentResult = {
+  questions?: string[];
+  promptForExternalAi?: string;
+  message?: string;
+};
+
 export interface DryLakeAiProvider {
   id: DryLakeProviderId;
   label: "Xupra Pro AI" | "User IDE AI" | "External AI Prompt";
@@ -28,5 +40,6 @@ export interface DryLakeAiProvider {
   refinePurpose(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;
   refineArchitecture(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;
   generatePhasePlan(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;
+  clarifyIntent?(input: ClarifyIntentInput): Promise<ClarifyIntentResult>;
 }
 

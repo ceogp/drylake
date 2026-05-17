@@ -10,6 +10,14 @@ export const runbookGenerationInputSchema = z.object({
   currentRunbook: z.object({}).catchall(z.unknown()).optional(),
 });
 
+export const runbookClarifyInputSchema = z.object({
+  prompt: z.string().trim().min(1),
+  mode: z.string().trim().min(1),
+  workspaceSummary: z.string().trim().min(1),
+});
+
+export type RunbookClarifyInput = z.infer<typeof runbookClarifyInputSchema>;
+
 export type RunbookGenerationInput = z.infer<typeof runbookGenerationInputSchema>;
 
 const RUNBOOK_SYSTEM_PROMPT = [
@@ -176,4 +184,54 @@ export async function generateRunbookPhasePlanPrompt(input: RunbookGenerationInp
       "Keep checks, agentTargets, and handoff aligned with the execution plan.",
     ].join("\n"),
   });
+}
+
+const CLARIFY_SYSTEM_PROMPT = [
+  "You help scope a DryLake build session.",
+  "Return between 2 and 4 short clarifying questions about the user's prompt.",
+  "Return only a JSON array of strings. No prose, no Markdown fences.",
+].join(" ");
+
+function parseClarifyQuestions(raw: string): string[] {
+  const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      const questions = parsed
+        .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        .map((item) => item.trim());
+      return questions.slice(0, 4);
+    }
+  } catch {
+    // fall through to line-based parsing
+  }
+
+  const lines = trimmed
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*[-*\d.)\s]+/, "").trim())
+    .filter((line) => line.length > 0);
+  return lines.slice(0, 4);
+}
+
+export async function clarifyRunbookIntent(input: RunbookClarifyInput) {
+  const userPrompt = [
+    `Mode: ${input.mode}`,
+    "",
+    "User prompt:",
+    input.prompt,
+    "",
+    "Workspace summary:",
+    input.workspaceSummary || "No workspace summary available.",
+    "",
+    "Return 2 to 4 short clarifying questions as a JSON array of strings.",
+  ].join("\n");
+
+  const content = await generateAiText({
+    systemPrompt: CLARIFY_SYSTEM_PROMPT,
+    userPrompt,
+    taskLabel: "runbook clarifying questions",
+  });
+
+  return { questions: parseClarifyQuestions(content) };
 }

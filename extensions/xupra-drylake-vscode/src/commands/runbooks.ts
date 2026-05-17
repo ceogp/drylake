@@ -175,6 +175,77 @@ async function maybeImportExternalResult(sessionStore: XuSessionStore, currentUr
   }
 }
 
+async function collectClarificationsForPrompt(params: {
+  provider: DryLakeAiProvider;
+  prompt: string;
+  mode: XuMode;
+}): Promise<string> {
+  if (typeof params.provider.clarifyIntent !== "function") {
+    return params.prompt;
+  }
+
+  const availability = await params.provider.isAvailable();
+  if (!availability.available) {
+    return params.prompt;
+  }
+
+  let questions: string[] = [];
+  try {
+    const workspaceSummary = await buildWorkspaceSummary();
+    const result = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "DryLake is preparing clarifying questions...",
+        cancellable: false,
+      },
+      () =>
+        params.provider.clarifyIntent!({
+          prompt: params.prompt,
+          mode: params.mode,
+          workspaceSummary,
+        }),
+    );
+
+    if (Array.isArray(result.questions)) {
+      questions = result.questions.filter((item) => typeof item === "string" && item.trim().length > 0);
+    }
+  } catch (error) {
+    console.warn("DryLake clarifying questions failed:", error);
+    return params.prompt;
+  }
+
+  if (questions.length === 0) {
+    return params.prompt;
+  }
+
+  const answers: Array<{ question: string; answer: string }> = [];
+  for (const question of questions.slice(0, 4)) {
+    const answer = await vscode.window.showInputBox({
+      title: "DryLake clarifying question",
+      prompt: question,
+      placeHolder: "Press Enter to skip",
+      ignoreFocusOut: true,
+    });
+
+    if (answer === undefined) {
+      return params.prompt;
+    }
+
+    if (answer.trim().length > 0) {
+      answers.push({ question, answer: answer.trim() });
+    }
+  }
+
+  if (answers.length === 0) {
+    return params.prompt;
+  }
+
+  const clarifications = answers
+    .map((item) => `- Q: ${item.question}\n  A: ${item.answer}`)
+    .join("\n");
+  return `${params.prompt}\n\nClarifications:\n${clarifications}`;
+}
+
 async function applyAiDraft(params: {
   deps: RunbookCommandDeps;
   prompt: string;
@@ -263,6 +334,13 @@ export async function startBuildSessionCommand(
 
   await deps.controlRoom.createOrShow(context);
 
+  const provider = await resolveProvider(deps.stateStore);
+  const clarifiedPrompt = await collectClarificationsForPrompt({
+    provider,
+    prompt: prompt.trim(),
+    mode,
+  });
+
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -270,10 +348,9 @@ export async function startBuildSessionCommand(
       cancellable: false,
     },
     async () => {
-      const provider = await resolveProvider(deps.stateStore);
-      const ensured = await deps.sessionStore.ensureRunbook({ prompt: prompt.trim(), mode });
+      const ensured = await deps.sessionStore.ensureRunbook({ prompt: clarifiedPrompt, mode });
       const session = await deps.sessionStore.createSession({
-        prompt: prompt.trim(),
+        prompt: clarifiedPrompt,
         mode,
         runbookPath: relativePath(ensured.uri),
         providerId: provider.id,
@@ -282,7 +359,7 @@ export async function startBuildSessionCommand(
       await deps.stateStore.setBuildSession(session);
       await applyAiDraft({
         deps,
-        prompt: prompt.trim(),
+        prompt: clarifiedPrompt,
         mode,
         runbook: ensured.runbook,
         runbookUri: ensured.uri,
