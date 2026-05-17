@@ -108,7 +108,7 @@ describe("runbook commands", () => {
       ...phase,
       id: `P-0${index + 1}`,
       title: `Phase ${index + 1}`,
-      steps: [`step-${index + 1}`],
+      steps: [{ id: `P-0${index + 1}-step-01`, text: `step-${index + 1}`, status: "pending" as const }],
       agent: index === 1 ? "codex" : phase.agent,
       status: index === 2 ? "complete" : phase.status,
     }));
@@ -142,7 +142,7 @@ describe("runbook commands", () => {
     const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
     expect(written.phases.map((phase) => phase.id)).toEqual(["P-02", "P-01", "P-03"]);
     expect(written.phases[0].agent).toBe("codex");
-    expect(written.phases[0].steps).toEqual(["step-2"]);
+    expect(written.phases[0].steps.map((step: { text: string }) => step.text)).toEqual(["step-2"]);
     expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });

@@ -1,6 +1,6 @@
 import { createStarterXu } from "./createStarterXu";
 import { XU_PHASE_AGENTS } from "./types";
-import type { ApplicationBuildRunbook, XuMode, XuPhase, XuPhaseAgent } from "./types";
+import type { ApplicationBuildRunbook, XuMode, XuPhase, XuPhaseAgent, XuStep, XuStepStatus } from "./types";
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -16,6 +16,46 @@ function asStringArray(value: unknown) {
   return Array.isArray(value)
     ? value.map((item) => String(item)).filter((item) => item.trim().length > 0)
     : [];
+}
+
+function asStepStatus(value: unknown): XuStepStatus {
+  return value === "active" ||
+    value === "approved" ||
+    value === "needs-revision" ||
+    value === "complete"
+    ? value
+    : "pending";
+}
+
+function asSteps(value: unknown, phaseId: string): XuStep[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item, index): XuStep | null => {
+      const fallbackId = `${phaseId}-step-${String(index + 1).padStart(2, "0")}`;
+      if (typeof item === "string") {
+        const text = item.trim();
+        return text.length === 0 ? null : { id: fallbackId, text, status: "pending" };
+      }
+
+      if (item && typeof item === "object") {
+        const record = item as Record<string, unknown>;
+        const text = asString(record.text).trim();
+        if (text.length === 0) {
+          return null;
+        }
+        return {
+          id: asString(record.id, fallbackId) || fallbackId,
+          text,
+          status: asStepStatus(record.status),
+        };
+      }
+
+      return null;
+    })
+    .filter((step): step is XuStep => step !== null);
 }
 
 function asBoolean(value: unknown, fallback: boolean) {
@@ -47,7 +87,7 @@ function normalizePhase(value: unknown, index: number): XuPhase {
     objective: asString(phase.objective),
     inputs: asStringArray(phase.inputs),
     outputs: asStringArray(phase.outputs),
-    steps: asStringArray(phase.steps),
+    steps: asSteps(phase.steps, id),
     acceptance: asStringArray(phase.acceptance),
   };
 }

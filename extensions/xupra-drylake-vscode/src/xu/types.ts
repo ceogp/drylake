@@ -42,6 +42,12 @@ export type XuProvisioning = {
   };
 };
 
+export type XuStep = {
+  id: string;
+  text: string;
+  status: XuStepStatus;
+};
+
 export type XuPhase = {
   id: string;
   title: string;
@@ -51,7 +57,7 @@ export type XuPhase = {
   objective: string;
   inputs: string[];
   outputs: string[];
-  steps: string[];
+  steps: XuStep[];
   acceptance: string[];
 };
 

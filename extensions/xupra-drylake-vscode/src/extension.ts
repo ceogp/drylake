@@ -13,11 +13,13 @@ import {
   exportHandoffPromptCommand,
   generateAgentFilesCommand,
   generateDraftRunbookCommand,
+  handoffPhaseCommand,
   openControlRoomCommand,
   previewProvisioningPlanCommand,
   reorderPhaseCommand,
   runNextPhaseCommand,
   startBuildSessionCommand,
+  toggleStepCommand,
   updatePhaseAgentCommand,
   updatePhaseStatusCommand,
   validateXuRunbookCommand,
@@ -696,6 +698,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.reorderPhase", async (...args: unknown[]) => {
     await reorderPhaseCommand(runbookDeps, args[0], args[1]);
+  });
+
+  register("drylake.toggleStep", async (...args: unknown[]) => {
+    await toggleStepCommand(runbookDeps, args[0], args[1], args[2]);
+  });
+
+  register("drylake.handoffPhase", async (...args: unknown[]) => {
+    await handoffPhaseCommand(runbookDeps, args[0]);
   });
 
   register("xupra.connect", async () => {

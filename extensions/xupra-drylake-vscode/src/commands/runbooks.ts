@@ -481,6 +481,47 @@ export async function runNextPhaseCommand(deps: RunbookCommandDeps) {
   await exportHandoffPromptCommand(deps);
 }
 
+export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown) {
+  const phaseId = typeof phaseIdArg === "string" ? phaseIdArg.trim() : "";
+  if (!phaseId) {
+    void vscode.window.showWarningMessage("DryLake could not start the handoff because no phase was specified.");
+    return;
+  }
+
+  const current = await deps.sessionStore.readRunbook();
+  if (!current) {
+    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    return;
+  }
+
+  const phase = current.runbook.phases.find((item) => item.id === phaseId);
+  if (!phase) {
+    void vscode.window.showWarningMessage(`DryLake could not find phase ${phaseId}.`);
+    return;
+  }
+
+  const updated: ApplicationBuildRunbook = {
+    ...current.runbook,
+    phases: current.runbook.phases.map((item) => {
+      if (item.id !== phaseId) {
+        return item.status === "active" ? { ...item, status: "pending" } : item;
+      }
+      return { ...item, status: "active" };
+    }),
+  };
+
+  await deps.sessionStore.writeRunbook(current.uri, updated);
+
+  const buildSession = deps.stateStore.getBuildSession();
+  const content = renderPhasePrompt(updated, phase, { activeProvider: buildSession });
+  await vscode.env.clipboard.writeText(content);
+  const document = await vscode.workspace.openTextDocument({ language: "markdown", content });
+  await vscode.window.showTextDocument(document, { preview: false });
+  await deps.controlRoom.refresh();
+  await deps.refreshSidebar();
+  void vscode.window.showInformationMessage(`Handoff prompt for ${phase.title} copied to clipboard.`);
+}
+
 export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown, agentArg?: unknown) {
   const phaseId = typeof phaseIdArg === "string" ? phaseIdArg.trim() : "";
   const agent = phaseAgentFromArg(agentArg);
@@ -555,6 +596,109 @@ export async function updatePhaseStatusCommand(deps: RunbookCommandDeps, phaseId
   await deps.sessionStore.writeRunbook(current.uri, updated);
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
+}
+
+function stepStatusFromArg(arg: unknown): XuStepStatus | undefined {
+  return arg === "pending" ||
+    arg === "active" ||
+    arg === "approved" ||
+    arg === "needs-revision" ||
+    arg === "complete"
+    ? arg
+    : undefined;
+}
+
+export async function toggleStepCommand(
+  deps: RunbookCommandDeps,
+  phaseIdArg?: unknown,
+  stepIdArg?: unknown,
+  statusArg?: unknown,
+) {
+  const phaseId = typeof phaseIdArg === "string" ? phaseIdArg.trim() : "";
+  const stepId = typeof stepIdArg === "string" ? stepIdArg.trim() : "";
+  const nextStatus = stepStatusFromArg(statusArg) ?? "complete";
+
+  if (!phaseId || !stepId) {
+    void vscode.window.showWarningMessage("DryLake could not toggle the step because the request was invalid.");
+    return;
+  }
+
+  const current = await deps.sessionStore.readRunbook();
+  if (!current) {
+    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    return;
+  }
+
+  let stepFound = false;
+  let phaseWithUpdatedSteps: ApplicationBuildRunbook["phases"][number] | undefined;
+  const phasesAfterStepUpdate = current.runbook.phases.map((phase) => {
+    if (phase.id !== phaseId) {
+      return phase;
+    }
+
+    const nextSteps = phase.steps.map((step) => {
+      if (step.id !== stepId) {
+        return step;
+      }
+      stepFound = true;
+      return { ...step, status: nextStatus };
+    });
+    phaseWithUpdatedSteps = { ...phase, steps: nextSteps };
+    return phaseWithUpdatedSteps;
+  });
+
+  if (!stepFound || !phaseWithUpdatedSteps) {
+    void vscode.window.showWarningMessage(`DryLake could not find step ${stepId} in phase ${phaseId}.`);
+    return;
+  }
+
+  const allStepsComplete =
+    phaseWithUpdatedSteps.steps.length > 0 &&
+    phaseWithUpdatedSteps.steps.every(
+      (step) => step.status === "complete" || step.status === "approved",
+    );
+
+  let didAutoAdvance = false;
+  let phases = phasesAfterStepUpdate;
+  if (allStepsComplete && phaseWithUpdatedSteps.status !== "complete") {
+    didAutoAdvance = true;
+    const completedPhaseIndex = phases.findIndex((phase) => phase.id === phaseId);
+    phases = phases.map((phase, index) => {
+      if (index === completedPhaseIndex) {
+        return { ...phase, status: "complete" };
+      }
+      return phase;
+    });
+
+    const nextPendingIndex = phases.findIndex(
+      (phase, index) => index > completedPhaseIndex && phase.status !== "complete",
+    );
+    if (nextPendingIndex !== -1) {
+      phases = phases.map((phase, index) =>
+        index === nextPendingIndex ? { ...phase, status: "active" } : phase,
+      );
+    }
+  }
+
+  const updated: ApplicationBuildRunbook = {
+    ...current.runbook,
+    phases,
+  };
+
+  await deps.sessionStore.writeRunbook(current.uri, updated);
+  await deps.controlRoom.refresh();
+  await deps.refreshSidebar();
+
+  if (didAutoAdvance) {
+    const nextActive = updated.phases.find((phase) => phase.status === "active");
+    if (nextActive) {
+      void vscode.window.showInformationMessage(
+        `${phaseWithUpdatedSteps.title} complete. ${nextActive.title} is now active.`,
+      );
+    } else {
+      void vscode.window.showInformationMessage(`${phaseWithUpdatedSteps.title} complete. All phases done.`);
+    }
+  }
 }
 
 export async function reorderPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown, afterPhaseIdArg?: unknown) {

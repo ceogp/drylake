@@ -45,7 +45,7 @@ export function renderPhaseSection(phase: XuPhase) {
     phase.objective || "No objective recorded.",
     "",
     "Steps:",
-    numberedList(phase.steps),
+    numberedList(phase.steps.map((step) => step.text)),
     "",
     "Acceptance:",
     bulletList(phase.acceptance),

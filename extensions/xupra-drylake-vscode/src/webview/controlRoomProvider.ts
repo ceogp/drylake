@@ -81,8 +81,34 @@ function renderAgentSelect(phase: XuPhase, fallbackAgent: XuPhaseAgent) {
   </select></label>`;
 }
 
+function renderPhaseSteps(phase: XuPhase) {
+  if (phase.steps.length === 0) {
+    return `<div class="step-count">No steps yet.</div>`;
+  }
+
+  const items = phase.steps
+    .map((step) => {
+      const done = step.status === "complete" || step.status === "approved";
+      const checked = done ? " checked" : "";
+      const stateClass = done ? " done" : "";
+      return `<li class="step-item${stateClass}">
+        <label>
+          <input type="checkbox" class="step-toggle" data-phase-id="${escapeHtml(phase.id)}" data-step-id="${escapeHtml(step.id)}"${checked} />
+          <span>${escapeHtml(step.text)}</span>
+        </label>
+      </li>`;
+    })
+    .join("");
+
+  const completed = phase.steps.filter((step) => step.status === "complete" || step.status === "approved").length;
+
+  return `<div class="step-list-wrap">
+    <div class="step-count">${completed} / ${phase.steps.length} complete</div>
+    <ul class="step-list">${items}</ul>
+  </div>`;
+}
+
 function renderPhaseCard(phase: XuPhase, fallbackAgent: XuPhaseAgent, options: { draggable: boolean }) {
-  const stepCount = phase.steps.length;
   const draggable = options.draggable ? ' draggable="true"' : "";
   const cardClass = `phase-card ${statusClass(phase.status)}${phase.status === "active" ? " active-phase" : ""}`;
 
@@ -92,7 +118,10 @@ function renderPhaseCard(phase: XuPhase, fallbackAgent: XuPhaseAgent, options: {
     <span class="badge ${statusClass(phase.status)}">${escapeHtml(STATUS_LABELS[phase.status])}</span>
     <p class="objective" title="${escapeHtml(phase.objective)}">${escapeHtml(phase.objective || "No objective recorded.")}</p>
     ${renderAgentSelect(phase, fallbackAgent)}
-    <div class="step-count">${stepCount} step${stepCount === 1 ? "" : "s"}</div>
+    ${renderPhaseSteps(phase)}
+    <div class="phase-actions">
+      <button class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}">Handoff to agent</button>
+    </div>
   </article>`;
 }
 
@@ -166,6 +195,7 @@ type WebviewMessage = {
   copy?: string;
   view?: unknown;
   phaseId?: unknown;
+  stepId?: unknown;
   afterPhaseId?: unknown;
   agent?: unknown;
   status?: unknown;
@@ -223,6 +253,21 @@ export class ControlRoomProvider {
 
       if (message.command === "drylake.updatePhaseStatus") {
         await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0], message.status ?? message.args?.[1]);
+        return;
+      }
+
+      if (message.command === "drylake.handoffPhase") {
+        await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0]);
+        return;
+      }
+
+      if (message.command === "drylake.toggleStep") {
+        await vscode.commands.executeCommand(
+          message.command,
+          message.phaseId ?? message.args?.[0],
+          message.stepId ?? message.args?.[1],
+          message.status ?? message.args?.[2],
+        );
         return;
       }
 
@@ -326,6 +371,13 @@ export class ControlRoomProvider {
     .planning-banner-eyebrow { color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 10px; letter-spacing: 0.14em; }
     .planning-banner-label { color: var(--vscode-foreground); }
     .planning-banner-reason { color: var(--vscode-descriptionForeground); flex-basis: 100%; }
+    .step-list-wrap { margin-top: 8px; }
+    .step-list { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; }
+    .step-item label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 12px; line-height: 1.4; color: var(--vscode-foreground); }
+    .step-item input[type="checkbox"] { margin-top: 2px; }
+    .step-item.done span { text-decoration: line-through; color: var(--vscode-descriptionForeground); }
+    .phase-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .handoff-btn { font-size: 12px; padding: 6px 10px; }
     @media (max-width: 860px) { header { flex-direction: column; } .kanban, .mode-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -398,20 +450,35 @@ export class ControlRoomProvider {
       const commandEl = event.target.closest("[data-command]");
       if (commandEl) {
         vscode.postMessage({ command: commandEl.dataset.command, args: [] });
+        return;
+      }
+
+      const handoffBtn = event.target.closest("[data-handoff-phase]");
+      if (handoffBtn) {
+        vscode.postMessage({ command: "drylake.handoffPhase", phaseId: handoffBtn.dataset.handoffPhase });
       }
     });
 
     document.addEventListener("change", (event) => {
       const select = event.target.closest("[data-phase-agent]");
-      if (!select) {
+      if (select) {
+        vscode.postMessage({
+          command: "drylake.updatePhaseAgent",
+          phaseId: select.dataset.phaseAgent,
+          agent: select.value
+        });
         return;
       }
 
-      vscode.postMessage({
-        command: "drylake.updatePhaseAgent",
-        phaseId: select.dataset.phaseAgent,
-        agent: select.value
-      });
+      const stepToggle = event.target.closest(".step-toggle");
+      if (stepToggle) {
+        vscode.postMessage({
+          command: "drylake.toggleStep",
+          phaseId: stepToggle.dataset.phaseId,
+          stepId: stepToggle.dataset.stepId,
+          status: stepToggle.checked ? "complete" : "pending",
+        });
+      }
     });
 
     document.addEventListener("dragstart", (event) => {

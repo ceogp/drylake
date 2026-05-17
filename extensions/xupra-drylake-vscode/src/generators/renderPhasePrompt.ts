@@ -80,7 +80,7 @@ export function renderPhasePrompt(runbook: ApplicationBuildRunbook, phase: XuPha
     phase.objective || "No objective recorded.",
     "",
     "## Steps",
-    numberedList(phase.steps),
+    numberedList(phase.steps.map((step) => step.text)),
     "",
     "## Acceptance Criteria",
     bulletList(phase.acceptance),

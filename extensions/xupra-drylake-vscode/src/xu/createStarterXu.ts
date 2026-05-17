@@ -1,4 +1,12 @@
-import type { ApplicationBuildRunbook, XuMode } from "./types";
+import type { ApplicationBuildRunbook, XuMode, XuStep } from "./types";
+
+function toSteps(phaseId: string, items: string[]): XuStep[] {
+  return items.map((text, index) => ({
+    id: `${phaseId}-step-${String(index + 1).padStart(2, "0")}`,
+    text,
+    status: "pending",
+  }));
+}
 
 function slugifyName(prompt: string) {
   const slug = prompt
@@ -69,13 +77,13 @@ export function createStarterXu(params: {
         objective: "Confirm what the user wants built.",
         inputs: ["user prompt"],
         outputs: ["confirmed purpose", "goals", "non-goals", "constraints"],
-        steps: [
+        steps: toSteps("01-intake", [
           "Parse the user prompt.",
           "Identify the application purpose.",
           "Identify target users.",
           "Identify non-goals and constraints.",
           "Ask the user to confirm before architecture work starts.",
-        ],
+        ]),
         acceptance: [
           "Purpose is confirmed.",
           "Goals and non-goals are explicit.",
@@ -90,13 +98,13 @@ export function createStarterXu(params: {
         objective: "Agree on technical architecture before implementation.",
         inputs: [],
         outputs: [],
-        steps: [
+        steps: toSteps("02-architecture", [
           "Propose architecture.",
           "List major dependencies.",
           "List data model assumptions.",
           "List deployment assumptions.",
           "Ask the user to approve or revise.",
-        ],
+        ]),
         acceptance: [
           "Architecture is approved.",
           "Risks and assumptions are documented.",
@@ -110,12 +118,12 @@ export function createStarterXu(params: {
         objective: "Preview project setup, commands, files, and environment requirements.",
         inputs: [],
         outputs: [],
-        steps: [
+        steps: toSteps("03-provisioning", [
           "Generate setup commands.",
           "Generate file creation plan.",
           "Generate environment variable list.",
           "Require approval before running or handing off commands.",
-        ],
+        ]),
         acceptance: [
           "Provisioning plan is approved.",
           "No command executes without user confirmation.",
@@ -129,12 +137,12 @@ export function createStarterXu(params: {
         objective: "Build the application step by step.",
         inputs: [],
         outputs: [],
-        steps: [
+        steps: toSteps("04-implementation", [
           "Implement one thin vertical slice.",
           "Avoid unrelated refactors.",
           "Keep changes reversible.",
           "Verify each phase before continuing.",
-        ],
+        ]),
         acceptance: [
           "Changed files are summarized.",
           "Checks pass or failures are explained.",
@@ -148,13 +156,13 @@ export function createStarterXu(params: {
         objective: "Validate implementation and produce final handoff.",
         inputs: [],
         outputs: [],
-        steps: [
+        steps: toSteps("05-verification", [
           "Run build.",
           "Run tests.",
           "Run lint.",
           "Summarize changed files.",
           "Summarize remaining risks.",
-        ],
+        ]),
         acceptance: [
           "Verification is complete.",
           "Handoff notes are generated.",
