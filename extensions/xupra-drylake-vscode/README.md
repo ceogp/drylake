@@ -1,29 +1,29 @@
-# DryLake: AI Coding Agent for Complex Code Changes
+# DryLake — Visual Planning for AI Coding Agents
 
-Turn tickets, bugs, and feature requests into clear AI coding plans inside VS Code.
+**Visual, easy planning of your coding-agent workflow.** Drop a ticket. DryLake builds a kanban of phases. Drag them around. Pick any coding agent per phase. Hand off with one click.
 
-DryLake helps you guide Claude Code, Codex, Cursor, GitHub Copilot, and other AI coding tools through larger repo changes without losing the plan.
+![DryLake Control Room kanban](media/readme-kanban.png)
 
-- Plan the change before your AI tool starts coding.
-- Break risky work into smaller, reviewable steps.
-- Keep scope, files, tests, and shipping notes in one place.
-- Run each step with the AI coding tool you already use.
-- Finish with a clean validation and handoff summary.
+Works with **Claude Code · OpenAI Codex · Cursor · Cline · Continue · Aider · Windsurf · GitHub Copilot · Roo Code · Augment Code** — and any other agent via clipboard handoff.
 
-```text
-Ticket or bug -> Build Session -> AI coding step -> validation -> ship
-```
+![DryLake pipeline view](media/readme-pipeline.png)
 
-![DryLake workflow](https://drylake.xupracorp.com/marketplace/drylake-workflow.png)
+## What It Does
+
+- **Plans your work as a kanban.** Pending → Active → Validating → Done. Drag phases to reorder them.
+- **One agent per phase.** Pick Claude Code for design, Cline for tests, Codex for docs — whatever you like.
+- **One-click handoff.** Click *Handoff* on a phase and your coding agent opens with the prompt pre-loaded.
+- **Auto-advance.** Tick all steps in a phase, DryLake completes it and activates the next one.
+- **Planning chat.** Tell DryLake to add a step or change scope; the kanban updates live.
 
 ## Get Started In 30 Seconds
 
 1. Install DryLake from the VS Code Marketplace.
 2. Run `DryLake: Start Build Session`.
 3. Paste a ticket, bug report, feature request, or product spec.
-4. Review the plan DryLake creates for the change.
-5. Run the first coding step with Claude Code, Codex, Cursor, GitHub Copilot, or External AI Prompt mode.
-6. Validate the result, then move to the next step.
+4. Review the kanban DryLake creates.
+5. Click *Handoff* on the active phase. Your coding agent opens with the prompt loaded.
+6. Tick steps off as the agent finishes them. Next phase auto-activates.
 
 No account is required to start a local build session or use External AI Prompt mode.
 
@@ -49,17 +49,24 @@ Start with a ticket, bug, or plain-language task. DryLake turns it into a practi
 
 Use Build Sessions when you want AI help without handing a messy repo change to a single disposable chat thread.
 
-## Works With Your AI Coding Tools
+## Works With Your Coding Agents
 
-DryLake is designed to guide the tools developers already use:
+Pick a different agent per phase — or stick with one for the whole session. DryLake hands off to:
 
-- Claude Code
-- Codex
-- Cursor
-- GitHub Copilot
-- External AI tools through copied coding steps
+1. **Claude Code** (Anthropic)
+2. **OpenAI Codex** / GPT-4o / GPT-5
+3. **Cursor**
+4. **Cline** (formerly Claude Dev)
+5. **Continue.dev**
+6. **Aider**
+7. **Windsurf** (Codeium)
+8. **GitHub Copilot** (incl. Copilot Chat & agent mode)
+9. **Roo Code** (Roo Cline)
+10. **Augment Code**
 
-DryLake does not try to replace every coding assistant. It helps keep the work clear enough for those assistants to be more useful on complex tasks.
+Plus **External AI Prompt** mode for ChatGPT, Gemini, DeepSeek, Tabnine, Cody, Plandex, Devin, Blackbox, Traycer, Zed, Replit, Trae, or any other tool — DryLake copies the focused prompt for that phase and you paste it wherever you want.
+
+DryLake does not try to replace any of these. It keeps the work clear enough for them to be more useful on complex tasks.
 
 ## Built For Real Repo Work
 
@@ -117,4 +124,4 @@ These features support the coding workflow, but they are not the main story. The
 
 ## Non-affiliation
 
-DryLake is not affiliated with Anthropic, OpenAI, GitHub, Microsoft, Cursor, OpenClaw, Cline, Roo, Windsurf, Traycer, Blackbox, Zencoder, or their respective owners.
+DryLake is not affiliated with Anthropic, OpenAI, GitHub, Microsoft, Cursor, Cline, Continue, Aider, Codeium / Windsurf, Roo, Augment, Tabnine, Sourcegraph / Cody, Plandex, Cognition / Devin, Blackbox, Traycer, Zencoder, Zed, Replit, Trae, Google, DeepSeek, or their respective owners.
