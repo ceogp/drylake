@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake: AI Coding Agent",
   "description": "Turn tickets and bug reports into safe AI coding steps for Claude Code, Codex, Cursor, Copilot, and your preferred AI tool.",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
@@ -305,6 +305,14 @@
       {
         "command": "drylake.handoffPhase",
         "title": "DryLake: Hand Off Phase"
+      },
+      {
+        "command": "drylake.chatSendMessage",
+        "title": "DryLake: Send Planning Chat Message"
+      },
+      {
+        "command": "drylake.clearChat",
+        "title": "DryLake: Clear Planning Chat"
       },
       {
         "command": "xupra.connect",

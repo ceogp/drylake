@@ -17,6 +17,7 @@ const LAST_IMPORT_KEY = "xupra.lastImport";
 const AWAITING_PLAN_REFRESH_KEY = "xupra.awaitingPlanRefreshUntil";
 const BUILD_SESSION_KEY = "drylake.buildSession";
 const PLANNING_PROVIDER_KEY = "drylake.planningProvider";
+const CHAT_HISTORY_KEY = "drylake.chatHistory";
 
 export type ActivePhaseSummary = {
   phaseId: string;
@@ -29,6 +30,21 @@ export type PlanningProviderInfo = {
   label: BuildSessionState["providerLabel"];
   reason?: string;
 };
+
+export type ChatMessageRole = "user" | "ai" | "system";
+
+export type ChatMessage = {
+  id: string;
+  role: ChatMessageRole;
+  text: string;
+  ts: number;
+};
+
+export type ChatState = {
+  messages: ChatMessage[];
+};
+
+const EMPTY_CHAT_STATE: ChatState = { messages: [] };
 
 export class StateStore {
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -117,6 +133,30 @@ export class StateStore {
 
   async setPlanningProvider(info: PlanningProviderInfo | null): Promise<void> {
     await this.context.workspaceState.update(PLANNING_PROVIDER_KEY, info);
+  }
+
+  getChatHistory(): ChatState {
+    return this.context.workspaceState.get<ChatState>(CHAT_HISTORY_KEY, EMPTY_CHAT_STATE);
+  }
+
+  async setChatHistory(state: ChatState): Promise<void> {
+    await this.context.workspaceState.update(CHAT_HISTORY_KEY, state);
+  }
+
+  async appendChatMessage(message: Omit<ChatMessage, "id" | "ts"> & { id?: string; ts?: number }): Promise<ChatMessage> {
+    const current = this.getChatHistory();
+    const next: ChatMessage = {
+      id: message.id ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      role: message.role,
+      text: message.text,
+      ts: message.ts ?? Date.now(),
+    };
+    await this.setChatHistory({ messages: [...current.messages, next] });
+    return next;
+  }
+
+  async clearChatHistory(): Promise<void> {
+    await this.setChatHistory(EMPTY_CHAT_STATE);
   }
 
   getActivePhaseSummary(runbook: ApplicationBuildRunbook | null | undefined): ActivePhaseSummary | null {

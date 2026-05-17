@@ -10,6 +10,8 @@ import { refreshProjectsCommand } from "./commands/refreshProjects";
 import {
   approveArchitectureCommand,
   approvePurposeCommand,
+  chatSendMessageCommand,
+  clearChatCommand,
   exportHandoffPromptCommand,
   generateAgentFilesCommand,
   generateDraftRunbookCommand,
@@ -363,7 +365,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
   const xuSessionStore = new XuSessionStore();
-  const controlRoom = new ControlRoomProvider(xuSessionStore, () => stateStore.getPlanningProvider());
+  const controlRoom = new ControlRoomProvider(
+    xuSessionStore,
+    () => stateStore.getPlanningProvider(),
+    () => stateStore.getChatHistory(),
+  );
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
   const importedSkillEditor = new ImportedSkillEditorManager(context, apiClient, async () => {
@@ -706,6 +712,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.handoffPhase", async (...args: unknown[]) => {
     await handoffPhaseCommand(runbookDeps, args[0]);
+  });
+
+  register("drylake.chatSendMessage", async (...args: unknown[]) => {
+    await chatSendMessageCommand(runbookDeps, args[0]);
+  });
+
+  register("drylake.clearChat", async () => {
+    await clearChatCommand(runbookDeps);
   });
 
   register("xupra.connect", async () => {

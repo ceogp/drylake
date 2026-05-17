@@ -180,70 +180,154 @@ async function collectClarificationsForPrompt(params: {
   prompt: string;
   mode: XuMode;
 }): Promise<string> {
+  // Clarifying questions now happen inside the Control Room chat panel.
+  // This helper is kept as a no-op so any older call sites continue to compile.
+  return params.prompt;
+}
+
+async function seedChatWithClarifyingQuestions(params: {
+  deps: RunbookCommandDeps;
+  provider: DryLakeAiProvider;
+  prompt: string;
+  mode: XuMode;
+}): Promise<void> {
   if (typeof params.provider.clarifyIntent !== "function") {
-    return params.prompt;
+    await params.deps.stateStore.appendChatMessage({
+      role: "ai",
+      text:
+        "I've drafted a starter plan based on your prompt. Tell me anything else I should know and I'll refine it.",
+    });
+    return;
   }
 
-  const availability = await params.provider.isAvailable();
-  if (!availability.available) {
-    return params.prompt;
-  }
-
-  let questions: string[] = [];
   try {
     const workspaceSummary = await buildWorkspaceSummary();
-    const result = await vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: "DryLake is preparing clarifying questions...",
-        cancellable: false,
-      },
-      () =>
-        params.provider.clarifyIntent!({
-          prompt: params.prompt,
-          mode: params.mode,
-          workspaceSummary,
-        }),
-    );
-
-    if (Array.isArray(result.questions)) {
-      questions = result.questions.filter((item) => typeof item === "string" && item.trim().length > 0);
-    }
-  } catch (error) {
-    console.warn("DryLake clarifying questions failed:", error);
-    return params.prompt;
-  }
-
-  if (questions.length === 0) {
-    return params.prompt;
-  }
-
-  const answers: Array<{ question: string; answer: string }> = [];
-  for (const question of questions.slice(0, 4)) {
-    const answer = await vscode.window.showInputBox({
-      title: "DryLake clarifying question",
-      prompt: question,
-      placeHolder: "Press Enter to skip",
-      ignoreFocusOut: true,
+    const result = await params.provider.clarifyIntent({
+      prompt: params.prompt,
+      mode: params.mode,
+      workspaceSummary,
     });
 
-    if (answer === undefined) {
-      return params.prompt;
+    const questions = Array.isArray(result.questions)
+      ? result.questions.filter((item) => typeof item === "string" && item.trim().length > 0)
+      : [];
+
+    if (questions.length === 0) {
+      await params.deps.stateStore.appendChatMessage({
+        role: "ai",
+        text:
+          result.message ??
+          "I've drafted a starter plan. Tell me anything else I should know and I'll refine it.",
+      });
+      return;
     }
 
-    if (answer.trim().length > 0) {
-      answers.push({ question, answer: answer.trim() });
-    }
+    const numbered = questions
+      .slice(0, 4)
+      .map((question, index) => `${index + 1}. ${question}`)
+      .join("\n");
+
+    await params.deps.stateStore.appendChatMessage({
+      role: "ai",
+      text: `Before I lock the plan, a few quick questions:\n${numbered}\n\nAnswer in one message — anything you skip I'll just guess.`,
+    });
+  } catch (error) {
+    console.warn("DryLake clarifying questions failed:", error);
+    await params.deps.stateStore.appendChatMessage({
+      role: "ai",
+      text: "I've drafted a starter plan. Tell me anything else I should know and I'll refine it.",
+    });
+  }
+}
+
+export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?: unknown) {
+  const text = typeof textArg === "string" ? textArg.trim() : "";
+  if (!text) {
+    return;
   }
 
-  if (answers.length === 0) {
-    return params.prompt;
+  await deps.stateStore.appendChatMessage({ role: "user", text });
+  await deps.controlRoom.refresh();
+
+  const session = deps.stateStore.getBuildSession();
+  const current = await deps.sessionStore.readRunbook();
+  if (!session || !current) {
+    await deps.stateStore.appendChatMessage({
+      role: "system",
+      text: "Start a build session first, then I can refine the plan based on what you say here.",
+    });
+    await deps.controlRoom.refresh();
+    return;
   }
 
-  const clarifications = answers
-    .map((item) => `- Q: ${item.question}\n  A: ${item.answer}`)
+  const provider = await resolveProvider(deps.stateStore);
+  const availability = await provider.isAvailable();
+  if (!availability.available && provider.id !== "external-ai-prompt") {
+    await deps.stateStore.appendChatMessage({
+      role: "system",
+      text: availability.reason ?? `${provider.label} is not available right now.`,
+    });
+    await deps.controlRoom.refresh();
+    return;
+  }
+
+  const chatHistory = deps.stateStore.getChatHistory().messages;
+  const chatTranscript = chatHistory
+    .map((message) => {
+      const speaker = message.role === "user" ? "User" : message.role === "system" ? "DryLake" : "Planning AI";
+      return `${speaker}: ${message.text}`;
+    })
     .join("\n");
-  return `${params.prompt}\n\nClarifications:\n${clarifications}`;
+
+  const refinedPrompt = `${session.prompt.trim()}\n\nPlanning chat so far:\n${chatTranscript}`;
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "DryLake is refining the plan...",
+      cancellable: false,
+    },
+    async () => {
+      const workspaceSummary = await buildWorkspaceSummary();
+      const result = await provider.generateDraftRunbook({
+        prompt: refinedPrompt,
+        mode: session.mode,
+        workspaceSummary,
+        currentRunbook: current.runbook,
+      });
+
+      if (result.runbook) {
+        await deps.sessionStore.writeRunbook(current.uri, result.runbook);
+        await deps.stateStore.appendChatMessage({
+          role: "ai",
+          text: "Plan updated. Check the kanban below — let me know what else to change.",
+        });
+      } else if (result.promptForExternalAi) {
+        await openGeneratedPromptDocument("DryLake External AI Prompt", result.promptForExternalAi);
+        await deps.stateStore.appendChatMessage({
+          role: "system",
+          text:
+            result.message ??
+            "I opened an external AI prompt for you. Paste the result back to refine the plan further.",
+        });
+      } else if (result.message) {
+        await deps.stateStore.appendChatMessage({ role: "system", text: result.message });
+      } else {
+        await deps.stateStore.appendChatMessage({
+          role: "system",
+          text: "I couldn't refine the plan this time. Try rephrasing.",
+        });
+      }
+    },
+  );
+
+  await deps.controlRoom.refresh();
+  await deps.refreshSidebar();
+}
+
+export async function clearChatCommand(deps: RunbookCommandDeps) {
+  await deps.stateStore.clearChatHistory();
+  await deps.controlRoom.refresh();
 }
 
 async function applyAiDraft(params: {
@@ -335,11 +419,6 @@ export async function startBuildSessionCommand(
   await deps.controlRoom.createOrShow(context);
 
   const provider = await resolveProvider(deps.stateStore);
-  const clarifiedPrompt = await collectClarificationsForPrompt({
-    provider,
-    prompt: prompt.trim(),
-    mode,
-  });
 
   await vscode.window.withProgress(
     {
@@ -348,9 +427,13 @@ export async function startBuildSessionCommand(
       cancellable: false,
     },
     async () => {
-      const ensured = await deps.sessionStore.ensureRunbook({ prompt: clarifiedPrompt, mode });
+      const cleanedPrompt = prompt.trim();
+      await deps.stateStore.clearChatHistory();
+      await deps.stateStore.appendChatMessage({ role: "user", text: cleanedPrompt });
+
+      const ensured = await deps.sessionStore.ensureRunbook({ prompt: cleanedPrompt, mode });
       const session = await deps.sessionStore.createSession({
-        prompt: clarifiedPrompt,
+        prompt: cleanedPrompt,
         mode,
         runbookPath: relativePath(ensured.uri),
         providerId: provider.id,
@@ -359,13 +442,14 @@ export async function startBuildSessionCommand(
       await deps.stateStore.setBuildSession(session);
       await applyAiDraft({
         deps,
-        prompt: clarifiedPrompt,
+        prompt: cleanedPrompt,
         mode,
         runbook: ensured.runbook,
         runbookUri: ensured.uri,
         provider,
         openExternalPrompt: false,
       });
+      await seedChatWithClarifyingQuestions({ deps, provider, prompt: cleanedPrompt, mode });
     },
   );
 

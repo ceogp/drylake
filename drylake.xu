@@ -1,0 +1,364 @@
+xu: 1
+kind: ApplicationBuildRunbook
+metadata:
+  name: i-want-to-check-if-this-was-done-the-user-is-una
+  owner: local
+  status: draft
+  mode: review
+intent:
+  rawPrompt: >-
+    i want to check if this was done 
+
+
+    The user is unavailable. I'll commit to the recommended options and produce the plan
+    autonomously. Decisions:
+
+
+    Blackbox PDF: I'll use the public Blackbox.ai homepage as the visual/structural reference during
+    the marketing rebuild.
+
+    Screenshot input: Xupra Pro AI only (vision tokens billed to you only for Pro users).
+
+    Clarifying questions: One round, 2–4 questions, then plan.
+
+    Enterprise mode: Auto-detect — if Pro API unreachable, silently fall back to External AI Prompt
+    with a banner.
+
+    Shipping: Slice-by-slice — each ticket = commit + version bump + push.
+
+    Plan: Zero-Friction Build Sessions + Marketing Rebuild
+
+    End-to-end build that delivers your vision: paste prompt/screenshot → AI asks 2–4 clarifying
+    questions → planner generates a runbook → kanban with visible per-step status → drag to reorder
+    → pick agent → click Handoff → tick steps off → next phase auto-activates. Plus Blackbox-style
+    marketing rebuild and enterprise/air-gapped fallback. Ships in slices: each ticket = commit +
+    extension version bump + push.
+
+
+    Phases
+
+
+    A — Provider transparency (T1)
+
+    B — Step model migration (T2)
+
+    C — Kanban execution UX (T3, T4, T5)
+
+    D — Clarifying-question loop (T6)
+
+    E — Multimodal paste (T7)
+
+    F — Enterprise / air-gapped fallback (T8)
+
+    G — Marketing rebuild (T9, parallel)
+
+    Tickets
+
+
+    T1 — Planning AI status banner (Control Room + sidebar). Provider resolver returns {provider,
+    reason}. → 0.2.6
+
+    T2 — XuStep type with per-step status; normalizeSteps() keeps legacy string[] runbooks working.
+    → 0.2.7
+
+    T3 — Render steps as a checklist inside each phase card; checkbox toggles pending → active →
+    complete. → 0.2.8
+
+    T4 — Per-phase Handoff button with agent-specific routing (Claude Code opens file, Cursor copies
+    for Composer, Copilot opens chat, Codex copies, External opens side-by-side). → 0.2.9
+
+    T5 — Auto-advance: phase complete → next phase active; "Continue" always points to active phase.
+    → 0.3.0
+
+    T6 — Clarifying-question chat loop. New POST /api/v1/drylake/runbooks/clarify. Provider gets
+    clarify() method. → 0.3.1
+
+    T7 — Screenshot paste in prompt textarea. Pro-only vision; LM/clipboard ignore images with
+    notice. → 0.3.2
+
+    T8 — Enterprise mode: drylake.forceExternalAiPrompt setting + health-probe fallback. → 0.3.3
+
+    T9 — Marketing homepage rebuild in Blackbox.ai's visual idiom (dark hero, agent logos,
+    three-step explainer, pricing). Parallel.
+
+    Relevant files — full list saved in memories/session/plan.md. Key paths:
+
+
+    providerResolver.ts, DryLakeAiProvider.ts, provider implementations
+
+    types.ts, parseXu.ts, renderXu.ts
+
+    controlRoomProvider.ts, commands/runbooks.ts
+
+    New: app/api/v1/drylake/runbooks/clarify/route.ts
+
+    page.tsx, app-home.tsx
+
+    Verification (per slice)
+
+
+    npm run typecheck && npm test && npm run build in extension
+
+    npm run package:vsix && npm run install:vsix; confirm new version; clean VSIX
+
+    Commit + push to origin/development (auto-deploys server to staging)
+
+    End-to-end manual check (after T1–T8)
+
+
+    Paste prompt → see active planning AI in banner
+
+    Answer clarifying questions → kanban appears
+
+    Each card shows a step checklist
+
+    Drag phase → persists
+
+    Click Handoff → correct coding agent launches
+
+    Tick steps → phase auto-advances
+
+    Toggle forceExternalAiPrompt → banner switches to clipboard mode
+
+    Pro user pastes screenshot → thumbnail + runbook references image
+
+    Decisions locked autonomously
+
+
+    Slice shipping, each ticket = own commit + version bump on development
+
+    VS Code LM stays in auto chain (free Copilot users keep AI planning)
+
+    Vision tokens billed only for Pro
+
+    Production deploy held until you explicitly approve
+
+    Blackbox.ai is structural inspiration only — no copy/asset reuse
+
+    Further considerations
+
+
+    Step ID format ${phase.id}.${index+1} (e.g. 1.1) for legacy migration — flag if you want
+    different (P1-S1 etc.).
+
+    T8 health probe adds ~3s startup latency; I'll cache the result 60s per session to keep startup
+    snappy.
+
+    Marketing demo GIF/video — record in final pass after T1–T5 are live so the demo matches the new
+    UX. Static screenshots until then.
+
+    Plan saved to memories/session/plan.md. Use the handoff buttons to execute, or reply with
+    changes you want.
+  purpose: i want to check if this was done The user is unavailable.
+  users:
+    - developer
+  goals:
+    - Create an inspectable drylake.xu runbook.
+    - Confirm purpose before architecture work.
+    - Approve architecture before execution handoff.
+    - Generate native agent files from the approved runbook.
+  nonGoals:
+    - Do not deploy or publish from this runbook.
+    - Do not run provisioning commands automatically.
+    - Do not call production APIs from the runbook flow.
+  constraints:
+    - Local-first workflow.
+    - Preview provisioning before execution.
+    - Keep generated artifacts under .drylake/generated first.
+    - Preserve user files with backups before overwrite.
+confirmation:
+  required: true
+  status: pending
+  userApprovedIntent: false
+  userApprovedArchitecture: false
+  userApprovedProvisioning: false
+architecture:
+  status: proposed
+  summary: >-
+    Use the current workspace as the source of truth (Workspace: agenttransfer). Keep the runbook,
+    approvals, generated files, and phase handoffs inspectable on disk.
+  decisions:
+    - id: ADR-001
+      choice: Use drylake.xu as the workflow source of truth.
+      rationale: >-
+        The user can inspect and version purpose, constraints, architecture, phases, and handoff
+        instructions.
+    - id: ADR-002
+      choice: Generate preview artifacts before installing root instruction files.
+      rationale: Preview-first generation makes the workflow safe to test in development.
+  risks:
+    - The generated draft is local and deterministic when no integrated AI is available.
+    - Execution still depends on the user's chosen coding agent.
+  assumptions:
+    - The user will approve purpose and architecture before execution.
+    - Provisioning commands are reviewed manually.
+provisioning:
+  status: draft
+  commands:
+    - npm install
+    - npm run build
+  filesToCreate:
+    - .drylake/generated/RUNBOOK.md
+    - .drylake/generated/AGENTS.md
+    - .drylake/generated/CLAUDE.md
+  environmentVariables: []
+  externalServices: []
+  safety:
+    requiresApprovalBeforeExecution: true
+    executeAutomatically: false
+phases:
+  - id: 01-intake
+    title: Confirm application purpose
+    agent: copilot
+    gate: user-confirmation
+    status: pending
+    objective: Confirm what the user wants built.
+    inputs:
+      - user prompt
+    outputs:
+      - confirmed purpose
+      - goals
+      - non-goals
+      - constraints
+    steps:
+      - id: 01-intake-step-01
+        text: Parse the user prompt.
+        status: pending
+      - id: 01-intake-step-02
+        text: Identify the application purpose.
+        status: pending
+      - id: 01-intake-step-03
+        text: Identify target users.
+        status: pending
+      - id: 01-intake-step-04
+        text: Identify non-goals and constraints.
+        status: pending
+      - id: 01-intake-step-05
+        text: Ask the user to confirm before architecture work starts.
+        status: pending
+    acceptance:
+      - Purpose is confirmed.
+      - Goals and non-goals are explicit.
+      - Constraints are recorded.
+  - id: 02-architecture
+    title: Approve architecture
+    agent: copilot
+    gate: architecture-approval
+    status: pending
+    objective: Agree on technical architecture before implementation.
+    inputs: []
+    outputs: []
+    steps:
+      - id: 02-architecture-step-01
+        text: Propose architecture.
+        status: pending
+      - id: 02-architecture-step-02
+        text: List major dependencies.
+        status: pending
+      - id: 02-architecture-step-03
+        text: List data model assumptions.
+        status: pending
+      - id: 02-architecture-step-04
+        text: List deployment assumptions.
+        status: pending
+      - id: 02-architecture-step-05
+        text: Ask the user to approve or revise.
+        status: pending
+    acceptance:
+      - Architecture is approved.
+      - Risks and assumptions are documented.
+  - id: 03-provisioning
+    title: Preview provisioning
+    agent: copilot
+    gate: provisioning-approval
+    status: pending
+    objective: Preview project setup, commands, files, and environment requirements.
+    inputs: []
+    outputs: []
+    steps:
+      - id: 03-provisioning-step-01
+        text: Generate setup commands.
+        status: pending
+      - id: 03-provisioning-step-02
+        text: Generate file creation plan.
+        status: pending
+      - id: 03-provisioning-step-03
+        text: Generate environment variable list.
+        status: pending
+      - id: 03-provisioning-step-04
+        text: Require approval before running or handing off commands.
+        status: pending
+    acceptance:
+      - Provisioning plan is approved.
+      - No command executes without user confirmation.
+  - id: 04-implementation
+    title: Implement in vertical slices
+    agent: copilot
+    gate: phase-review
+    status: pending
+    objective: Build the application step by step.
+    inputs: []
+    outputs: []
+    steps:
+      - id: 04-implementation-step-01
+        text: Implement one thin vertical slice.
+        status: pending
+      - id: 04-implementation-step-02
+        text: Avoid unrelated refactors.
+        status: pending
+      - id: 04-implementation-step-03
+        text: Keep changes reversible.
+        status: pending
+      - id: 04-implementation-step-04
+        text: Verify each phase before continuing.
+        status: pending
+    acceptance:
+      - Changed files are summarized.
+      - Checks pass or failures are explained.
+  - id: 05-verification
+    title: Verify and hand off
+    agent: copilot
+    gate: final-review
+    status: pending
+    objective: Validate implementation and produce final handoff.
+    inputs: []
+    outputs: []
+    steps:
+      - id: 05-verification-step-01
+        text: Run build.
+        status: pending
+      - id: 05-verification-step-02
+        text: Run tests.
+        status: pending
+      - id: 05-verification-step-03
+        text: Run lint.
+        status: pending
+      - id: 05-verification-step-04
+        text: Summarize changed files.
+        status: pending
+      - id: 05-verification-step-05
+        text: Summarize remaining risks.
+        status: pending
+    acceptance:
+      - Verification is complete.
+      - Handoff notes are generated.
+checks:
+  install: npm install
+  dev: npm run dev
+  build: npm run build
+  test: npm test
+  lint: npm run lint
+agentTargets:
+  agentsMd: true
+  claudeMd: true
+  copilotInstructions: true
+  cursorRules: true
+  codexSkill: true
+  openclawSkill: true
+handoff:
+  defaultAgent: claude-code
+  instructions:
+    - Follow phases in order.
+    - Do not skip approval gates.
+    - Do not provision infrastructure without explicit confirmation.
+    - Always summarize changed files and verification results.

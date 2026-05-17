@@ -75,6 +75,13 @@ describe("runbook commands", () => {
         setAwaitingPlanRefreshUntil: vi.fn(async () => undefined),
         setBuildSession: vi.fn(async () => undefined),
         setPlanningProvider: vi.fn(async () => undefined),
+        clearChatHistory: vi.fn(async () => undefined),
+        appendChatMessage: vi.fn(async (message: { role: string; text: string }) => ({
+          id: "msg-1",
+          ts: 0,
+          ...message,
+        })),
+        getChatHistory: vi.fn(() => ({ messages: [] })),
       },
       sessionStore: {
         ensureRunbook: vi.fn(async () => ({ uri: runbookUri, runbook })),

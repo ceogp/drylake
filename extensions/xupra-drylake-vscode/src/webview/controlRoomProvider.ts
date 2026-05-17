@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 
 import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
-import type { PlanningProviderInfo } from "../services/stateStore";
+import type { ChatState, PlanningProviderInfo } from "../services/stateStore";
 import type { ApplicationBuildRunbook, XuMode, XuPhase, XuPhaseAgent, XuStepStatus } from "../xu/types";
 
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
@@ -199,9 +199,51 @@ type WebviewMessage = {
   afterPhaseId?: unknown;
   agent?: unknown;
   status?: unknown;
+  text?: unknown;
 };
 
 type PlanningProviderReader = () => PlanningProviderInfo | null;
+type ChatStateReader = () => ChatState;
+
+function formatChatTime(ts: number) {
+  try {
+    return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+function renderChatPanel(state: ChatState, planningProviderLabel: string) {
+  const messages = state.messages.length
+    ? state.messages
+        .map((message) => {
+          const roleClass =
+            message.role === "user" ? "user" : message.role === "system" ? "system" : "ai";
+          const senderLabel =
+            message.role === "user" ? "You" : message.role === "system" ? "DryLake" : planningProviderLabel;
+          return `<div class="chat-message ${roleClass}">
+            <div class="chat-meta"><span class="chat-sender">${escapeHtml(senderLabel)}</span><span class="chat-time">${escapeHtml(formatChatTime(message.ts))}</span></div>
+            <div class="chat-body">${escapeHtml(message.text).replace(/\n/g, "<br />")}</div>
+          </div>`;
+        })
+        .join("")
+    : `<div class="chat-empty">Chat with the planning AI here. As you discuss the plan, the kanban below will update.</div>`;
+
+  return `<section class="chat-panel" aria-label="Planning chat">
+    <div class="chat-header">
+      <span class="chat-eyebrow">Planning Chat</span>
+      <button type="button" class="chat-clear secondary" data-command="drylake.clearChat">Clear</button>
+    </div>
+    <div class="chat-messages" id="chatMessages">${messages}</div>
+    <form class="chat-form" id="chatForm">
+      <textarea id="chatInput" rows="2" placeholder="Tell the planning AI what you want, or answer its questions. Shift+Enter for a new line."></textarea>
+      <div class="chat-form-row">
+        <span class="chat-hint muted">Enter to send</span>
+        <button type="submit">Send</button>
+      </div>
+    </form>
+  </section>`;
+}
 
 export class ControlRoomProvider {
   private panel?: vscode.WebviewPanel;
@@ -210,6 +252,7 @@ export class ControlRoomProvider {
   constructor(
     private readonly sessionStore: XuSessionStore,
     private readonly readPlanningProvider: PlanningProviderReader = () => null,
+    private readonly readChatState: ChatStateReader = () => ({ messages: [] }),
   ) {}
 
   async createOrShow(context: vscode.ExtensionContext) {
@@ -261,6 +304,16 @@ export class ControlRoomProvider {
         return;
       }
 
+      if (message.command === "drylake.chatSendMessage") {
+        await vscode.commands.executeCommand(message.command, message.text ?? message.args?.[0]);
+        return;
+      }
+
+      if (message.command === "drylake.clearChat") {
+        await vscode.commands.executeCommand(message.command);
+        return;
+      }
+
       if (message.command === "drylake.toggleStep") {
         await vscode.commands.executeCommand(
           message.command,
@@ -307,6 +360,9 @@ export class ControlRoomProvider {
     const view = this.currentView();
     const planningProvider = this.readPlanningProvider();
     const banner = renderPlanningProviderBanner(planningProvider);
+    const chatState = this.readChatState();
+    const planningProviderLabel = planningProvider?.label ?? "Planning AI";
+    const chatPanel = renderChatPanel(chatState, planningProviderLabel);
     const body = runbook ? (view === "kanban" ? renderKanban(runbook) : renderPipeline(runbook)) : renderEmptyState();
 
     return `<!DOCTYPE html>
@@ -378,6 +434,20 @@ export class ControlRoomProvider {
     .step-item.done span { text-decoration: line-through; color: var(--vscode-descriptionForeground); }
     .phase-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
     .handoff-btn { font-size: 12px; padding: 6px 10px; }
+    .chat-panel { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin: 0 0 18px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); }
+    .chat-header { display: flex; align-items: center; justify-content: space-between; }
+    .chat-eyebrow { color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 10px; letter-spacing: 0.14em; }
+    .chat-clear { padding: 4px 8px; font-size: 11px; }
+    .chat-messages { display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+    .chat-message { padding: 8px 10px; border: 1px solid var(--vscode-panel-border); border-radius: 6px; background: var(--vscode-editor-background); }
+    .chat-message.user { border-color: var(--vscode-button-background); }
+    .chat-message.system { border-style: dashed; opacity: 0.85; }
+    .chat-meta { display: flex; justify-content: space-between; color: var(--vscode-descriptionForeground); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+    .chat-body { font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+    .chat-empty { padding: 8px 4px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+    .chat-form textarea { min-height: 56px; }
+    .chat-form-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+    .chat-hint { font-size: 11px; }
     @media (max-width: 860px) { header { flex-direction: column; } .kanban, .mode-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -398,11 +468,41 @@ export class ControlRoomProvider {
       </div>
     </header>
     ${banner}
+    ${chatPanel}
     ${body}
   </main>
   <script>
     const vscode = acquireVsCodeApi();
     let selectedMode = "build-app";
+
+    const chatMessagesEl = document.getElementById("chatMessages");
+    if (chatMessagesEl) {
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }
+
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
+    function sendChat() {
+      if (!chatInput) {
+        return;
+      }
+      const text = chatInput.value.trim();
+      if (!text) {
+        return;
+      }
+      vscode.postMessage({ command: "drylake.chatSendMessage", text: text });
+      chatInput.value = "";
+    }
+    chatForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      sendChat();
+    });
+    chatInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendChat();
+      }
+    });
 
     function clearDropIndicators() {
       document.querySelectorAll(".drag-over, .drop-before, .drop-after").forEach((item) => {
