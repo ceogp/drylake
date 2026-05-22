@@ -140,26 +140,26 @@ export default async function ExtensionConnectPage({
       : null;
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_46%,_#ffffff_100%)]">
+    <main className="tape-page min-h-screen">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16 md:px-10 lg:py-24">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-4">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">
+            <p className="tape-eyebrow">
               Extension Connection
             </p>
-            <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
+            <h1 className="font-[family-name:var(--font-heading)] text-4xl font-black leading-tight text-stone-950 sm:text-5xl">
               {context
                 ? `Return ${context.organization.name} to VS Code or Cursor`
-                : "Connect Xupra back to the editor"}
+                : "Connect DryLake back to the editor"}
             </h1>
             <p className="max-w-3xl text-lg leading-8 text-stone-700">
-              The editor opens the browser for identity, Xupra creates the starter workspace on
+              The editor opens the browser for identity, DryLake creates the starter workspace on
               first sign-in, and the browser hands control back to VS Code or Cursor.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+              className="tape-button bg-white px-5 py-3 text-sm text-black"
               href={workspaceHref}
             >
               Open Dashboard
@@ -250,7 +250,7 @@ export default async function ExtensionConnectPage({
                 Finish account setup, then go right back to the editor
               </h2>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                Use any email. Xupra creates your starter workspace automatically, then brings you
+                Use any email. DryLake creates your starter workspace automatically, then brings you
                 back here so you can approve the editor connection.
               </p>
               <ExtensionConnectAuthButtons reconnectPath={reconnectPath} />

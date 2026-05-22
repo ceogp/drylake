@@ -1,136 +1,75 @@
 <svg width="1400" height="500" viewBox="0 0 1400 500" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, Segoe UI, sans-serif">
   <defs>
-    <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#0B1220"/>
-      <stop offset="1" stop-color="#111827"/>
-    </linearGradient>
-    <linearGradient id="active2" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#F97316"/>
-      <stop offset="1" stop-color="#EA580C"/>
-    </linearGradient>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-      <path d="M 0 0 L 12 6 L 0 12 z" fill="#4B5563"/>
-    </marker>
-    <marker id="arrowHot" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-      <path d="M 0 0 L 12 6 L 0 12 z" fill="#F97316"/>
+      <path d="M0 0 L12 6 L0 12 Z" fill="#111111"/>
     </marker>
   </defs>
+  <rect width="1400" height="500" rx="28" fill="#f7f4ea"/>
+  <rect x="40" y="36" width="1320" height="104" rx="8" fill="#ffffff" stroke="#111111" stroke-width="5"/>
+  <text x="60" y="70" fill="#005caf" font-size="12" letter-spacing="3" font-weight="800">PIPELINE VIEW</text>
+  <text x="60" y="102" fill="#111111" font-size="25" font-weight="900">DryLake Visual Planner</text>
+  <text x="60" y="124" fill="#4b463f" font-size="14" font-weight="600">Plan phases, pick an agent, run the next step.</text>
+  <rect x="1030" y="62" width="270" height="48" rx="4" fill="#ffd60a" stroke="#111111" stroke-width="4"/>
+  <text x="1060" y="93" fill="#111111" font-size="14" font-weight="900">VISUAL AGENT ORCHESTRATION</text>
 
-  <rect width="1400" height="500" rx="32" fill="url(#bg2)"/>
-
-  <!-- title -->
-  <text x="60" y="60" fill="#FED7AA" font-size="12" letter-spacing="3" font-weight="700">PIPELINE VIEW</text>
-  <text x="60" y="92" fill="#F9FAFB" font-size="22" font-weight="700">Build Session · Stripe billing integration</text>
-  <text x="60" y="116" fill="#9CA3AF" font-size="13">5 phases · phase 3 active · 38% complete</text>
-
-  <!-- progress rail -->
-  <rect x="60" y="155" width="1280" height="6" rx="3" fill="#1F2937"/>
-  <rect x="60" y="155" width="490" height="6" rx="3" fill="url(#active2)"/>
-
-  <!-- phase pills along the pipeline -->
-  <g transform="translate(60 200)">
-    <!-- Phase 0 DONE -->
+  <g transform="translate(60 182)">
     <g>
-      <rect x="0" y="0" width="220" height="170" rx="14" fill="#0F172A" stroke="#34D399" stroke-opacity="0.5"/>
-      <text x="16" y="28" fill="#9CA3AF" font-size="10" letter-spacing="2" font-weight="700">PHASE 0 · DONE</text>
-      <text x="16" y="56" fill="#F3F4F6" font-size="15" font-weight="700">Discovery</text>
-      <rect x="16" y="74" width="120" height="22" rx="11" fill="#0F172A" stroke="#34D399"/>
-      <text x="30" y="90" fill="#6EE7B7" font-size="11" font-weight="600">✓ GitHub Copilot</text>
-      <text x="16" y="118" fill="#6B7280" font-size="11">Repo scan · entry points</text>
-      <text x="16" y="138" fill="#6B7280" font-size="11">6 / 6 steps</text>
-      <text x="16" y="158" fill="#34D399" font-size="11" font-weight="700">Completed</text>
+      <rect x="0" y="0" width="220" height="170" rx="6" fill="#ffffff" stroke="#111111" stroke-width="4"/>
+      <text x="16" y="28" fill="#005caf" font-size="10" letter-spacing="2" font-weight="900">PHASE 01 · DONE</text>
+      <text x="16" y="58" fill="#111111" font-size="17" font-weight="900">Discovery</text>
+      <rect x="16" y="76" width="138" height="26" rx="4" fill="#36b979" stroke="#111111" stroke-width="3"/>
+      <text x="30" y="94" fill="#111111" font-size="12" font-weight="800">Copilot</text>
+      <text x="16" y="126" fill="#4b463f" font-size="12">Repo scan · entry points</text>
+      <text x="16" y="150" fill="#111111" font-size="12" font-weight="800">6 / 6 complete</text>
     </g>
+    <line x1="232" y1="85" x2="282" y2="85" stroke="#111111" stroke-width="4" marker-end="url(#arrow)"/>
 
-    <line x1="226" y1="85" x2="262" y2="85" stroke="#4B5563" stroke-width="2" marker-end="url(#arrow)"/>
-
-    <!-- Phase 1 DONE -->
-    <g transform="translate(268 0)">
-      <rect x="0" y="0" width="220" height="170" rx="14" fill="#0F172A" stroke="#34D399" stroke-opacity="0.5"/>
-      <text x="16" y="28" fill="#9CA3AF" font-size="10" letter-spacing="2" font-weight="700">PHASE 1 · DONE</text>
-      <text x="16" y="56" fill="#F3F4F6" font-size="15" font-weight="700">Scope &amp; design</text>
-      <rect x="16" y="74" width="100" height="22" rx="11" fill="#0F172A" stroke="#34D399"/>
-      <text x="30" y="90" fill="#6EE7B7" font-size="11" font-weight="600">✓ Codex</text>
-      <text x="16" y="118" fill="#6B7280" font-size="11">Schema + contracts</text>
-      <text x="16" y="138" fill="#6B7280" font-size="11">4 / 4 steps</text>
-      <text x="16" y="158" fill="#34D399" font-size="11" font-weight="700">Completed</text>
+    <g transform="translate(300 0)">
+      <rect x="0" y="0" width="220" height="170" rx="6" fill="#ffffff" stroke="#111111" stroke-width="4"/>
+      <text x="16" y="28" fill="#005caf" font-size="10" letter-spacing="2" font-weight="900">PHASE 02 · DONE</text>
+      <text x="16" y="58" fill="#111111" font-size="17" font-weight="900">Scope</text>
+      <rect x="16" y="76" width="100" height="26" rx="4" fill="#ffd60a" stroke="#111111" stroke-width="3"/>
+      <text x="30" y="94" fill="#111111" font-size="12" font-weight="800">Codex</text>
+      <text x="16" y="126" fill="#4b463f" font-size="12">Contracts + plan</text>
+      <text x="16" y="150" fill="#111111" font-size="12" font-weight="800">4 / 4 complete</text>
     </g>
+    <line x1="532" y1="85" x2="582" y2="85" stroke="#111111" stroke-width="4" marker-end="url(#arrow)"/>
 
-    <line x1="494" y1="85" x2="530" y2="85" stroke="#F97316" stroke-width="2.5" marker-end="url(#arrowHot)"/>
-
-    <!-- Phase 2 ACTIVE -->
-    <g transform="translate(536 -10)">
-      <rect x="0" y="0" width="240" height="190" rx="14" fill="#1F2937" stroke="url(#active2)" stroke-width="2.5"/>
-      <rect x="0" y="0" width="240" height="6" rx="3" fill="url(#active2)"/>
-      <text x="16" y="34" fill="#FED7AA" font-size="10" letter-spacing="2" font-weight="700">PHASE 2 · ACTIVE</text>
-      <text x="16" y="62" fill="#F9FAFB" font-size="16" font-weight="700">Stripe webhooks</text>
-      <rect x="16" y="80" width="140" height="24" rx="12" fill="#0F172A" stroke="#F97316"/>
-      <text x="30" y="97" fill="#FED7AA" font-size="12" font-weight="600">▸ Claude Code</text>
-      <text x="16" y="126" fill="#E5E7EB" font-size="11">● Add webhook route</text>
-      <text x="16" y="144" fill="#F97316" font-size="11" font-weight="700">◐ Verify signature</text>
-      <text x="16" y="162" fill="#6B7280" font-size="11">○ Refund handler</text>
-      <rect x="16" y="172" width="180" height="14" rx="7" fill="#0F172A"/>
-      <rect x="16" y="172" width="80" height="14" rx="7" fill="url(#active2)"/>
+    <g transform="translate(600 -12)">
+      <rect x="0" y="0" width="250" height="194" rx="6" fill="#fff7ed" stroke="#ff5a1f" stroke-width="6"/>
+      <text x="18" y="34" fill="#ff5a1f" font-size="10" letter-spacing="2" font-weight="900">PHASE 03 · ACTIVE</text>
+      <text x="18" y="66" fill="#111111" font-size="18" font-weight="900">Webhook work</text>
+      <rect x="18" y="84" width="132" height="26" rx="4" fill="#ff5a1f" stroke="#111111" stroke-width="3"/>
+      <text x="32" y="102" fill="#ffffff" font-size="12" font-weight="900">Claude Code</text>
+      <text x="18" y="134" fill="#4b463f" font-size="12">✓ Add route</text>
+      <text x="18" y="156" fill="#111111" font-size="12" font-weight="900">● Verify signature</text>
+      <text x="18" y="178" fill="#4b463f" font-size="12">○ Refund handler</text>
     </g>
+    <line x1="862" y1="85" x2="912" y2="85" stroke="#111111" stroke-width="4" marker-end="url(#arrow)"/>
 
-    <line x1="782" y1="85" x2="818" y2="85" stroke="#4B5563" stroke-width="2" marker-end="url(#arrow)"/>
-
-    <!-- Phase 3 PENDING -->
-    <g transform="translate(824 0)">
-      <rect x="0" y="0" width="220" height="170" rx="14" fill="#1F2937" stroke="#374151"/>
-      <text x="16" y="28" fill="#9CA3AF" font-size="10" letter-spacing="2" font-weight="700">PHASE 3 · PENDING</text>
-      <text x="16" y="56" fill="#F3F4F6" font-size="15" font-weight="700">Tests</text>
-      <rect x="16" y="74" width="80" height="22" rx="11" fill="#0F172A" stroke="#F97316"/>
-      <text x="30" y="90" fill="#FED7AA" font-size="11" font-weight="600">▸ Cline</text>
-      <text x="16" y="118" fill="#9CA3AF" font-size="11">Unit + E2E + snapshots</text>
-      <text x="16" y="138" fill="#9CA3AF" font-size="11">0 / 3 steps</text>
-      <text x="16" y="158" fill="#6B7280" font-size="11">Auto-activates when 2 done</text>
-    </g>
-
-    <line x1="1050" y1="85" x2="1086" y2="85" stroke="#4B5563" stroke-width="2" marker-end="url(#arrow)"/>
-
-    <!-- Phase 4 PENDING -->
-    <g transform="translate(1092 0)">
-      <rect x="0" y="0" width="220" height="170" rx="14" fill="#1F2937" stroke="#374151"/>
-      <text x="16" y="28" fill="#9CA3AF" font-size="10" letter-spacing="2" font-weight="700">PHASE 4 · PENDING</text>
-      <text x="16" y="56" fill="#F3F4F6" font-size="15" font-weight="700">Ship &amp; docs</text>
-      <rect x="16" y="74" width="100" height="22" rx="11" fill="#0F172A" stroke="#A78BFA"/>
-      <text x="30" y="90" fill="#DDD6FE" font-size="11" font-weight="600">▸ Continue</text>
-      <text x="16" y="118" fill="#9CA3AF" font-size="11">PR + changelog</text>
-      <text x="16" y="138" fill="#9CA3AF" font-size="11">0 / 5 steps</text>
-      <text x="16" y="158" fill="#6B7280" font-size="11">Final phase</text>
+    <g transform="translate(930 0)">
+      <rect x="0" y="0" width="220" height="170" rx="6" fill="#ffffff" stroke="#111111" stroke-width="4"/>
+      <text x="16" y="28" fill="#005caf" font-size="10" letter-spacing="2" font-weight="900">PHASE 04 · NEXT</text>
+      <text x="16" y="58" fill="#111111" font-size="17" font-weight="900">Tests</text>
+      <rect x="16" y="76" width="86" height="26" rx="4" fill="#e6007e" stroke="#111111" stroke-width="3"/>
+      <text x="30" y="94" fill="#ffffff" font-size="12" font-weight="900">Cline</text>
+      <text x="16" y="126" fill="#4b463f" font-size="12">Unit + E2E</text>
+      <text x="16" y="150" fill="#4b463f" font-size="12">0 / 3 complete</text>
     </g>
   </g>
 
-  <!-- agent strip -->
-  <g transform="translate(60 420)">
-    <text x="0" y="0" fill="#9CA3AF" font-size="10" letter-spacing="2" font-weight="700">HANDOFF ACTIONS: RUN · .SH · .BAT · COPY · MARKDOWN · VS CODE</text>
-    <g font-size="12" font-weight="600">
-      <rect x="0" y="14" width="96" height="30" rx="8" fill="#1F2937" stroke="#F97316"/>
-      <text x="10" y="34" fill="#FED7AA">Claude Code</text>
-
-      <rect x="104" y="14" width="70" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="122" y="34" fill="#D1D5DB">Codex</text>
-
-      <rect x="182" y="14" width="92" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="198" y="34" fill="#D1D5DB">Gemini CLI</text>
-
-      <rect x="282" y="14" width="88" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="296" y="34" fill="#D1D5DB">Cursor CLI</text>
-
-      <rect x="378" y="14" width="78" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="392" y="34" fill="#D1D5DB">Cline CLI</text>
-
-      <rect x="464" y="14" width="94" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="476" y="34" fill="#D1D5DB">Continue</text>
-
-      <rect x="566" y="14" width="62" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="580" y="34" fill="#D1D5DB">Aider</text>
-
-      <rect x="636" y="14" width="108" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="650" y="34" fill="#D1D5DB">GitHub Copilot</text>
-
-      <rect x="752" y="14" width="112" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="766" y="34" fill="#D1D5DB">Augment/Auggie</text>
+  <g transform="translate(60 410)">
+    <text x="0" y="0" fill="#005caf" font-size="10" letter-spacing="2" font-weight="900">INSTALL TARGETS</text>
+    <g font-size="12" font-weight="900">
+      <rect x="0" y="16" width="122" height="32" rx="4" fill="#005caf" stroke="#111111" stroke-width="3"/><text x="15" y="37" fill="#ffffff">Claude Code</text>
+      <rect x="134" y="16" width="76" height="32" rx="4" fill="#36b979" stroke="#111111" stroke-width="3"/><text x="152" y="37" fill="#111111">Codex</text>
+      <rect x="222" y="16" width="92" height="32" rx="4" fill="#e6007e" stroke="#111111" stroke-width="3"/><text x="240" y="37" fill="#ffffff">Gemini</text>
+      <rect x="326" y="16" width="98" height="32" rx="4" fill="#f7f4ea" stroke="#111111" stroke-width="3"/><text x="344" y="37" fill="#111111">Cursor</text>
+      <rect x="436" y="16" width="76" height="32" rx="4" fill="#ff5a1f" stroke="#111111" stroke-width="3"/><text x="454" y="37" fill="#ffffff">Cline</text>
+      <rect x="524" y="16" width="102" height="32" rx="4" fill="#ffd60a" stroke="#111111" stroke-width="3"/><text x="540" y="37" fill="#111111">Continue</text>
+      <rect x="638" y="16" width="72" height="32" rx="4" fill="#ffffff" stroke="#111111" stroke-width="3"/><text x="656" y="37" fill="#111111">Aider</text>
+      <rect x="722" y="16" width="160" height="32" rx="4" fill="#36b979" stroke="#111111" stroke-width="3"/><text x="740" y="37" fill="#111111">GitHub Copilot</text>
+      <rect x="894" y="16" width="96" height="32" rx="4" fill="#e6007e" stroke="#111111" stroke-width="3"/><text x="912" y="37" fill="#ffffff">Augment</text>
     </g>
   </g>
 </svg>

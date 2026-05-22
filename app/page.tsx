@@ -13,14 +13,13 @@ import {
   isConfiguredMarketingHost,
   normalizeHost,
 } from "@/lib/site-hosts";
+import { installTargets } from "@/lib/install-targets";
 
 const steps = [
   { id: "01", title: "Import", body: "Choose a repo folder or selected files.", bg: tapeColors.yellow, fg: tapeColors.ink },
   { id: "02", title: "Canonicalize", body: "Convert raw source into portable agents, skills, rules, and instructions with Kimi.", bg: tapeColors.blue, fg: tapeColors.white },
   { id: "03", title: "Install", body: "Pick Cursor, Codex, Claude, or a custom path and let the extension write files.", bg: tapeColors.green, fg: tapeColors.ink },
 ];
-
-const platforms = ["Copilot", "Codex", "Claude", "Gemini", "Cline", "Aider"];
 
 function ActionLink({ href, children, variant = "yellow" }: { href: string; children: ReactNode; variant?: "yellow" | "white" }) {
   const className = variant === "white"
@@ -68,10 +67,15 @@ function PlatformPanel() {
           <ArrowTape color="#111111" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {platforms.map((platform, index) => (
-            <div key={platform} className="border-[4px] border-black px-4 py-3 font-mono text-xs font-black uppercase tracking-[0.14em]" style={{ background: index % 3 === 0 ? tapeColors.yellow : index % 3 === 1 ? tapeColors.paper : tapeColors.green }}>
-              {platform}
-            </div>
+          {installTargets.map((target) => (
+            <Link
+              key={target.slug}
+              className="border-[4px] border-black px-4 py-3 font-mono text-xs font-black uppercase tracking-[0.14em] transition hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#111]"
+              href={`/install-targets/${target.slug}`}
+              style={{ background: target.color }}
+            >
+              {target.name}
+            </Link>
           ))}
         </div>
       </div>
@@ -83,42 +87,26 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
   const dryLakeOrigin = getConfiguredAppOrigin();
   const primaryHref = marketing ? dryLakeOrigin : "/upload";
   const secondaryHref = marketing ? `${dryLakeOrigin}/upload` : "/install";
-  const headline = marketing
-    ? "Xupra builds practical AI software for teams shipping with agents."
-    : "Import your skills and agents. Then install them in the next tool.";
-  const body = marketing
-    ? "Our live product is DryLake: a portability layer for repository skills, rules, and agent files. Import what already works, canonicalize it, and install it into the next editor or agent platform."
-    : "Start by importing an existing repo folder or selected files. Xupra stores the raw source files, canonicalizes them with Kimi, and hands install back to your editor.";
+  const headline = "Visual Kanban and Pipeline Planner for coding agents.";
 
   return (
     <main className="min-h-screen bg-[#f7f4ea] text-[#111111]">
       <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 lg:py-9">
         <section className="grid gap-6 lg:grid-cols-[1.02fr_0.98fr]">
           <div className="grid content-start gap-5 border-[5px] border-black bg-white p-5 shadow-[10px_10px_0_#111]">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-[#e84a5f] px-4 py-3">
-                <TapeWord text="XUPRA" color="#070707" cell={7} gap={2} label="Xupra" variantSet={1} />
-              </div>
-              <div className="bg-[#ff5a1f] px-4 py-3">
-                <TapeWord text="AI" color="#ffffff" cell={7} gap={2} label="AI" />
-              </div>
-            </div>
             <div className="grid gap-2">
               <div className="bg-[#005caf] px-4 py-3">
-                <TapeWord text="DRYLAKE" color="#ffffff" cell={7} gap={1} label="DryLake" variantSet={1} />
+                <TapeWord text="DRYLAKE" color="#ffffff" cell={4.5} gap={1} label="DryLake" variantSet={1} />
               </div>
               <div className="flex flex-wrap items-center gap-4 bg-[#f7f4ea] px-4 py-3">
-                <TapeWord text="IMPORT" color="#36b979" cell={5.4} gap={1} label="Import" variantSet={1} />
+                <TapeWord text="KANBAN" color="#36b979" cell={3.9} gap={1} label="Kanban" variantSet={1} />
                 <ArrowTape color="#36b979" />
-                <TapeWord text="INSTALL" color="#111111" cell={4.8} gap={1} label="Install" variantSet={2} />
+                <TapeWord text="PIPELINE" color="#111111" cell={3.4} gap={1} label="Pipeline" variantSet={2} />
               </div>
             </div>
-            <h1 className="max-w-3xl text-4xl font-black uppercase leading-[0.95] md:text-6xl">
+            <h1 className="max-w-3xl text-3xl font-black leading-tight text-stone-950 sm:text-4xl md:text-5xl">
               {headline}
             </h1>
-            <p className="max-w-2xl text-base font-medium leading-7 text-stone-800 md:text-lg">
-              {body}
-            </p>
             <div className="flex flex-wrap gap-3">
               <ActionLink href={primaryHref}>{marketing ? "Open DryLake" : "Start build"}</ActionLink>
               <ActionLink href={secondaryHref} variant="white">{marketing ? "Import skills" : "Open installer"}</ActionLink>

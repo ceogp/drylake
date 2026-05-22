@@ -78,7 +78,7 @@ export default async function RootLayout({
               width={44}
             />
             <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
-              Xupra
+              DryLake
             </div>
           </Link>
           <nav className="hidden items-center gap-3 text-sm font-black uppercase text-black md:flex">
@@ -136,7 +136,7 @@ export default async function RootLayout({
                 width={44}
               />
               <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
-                Xupra DryLake
+                DryLake
               </div>
             </Link>
             <nav className="hidden items-center gap-3 text-sm font-black uppercase text-black md:flex">

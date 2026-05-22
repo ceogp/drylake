@@ -2,27 +2,25 @@ import Link from "next/link";
 
 export default function ExtensionInstallPage() {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_46%,_#ffffff_100%)]">
+    <main className="tape-page min-h-screen">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-16 md:px-10 lg:py-24">
         <div className="space-y-4">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
+          <p className="tape-eyebrow">
             Extension Install
           </p>
-          <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold text-stone-950">
-            Install DryLake Agent Portability in VS Code
+          <h1 className="font-[family-name:var(--font-heading)] text-4xl font-black leading-tight text-stone-950 sm:text-5xl">
+            Install DryLake Visual Planner in VS Code
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            Install from the VS Code Marketplace or from the VS Code command line. Cursor
-            marketplace publishing is not live yet, so this page only covers the VS Code install
-            path.
+            Use DryLake to plan agent work as phases, then hand each phase to the tool that fits.
           </p>
         </div>
 
-        <article className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
+        <article className="tape-panel bg-white p-7">
+          <p className="tape-eyebrow">
             VS Code Marketplace
           </p>
-          <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+          <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-black text-stone-950">
             Install from the public listing
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
@@ -31,7 +29,7 @@ export default function ExtensionInstallPage() {
             .
           </p>
           <a
-            className="mt-5 inline-flex rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+            className="tape-button mt-5 bg-[#ffd60a] px-5 py-3 text-sm text-black"
             href="https://marketplace.visualstudio.com/items?itemName=xupracorp.drylake"
             rel="noopener noreferrer"
             target="_blank"
@@ -44,7 +42,7 @@ export default function ExtensionInstallPage() {
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
                 Install via command line
               </p>
-              <div className="mt-3 rounded-[1.35rem] border border-stone-200 bg-stone-50 px-5 py-4 font-mono text-xs text-stone-700">
+              <div className="mt-3 border-[4px] border-black bg-[#f7f4ea] px-5 py-4 font-mono text-xs text-stone-700">
                 code --install-extension xupracorp.drylake
               </div>
               <p className="mt-3 text-sm leading-7 text-stone-600">
@@ -57,14 +55,14 @@ export default function ExtensionInstallPage() {
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
                 Manual fallback
               </p>
-              <div className="mt-3 rounded-[1.35rem] border border-stone-200 bg-stone-50 px-5 py-4 text-sm leading-7 text-stone-700">
+              <div className="mt-3 border-[4px] border-black bg-[#f7f4ea] px-5 py-4 text-sm leading-7 text-stone-700">
                 Use <span className="font-mono text-xs">Extensions: Install from VSIX...</span> if
                 you are testing a local build or do not have the CLI configured.
               </div>
             </div>
           </div>
 
-          <div className="mt-8 rounded-[1.5rem] border border-dashed border-stone-300 bg-white p-4 text-sm leading-7 text-stone-700">
+          <div className="mt-8 border-[4px] border-black bg-[#f7f4ea] p-4 text-sm leading-7 text-stone-700">
             Need the browser handoff page after install?
             <Link
               className="mt-3 block font-medium text-orange-700 underline underline-offset-2 hover:text-orange-900"

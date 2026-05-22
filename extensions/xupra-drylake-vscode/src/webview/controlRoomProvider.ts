@@ -421,92 +421,93 @@ export class ControlRoomProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; color: var(--vscode-foreground); background: var(--vscode-editor-background); font-family: var(--vscode-font-family); }
+    :root { --drylake-paper: #f7f4ea; --drylake-ink: #111111; --drylake-yellow: #ffd60a; --drylake-blue: #005caf; --drylake-pink: #e6007e; --drylake-green: #36b979; --drylake-orange: #ff5a1f; --drylake-white: #ffffff; }
+    body { margin: 0; color: var(--drylake-ink); background: var(--drylake-paper); font-family: var(--vscode-font-family); }
     main { max-width: 1180px; margin: 0 auto; padding: 24px; }
-    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; padding: 16px; border: 5px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); box-shadow: 10px 10px 0 var(--drylake-ink); }
     h1 { margin: 0; font-size: 24px; }
     h2 { margin: 8px 0; font-size: 20px; }
     h3, p { margin: 0; }
     button, select, textarea { font: inherit; }
-    button { color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: 1px solid var(--vscode-button-background); border-radius: 4px; padding: 7px 11px; cursor: pointer; }
-    button.secondary, .toggle-btn { color: var(--vscode-foreground); background: var(--vscode-editor-background); border-color: var(--vscode-panel-border); }
-    .eyebrow { color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 11px; letter-spacing: 0.12em; }
-    .muted { color: var(--vscode-descriptionForeground); line-height: 1.45; }
+    button { color: var(--drylake-ink); background: var(--drylake-yellow); border: 3px solid var(--drylake-ink); border-radius: 4px; padding: 7px 11px; cursor: pointer; font-weight: 800; box-shadow: 4px 4px 0 var(--drylake-ink); }
+    button.secondary, .toggle-btn { color: var(--drylake-ink); background: var(--drylake-white); border-color: var(--drylake-ink); }
+    .eyebrow { color: var(--drylake-blue); text-transform: uppercase; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; }
+    .muted { color: #3f3a34; line-height: 1.45; }
     .actions, .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
-    .toggle-btn.active { color: var(--vscode-button-foreground); background: var(--vscode-button-background); border-color: var(--vscode-button-background); }
+    .toggle-btn.active { color: var(--drylake-ink); background: var(--drylake-yellow); border-color: var(--drylake-ink); }
     .pipeline { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 10px; }
-    .arrow { display: flex; align-items: center; padding: 0 8px; color: var(--vscode-descriptionForeground); font-size: 18px; flex: 0 0 auto; }
-    .phase-card { min-width: 190px; max-width: 220px; flex: 0 0 210px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; padding: 12px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
-    .phase-card.active, .phase-card.active-phase { border-color: var(--vscode-button-background); }
-    .phase-card.approved, .phase-card.complete { border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .arrow { display: flex; align-items: center; padding: 0 8px; color: var(--drylake-blue); font-size: 22px; font-weight: 900; flex: 0 0 auto; }
+    .phase-card { min-width: 190px; max-width: 220px; flex: 0 0 210px; border: 4px solid var(--drylake-ink); border-radius: 6px; padding: 12px; background: var(--drylake-white); box-shadow: 5px 5px 0 var(--drylake-ink); }
+    .phase-card.active, .phase-card.active-phase { border-color: var(--drylake-orange); background: #fff7ed; }
+    .phase-card.approved, .phase-card.complete { border-color: var(--drylake-green); }
     .phase-card.complete { opacity: 0.78; }
     .phase-card[draggable="true"] { cursor: grab; }
     .phase-card.dragging { opacity: 0.5; border-style: dashed; }
-    .pipeline .phase-card.drop-before { border-left: 4px solid var(--vscode-button-background); }
-    .pipeline .phase-card.drop-after { border-right: 4px solid var(--vscode-button-background); }
-    .kanban .phase-card.drop-before { border-top: 4px solid var(--vscode-button-background); }
-    .kanban .phase-card.drop-after { border-bottom: 4px solid var(--vscode-button-background); }
-    .phase-id { color: var(--vscode-descriptionForeground); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; }
+    .pipeline .phase-card.drop-before { border-left: 6px solid var(--drylake-blue); }
+    .pipeline .phase-card.drop-after { border-right: 6px solid var(--drylake-blue); }
+    .kanban .phase-card.drop-before { border-top: 6px solid var(--drylake-blue); }
+    .kanban .phase-card.drop-after { border-bottom: 6px solid var(--drylake-blue); }
+    .phase-id { color: var(--drylake-blue); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
     .phase-title { margin: 5px 0 8px; font-size: 13px; line-height: 1.25; }
-    .badge { display: inline-block; margin-bottom: 8px; padding: 2px 7px; border: 1px solid var(--vscode-panel-border); border-radius: 999px; color: var(--vscode-descriptionForeground); font-size: 10px; }
-    .badge.active { border-color: var(--vscode-button-background); color: var(--vscode-button-background); }
-    .badge.approved, .badge.complete { border-color: var(--vscode-testing-iconPassed, #4ec9b0); color: var(--vscode-testing-iconPassed, #4ec9b0); }
-    .objective { min-height: 32px; margin-bottom: 8px; color: var(--vscode-descriptionForeground); font-size: 11px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .agent-label { display: block; color: var(--vscode-descriptionForeground); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
-    .agent-select { width: 100%; margin-top: 4px; padding: 4px 6px; color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border)); border-radius: 4px; font-size: 11px; }
-    .step-count { margin-top: 8px; color: var(--vscode-descriptionForeground); font-size: 10px; }
+    .badge { display: inline-block; margin-bottom: 8px; padding: 2px 7px; border: 2px solid var(--drylake-ink); border-radius: 4px; color: var(--drylake-ink); background: var(--drylake-yellow); font-size: 10px; font-weight: 800; }
+    .badge.active { background: var(--drylake-orange); color: var(--drylake-white); }
+    .badge.approved, .badge.complete { background: var(--drylake-green); color: var(--drylake-ink); }
+    .objective { min-height: 32px; margin-bottom: 8px; color: #4b463f; font-size: 11px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .agent-label { display: block; color: #4b463f; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+    .agent-select { width: 100%; margin-top: 4px; padding: 4px 6px; color: var(--drylake-ink); background: var(--drylake-paper); border: 3px solid var(--drylake-ink); border-radius: 4px; font-size: 11px; }
+    .step-count { margin-top: 8px; color: #4b463f; font-size: 10px; }
     .kanban { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-    .kanban-column { min-height: 320px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
-    .column-header { display: flex; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--vscode-panel-border); color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 11px; letter-spacing: 0.12em; }
-    .count { padding: 1px 7px; border-radius: 999px; color: var(--vscode-badge-foreground); background: var(--vscode-badge-background); }
+    .kanban-column { min-height: 320px; border: 4px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); }
+    .column-header { display: flex; justify-content: space-between; padding: 10px 12px; border-bottom: 4px solid var(--drylake-ink); color: var(--drylake-ink); background: var(--drylake-yellow); text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.12em; }
+    .count { padding: 1px 7px; border: 2px solid var(--drylake-ink); border-radius: 4px; color: var(--drylake-ink); background: var(--drylake-white); }
     .column-body { min-height: 280px; padding: 10px; }
     .kanban .phase-card { width: 100%; max-width: none; min-width: 0; margin-bottom: 8px; }
-    .drop-zone { padding: 10px; border: 1px dashed var(--vscode-panel-border); border-radius: 6px; color: var(--vscode-descriptionForeground); text-align: center; font-size: 11px; }
-    .kanban-column.drag-over .drop-zone { border-color: var(--vscode-button-background); color: var(--vscode-button-background); }
-    .empty-state { border: 1px solid var(--vscode-panel-border); border-radius: 8px; padding: 18px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
+    .drop-zone { padding: 10px; border: 3px dashed var(--drylake-ink); border-radius: 6px; color: #4b463f; text-align: center; font-size: 11px; }
+    .kanban-column.drag-over .drop-zone { border-color: var(--drylake-blue); color: var(--drylake-blue); }
+    .empty-state { border: 5px solid var(--drylake-ink); border-radius: 8px; padding: 18px; background: var(--drylake-white); box-shadow: 10px 10px 0 var(--drylake-ink); }
     .prompt-panel { margin-top: 14px; display: grid; gap: 12px; }
-    textarea { width: 100%; min-height: 170px; resize: vertical; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 4px; padding: 12px; line-height: 1.45; }
+    textarea { width: 100%; min-height: 170px; resize: vertical; color: var(--drylake-ink); background: var(--drylake-white); border: 3px solid var(--drylake-ink); border-radius: 4px; padding: 12px; line-height: 1.45; }
     .mode-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .mode-card { min-height: 92px; color: var(--vscode-foreground); background: var(--vscode-editor-background); border-color: var(--vscode-panel-border); text-align: left; }
-    .mode-card.selected { border-color: var(--vscode-button-background); }
+    .mode-card { min-height: 92px; color: var(--drylake-ink); background: var(--drylake-white); border-color: var(--drylake-ink); text-align: left; }
+    .mode-card.selected { background: var(--drylake-yellow); border-color: var(--drylake-ink); }
     .mode-card strong { display: block; margin-bottom: 6px; }
-    .planning-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; margin: 0 0 16px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); font-size: 12px; }
-    .planning-banner.pro { border-color: var(--vscode-button-background); }
-    .planning-banner.fallback { border-color: var(--vscode-editorWarning-foreground, var(--vscode-panel-border)); }
-    .planning-banner-eyebrow { color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 10px; letter-spacing: 0.14em; }
-    .planning-banner-label { color: var(--vscode-foreground); }
-    .planning-banner-reason { color: var(--vscode-descriptionForeground); flex-basis: 100%; }
-    .handoff-panel { display: grid; gap: 10px; padding: 12px; margin: 0 0 16px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
+    .planning-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; margin: 0 0 16px; border: 4px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); font-size: 12px; }
+    .planning-banner.pro { border-color: var(--drylake-blue); }
+    .planning-banner.fallback { border-color: var(--drylake-orange); }
+    .planning-banner-eyebrow { color: var(--drylake-blue); text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
+    .planning-banner-label { color: var(--drylake-ink); }
+    .planning-banner-reason { color: #4b463f; flex-basis: 100%; }
+    .handoff-panel { display: grid; gap: 10px; padding: 12px; margin: 0 0 16px; border: 4px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); }
     .handoff-panel-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
-    .handoff-eyebrow { color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 10px; letter-spacing: 0.14em; }
-    .handoff-note { color: var(--vscode-descriptionForeground); font-size: 11px; }
+    .handoff-eyebrow { color: var(--drylake-blue); text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
+    .handoff-note { color: #4b463f; font-size: 11px; }
     .agent-capability-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
-    .agent-capability { min-height: 54px; padding: 8px; border: 1px solid var(--vscode-panel-border); border-radius: 6px; background: var(--vscode-editor-background); }
-    .agent-capability.direct { border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
-    .agent-capability.prompt { border-color: var(--vscode-editorWarning-foreground, #cca700); }
+    .agent-capability { min-height: 54px; padding: 8px; border: 3px solid var(--drylake-ink); border-radius: 6px; background: var(--drylake-paper); }
+    .agent-capability.direct { background: #e9fff2; border-color: var(--drylake-green); }
+    .agent-capability.prompt { background: #fff7d0; border-color: var(--drylake-yellow); }
     .agent-capability.fallback { opacity: 0.84; }
     .agent-capability-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 5px; font-size: 12px; }
-    .agent-capability span { color: var(--vscode-descriptionForeground); font-size: 11px; }
-    .agent-count { min-width: 18px; padding: 1px 6px; border-radius: 999px; color: var(--vscode-badge-foreground) !important; background: var(--vscode-badge-background); text-align: center; }
+    .agent-capability span { color: #4b463f; font-size: 11px; }
+    .agent-count { min-width: 18px; padding: 1px 6px; border: 2px solid var(--drylake-ink); border-radius: 4px; color: var(--drylake-ink) !important; background: var(--drylake-yellow); text-align: center; }
     .step-list-wrap { margin-top: 8px; }
     .step-list { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; }
-    .step-item label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 12px; line-height: 1.4; color: var(--vscode-foreground); }
+    .step-item label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 12px; line-height: 1.4; color: var(--drylake-ink); }
     .step-item input[type="checkbox"] { margin-top: 2px; }
-    .step-item.done span { text-decoration: line-through; color: var(--vscode-descriptionForeground); }
+    .step-item.done span { text-decoration: line-through; color: #6c655d; }
     .phase-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-top: 10px; }
-    .handoff-action-select { min-width: 0; width: 100%; padding: 5px 6px; color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border)); border-radius: 4px; font-size: 11px; }
+    .handoff-action-select { min-width: 0; width: 100%; padding: 5px 6px; color: var(--drylake-ink); background: var(--drylake-paper); border: 3px solid var(--drylake-ink); border-radius: 4px; font-size: 11px; }
     .handoff-btn { font-size: 12px; padding: 6px 10px; }
-    .chat-panel { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin: 0 0 18px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); }
+    .chat-panel { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin: 0 0 18px; border: 4px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); }
     .chat-header { display: flex; align-items: center; justify-content: space-between; }
-    .chat-eyebrow { color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 10px; letter-spacing: 0.14em; }
+    .chat-eyebrow { color: var(--drylake-blue); text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
     .chat-clear { padding: 4px 8px; font-size: 11px; }
     .chat-messages { display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
-    .chat-message { padding: 8px 10px; border: 1px solid var(--vscode-panel-border); border-radius: 6px; background: var(--vscode-editor-background); }
-    .chat-message.user { border-color: var(--vscode-button-background); }
+    .chat-message { padding: 8px 10px; border: 3px solid var(--drylake-ink); border-radius: 6px; background: var(--drylake-paper); }
+    .chat-message.user { border-color: var(--drylake-blue); }
     .chat-message.system { border-style: dashed; opacity: 0.85; }
-    .chat-meta { display: flex; justify-content: space-between; color: var(--vscode-descriptionForeground); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+    .chat-meta { display: flex; justify-content: space-between; color: #4b463f; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
     .chat-body { font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
-    .chat-empty { padding: 8px 4px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+    .chat-empty { padding: 8px 4px; color: #4b463f; font-size: 12px; }
     .chat-form textarea { min-height: 56px; }
     .chat-form-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
     .chat-hint { font-size: 11px; }
@@ -519,7 +520,7 @@ export class ControlRoomProvider {
       <div>
         <div class="eyebrow">DryLake Build Session</div>
         <h1>DryLake Control Room</h1>
-        <p class="muted">Plan the work, assign the right AI tool, and move each coding step toward validation.</p>
+        <p class="muted">Visual kanban and pipeline planner for coding-agent work.</p>
       </div>
       <div class="actions">
         <div class="toggle-group" role="group" aria-label="Control Room view">

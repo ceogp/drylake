@@ -44,7 +44,6 @@ External AI Prompt remains available as a planning fallback, but it is not a sel
 ## Support
 
 - Homepage: <https://drylake.xupracorp.com/>
-- About Xupra: <https://drylake.xupracorp.com/about>
 - Support: support@xupracorp.com
 
 ## Non-affiliation
