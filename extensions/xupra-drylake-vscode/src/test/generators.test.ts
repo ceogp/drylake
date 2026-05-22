@@ -76,7 +76,6 @@ describe("runbook generators", () => {
       codex: "You are running as Codex CLI.",
       gemini: "You are running as Gemini CLI.",
       cursor: "You are running as Cursor CLI.",
-      cline: "You are running as Cline CLI.",
       continue: "You are running as Continue CLI.",
       aider: "You are running as Aider.",
       copilot: "You are running as GitHub Copilot.",

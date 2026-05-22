@@ -1,18 +1,18 @@
 # DryLake — Visual Planning for AI Coding Agents
 
-**Visual planning for AI coding work.** Drop in a ticket, split it into phases, assign an agent, and run each phase from Kanban or Pipeline.
+**Visual planning for AI coding work.** Drop in a ticket, split it into phases, choose the agent from each phase card, then choose the handoff action from Kanban or Pipeline.
 
-![DryLake Control Room kanban](media/readme-kanban.png)
+![DryLake Control Room kanban](https://drylake.xupracorp.com/marketplace/extension/media/readme-kanban.png)
 
-Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Cursor CLI · Cline CLI · Continue CLI · Aider · GitHub Copilot · Augment / Auggie** from the planner. DryLake saves the phase handoff and exposes direct run, `.sh`, `.bat`, Copy, Markdown, and VS Code actions.
+Each phase card has an **Agent** dropdown and a **Handoff action** dropdown. Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Cursor CLI · Continue CLI · Aider · GitHub Copilot · Augment / Auggie** from the planner. DryLake saves the phase handoff and exposes direct run, `.sh`, `.bat`, Copy, Markdown, and VS Code actions.
 
-![DryLake pipeline view](media/readme-pipeline.png)
+![DryLake pipeline view](https://drylake.xupracorp.com/marketplace/extension/media/readme-pipeline.png)
 
 ## What It Does
 
 - **Plans your work as a kanban.** Pending → Active → Validating → Done. Drag phases to reorder them.
-- **One agent per phase.** Pick Claude Code for design, Cline for tests, Codex for docs, or another verified launcher.
-- **Explicit handoff actions.** Choose direct run, `.sh`, `.bat`, Copy, Markdown, or VS Code for each phase.
+- **One visible agent selector per phase.** Pick Claude Code for design, Aider for patch work, Codex for docs, or another verified launcher directly on the card.
+- **Explicit handoff action selector.** Choose direct run, `.sh`, `.bat`, Copy, Markdown, or VS Code before pressing Handoff.
 - **Auto-advance.** Tick all steps in a phase, DryLake completes it and activates the next one.
 - **Planning chat.** Tell DryLake to add a step or change scope; the kanban updates live.
 
@@ -27,19 +27,20 @@ Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Cursor CLI · Cl
 
 ## Works With Your Coding Agents
 
-Pick a different agent per phase — or stick with one for the whole session. Selectable phase agents have verified launch paths:
+Pick a different agent per phase — or stick with one for the whole session. Selectable phase agents have implemented handoff paths in the extension:
 
 1. **Claude Code** (Anthropic)
 2. **OpenAI Codex**
 3. **Gemini CLI**
 4. **Cursor CLI**
-5. **Cline CLI**
-6. **Continue CLI**
-7. **Aider**
-8. **GitHub Copilot** (Copilot Chat)
-9. **Augment / Auggie CLI**
+5. **Continue CLI**
+6. **Aider**
+7. **GitHub Copilot** (Copilot Chat)
+8. **Augment / Auggie CLI**
 
 External AI Prompt remains available as a planning fallback, but it is not a selectable phase handoff agent.
+
+Direct CLI handoff requires the matching command to already be installed and available on `PATH`. If a direct command is missing, DryLake saves the phase handoff, copies the prompt, and opens the Markdown file instead of pretending the launch worked.
 
 ## Support
 
@@ -48,4 +49,4 @@ External AI Prompt remains available as a planning fallback, but it is not a sel
 
 ## Non-affiliation
 
-DryLake is not affiliated with Anthropic, OpenAI, Google, GitHub, Microsoft, Cursor, Cline, Continue, Aider, Augment, or their respective owners.
+DryLake is not affiliated with Anthropic, OpenAI, Google, GitHub, Microsoft, Cursor, Continue, Aider, Augment, or their respective owners.

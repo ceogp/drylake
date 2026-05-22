@@ -209,9 +209,9 @@ describe("Control Room webview", () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);
 
-    await messageHandler?.({ command: "drylake.updatePhaseAgent", phaseId: "active", agent: "cline" });
+    await messageHandler?.({ command: "drylake.updatePhaseAgent", phaseId: "active", agent: "aider" });
 
-    expect(executed).toContainEqual({ command: "drylake.updatePhaseAgent", args: ["active", "cline"] });
+    expect(executed).toContainEqual({ command: "drylake.updatePhaseAgent", args: ["active", "aider"] });
   });
 
   it("routes handoff action messages to phase handoff commands", async () => {
@@ -233,11 +233,11 @@ describe("Control Room webview", () => {
       expect(html).toContain(`option value="${agent}"`);
     }
 
-    expect(html).toContain("Cline");
     expect(html).toContain("Gemini CLI");
     expect(html).toContain("Continue.dev");
     expect(html).toContain("Aider");
     expect(html).toContain("Augment Code");
+    expect(html).not.toContain("Cline");
     expect(html).not.toContain("Windsurf");
     expect(html).not.toContain("Roo Code");
     expect(html).not.toContain("External AI Prompt");

@@ -7,7 +7,6 @@ const AGENT_PREAMBLES: Record<XuPhaseAgent, string> = {
   codex: "You are running as Codex CLI. Output shell commands and file patches.",
   gemini: "You are running as Gemini CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
   cursor: "You are running as Cursor CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
-  cline: "You are running as Cline CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
   continue: "You are running as Continue CLI. Use the focused phase objective, steps, and acceptance criteria to guide the agent session.",
   aider: "You are running as Aider. Use the focused phase objective, steps, and acceptance criteria to plan patches before editing files.",
   copilot: "You are running as GitHub Copilot. Use inline suggestions and chat.",

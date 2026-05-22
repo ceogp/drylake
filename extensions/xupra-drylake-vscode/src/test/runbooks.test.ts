@@ -91,9 +91,9 @@ beforeEach(() => {
   mocks.writePhaseHandoffScript.mockReset();
   mocks.showWarningMessage.mockResolvedValue("Upgrade to Pro");
   mocks.openTextDocument.mockImplementation(async (document) => document);
-  mocks.writePhaseHandoffFile.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-cline.md", path: "/repo/.drylake/handoffs/P-01-cline.md" });
-  mocks.writePhaseHandoffScript.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-cline.sh", path: "/repo/.drylake/handoffs/P-01-cline.sh" });
-  mocks.launchPhaseAgent.mockResolvedValue({ status: "launched", message: "Started Cline for this phase." });
+  mocks.writePhaseHandoffFile.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-aider.md", path: "/repo/.drylake/handoffs/P-01-aider.md" });
+  mocks.writePhaseHandoffScript.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-aider.sh", path: "/repo/.drylake/handoffs/P-01-aider.sh" });
+  mocks.launchPhaseAgent.mockResolvedValue({ status: "launched", message: "Started Aider for this phase." });
 });
 
 describe("runbook commands", () => {
@@ -248,10 +248,10 @@ describe("runbook commands", () => {
   it("persists newly native phase-agent selections", async () => {
     const { deps } = reorderDeps();
 
-    await updatePhaseAgentCommand(deps as never, "P-01", "cline");
+    await updatePhaseAgentCommand(deps as never, "P-01", "aider");
 
     const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
-    expect(written.phases.find((phase) => phase.id === "P-01")?.agent).toBe("cline");
+    expect(written.phases.find((phase) => phase.id === "P-01")?.agent).toBe("aider");
     expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });
@@ -295,7 +295,7 @@ describe("runbook commands", () => {
     runbook.handoff.autopilot = true;
     runbook.phases[0].status = "active";
     runbook.phases[0].agent = "codex";
-    runbook.phases[1].agent = "cline";
+    runbook.phases[1].agent = "aider";
     let currentRunbook = runbook;
     const uri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
     const deps = {
@@ -317,7 +317,7 @@ describe("runbook commands", () => {
 
     await toggleStepCommand(deps as never, "P-01", "P-01-step-01", "complete");
 
-    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "cline" }));
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "aider" }));
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(2);
     expect(currentRunbook.phases[0].status).toBe("complete");
     expect(currentRunbook.phases[1].status).toBe("active");
@@ -341,19 +341,19 @@ describe("runbook commands", () => {
 
   it("writes handoff files and launches selected phase agents", async () => {
     const runbook = reorderRunbook();
-    runbook.phases[0].agent = "cline";
+    runbook.phases[0].agent = "aider";
     const { deps } = reorderDeps(runbook);
 
     await handoffPhaseCommand(deps as never, "P-01");
 
     expect(mocks.writeClipboard).not.toHaveBeenCalled();
     expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
-      agent: "cline",
-      content: expect.stringContaining("You are running as Cline CLI."),
+      agent: "aider",
+      content: expect.stringContaining("You are running as Aider."),
     }));
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({
-      agent: "cline",
-      prompt: expect.stringContaining("You are running as Cline CLI."),
+      agent: "aider",
+      prompt: expect.stringContaining("You are running as Aider."),
     }));
     expect(mocks.openTextDocument).not.toHaveBeenCalled();
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
@@ -363,12 +363,12 @@ describe("runbook commands", () => {
 
   it("copies selected phase prompts as an explicit handoff action", async () => {
     const runbook = reorderRunbook();
-    runbook.phases[0].agent = "cline";
+    runbook.phases[0].agent = "aider";
     const { deps } = reorderDeps(runbook);
 
     await handoffPhaseCommand(deps as never, "P-01", "copy");
 
-    expect(mocks.writeClipboard).toHaveBeenCalledWith(expect.stringContaining("You are running as Cline CLI."));
+    expect(mocks.writeClipboard).toHaveBeenCalledWith(expect.stringContaining("You are running as Aider."));
     expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
     expect(mocks.openTextDocument).not.toHaveBeenCalled();
   });
@@ -382,8 +382,8 @@ describe("runbook commands", () => {
 
     expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
     expect(mocks.openTextDocument).toHaveBeenCalledWith({
-      fsPath: "C:/repo/.drylake/handoffs/P-01-cline.md",
-      path: "/repo/.drylake/handoffs/P-01-cline.md",
+      fsPath: "C:/repo/.drylake/handoffs/P-01-aider.md",
+      path: "/repo/.drylake/handoffs/P-01-aider.md",
     });
     expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
   });
@@ -442,8 +442,8 @@ describe("runbook commands", () => {
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "cursor" }));
     expect(mocks.openTextDocument).toHaveBeenCalledWith({
-      fsPath: "C:/repo/.drylake/handoffs/P-01-cline.md",
-      path: "/repo/.drylake/handoffs/P-01-cline.md",
+      fsPath: "C:/repo/.drylake/handoffs/P-01-aider.md",
+      path: "/repo/.drylake/handoffs/P-01-aider.md",
     });
     expect(mocks.showTextDocument).toHaveBeenCalled();
   });

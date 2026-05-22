@@ -126,16 +126,6 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     shellScriptCommand: shellPromptArgCommand("agent -p"),
     batchScriptCommand: batchPromptArgCommand("agent -p"),
   },
-  cline: {
-    id: "cline",
-    label: "Cline",
-    kind: "terminal",
-    executable: "cline",
-    help: "Install Cline CLI and make the `cline` command available on PATH.",
-    terminalCommand: (promptFilePath) => fromPromptFile("cline --auto-approve false", promptFilePath),
-    shellScriptCommand: shellPromptArgCommand("cline --auto-approve false"),
-    batchScriptCommand: batchPromptArgCommand("cline --auto-approve false"),
-  },
   continue: {
     id: "continue",
     label: "Continue.dev",
