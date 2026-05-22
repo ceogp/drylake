@@ -186,6 +186,7 @@ export function createStarterXu(params: {
     },
     handoff: {
       defaultAgent: "claude-code",
+      autopilot: false,
       instructions: [
         "Follow phases in order.",
         "Do not skip approval gates.",

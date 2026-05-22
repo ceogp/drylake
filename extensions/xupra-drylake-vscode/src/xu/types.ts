@@ -111,6 +111,7 @@ export type ApplicationBuildRunbook = {
   };
   handoff: {
     defaultAgent: string;
+    autopilot: boolean;
     instructions: string[];
   };
 };

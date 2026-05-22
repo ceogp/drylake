@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { handoffPhaseCommand, reorderPhaseCommand, startBuildSessionCommand, updatePhaseAgentCommand } from "../commands/runbooks";
+import {
+  handoffPhaseCommand,
+  reorderPhaseCommand,
+  runNextPhaseCommand,
+  startBuildSessionCommand,
+  toggleAutopilotCommand,
+  toggleStepCommand,
+  updatePhaseAgentCommand,
+} from "../commands/runbooks";
 import { createStarterXu } from "../xu/createStarterXu";
 import type { ApplicationBuildRunbook } from "../xu/types";
 
@@ -237,6 +245,89 @@ describe("runbook commands", () => {
     expect(written.phases.find((phase) => phase.id === "P-01")?.agent).toBe("cline");
     expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+  });
+
+  it("requires an explicit phase agent before launch", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = undefined;
+    const { deps } = reorderDeps(runbook);
+
+    await handoffPhaseCommand(deps as never, "P-01");
+
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith("Select an agent for Phase 1 before running this phase.");
+    expect(mocks.writePhaseHandoffFile).not.toHaveBeenCalled();
+    expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
+  });
+
+  it("runs the next in-order phase instead of only exporting a prompt", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps } = reorderDeps(runbook);
+
+    await runNextPhaseCommand(deps as never);
+
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
+    expect(mocks.openTextDocument).not.toHaveBeenCalled();
+  });
+
+  it("toggles autopilot mode in the runbook", async () => {
+    const { deps } = reorderDeps();
+
+    await toggleAutopilotCommand(deps as never);
+
+    const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(written.handoff.autopilot).toBe(true);
+    expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
+    expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+  });
+
+  it("autopilot launches the next selected phase after completion", async () => {
+    const runbook = reorderRunbook();
+    runbook.handoff.autopilot = true;
+    runbook.phases[0].status = "active";
+    runbook.phases[0].agent = "codex";
+    runbook.phases[1].agent = "roo-code";
+    let currentRunbook = runbook;
+    const uri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
+    const deps = {
+      apiClient: {},
+      stateStore: {
+        getBuildSession: vi.fn(() => null),
+      },
+      sessionStore: {
+        readRunbook: vi.fn(async () => ({ uri, runbook: currentRunbook })),
+        writeRunbook: vi.fn(async (_uri: unknown, nextRunbook: ApplicationBuildRunbook) => {
+          currentRunbook = nextRunbook;
+        }),
+      },
+      controlRoom: {
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+
+    await toggleStepCommand(deps as never, "P-01", "P-01-step-01", "complete");
+
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "roo-code" }));
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(2);
+    expect(currentRunbook.phases[0].status).toBe("complete");
+    expect(currentRunbook.phases[1].status).toBe("active");
+  });
+
+  it("autopilot pauses when the next phase has no selected agent", async () => {
+    const runbook = reorderRunbook();
+    runbook.handoff.autopilot = true;
+    runbook.phases[0].status = "active";
+    runbook.phases[0].agent = "codex";
+    runbook.phases[1].agent = undefined;
+    const { deps } = reorderDeps(runbook);
+
+    await toggleStepCommand(deps as never, "P-01", "P-01-step-01", "complete");
+
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+      "Phase 1 complete. Autopilot is paused until you select an agent for Phase 2.",
+    );
+    expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
   });
 
   it("writes handoff files and launches newly native phase agents", async () => {

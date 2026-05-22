@@ -4,7 +4,7 @@ import { phaseAgentActionLabel, phaseAgentHint, phaseAgentLabel } from "../agent
 import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { ChatState, PlanningProviderInfo } from "../services/stateStore";
-import type { ApplicationBuildRunbook, XuMode, XuPhase, XuPhaseAgent, XuStepStatus } from "../xu/types";
+import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../xu/types";
 
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
 type ControlRoomView = "pipeline" | "kanban";
@@ -37,14 +37,8 @@ function controlRoomViewFrom(value: unknown): ControlRoomView {
   return value === "kanban" ? "kanban" : "pipeline";
 }
 
-function phaseAgentFrom(value: unknown): XuPhaseAgent | undefined {
-  return typeof value === "string" && (XU_PHASE_AGENTS as readonly string[]).includes(value)
-    ? (value as XuPhaseAgent)
-    : undefined;
-}
-
-function defaultAgent(runbook: ApplicationBuildRunbook | null): XuPhaseAgent {
-  return phaseAgentFrom(runbook?.handoff.defaultAgent) ?? "external-ai-prompt";
+function autopilotEnabled(runbook: ApplicationBuildRunbook | null) {
+  return Boolean(runbook?.handoff.autopilot);
 }
 
 function statusClass(status: XuStepStatus) {
@@ -63,10 +57,12 @@ function statusForKanban(status: XuStepStatus) {
   return "pending";
 }
 
-function renderAgentSelect(phase: XuPhase, fallbackAgent: XuPhaseAgent) {
-  const selected = phase.agent ?? fallbackAgent;
+function renderAgentSelect(phase: XuPhase) {
+  const selected = phase.agent;
+  const placeholderSelected = selected ? "" : " selected";
 
-  return `<label class="agent-label">Agent<select class="agent-select" data-phase-agent="${escapeHtml(phase.id)}" aria-label="Agent for ${escapeHtml(phase.title)}" title="${escapeHtml(phaseAgentHint(selected))}">
+  return `<label class="agent-label">Agent<select class="agent-select" data-phase-agent="${escapeHtml(phase.id)}" aria-label="Agent for ${escapeHtml(phase.title)}" title="${escapeHtml(selected ? phaseAgentHint(selected) : "Select the agent that should run this phase.")}">
+    <option value="" disabled${placeholderSelected}>Select phase agent</option>
     ${XU_PHASE_AGENTS.map((agent) => {
       const isSelected = agent === selected ? " selected" : "";
       return `<option value="${agent}"${isSelected}>${escapeHtml(phaseAgentLabel(agent))}</option>`;
@@ -101,55 +97,68 @@ function renderPhaseSteps(phase: XuPhase) {
   </div>`;
 }
 
-function renderPhaseCard(phase: XuPhase, fallbackAgent: XuPhaseAgent, options: { draggable: boolean }) {
+function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
   const draggable = options.draggable ? ' draggable="true"' : "";
   const cardClass = `phase-card ${statusClass(phase.status)}${phase.status === "active" ? " active-phase" : ""}`;
-  const selectedAgent = phase.agent ?? fallbackAgent;
+  const selectedAgent = phase.agent;
+  const actionLabel = selectedAgent ? phaseAgentActionLabel(selectedAgent) : "Select agent";
+  const actionHint = selectedAgent ? phaseAgentHint(selectedAgent) : "Select a phase agent before running this phase.";
 
   return `<article class="${cardClass}" data-phase-id="${escapeHtml(phase.id)}" data-phase-status="${statusForKanban(phase.status)}"${draggable}>
     <div class="phase-id">${escapeHtml(phase.id)}</div>
     <h3 class="phase-title">${escapeHtml(phase.title)}</h3>
     <span class="badge ${statusClass(phase.status)}">${escapeHtml(STATUS_LABELS[phase.status])}</span>
     <p class="objective" title="${escapeHtml(phase.objective)}">${escapeHtml(phase.objective || "No objective recorded.")}</p>
-    ${renderAgentSelect(phase, fallbackAgent)}
+    ${renderAgentSelect(phase)}
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
-      <button class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" title="${escapeHtml(phaseAgentHint(selectedAgent))}">${escapeHtml(phaseAgentActionLabel(selectedAgent))}</button>
+      <button class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" title="${escapeHtml(actionHint)}">${escapeHtml(actionLabel)}</button>
     </div>
   </article>`;
 }
 
-function renderPipeline(runbook: ApplicationBuildRunbook) {
-  const fallbackAgent = defaultAgent(runbook);
+function renderExecutionModeToggle(runbook: ApplicationBuildRunbook | null) {
+  if (!runbook) {
+    return "";
+  }
 
+  const enabled = autopilotEnabled(runbook);
+  const label = enabled ? "Autopilot mode" : "Require Approval Between Phases";
+  const title = enabled
+    ? "DryLake starts the next phase automatically after the current phase is marked complete."
+    : "DryLake pauses after each phase so you can approve before starting the next phase.";
+
+  return `<button class="toggle-btn execution-toggle${enabled ? " active" : ""}" data-command="drylake.toggleAutopilot" title="${escapeHtml(title)}" aria-pressed="${enabled ? "true" : "false"}">${escapeHtml(label)}</button>`;
+}
+
+function renderPipeline(runbook: ApplicationBuildRunbook) {
   return `<section class="pipeline" aria-label="Build Session pipeline">
     ${runbook.phases.map((phase, index) => {
-      const card = renderPhaseCard(phase, fallbackAgent, { draggable: true });
+      const card = renderPhaseCard(phase, { draggable: true });
       return index < runbook.phases.length - 1 ? `${card}<div class="arrow" aria-hidden="true">&rarr;</div>` : card;
     }).join("")}
   </section>`;
 }
 
-function renderKanbanColumn(title: string, status: "pending" | "active" | "complete", phases: XuPhase[], fallbackAgent: XuPhaseAgent) {
+function renderKanbanColumn(title: string, status: "pending" | "active" | "complete", phases: XuPhase[]) {
   return `<section class="kanban-column" data-drop-status="${status}">
     <div class="column-header"><span>${escapeHtml(title)}</span><span class="count">${phases.length}</span></div>
     <div class="column-body">
-      ${phases.map((phase) => renderPhaseCard(phase, fallbackAgent, { draggable: true })).join("")}
+      ${phases.map((phase) => renderPhaseCard(phase, { draggable: true })).join("")}
       <div class="drop-zone">Drop phase here</div>
     </div>
   </section>`;
 }
 
 function renderKanban(runbook: ApplicationBuildRunbook) {
-  const fallbackAgent = defaultAgent(runbook);
   const pending = runbook.phases.filter((phase) => statusForKanban(phase.status) === "pending");
   const active = runbook.phases.filter((phase) => statusForKanban(phase.status) === "active");
   const complete = runbook.phases.filter((phase) => statusForKanban(phase.status) === "complete");
 
   return `<section class="kanban" aria-label="Build Session kanban">
-    ${renderKanbanColumn("To Do", "pending", pending, fallbackAgent)}
-    ${renderKanbanColumn("In Progress", "active", active, fallbackAgent)}
-    ${renderKanbanColumn("Done", "complete", complete, fallbackAgent)}
+    ${renderKanbanColumn("To Do", "pending", pending)}
+    ${renderKanbanColumn("In Progress", "active", active)}
+    ${renderKanbanColumn("Done", "complete", complete)}
   </section>`;
 }
 
@@ -293,6 +302,11 @@ export class ControlRoomProvider {
         return;
       }
 
+      if (message.command === "drylake.toggleAutopilot") {
+        await vscode.commands.executeCommand(message.command);
+        return;
+      }
+
       if (message.command === "drylake.handoffPhase") {
         await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0]);
         return;
@@ -358,6 +372,7 @@ export class ControlRoomProvider {
     const planningProviderLabel = planningProvider?.label ?? "Planning AI";
     const chatPanel = renderChatPanel(chatState, planningProviderLabel);
     const body = runbook ? (view === "kanban" ? renderKanban(runbook) : renderPipeline(runbook)) : renderEmptyState();
+    const executionToggle = renderExecutionModeToggle(runbook);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -458,6 +473,7 @@ export class ControlRoomProvider {
           <button class="toggle-btn${view === "pipeline" ? " active" : ""}" data-view="pipeline">Pipeline</button>
           <button class="toggle-btn${view === "kanban" ? " active" : ""}" data-view="kanban">Kanban</button>
         </div>
+        ${executionToggle}
         <button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>
       </div>
     </header>

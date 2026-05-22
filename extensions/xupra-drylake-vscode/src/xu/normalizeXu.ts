@@ -195,6 +195,7 @@ export function normalizeXu(value: unknown): ApplicationBuildRunbook {
     },
     handoff: {
       defaultAgent: asString(handoff.defaultAgent, starter.handoff.defaultAgent),
+      autopilot: asBoolean(handoff.autopilot, false),
       instructions: asStringArray(handoff.instructions).length > 0
         ? asStringArray(handoff.instructions)
         : starter.handoff.instructions,

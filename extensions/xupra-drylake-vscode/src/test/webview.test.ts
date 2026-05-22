@@ -76,6 +76,12 @@ function runbook(): ApplicationBuildRunbook {
   return value;
 }
 
+function autopilotRunbook(): ApplicationBuildRunbook {
+  const value = runbook();
+  value.handoff.autopilot = true;
+  return value;
+}
+
 beforeEach(() => {
   executed.length = 0;
   messageHandler = undefined;
@@ -133,7 +139,33 @@ describe("Control Room webview", () => {
     expect(html).toContain("drop-before");
     expect(html).toContain("drop-after");
     expect(html).toContain("Run with Codex");
-    expect(html).toContain("Run with GitHub Copilot");
+    expect(html).toContain("Select phase agent");
+    expect(html).toContain("Select agent");
+    expect(html).toContain("Require Approval Between Phases");
+  });
+
+  it("renders autopilot toggle state for pipeline and kanban", async () => {
+    storedView = "pipeline";
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: autopilotRunbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    expect(panel?.webview.html).toContain("Autopilot mode");
+    expect(panel?.webview.html).toContain('aria-pressed="true"');
+
+    storedView = "kanban";
+    await provider.refresh();
+
+    expect(panel?.webview.html).toContain('class="kanban"');
+    expect(panel?.webview.html).toContain("Autopilot mode");
+  });
+
+  it("routes execution mode toggle messages to the command handler", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({ command: "drylake.toggleAutopilot" });
+
+    expect(executed).toContainEqual({ command: "drylake.toggleAutopilot", args: [] });
   });
 
   it("routes kanban drop messages to phase status updates", async () => {

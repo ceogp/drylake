@@ -21,6 +21,7 @@ import {
   reorderPhaseCommand,
   runNextPhaseCommand,
   startBuildSessionCommand,
+  toggleAutopilotCommand,
   toggleStepCommand,
   updatePhaseAgentCommand,
   updatePhaseStatusCommand,
@@ -700,6 +701,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.updatePhaseStatus", async (...args: unknown[]) => {
     await updatePhaseStatusCommand(runbookDeps, args[0], args[1]);
+  });
+
+  register("drylake.toggleAutopilot", async () => {
+    await toggleAutopilotCommand(runbookDeps);
   });
 
   register("drylake.reorderPhase", async (...args: unknown[]) => {

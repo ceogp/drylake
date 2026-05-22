@@ -72,8 +72,8 @@ function phaseAgentFromArg(arg: unknown): XuPhaseAgent | undefined {
     : undefined;
 }
 
-function selectedPhaseAgent(runbook: ApplicationBuildRunbook, agent: unknown): XuPhaseAgent {
-  return phaseAgentFromArg(agent) ?? phaseAgentFromArg(runbook.handoff.defaultAgent) ?? "external-ai-prompt";
+function explicitPhaseAgent(agent: unknown): XuPhaseAgent | undefined {
+  return phaseAgentFromArg(agent);
 }
 
 function phaseStatusFromArg(arg: unknown): Extract<XuStepStatus, "pending" | "active" | "complete"> | undefined {
@@ -671,7 +671,19 @@ export async function exportHandoffPromptCommand(deps: RunbookCommandDeps) {
 }
 
 export async function runNextPhaseCommand(deps: RunbookCommandDeps) {
-  await exportHandoffPromptCommand(deps);
+  const current = await deps.sessionStore.readRunbook();
+  if (!current) {
+    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    return;
+  }
+
+  const phase = nextLaunchablePhase(current.runbook);
+  if (!phase) {
+    void vscode.window.showInformationMessage("All DryLake phases are complete.");
+    return;
+  }
+
+  await handoffPhaseCommand(deps, phase.id);
 }
 
 export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown) {
@@ -701,6 +713,12 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
     return;
   }
 
+  const agent = explicitPhaseAgent(phase.agent);
+  if (!agent) {
+    void vscode.window.showWarningMessage(`Select an agent for ${phase.title} before running this phase.`);
+    return;
+  }
+
   const updated: ApplicationBuildRunbook = {
     ...current.runbook,
     phases: current.runbook.phases.map((item) => {
@@ -715,7 +733,6 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
 
   const buildSession = deps.stateStore.getBuildSession();
   const content = renderPhasePrompt(updated, phase, { activeProvider: buildSession });
-  const agent = selectedPhaseAgent(updated, phase.agent);
   const workspaceUri = workspaceRoot();
   const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
   await vscode.env.clipboard.writeText(content);
@@ -808,6 +825,30 @@ export async function updatePhaseStatusCommand(deps: RunbookCommandDeps, phaseId
   await deps.sessionStore.writeRunbook(current.uri, updated);
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
+}
+
+export async function toggleAutopilotCommand(deps: RunbookCommandDeps) {
+  const current = await deps.sessionStore.readRunbook();
+  if (!current) {
+    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    return;
+  }
+
+  const enabled = !current.runbook.handoff.autopilot;
+  const updated: ApplicationBuildRunbook = {
+    ...current.runbook,
+    handoff: {
+      ...current.runbook.handoff,
+      autopilot: enabled,
+    },
+  };
+
+  await deps.sessionStore.writeRunbook(current.uri, updated);
+  await deps.controlRoom.refresh();
+  await deps.refreshSidebar();
+  void vscode.window.showInformationMessage(
+    enabled ? "Autopilot mode enabled." : "DryLake will require approval between phases.",
+  );
 }
 
 function stepStatusFromArg(arg: unknown): XuStepStatus | undefined {
@@ -904,9 +945,22 @@ export async function toggleStepCommand(
   if (didAutoAdvance) {
     const nextActive = updated.phases.find((phase) => phase.status === "active");
     if (nextActive) {
-      void vscode.window.showInformationMessage(
-        `${phaseWithUpdatedSteps.title} complete. ${nextActive.title} is now active.`,
-      );
+      if (updated.handoff.autopilot) {
+        if (!explicitPhaseAgent(nextActive.agent)) {
+          void vscode.window.showWarningMessage(
+            `${phaseWithUpdatedSteps.title} complete. Autopilot is paused until you select an agent for ${nextActive.title}.`,
+          );
+          return;
+        }
+
+        void vscode.window.showInformationMessage(
+          `${phaseWithUpdatedSteps.title} complete. Autopilot starting ${nextActive.title}.`,
+        );
+        await handoffPhaseCommand(deps, nextActive.id);
+        return;
+      }
+
+      void vscode.window.showInformationMessage(`${phaseWithUpdatedSteps.title} complete. ${nextActive.title} is now active.`);
     } else {
       void vscode.window.showInformationMessage(`${phaseWithUpdatedSteps.title} complete. All phases done.`);
     }
