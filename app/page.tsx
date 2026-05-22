@@ -1,251 +1,158 @@
-import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
+import type { ReactNode } from "react";
 
+import {
+  ArrowTape,
+  TapePanel,
+  TapeWord,
+  tapeColors,
+} from "@/components/tape-brand";
 import {
   getConfiguredAppOrigin,
   isConfiguredMarketingHost,
   normalizeHost,
 } from "@/lib/site-hosts";
 
-const platforms = ["Codex", "Claude Code", "Cursor", "Claude Agents"];
+const phases = [
+  { id: "01", title: "Prompt", body: "Start with a ticket, feature sketch, repo goal, or bug report.", bg: tapeColors.yellow, fg: tapeColors.ink },
+  { id: "02", title: "Plan", body: "DryLake turns the work into a visible phase map before the agent starts.", bg: tapeColors.blue, fg: tapeColors.white },
+  { id: "03", title: "Assign", body: "Pick Copilot, Codex, Claude, Gemini, Cline, or Aider per phase.", bg: tapeColors.pink, fg: tapeColors.white },
+  { id: "04", title: "Handoff", body: "Run direct, export scripts, copy, markdown, or send to VS Code.", bg: tapeColors.green, fg: tapeColors.ink },
+];
 
-function DryLakeHome() {
+const handoffActions = ["RUN", ".SH", ".BAT", "COPY", "MD", "VS CODE"];
+const platforms = ["Copilot", "Codex", "Claude", "Gemini", "Cline", "Aider"];
+
+function ActionLink({ href, children, variant = "yellow" }: { href: string; children: ReactNode; variant?: "yellow" | "white" }) {
+  const className = variant === "white"
+      ? "rounded-[4px] border-[4px] border-black bg-white px-5 py-3 text-sm font-black uppercase text-black shadow-[5px_5px_0_#111] transition hover:-translate-y-0.5 hover:shadow-[7px_7px_0_#111]"
+      : "rounded-[4px] border-[4px] border-black bg-[#ffd60a] px-5 py-3 text-sm font-black uppercase text-black shadow-[5px_5px_0_#111] transition hover:-translate-y-0.5 hover:shadow-[7px_7px_0_#111]";
+
+  if (href.startsWith("/")) {
+    return <Link className={className} href={href}>{children}</Link>;
+  }
+
+  return <a className={className} href={href}>{children}</a>;
+}
+
+function PhaseBoard() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(234,88,12,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(120,53,15,0.12),_transparent_28%),linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_50%,_#ffffff_100%)]">
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-14 md:px-10 lg:py-20">
-        <section className="overflow-hidden rounded-[2.5rem] border border-orange-200/80 bg-white/88 px-6 py-8 shadow-[0_24px_60px_rgba(120,53,15,0.10)] backdrop-blur md:px-10 md:py-10">
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Image
-                  alt="Xupra logo"
-                  className="h-16 w-16 rounded-[1.4rem] shadow-[0_18px_48px_rgba(15,23,42,0.10)]"
-                  height={64}
-                  priority
-                  src="/xupra-logo.svg"
-                  width={64}
-                />
-                <div>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-orange-700">
-                    Xupra
-                  </p>
-                  <p className="font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-[-0.05em] text-stone-950">
-                    DryLake
-                  </p>
-                </div>
+    <TapePanel className="bg-[#111111] text-white">
+      <div className="grid h-full gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#ffd60a]">Live work map</p>
+          <ArrowTape color="#ffd60a" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {phases.map((phase) => (
+            <article key={phase.id} className="min-h-36 rounded-[6px] border-[4px] border-white p-4" style={{ background: phase.bg, color: phase.fg }}>
+              <div className="flex items-start justify-between gap-3">
+                <span className="font-mono text-3xl font-black">{phase.id}</span>
+                <ArrowTape color={phase.fg} className="h-8 w-20" />
               </div>
-              <div className="rounded-full border border-orange-300/70 bg-orange-50 px-4 py-2 font-mono text-xs uppercase tracking-[0.22em] text-orange-900">
-                Agent Transfer
-              </div>
-            </div>
-
-            <div className="space-y-5">
-              <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.07em] text-stone-950 sm:text-6xl lg:text-7xl">
-                Import your skills and agents. Then install them in the next tool.
-              </h1>
-              <p className="max-w-3xl text-lg leading-8 text-stone-700 sm:text-xl">
-                Start by importing an existing repo folder or selected files. Xupra stores the raw
-                source files, canonicalizes them with Kimi, and hands install back to your editor.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <Link
-                className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
-                href="/upload"
-              >
-                Import Skills And Agents
-              </Link>
-              <Link
-                className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
-                href="/install"
-              >
-                Install
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              {platforms.map((platform) => (
-                <div
-                  key={platform}
-                  className="rounded-full border border-stone-200 bg-stone-50 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-stone-700"
-                >
-                  {platform}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
-          <div className="grid gap-5 lg:grid-cols-3">
-            <div>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">1. Import</p>
-              <p className="mt-3 text-sm leading-7 text-stone-700">
-                Choose a repo folder or selected files from the import page.
-              </p>
-            </div>
-            <div>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">2. Canonicalize</p>
-              <p className="mt-3 text-sm leading-7 text-stone-700">
-                Convert raw source into portable agents, skills, rules, and instructions with Kimi.
-              </p>
-            </div>
-            <div>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">3. Install</p>
-              <p className="mt-3 text-sm leading-7 text-stone-700">
-                Pick Cursor, Codex, Claude, or a custom path and let the extension write files.
-              </p>
-            </div>
-          </div>
-        </section>
-      </section>
-    </main>
+              <h2 className="mt-3 text-xl font-black uppercase leading-none">{phase.title}</h2>
+              <p className="mt-2 text-sm font-semibold leading-5 opacity-85">{phase.body}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </TapePanel>
   );
 }
 
-function MarketingHome() {
+function HandoffPanel() {
+  return (
+    <TapePanel className="bg-[#005caf] text-white">
+      <div className="grid gap-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-3xl font-black uppercase leading-none">Handoff paths</h2>
+          <ArrowTape color="#ffd60a" />
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {handoffActions.map((action) => (
+            <div key={action} className="rounded-[4px] border-[3px] border-white bg-[#ffd60a] px-3 py-3 text-center font-mono text-sm font-black text-black">
+              {action}
+            </div>
+          ))}
+        </div>
+        <p className="max-w-2xl text-sm font-semibold leading-6 text-blue-50">
+          The same build map can become a direct run, a shell script, a batch file, a copied prompt, a markdown handoff, or a VS Code handoff.
+        </p>
+      </div>
+    </TapePanel>
+  );
+}
+
+function PlatformPanel() {
+  return (
+    <TapePanel className="bg-white">
+      <div className="grid gap-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-3xl font-black uppercase leading-none">Bring your agent bench.</h2>
+          <ArrowTape color="#111111" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {platforms.map((platform, index) => (
+            <div key={platform} className="border-[4px] border-black px-4 py-3 font-mono text-xs font-black uppercase tracking-[0.14em]" style={{ background: index % 3 === 0 ? tapeColors.yellow : index % 3 === 1 ? tapeColors.paper : tapeColors.green }}>
+              {platform}
+            </div>
+          ))}
+        </div>
+        <p className="max-w-2xl text-sm font-semibold leading-6 text-stone-800">
+          DryLake keeps the orchestration visible while your existing coding tools do the work. It is a control surface, not a black box.
+        </p>
+      </div>
+    </TapePanel>
+  );
+}
+
+function HomeExperience({ marketing }: { marketing: boolean }) {
   const dryLakeOrigin = getConfiguredAppOrigin();
+  const primaryHref = marketing ? dryLakeOrigin : "/upload";
+  const secondaryHref = marketing ? `${dryLakeOrigin}/upload` : "/install";
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_15%_10%,_rgba(234,88,12,0.18),_transparent_30%),radial-gradient(circle_at_85%_0%,_rgba(28,15,6,0.18),_transparent_28%),linear-gradient(180deg,_#fffdf9_0%,_#fff7ed_42%,_#f8fafc_100%)]">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-14 md:px-10 lg:py-20">
-        <section className="overflow-hidden rounded-[2.75rem] border border-stone-200 bg-white/92 shadow-[0_30px_90px_rgba(28,15,6,0.12)] backdrop-blur">
-          <div className="grid gap-0 lg:grid-cols-[1.08fr_0.92fr]">
-            <div className="flex flex-col gap-8 px-6 py-8 md:px-10 md:py-12">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <Image
-                    alt="Xupra logo"
-                    className="h-16 w-16 rounded-[1.4rem] shadow-[0_18px_48px_rgba(15,23,42,0.10)]"
-                    height={64}
-                    priority
-                    src="/xupra-logo.svg"
-                    width={64}
-                  />
-                  <div>
-                    <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-orange-700">
-                      Xupra
-                    </p>
-                    <p className="font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-[-0.05em] text-stone-950">
-                      AI Product Studio
-                    </p>
-                  </div>
-                </div>
-                <div className="rounded-full border border-stone-300/70 bg-stone-50 px-4 py-2 font-mono text-xs uppercase tracking-[0.22em] text-stone-800">
-                  Shipping DryLake
-                </div>
+    <main className="min-h-screen bg-[#f7f4ea] text-[#111111]">
+      <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 lg:py-9">
+        <section className="grid gap-6 lg:grid-cols-[1.02fr_0.98fr]">
+          <div className="grid content-start gap-5 border-[5px] border-black bg-white p-5 shadow-[10px_10px_0_#111]">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="bg-[#e84a5f] px-4 py-3">
+                <TapeWord text="XUPRA" color="#070707" cell={7} gap={2} label="Xupra" variantSet={1} />
               </div>
-
-              <div className="space-y-5">
-                <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.07em] text-stone-950 sm:text-6xl lg:text-7xl">
-                  Xupra builds practical AI software for teams shipping with agents.
-                </h1>
-                <p className="max-w-3xl text-lg leading-8 text-stone-700 sm:text-xl">
-                  Our live product is DryLake: a portability layer for repository skills, rules, and
-                  agent files. Import what already works, canonicalize it, and install it into the next
-                  editor or agent platform without rebuilding everything by hand.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-4">
-                <a
-                  className="rounded-full bg-orange-600 px-6 py-4 font-medium text-white transition hover:bg-orange-700"
-                  href={dryLakeOrigin}
-                >
-                  Open DryLake
-                </a>
-                <a
-                  className="rounded-full border border-stone-300 bg-white px-6 py-4 font-medium text-stone-900 transition hover:bg-stone-100"
-                  href={`${dryLakeOrigin}/upload`}
-                >
-                  Import Skills And Agents
-                </a>
-                <Link
-                  className="rounded-full border border-orange-200 bg-orange-50 px-6 py-4 font-medium text-orange-950 transition hover:bg-orange-100"
-                  href="/about"
-                >
-                  About Xupra
-                </Link>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                {["Codex", "Claude Code", "Cursor"].map((platform) => (
-                  <div
-                    key={platform}
-                    className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-mono text-xs uppercase tracking-[0.16em] text-stone-700"
-                  >
-                    {platform}
-                  </div>
-                ))}
+              <div className="bg-[#ff5a1f] px-4 py-3">
+                <TapeWord text="AI" color="#ffffff" cell={7} gap={2} label="AI" />
               </div>
             </div>
-
-            <div className="border-t border-stone-200 bg-[#1c0f06] p-6 text-white md:p-10 lg:border-l lg:border-t-0">
-              <div className="flex h-full flex-col justify-between gap-10">
-                <div className="rounded-[2rem] border border-white/10 bg-white/8 p-6">
-                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-200">
-                    Live product URL
-                  </p>
-                  <p className="mt-3 break-all font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-[-0.05em] text-white">
-                    {dryLakeOrigin}
-                  </p>
-                  <p className="mt-3 text-sm leading-7 text-orange-50/78">
-                    Use this domain for extension connect, Clerk auth, billing, and the full user onboarding flow.
-                  </p>
-                </div>
-
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-200">
-                    Company
-                  </p>
-                  <h2 className="mt-4 font-[family-name:var(--font-heading)] text-4xl font-semibold tracking-[-0.06em] text-white">
-                    Built in Japan and the US.
-                  </h2>
-                  <p className="mt-4 text-sm leading-7 text-orange-50/78">
-                    Xupra KK focuses on transparent AI workflows, agent portability, and practical
-                    tools that fit into existing engineering systems.
-                  </p>
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <Link
-                      className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#1c0f06] transition hover:bg-orange-100"
-                      href="/about"
-                    >
-                      Read about Xupra
-                    </Link>
-                    <a
-                      className="rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-                      href="mailto:support@xupracorp.com"
-                    >
-                      Support
-                    </a>
-                  </div>
-                </div>
+            <div className="grid gap-2">
+              <div className="bg-[#005caf] px-4 py-3">
+                <TapeWord text="DRYLAKE" color="#ffffff" cell={7} gap={1} label="DryLake" variantSet={1} />
               </div>
+              <div className="flex flex-wrap items-center gap-4 bg-[#f7f4ea] px-4 py-3">
+                <TapeWord text="AGENT" color="#36b979" cell={6} gap={1} label="Agent" variantSet={1} />
+                <ArrowTape color="#36b979" />
+                <TapeWord text="handoff" color="#111111" cell={6} gap={2} label="Handoff" variantSet={2} />
+              </div>
+            </div>
+            <h1 className="max-w-3xl text-4xl font-black uppercase leading-[0.95] md:text-6xl">
+              Agent work maps you can hand to the next tool.
+            </h1>
+            <p className="max-w-2xl text-base font-medium leading-7 text-stone-800 md:text-lg">
+              Import repository skills, rules, prompts, and agent files. DryLake turns them into a visible build map, then hands each phase to the tool that fits.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <ActionLink href={primaryHref}>{marketing ? "Open DryLake" : "Start build"}</ActionLink>
+              <ActionLink href={secondaryHref} variant="white">{marketing ? "Import skills" : "Open installer"}</ActionLink>
             </div>
           </div>
+
+          <PhaseBoard />
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Import</p>
-            <p className="mt-3 text-sm leading-7 text-stone-700">
-              Bring in existing agent files, rules, prompts, and skill folders from a repo or local editor setup.
-            </p>
-          </div>
-          <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Canonicalize</p>
-            <p className="mt-3 text-sm leading-7 text-stone-700">
-              Convert platform-specific instructions into a portable representation that can be reviewed.
-            </p>
-          </div>
-          <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Install</p>
-            <p className="mt-3 text-sm leading-7 text-stone-700">
-              Write generated files into Codex, Claude Code, Cursor, and other supported runtimes.
-            </p>
-          </div>
+        <section className="grid gap-6 lg:grid-cols-[0.86fr_1.14fr]">
+          <HandoffPanel />
+          <PlatformPanel />
         </section>
       </section>
     </main>
@@ -258,9 +165,5 @@ export default async function Home() {
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
   );
 
-  if (isConfiguredMarketingHost(requestHost)) {
-    return <MarketingHome />;
-  }
-
-  return <DryLakeHome />;
+  return <HomeExperience marketing={isConfiguredMarketingHost(requestHost)} />;
 }

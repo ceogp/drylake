@@ -67,28 +67,28 @@ export default async function RootLayout({
 
   const shell = marketingHostRequest ? (
     <>
-      <div className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/92 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 md:px-10">
+      <div className="sticky top-0 z-50 border-b-[4px] border-black bg-[#f7f4ea]">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <Link className="flex items-center gap-3" href={marketingOrigin}>
             <Image
               alt="Xupra logo"
-              className="h-11 w-11 rounded-2xl shadow-[0_12px_32px_rgba(249,115,22,0.18)]"
+              className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
               height={44}
               src="/xupra-logo.svg"
               width={44}
             />
-            <div className="rounded-full border border-stone-300/70 bg-stone-50 px-4 py-2 font-mono text-xs uppercase tracking-[0.24em] text-stone-900">
+            <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
               Xupra
             </div>
           </Link>
-          <nav className="hidden items-center gap-5 text-sm text-stone-600 md:flex">
-            <Link className="transition hover:text-stone-950" href="/about">
+          <nav className="hidden items-center gap-3 text-sm font-black uppercase text-black md:flex">
+            <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/about">
               About
             </Link>
-            <a className="transition hover:text-stone-950" href={dryLakeOrigin}>
+            <a className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href={dryLakeOrigin}>
               DryLake
             </a>
-            <a className="transition hover:text-stone-950" href={`${dryLakeOrigin}/billing`}>
+            <a className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href={`${dryLakeOrigin}/billing`}>
               Pricing
             </a>
           </nav>
@@ -98,22 +98,22 @@ export default async function RootLayout({
     </>
   ) : adminInternalHostRequest ? (
     <>
-      <div className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/92 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 md:px-10">
+      <div className="sticky top-0 z-50 border-b-[4px] border-black bg-[#f7f4ea]">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <Link className="flex items-center gap-3" href="/admin">
             <Image
               alt="Xupra logo"
-              className="h-11 w-11 rounded-2xl shadow-[0_12px_32px_rgba(249,115,22,0.18)]"
+              className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
               height={44}
               src="/xupra-logo.svg"
               width={44}
             />
-            <div className="rounded-full border border-stone-300/70 bg-stone-50 px-4 py-2 font-mono text-xs uppercase tracking-[0.24em] text-stone-900">
+            <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
               Xupra Internal Admin
             </div>
           </Link>
           <a
-            className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+            className="rounded-[4px] border-[3px] border-black bg-white px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-[#ffd60a]"
             href={dryLakeOrigin}
           >
             Open Customer App
@@ -124,29 +124,29 @@ export default async function RootLayout({
     </>
   ) : (
     <>
-      <div className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 md:px-10">
+      <div className="sticky top-0 z-50 border-b-[4px] border-black bg-[#f7f4ea]">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <div className="flex items-center gap-4">
             <Link className="flex items-center gap-3" href="/">
               <Image
                 alt="Xupra logo"
-                className="h-11 w-11 rounded-2xl shadow-[0_12px_32px_rgba(249,115,22,0.18)]"
+                className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
                 height={44}
                 src="/xupra-logo.svg"
                 width={44}
               />
-              <div className="rounded-full border border-orange-300/70 bg-orange-50 px-4 py-2 font-mono text-xs uppercase tracking-[0.24em] text-orange-900">
+              <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
                 Xupra DryLake
               </div>
             </Link>
-            <nav className="hidden items-center gap-4 text-sm text-stone-600 md:flex">
-              <Link className="transition hover:text-stone-950" href="/upload">
+            <nav className="hidden items-center gap-3 text-sm font-black uppercase text-black md:flex">
+              <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/upload">
                 Import
               </Link>
-              <Link className="transition hover:text-stone-950" href="/settings">
+              <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/settings">
                 Settings
               </Link>
-              <Link className="transition hover:text-stone-950" href="/billing">
+              <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/billing">
                 Billing
               </Link>
             </nav>
@@ -166,7 +166,7 @@ export default async function RootLayout({
             {useClerkUi ? (
               <HeaderAuthControls />
             ) : (
-              <div className="rounded-full border border-stone-300 bg-white px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-stone-600">
+              <div className="rounded-[4px] border-[3px] border-black bg-white px-4 py-2 font-mono text-[11px] font-black uppercase tracking-[0.14em] text-black">
                 Dev Auth
               </div>
             )}
