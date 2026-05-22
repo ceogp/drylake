@@ -49,7 +49,7 @@ function runbookContractLines() {
     "provisioning.safety.executeAutomatically: false",
     "phases: at least five phases",
     "each phase must include id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
-    "phase.agent optional enum: claude-code, codex, cursor, copilot, external-ai-prompt",
+    "phase.agent optional enum: claude-code, codex, gemini, cursor, continue, aider, copilot, augment-code",
     "checks.install, checks.dev, checks.build, checks.test, checks.lint",
     "agentTargets.agentsMd, agentTargets.claudeMd, agentTargets.copilotInstructions, agentTargets.cursorRules, agentTargets.codexSkill, agentTargets.openclawSkill",
     "handoff.defaultAgent, handoff.instructions",

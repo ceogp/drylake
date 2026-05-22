@@ -90,11 +90,11 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       }
 
       if (!response.ok) {
+        const message = typeof payload?.error?.message === "string"
+          ? payload.error.message
+          : `Xupra AI request failed (${response.status}).`;
         return {
-          message:
-            typeof payload?.error?.message === "string"
-              ? payload.error.message
-              : `Xupra AI request failed (${response.status}).`,
+          message: message.includes(`(${response.status})`) ? message : `${message} (${response.status}).`,
         };
       }
 

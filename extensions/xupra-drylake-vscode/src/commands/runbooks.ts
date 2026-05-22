@@ -251,10 +251,10 @@ async function seedChatWithClarifyingQuestions(params: {
 
     if (questions.length === 0) {
       await params.deps.stateStore.appendChatMessage({
-        role: "ai",
-        text:
-          result.message ??
-          "I've drafted a starter plan. Tell me anything else I should know and I'll refine it.",
+        role: result.message ? "system" : "ai",
+        text: result.message
+          ? `DryLake created a local starter plan, but ${params.provider.label} could not generate follow-up questions: ${result.message}`
+          : "I've drafted a starter plan. Tell me anything else I should know and I'll refine it.",
       });
       return;
     }
@@ -348,7 +348,10 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
             "I opened an external AI prompt for you. Paste the result back to refine the plan further.",
         });
       } else if (result.message) {
-        await deps.stateStore.appendChatMessage({ role: "system", text: result.message });
+        await deps.stateStore.appendChatMessage({
+          role: "system",
+          text: `${provider.label} could not update the plan: ${result.message} The current DryLake runbook was left unchanged; use the Control Room phases or try again.`,
+        });
       } else {
         await deps.stateStore.appendChatMessage({
           role: "system",
@@ -375,7 +378,7 @@ async function applyAiDraft(params: {
   runbookUri: vscode.Uri;
   provider: DryLakeAiProvider;
   openExternalPrompt: boolean;
-}) {
+}): Promise<{ runbook: ApplicationBuildRunbook; providerGenerated: boolean; providerMessage?: string }> {
   const workspaceSummary = await buildWorkspaceSummary();
   const localDraft = createLocalDraftXu({
     prompt: params.prompt,
@@ -389,18 +392,18 @@ async function applyAiDraft(params: {
   if (!availability.available && params.provider.id !== "external-ai-prompt") {
     if (params.provider.id === "xupra-pro-ai" && params.deps.stateStore.getConnection().userEmail) {
       await requireXupraProAiEntitlement(params.deps.apiClient, params.deps.stateStore, "Xupra AI");
-      return localDraft;
+      return { runbook: localDraft, providerGenerated: false, providerMessage: availability.reason };
     }
 
     void vscode.window.showInformationMessage(
       `${params.provider.label} is not available, so DryLake created a local draft runbook.`,
     );
-    return localDraft;
+    return { runbook: localDraft, providerGenerated: false, providerMessage: availability.reason };
   }
 
   if (params.provider.id === "external-ai-prompt" && !params.openExternalPrompt) {
     void vscode.window.showInformationMessage("DryLake created a local draft runbook.");
-    return localDraft;
+    return { runbook: localDraft, providerGenerated: false };
   }
 
   const result = await params.provider.generateDraftRunbook({
@@ -412,7 +415,7 @@ async function applyAiDraft(params: {
 
   if (result.runbook) {
     await params.deps.sessionStore.writeRunbook(params.runbookUri, result.runbook);
-    return result.runbook;
+    return { runbook: result.runbook, providerGenerated: true };
   }
 
   if (result.promptForExternalAi) {
@@ -424,7 +427,7 @@ async function applyAiDraft(params: {
     void vscode.window.showInformationMessage(result.message);
   }
 
-  return localDraft;
+  return { runbook: localDraft, providerGenerated: false, providerMessage: result.message };
 }
 
 export async function openControlRoomCommand(deps: RunbookCommandDeps, context: vscode.ExtensionContext) {
@@ -481,7 +484,7 @@ export async function startBuildSessionCommand(
         providerLabel: provider.label,
       });
       await deps.stateStore.setBuildSession(session);
-      await applyAiDraft({
+      const draftResult = await applyAiDraft({
         deps,
         prompt: cleanedPrompt,
         mode,
@@ -490,7 +493,16 @@ export async function startBuildSessionCommand(
         provider,
         openExternalPrompt: false,
       });
-      await seedChatWithClarifyingQuestions({ deps, provider, prompt: cleanedPrompt, mode });
+      if (draftResult.providerGenerated) {
+        await seedChatWithClarifyingQuestions({ deps, provider, prompt: cleanedPrompt, mode });
+      } else {
+        await deps.stateStore.appendChatMessage({
+          role: "system",
+          text: draftResult.providerMessage
+            ? `DryLake created a local starter plan, but ${provider.label} could not replace it: ${draftResult.providerMessage}`
+            : "DryLake created a local starter plan. Review and run phases from the Control Room.",
+        });
+      }
     },
   );
 

@@ -244,6 +244,19 @@ describe("Control Room webview", () => {
     expect(html).toContain("Agent for Todo phase");
   });
 
+  it("hides phase execution controls when the runbook has no phases", async () => {
+    const emptyRunbook = runbook();
+    emptyRunbook.phases = [];
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: emptyRunbook }) } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).not.toContain("Run Next Phase");
+    expect(html).not.toContain("Require Approval Between Phases");
+    expect(html).not.toContain("Autopilot mode");
+  });
+
   it("persists kanban view selection across refreshes", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);

@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake — Visual Planning for AI Coding Agents",
   "description": "Visual kanban and pipeline planner for assigning coding phases to Claude Code, Codex, Gemini CLI, Cursor CLI, Continue CLI, Aider, GitHub Copilot, and Augment.",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",

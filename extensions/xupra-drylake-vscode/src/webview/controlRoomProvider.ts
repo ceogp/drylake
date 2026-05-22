@@ -131,7 +131,7 @@ function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
 }
 
 function renderExecutionModeToggle(runbook: ApplicationBuildRunbook | null) {
-  if (!runbook) {
+  if (!runbook || runbook.phases.length === 0) {
     return "";
   }
 
@@ -412,6 +412,7 @@ export class ControlRoomProvider {
     const chatPanel = renderChatPanel(chatState, planningProviderLabel);
     const body = runbook ? (view === "kanban" ? renderKanban(runbook) : renderPipeline(runbook)) : renderEmptyState();
     const executionToggle = renderExecutionModeToggle(runbook);
+    const runNextButton = runbook?.phases.length ? '<button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>' : "";
     const handoffPanel = renderHandoffCapabilityPanel(runbook);
 
     return `<!DOCTYPE html>
@@ -528,7 +529,7 @@ export class ControlRoomProvider {
           <button class="toggle-btn${view === "kanban" ? " active" : ""}" data-view="kanban">Kanban</button>
         </div>
         ${executionToggle}
-        <button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>
+        ${runNextButton}
       </div>
     </header>
     ${banner}

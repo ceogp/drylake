@@ -56,7 +56,6 @@ type InboundAction =
   | "openControlRoom"
   | "validateXuRunbook"
   | "generateAgentFiles"
-  | "exportHandoffPrompt"
   ;
 
 type BasicInboundMessage = {
@@ -207,9 +206,6 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
             break;
           case "generateAgentFiles":
             await vscode.commands.executeCommand("drylake.generateAgentFiles");
-            break;
-          case "exportHandoffPrompt":
-            await vscode.commands.executeCommand("drylake.exportHandoffPrompt");
             break;
           case "openImportedSkill":
             await vscode.commands.executeCommand("xupra.openImportedSkill", message.skillRuleId);
@@ -922,7 +918,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       html += '<div class="session-name" title="' + escapeHtml(sessionName) + '">' + escapeHtml(sessionName) + '</div>';
       html += '<div class="session-meta">' + escapeHtml(status) + ' · ' + escapeHtml(runbook.path || 'drylake.xu') + ' · ' + escapeHtml(runbook.providerStatus || 'User IDE AI / External AI Prompt') + '</div>';
       html += '<div class="phase-row"><span>Active phase: ' + escapeHtml(phaseLabel) + '</span><span class="phase-agent">' + escapeHtml(runbook.activePhaseAgent || 'session default') + '</span></div>';
-      html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button><button class="action-btn" data-action="exportHandoffPrompt">Run Next Phase</button></div>';
+      html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button></div>';
       html += '<button class="big-action" data-action="startBuildSession">Start New Session</button>';
       html += '</div></div>';
       return html;
