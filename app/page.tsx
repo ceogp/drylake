@@ -14,14 +14,12 @@ import {
   normalizeHost,
 } from "@/lib/site-hosts";
 
-const phases = [
-  { id: "01", title: "Prompt", body: "Start with a ticket, feature sketch, repo goal, or bug report.", bg: tapeColors.yellow, fg: tapeColors.ink },
-  { id: "02", title: "Plan", body: "DryLake turns the work into a visible phase map before the agent starts.", bg: tapeColors.blue, fg: tapeColors.white },
-  { id: "03", title: "Assign", body: "Pick Copilot, Codex, Claude, Gemini, Cline, or Aider per phase.", bg: tapeColors.pink, fg: tapeColors.white },
-  { id: "04", title: "Handoff", body: "Run direct, export scripts, copy, markdown, or send to VS Code.", bg: tapeColors.green, fg: tapeColors.ink },
+const steps = [
+  { id: "01", title: "Import", body: "Choose a repo folder or selected files.", bg: tapeColors.yellow, fg: tapeColors.ink },
+  { id: "02", title: "Canonicalize", body: "Convert raw source into portable agents, skills, rules, and instructions with Kimi.", bg: tapeColors.blue, fg: tapeColors.white },
+  { id: "03", title: "Install", body: "Pick Cursor, Codex, Claude, or a custom path and let the extension write files.", bg: tapeColors.green, fg: tapeColors.ink },
 ];
 
-const handoffActions = ["RUN", ".SH", ".BAT", "COPY", "MD", "VS CODE"];
 const platforms = ["Copilot", "Codex", "Claude", "Gemini", "Cline", "Aider"];
 
 function ActionLink({ href, children, variant = "yellow" }: { href: string; children: ReactNode; variant?: "yellow" | "white" }) {
@@ -41,44 +39,21 @@ function PhaseBoard() {
     <TapePanel className="bg-[#111111] text-white">
       <div className="grid h-full gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#ffd60a]">Live work map</p>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#ffd60a]">DryLake flow</p>
           <ArrowTape color="#ffd60a" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {phases.map((phase) => (
-            <article key={phase.id} className="min-h-36 rounded-[6px] border-[4px] border-white p-4" style={{ background: phase.bg, color: phase.fg }}>
+        <div className="grid gap-3">
+          {steps.map((step) => (
+            <article key={step.id} className="rounded-[6px] border-[4px] border-white p-4" style={{ background: step.bg, color: step.fg }}>
               <div className="flex items-start justify-between gap-3">
-                <span className="font-mono text-3xl font-black">{phase.id}</span>
-                <ArrowTape color={phase.fg} className="h-8 w-20" />
+                <span className="font-mono text-3xl font-black">{step.id}</span>
+                <ArrowTape color={step.fg} className="h-8 w-20" />
               </div>
-              <h2 className="mt-3 text-xl font-black uppercase leading-none">{phase.title}</h2>
-              <p className="mt-2 text-sm font-semibold leading-5 opacity-85">{phase.body}</p>
+              <h2 className="mt-3 text-xl font-black uppercase leading-none">{step.title}</h2>
+              <p className="mt-2 text-sm font-semibold leading-5 opacity-85">{step.body}</p>
             </article>
           ))}
         </div>
-      </div>
-    </TapePanel>
-  );
-}
-
-function HandoffPanel() {
-  return (
-    <TapePanel className="bg-[#005caf] text-white">
-      <div className="grid gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-3xl font-black uppercase leading-none">Handoff paths</h2>
-          <ArrowTape color="#ffd60a" />
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {handoffActions.map((action) => (
-            <div key={action} className="rounded-[4px] border-[3px] border-white bg-[#ffd60a] px-3 py-3 text-center font-mono text-sm font-black text-black">
-              {action}
-            </div>
-          ))}
-        </div>
-        <p className="max-w-2xl text-sm font-semibold leading-6 text-blue-50">
-          The same build map can become a direct run, a shell script, a batch file, a copied prompt, a markdown handoff, or a VS Code handoff.
-        </p>
       </div>
     </TapePanel>
   );
@@ -89,7 +64,7 @@ function PlatformPanel() {
     <TapePanel className="bg-white">
       <div className="grid gap-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-3xl font-black uppercase leading-none">Bring your agent bench.</h2>
+          <h2 className="text-3xl font-black uppercase leading-none">Install targets</h2>
           <ArrowTape color="#111111" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -99,9 +74,6 @@ function PlatformPanel() {
             </div>
           ))}
         </div>
-        <p className="max-w-2xl text-sm font-semibold leading-6 text-stone-800">
-          DryLake keeps the orchestration visible while your existing coding tools do the work. It is a control surface, not a black box.
-        </p>
       </div>
     </TapePanel>
   );
@@ -111,6 +83,12 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
   const dryLakeOrigin = getConfiguredAppOrigin();
   const primaryHref = marketing ? dryLakeOrigin : "/upload";
   const secondaryHref = marketing ? `${dryLakeOrigin}/upload` : "/install";
+  const headline = marketing
+    ? "Xupra builds practical AI software for teams shipping with agents."
+    : "Import your skills and agents. Then install them in the next tool.";
+  const body = marketing
+    ? "Our live product is DryLake: a portability layer for repository skills, rules, and agent files. Import what already works, canonicalize it, and install it into the next editor or agent platform."
+    : "Start by importing an existing repo folder or selected files. Xupra stores the raw source files, canonicalizes them with Kimi, and hands install back to your editor.";
 
   return (
     <main className="min-h-screen bg-[#f7f4ea] text-[#111111]">
@@ -130,16 +108,16 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
                 <TapeWord text="DRYLAKE" color="#ffffff" cell={7} gap={1} label="DryLake" variantSet={1} />
               </div>
               <div className="flex flex-wrap items-center gap-4 bg-[#f7f4ea] px-4 py-3">
-                <TapeWord text="AGENT" color="#36b979" cell={6} gap={1} label="Agent" variantSet={1} />
+                <TapeWord text="IMPORT" color="#36b979" cell={5.4} gap={1} label="Import" variantSet={1} />
                 <ArrowTape color="#36b979" />
-                <TapeWord text="handoff" color="#111111" cell={6} gap={2} label="Handoff" variantSet={2} />
+                <TapeWord text="INSTALL" color="#111111" cell={4.8} gap={1} label="Install" variantSet={2} />
               </div>
             </div>
             <h1 className="max-w-3xl text-4xl font-black uppercase leading-[0.95] md:text-6xl">
-              Agent work maps you can hand to the next tool.
+              {headline}
             </h1>
             <p className="max-w-2xl text-base font-medium leading-7 text-stone-800 md:text-lg">
-              Import repository skills, rules, prompts, and agent files. DryLake turns them into a visible build map, then hands each phase to the tool that fits.
+              {body}
             </p>
             <div className="flex flex-wrap gap-3">
               <ActionLink href={primaryHref}>{marketing ? "Open DryLake" : "Start build"}</ActionLink>
@@ -150,8 +128,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
           <PhaseBoard />
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[0.86fr_1.14fr]">
-          <HandoffPanel />
+        <section className="grid gap-6">
           <PlatformPanel />
         </section>
       </section>
