@@ -103,31 +103,34 @@
 
   <!-- agent strip -->
   <g transform="translate(60 420)">
-    <text x="0" y="0" fill="#9CA3AF" font-size="10" letter-spacing="2" font-weight="700">VERIFIED AGENT HANDOFF</text>
+    <text x="0" y="0" fill="#9CA3AF" font-size="10" letter-spacing="2" font-weight="700">HANDOFF ACTIONS: RUN · .SH · .BAT · COPY · MARKDOWN · VS CODE</text>
     <g font-size="12" font-weight="600">
-      <rect x="0" y="14" width="110" height="30" rx="8" fill="#1F2937" stroke="#F97316"/>
-      <text x="14" y="34" fill="#FED7AA">Claude Code</text>
+      <rect x="0" y="14" width="96" height="30" rx="8" fill="#1F2937" stroke="#F97316"/>
+      <text x="10" y="34" fill="#FED7AA">Claude Code</text>
 
-      <rect x="118" y="14" width="80" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="138" y="34" fill="#D1D5DB">Codex</text>
+      <rect x="104" y="14" width="70" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
+      <text x="122" y="34" fill="#D1D5DB">Codex</text>
 
-      <rect x="206" y="14" width="90" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="222" y="34" fill="#D1D5DB">Cursor CLI</text>
+      <rect x="182" y="14" width="92" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
+      <text x="198" y="34" fill="#D1D5DB">Gemini CLI</text>
 
-      <rect x="304" y="14" width="86" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="322" y="34" fill="#D1D5DB">Cline CLI</text>
+      <rect x="282" y="14" width="88" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
+      <text x="296" y="34" fill="#D1D5DB">Cursor CLI</text>
 
-      <rect x="398" y="14" width="108" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="414" y="34" fill="#D1D5DB">Continue CLI</text>
+      <rect x="378" y="14" width="78" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
+      <text x="392" y="34" fill="#D1D5DB">Cline CLI</text>
 
-      <rect x="514" y="14" width="76" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="530" y="34" fill="#D1D5DB">Aider</text>
+      <rect x="464" y="14" width="94" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
+      <text x="476" y="34" fill="#D1D5DB">Continue</text>
 
-      <rect x="598" y="14" width="120" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="614" y="34" fill="#D1D5DB">GitHub Copilot</text>
+      <rect x="566" y="14" width="62" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
+      <text x="580" y="34" fill="#D1D5DB">Aider</text>
 
-      <rect x="726" y="14" width="124" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
-      <text x="742" y="34" fill="#D1D5DB">Augment/Auggie</text>
+      <rect x="636" y="14" width="108" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
+      <text x="650" y="34" fill="#D1D5DB">GitHub Copilot</text>
+
+      <rect x="752" y="14" width="112" height="30" rx="8" fill="#1F2937" stroke="#374151"/>
+      <text x="766" y="34" fill="#D1D5DB">Augment/Auggie</text>
     </g>
   </g>
 </svg>

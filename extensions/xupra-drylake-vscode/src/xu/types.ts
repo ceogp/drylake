@@ -3,6 +3,7 @@ export type XuStepStatus = "pending" | "active" | "approved" | "needs-revision" 
 export const XU_PHASE_AGENTS = [
   "claude-code",
   "codex",
+  "gemini",
   "cursor",
   "cline",
   "continue",

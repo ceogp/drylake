@@ -716,7 +716,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("drylake.handoffPhase", async (...args: unknown[]) => {
-    await handoffPhaseCommand(runbookDeps, args[0]);
+    await handoffPhaseCommand(runbookDeps, args[0], args[1]);
   });
 
   register("drylake.chatSendMessage", async (...args: unknown[]) => {

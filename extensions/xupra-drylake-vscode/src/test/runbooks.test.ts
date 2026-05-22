@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   executeCommand: vi.fn(),
   launchPhaseAgent: vi.fn(),
   writePhaseHandoffFile: vi.fn(),
+  writePhaseHandoffScript: vi.fn(),
 }));
 
 vi.mock("vscode", () => ({
@@ -68,7 +69,13 @@ vi.mock("../services/workspaceScanner", () => ({
 
 vi.mock("../agents/phaseAgentLauncher", () => ({
   launchPhaseAgent: mocks.launchPhaseAgent,
+  phaseHandoffActionFromArg: (arg: unknown) => (
+    typeof arg === "string" && ["run", "script-sh", "script-bat", "copy", "markdown", "vscode"].includes(arg)
+      ? arg
+      : undefined
+  ),
   writePhaseHandoffFile: mocks.writePhaseHandoffFile,
+  writePhaseHandoffScript: mocks.writePhaseHandoffScript,
 }));
 
 beforeEach(() => {
@@ -81,9 +88,11 @@ beforeEach(() => {
   mocks.executeCommand.mockReset();
   mocks.launchPhaseAgent.mockReset();
   mocks.writePhaseHandoffFile.mockReset();
+  mocks.writePhaseHandoffScript.mockReset();
   mocks.showWarningMessage.mockResolvedValue("Upgrade to Pro");
   mocks.openTextDocument.mockImplementation(async (document) => document);
   mocks.writePhaseHandoffFile.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-cline.md", path: "/repo/.drylake/handoffs/P-01-cline.md" });
+  mocks.writePhaseHandoffScript.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-cline.sh", path: "/repo/.drylake/handoffs/P-01-cline.sh" });
   mocks.launchPhaseAgent.mockResolvedValue({ status: "launched", message: "Started Cline for this phase." });
 });
 
@@ -337,7 +346,7 @@ describe("runbook commands", () => {
 
     await handoffPhaseCommand(deps as never, "P-01");
 
-    expect(mocks.writeClipboard).toHaveBeenCalledWith(expect.stringContaining("You are running as Cline CLI."));
+    expect(mocks.writeClipboard).not.toHaveBeenCalled();
     expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
       agent: "cline",
       content: expect.stringContaining("You are running as Cline CLI."),
@@ -350,6 +359,61 @@ describe("runbook commands", () => {
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
     expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+  });
+
+  it("copies selected phase prompts as an explicit handoff action", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "cline";
+    const { deps } = reorderDeps(runbook);
+
+    await handoffPhaseCommand(deps as never, "P-01", "copy");
+
+    expect(mocks.writeClipboard).toHaveBeenCalledWith(expect.stringContaining("You are running as Cline CLI."));
+    expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
+    expect(mocks.openTextDocument).not.toHaveBeenCalled();
+  });
+
+  it("exports selected phase prompts as markdown", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps } = reorderDeps(runbook);
+
+    await handoffPhaseCommand(deps as never, "P-01", "markdown");
+
+    expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
+    expect(mocks.openTextDocument).toHaveBeenCalledWith({
+      fsPath: "C:/repo/.drylake/handoffs/P-01-cline.md",
+      path: "/repo/.drylake/handoffs/P-01-cline.md",
+    });
+    expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
+  });
+
+  it("exports CLI handoff scripts", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps } = reorderDeps(runbook);
+
+    await handoffPhaseCommand(deps as never, "P-01", "script-bat");
+
+    expect(mocks.writePhaseHandoffScript).toHaveBeenCalledWith(expect.objectContaining({
+      agent: "codex",
+      shell: "bat",
+    }));
+    expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
+  });
+
+  it("hands off any selected phase to VS Code through GitHub Copilot", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps } = reorderDeps(runbook);
+
+    await handoffPhaseCommand(deps as never, "P-01", "vscode");
+
+    expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
+      agent: "copilot",
+      content: expect.stringContaining("You are running as GitHub Copilot."),
+    }));
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "copilot" }));
   });
 
   it("prevents launching a later phase before the active phase is complete", async () => {

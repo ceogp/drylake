@@ -10,6 +10,8 @@ type TerminalAgent = {
   kind: "terminal";
   executable: string;
   terminalCommand: (promptFilePath: string) => string;
+  shellScriptCommand: (promptFileRef: string) => string;
+  batchScriptCommand: () => string;
 };
 
 type VsCodeAgent = {
@@ -30,6 +32,16 @@ export type PhaseAgentLaunchResult = {
   message: string;
   promptFile?: vscode.Uri;
   command?: string;
+};
+
+export const PHASE_HANDOFF_ACTIONS = ["run", "script-sh", "script-bat", "copy", "markdown", "vscode"] as const;
+
+export type PhaseHandoffAction = (typeof PHASE_HANDOFF_ACTIONS)[number];
+
+export type PhaseHandoffOption = {
+  action: PhaseHandoffAction;
+  label: string;
+  title: string;
 };
 
 const WINDOWS = process.platform === "win32";
@@ -55,6 +67,22 @@ function fromPromptFile(command: string, promptFilePath: string) {
   return `${command} "$(cat ${path})"`;
 }
 
+function shellPipeCommand(command: string) {
+  return (promptFileRef: string) => `cat ${promptFileRef} | ${command}`;
+}
+
+function shellPromptArgCommand(command: string) {
+  return (promptFileRef: string) => `${command} "$(cat ${promptFileRef})"`;
+}
+
+function batchPipeCommand(command: string) {
+  return () => `powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-Content -Raw $env:PROMPT_FILE | ${command}"`;
+}
+
+function batchPromptArgCommand(command: string) {
+  return () => `powershell -NoProfile -ExecutionPolicy Bypass -Command "$prompt = Get-Content -Raw $env:PROMPT_FILE; ${command} $prompt"`;
+}
+
 export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
   "claude-code": {
     id: "claude-code",
@@ -65,6 +93,8 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     terminalCommand: (promptFilePath) => (WINDOWS
       ? `Get-Content -Raw ${quotePath(promptFilePath)} | claude -p`
       : `cat ${quotePath(promptFilePath)} | claude -p`),
+    shellScriptCommand: shellPipeCommand("claude -p"),
+    batchScriptCommand: batchPipeCommand("claude -p"),
   },
   codex: {
     id: "codex",
@@ -73,6 +103,18 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     executable: "codex",
     help: "Install Codex CLI and make the `codex` command available on PATH.",
     terminalCommand: (promptFilePath) => fromPromptFile("codex exec", promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("codex exec"),
+    batchScriptCommand: batchPromptArgCommand("codex exec"),
+  },
+  gemini: {
+    id: "gemini",
+    label: "Gemini CLI",
+    kind: "terminal",
+    executable: "gemini",
+    help: "Install Gemini CLI and make the `gemini` command available on PATH.",
+    terminalCommand: (promptFilePath) => fromPromptFile("gemini -p", promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("gemini -p"),
+    batchScriptCommand: batchPromptArgCommand("gemini -p"),
   },
   cursor: {
     id: "cursor",
@@ -81,6 +123,8 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     executable: "agent",
     help: "Install Cursor CLI and make the `agent` command available on PATH.",
     terminalCommand: (promptFilePath) => fromPromptFile("agent -p", promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("agent -p"),
+    batchScriptCommand: batchPromptArgCommand("agent -p"),
   },
   cline: {
     id: "cline",
@@ -89,6 +133,8 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     executable: "cline",
     help: "Install Cline CLI and make the `cline` command available on PATH.",
     terminalCommand: (promptFilePath) => fromPromptFile("cline --auto-approve false", promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("cline --auto-approve false"),
+    batchScriptCommand: batchPromptArgCommand("cline --auto-approve false"),
   },
   continue: {
     id: "continue",
@@ -99,6 +145,8 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     terminalCommand: (promptFilePath) => (WINDOWS
       ? `Get-Content -Raw ${quotePath(promptFilePath)} | cn -p`
       : `cat ${quotePath(promptFilePath)} | cn -p`),
+    shellScriptCommand: shellPipeCommand("cn -p"),
+    batchScriptCommand: batchPipeCommand("cn -p"),
   },
   aider: {
     id: "aider",
@@ -107,6 +155,8 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     executable: "aider",
     help: "Install Aider and make the `aider` command available on PATH.",
     terminalCommand: (promptFilePath) => `aider --message-file ${quotePath(promptFilePath)}`,
+    shellScriptCommand: (promptFileRef) => `aider --message-file ${promptFileRef}`,
+    batchScriptCommand: () => `aider --message-file "%PROMPT_FILE%"`,
   },
   copilot: {
     id: "copilot",
@@ -124,6 +174,8 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     executable: "auggie",
     help: "Install Auggie CLI and make the `auggie` command available on PATH.",
     terminalCommand: (promptFilePath) => `auggie --print --instruction-file ${quotePath(promptFilePath)}`,
+    shellScriptCommand: (promptFileRef) => `auggie --print --instruction-file ${promptFileRef}`,
+    batchScriptCommand: () => `auggie --print --instruction-file "%PROMPT_FILE%"`,
   },
 };
 
@@ -136,6 +188,58 @@ export function phaseAgentActionLabel(agent: XuPhaseAgent) {
   return `Run with ${launcher.label}`;
 }
 
+export function phaseHandoffActionFromArg(arg: unknown): PhaseHandoffAction | undefined {
+  return typeof arg === "string" && (PHASE_HANDOFF_ACTIONS as readonly string[]).includes(arg)
+    ? (arg as PhaseHandoffAction)
+    : undefined;
+}
+
+export function phaseAgentHandoffOptions(agent: XuPhaseAgent): PhaseHandoffOption[] {
+  const launcher = PHASE_AGENT_LAUNCHERS[agent];
+  const options: PhaseHandoffOption[] = [
+    {
+      action: "run",
+      label: `Run with ${launcher.label}`,
+      title: phaseAgentHint(agent),
+    },
+  ];
+
+  if (launcher.kind === "terminal") {
+    options.push(
+      {
+        action: "script-sh",
+        label: `${launcher.label} .sh`,
+        title: `Export a bash script that runs ${launcher.label} with this phase prompt.`,
+      },
+      {
+        action: "script-bat",
+        label: `${launcher.label} .bat`,
+        title: `Export a Windows batch script that runs ${launcher.label} with this phase prompt.`,
+      },
+    );
+  }
+
+  options.push(
+    {
+      action: "copy",
+      label: "Copy",
+      title: "Copy the phase prompt to the clipboard.",
+    },
+    {
+      action: "markdown",
+      label: "Export as Markdown",
+      title: "Save and open the phase prompt as a Markdown handoff file.",
+    },
+    {
+      action: "vscode",
+      label: "VS Code",
+      title: "Open the phase prompt in VS Code with GitHub Copilot Chat.",
+    },
+  );
+
+  return options;
+}
+
 export function phaseAgentHint(agent: XuPhaseAgent) {
   return PHASE_AGENT_LAUNCHERS[agent]?.help ?? "DryLake will export a focused prompt for this phase.";
 }
@@ -143,7 +247,7 @@ export function phaseAgentHint(agent: XuPhaseAgent) {
 export function phaseAgentConnectionLabel(agent: XuPhaseAgent) {
   const launcher = PHASE_AGENT_LAUNCHERS[agent];
   if (launcher.kind === "terminal") {
-    return "Direct CLI";
+    return "Direct CLI + scripts";
   }
 
   return "Direct VS Code";
@@ -157,7 +261,7 @@ export function phaseAgentConnectionTone(agent: XuPhaseAgent) {
 export function phaseAgentConnectionDescription(agent: XuPhaseAgent) {
   const launcher = PHASE_AGENT_LAUNCHERS[agent];
   if (launcher.kind === "terminal") {
-    return `Runs ${launcher.label} from a VS Code terminal using the saved phase handoff file.`;
+    return `Runs ${launcher.label} from a VS Code terminal or exports .sh/.bat scripts using the saved phase handoff file.`;
   }
 
   return `Opens ${launcher.label} inside VS Code with the phase prompt.`;
@@ -180,6 +284,59 @@ export async function writePhaseHandoffFile(params: {
   const fileName = `${timestamp}-${sanitizePathPart(params.phase.id)}-${params.agent}.md`;
   const uri = vscode.Uri.joinPath(folder, fileName);
   await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(params.content));
+  return uri;
+}
+
+function promptFileName(promptFile: vscode.Uri) {
+  return promptFile.path.split("/").pop() || "phase-handoff.md";
+}
+
+function promptScriptName(promptFile: vscode.Uri, shell: "sh" | "bat") {
+  return promptFileName(promptFile).replace(/\.md$/i, `.${shell}`);
+}
+
+function renderShellScript(launcher: Extract<PhaseAgentLauncher, TerminalAgent>, promptFile: vscode.Uri) {
+  const fileName = promptFileName(promptFile);
+  return [
+    "#!/usr/bin/env bash",
+    "set -euo pipefail",
+    "HANDOFF_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"",
+    `PROMPT_FILE="$HANDOFF_DIR/${fileName}"`,
+    launcher.shellScriptCommand('"$PROMPT_FILE"'),
+    "",
+  ].join("\n");
+}
+
+function renderBatchScript(launcher: Extract<PhaseAgentLauncher, TerminalAgent>, promptFile: vscode.Uri) {
+  const fileName = promptFileName(promptFile);
+  return [
+    "@echo off",
+    "setlocal",
+    `set "PROMPT_FILE=%~dp0${fileName}"`,
+    launcher.batchScriptCommand(),
+    "",
+  ].join("\r\n");
+}
+
+export async function writePhaseHandoffScript(params: {
+  workspaceUri: vscode.Uri;
+  agent: XuPhaseAgent;
+  promptFile: vscode.Uri;
+  shell: "sh" | "bat";
+}) {
+  const launcher = PHASE_AGENT_LAUNCHERS[params.agent];
+  if (launcher.kind !== "terminal") {
+    throw new Error(`${launcher.label} does not support shell script export.`);
+  }
+
+  const folder = vscode.Uri.joinPath(params.workspaceUri, ".drylake", "handoffs");
+  await vscode.workspace.fs.createDirectory(folder);
+  const fileName = promptScriptName(params.promptFile, params.shell);
+  const uri = vscode.Uri.joinPath(folder, fileName);
+  const content = params.shell === "sh"
+    ? renderShellScript(launcher, params.promptFile)
+    : renderBatchScript(launcher, params.promptFile);
+  await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(content));
   return uri;
 }
 

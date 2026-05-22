@@ -5,6 +5,7 @@ import type { ApplicationBuildRunbook, BuildSessionState, XuPhase, XuPhaseAgent 
 const AGENT_PREAMBLES: Record<XuPhaseAgent, string> = {
   "claude-code": "You are running as Claude Code. Use the bash tool for file operations.",
   codex: "You are running as Codex CLI. Output shell commands and file patches.",
+  gemini: "You are running as Gemini CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
   cursor: "You are running as Cursor CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
   cline: "You are running as Cline CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
   continue: "You are running as Continue CLI. Use the focused phase objective, steps, and acceptance criteria to guide the agent session.",

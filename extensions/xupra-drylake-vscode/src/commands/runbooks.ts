@@ -6,7 +6,12 @@ import { renderGeneratedFiles } from "../generators/renderGeneratedFiles";
 import { planGeneratedFiles, summarizeGeneratedFilePlan } from "../generators/planGeneratedFiles";
 import { readWorkspaceExisting, writeGeneratedFiles } from "../generators/writeGeneratedFiles";
 import { renderPhasePrompt } from "../generators/renderPhasePrompt";
-import { launchPhaseAgent, writePhaseHandoffFile } from "../agents/phaseAgentLauncher";
+import {
+  launchPhaseAgent,
+  phaseHandoffActionFromArg,
+  writePhaseHandoffFile,
+  writePhaseHandoffScript,
+} from "../agents/phaseAgentLauncher";
 import { applyApproval } from "../xu/approvalState";
 import { createLocalDraftXu } from "../xu/createLocalDraftXu";
 import { parseXu } from "../xu/parseXu";
@@ -74,6 +79,10 @@ function phaseAgentFromArg(arg: unknown): XuPhaseAgent | undefined {
 
 function explicitPhaseAgent(agent: unknown): XuPhaseAgent | undefined {
   return phaseAgentFromArg(agent);
+}
+
+function handoffActionFromArg(arg: unknown) {
+  return phaseHandoffActionFromArg(arg) ?? "run";
 }
 
 function phaseStatusFromArg(arg: unknown): Extract<XuStepStatus, "pending" | "active" | "complete"> | undefined {
@@ -686,8 +695,9 @@ export async function runNextPhaseCommand(deps: RunbookCommandDeps) {
   await handoffPhaseCommand(deps, phase.id);
 }
 
-export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown) {
+export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown, handoffActionArg?: unknown) {
   const phaseId = typeof phaseIdArg === "string" ? phaseIdArg.trim() : "";
+  const handoffAction = handoffActionFromArg(handoffActionArg);
   if (!phaseId) {
     void vscode.window.showWarningMessage("DryLake could not start the handoff because no phase was specified.");
     return;
@@ -732,23 +742,56 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
   await deps.sessionStore.writeRunbook(current.uri, updated);
 
   const buildSession = deps.stateStore.getBuildSession();
-  const content = renderPhasePrompt(updated, phase, { activeProvider: buildSession });
+  const promptAgent: XuPhaseAgent = handoffAction === "vscode" ? "copilot" : agent;
+  const promptPhase = { ...phase, agent: promptAgent };
+  const content = renderPhasePrompt(updated, promptPhase, { activeProvider: buildSession });
   const workspaceUri = workspaceRoot();
-  const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
-  await vscode.env.clipboard.writeText(content);
-  const launchResult = await launchPhaseAgent({ agent, prompt: content, promptFile, workspaceUri });
+  const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent: promptAgent, content });
 
-  if (launchResult.status !== "launched") {
+  let message = "";
+  let warning = false;
+
+  if (handoffAction === "copy") {
+    await vscode.env.clipboard.writeText(content);
+    message = "Phase prompt copied to clipboard.";
+  } else if (handoffAction === "markdown") {
     const document = await vscode.workspace.openTextDocument(promptFile);
     await vscode.window.showTextDocument(document, { preview: false });
+    message = `Exported Markdown handoff to ${relativePath(promptFile)}.`;
+  } else if (handoffAction === "script-sh" || handoffAction === "script-bat") {
+    const shell = handoffAction === "script-sh" ? "sh" : "bat";
+    try {
+      const scriptFile = await writePhaseHandoffScript({ workspaceUri, agent, promptFile, shell });
+      const document = await vscode.workspace.openTextDocument(scriptFile);
+      await vscode.window.showTextDocument(document, { preview: false });
+      message = `Exported ${shell === "sh" ? "bash" : "Windows batch"} handoff script to ${relativePath(scriptFile)}.`;
+    } catch (error) {
+      warning = true;
+      const detail = error instanceof Error ? error.message : String(error);
+      message = `DryLake could not export a script for this phase: ${detail}`;
+    }
+  } else {
+    const launchAgent: XuPhaseAgent = handoffAction === "vscode" ? "copilot" : agent;
+    const launchResult = await launchPhaseAgent({ agent: launchAgent, prompt: content, promptFile, workspaceUri });
+
+    if (launchResult.status !== "launched") {
+      await vscode.env.clipboard.writeText(content);
+      const document = await vscode.workspace.openTextDocument(promptFile);
+      await vscode.window.showTextDocument(document, { preview: false });
+    }
+
+    warning = launchResult.status === "not-installed" || launchResult.status === "failed";
+    message = launchResult.status === "launched"
+      ? launchResult.message
+      : `${launchResult.message} Prompt copied to clipboard.`;
   }
 
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
-  const notify = launchResult.status === "not-installed" || launchResult.status === "failed"
+  const notify = warning
     ? vscode.window.showWarningMessage
     : vscode.window.showInformationMessage;
-  void notify(`${launchResult.message} Prompt also copied to clipboard.`);
+  void notify(message);
 }
 
 export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown, agentArg?: unknown) {

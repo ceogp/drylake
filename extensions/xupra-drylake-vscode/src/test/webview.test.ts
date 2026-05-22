@@ -13,6 +13,7 @@ type TestMessage = {
   phaseId?: unknown;
   afterPhaseId?: unknown;
   agent?: unknown;
+  handoffAction?: unknown;
   status?: unknown;
 };
 
@@ -139,6 +140,10 @@ describe("Control Room webview", () => {
     expect(html).toContain("drop-before");
     expect(html).toContain("drop-after");
     expect(html).toContain("Run with Codex");
+    expect(html).toContain("Codex .sh");
+    expect(html).toContain("Codex .bat");
+    expect(html).toContain("Export as Markdown");
+    expect(html).toContain("VS Code");
     expect(html).toContain("Select phase agent");
     expect(html).toContain("Select agent");
     expect(html).toContain("Require Approval Between Phases");
@@ -151,11 +156,11 @@ describe("Control Room webview", () => {
     const html = panel?.webview.html ?? "";
 
     expect(html).toContain("Agent Handoff");
-    expect(html).toContain("Direct CLI");
+    expect(html).toContain("Direct CLI + scripts");
     expect(html).toContain("Direct VS Code");
     expect(html).not.toContain("Prompt-ready");
     expect(html).not.toContain("Prompt fallback");
-    expect(html).toContain("Only agents with verified no-copy launch paths are selectable.");
+    expect(html).toContain("Choose direct run, .sh/.bat, Copy, Markdown, or VS Code per phase.");
   });
 
   it("renders autopilot toggle state for pipeline and kanban", async () => {
@@ -209,6 +214,15 @@ describe("Control Room webview", () => {
     expect(executed).toContainEqual({ command: "drylake.updatePhaseAgent", args: ["active", "cline"] });
   });
 
+  it("routes handoff action messages to phase handoff commands", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({ command: "drylake.handoffPhase", phaseId: "active", handoffAction: "script-sh" });
+
+    expect(executed).toContainEqual({ command: "drylake.handoffPhase", args: ["active", "script-sh"] });
+  });
+
   it("renders every native phase agent in the dropdown", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);
@@ -220,6 +234,7 @@ describe("Control Room webview", () => {
     }
 
     expect(html).toContain("Cline");
+    expect(html).toContain("Gemini CLI");
     expect(html).toContain("Continue.dev");
     expect(html).toContain("Aider");
     expect(html).toContain("Augment Code");

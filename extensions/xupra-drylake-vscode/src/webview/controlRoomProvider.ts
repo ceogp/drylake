@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 
 import {
-  phaseAgentActionLabel,
   phaseAgentConnectionDescription,
   phaseAgentConnectionLabel,
   phaseAgentConnectionTone,
+  phaseAgentHandoffOptions,
   phaseAgentHint,
   phaseAgentLabel,
 } from "../agents/phaseAgentLauncher";
@@ -108,8 +108,13 @@ function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
   const draggable = options.draggable ? ' draggable="true"' : "";
   const cardClass = `phase-card ${statusClass(phase.status)}${phase.status === "active" ? " active-phase" : ""}`;
   const selectedAgent = phase.agent;
-  const actionLabel = selectedAgent ? phaseAgentActionLabel(selectedAgent) : "Select agent";
   const actionHint = selectedAgent ? phaseAgentHint(selectedAgent) : "Select a phase agent before running this phase.";
+  const actionOptions = selectedAgent
+    ? phaseAgentHandoffOptions(selectedAgent).map((option) => (
+      `<option value="${escapeHtml(option.action)}" title="${escapeHtml(option.title)}">${escapeHtml(option.label)}</option>`
+    )).join("")
+    : `<option value="run">Select agent</option>`;
+  const actionDisabled = selectedAgent ? "" : " disabled";
 
   return `<article class="${cardClass}" data-phase-id="${escapeHtml(phase.id)}" data-phase-status="${statusForKanban(phase.status)}"${draggable}>
     <div class="phase-id">${escapeHtml(phase.id)}</div>
@@ -119,7 +124,8 @@ function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
     ${renderAgentSelect(phase)}
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
-      <button class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" title="${escapeHtml(actionHint)}">${escapeHtml(actionLabel)}</button>
+      <select class="handoff-action-select" data-handoff-action-for="${escapeHtml(phase.id)}" aria-label="Handoff action for ${escapeHtml(phase.title)}" title="${escapeHtml(actionHint)}"${actionDisabled}>${actionOptions}</select>
+      <button class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" title="${escapeHtml(actionHint)}"${actionDisabled}>Handoff</button>
     </div>
   </article>`;
 }
@@ -157,7 +163,7 @@ function renderHandoffCapabilityPanel(runbook: ApplicationBuildRunbook | null) {
   return `<section class="handoff-panel" aria-label="Agent handoff capability">
     <div class="handoff-panel-header">
       <span class="handoff-eyebrow">Agent Handoff</span>
-      <span class="handoff-note">Only agents with verified no-copy launch paths are selectable.</span>
+      <span class="handoff-note">Choose direct run, .sh/.bat, Copy, Markdown, or VS Code per phase.</span>
     </div>
     <div class="agent-capability-grid">${cards}</div>
   </section>`;
@@ -233,6 +239,7 @@ type WebviewMessage = {
   stepId?: unknown;
   afterPhaseId?: unknown;
   agent?: unknown;
+  handoffAction?: unknown;
   status?: unknown;
   text?: unknown;
 };
@@ -340,7 +347,7 @@ export class ControlRoomProvider {
       }
 
       if (message.command === "drylake.handoffPhase") {
-        await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0]);
+        await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0], message.handoffAction ?? message.args?.[1]);
         return;
       }
 
@@ -486,7 +493,8 @@ export class ControlRoomProvider {
     .step-item label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 12px; line-height: 1.4; color: var(--vscode-foreground); }
     .step-item input[type="checkbox"] { margin-top: 2px; }
     .step-item.done span { text-decoration: line-through; color: var(--vscode-descriptionForeground); }
-    .phase-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .phase-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-top: 10px; }
+    .handoff-action-select { min-width: 0; width: 100%; padding: 5px 6px; color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border)); border-radius: 4px; font-size: 11px; }
     .handoff-btn { font-size: 12px; padding: 6px 10px; }
     .chat-panel { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin: 0 0 18px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); }
     .chat-header { display: flex; align-items: center; justify-content: space-between; }
@@ -611,7 +619,13 @@ export class ControlRoomProvider {
 
       const handoffBtn = event.target.closest("[data-handoff-phase]");
       if (handoffBtn) {
-        vscode.postMessage({ command: "drylake.handoffPhase", phaseId: handoffBtn.dataset.handoffPhase });
+        const card = handoffBtn.closest(".phase-card");
+        const actionSelect = card?.querySelector("[data-handoff-action-for]");
+        vscode.postMessage({
+          command: "drylake.handoffPhase",
+          phaseId: handoffBtn.dataset.handoffPhase,
+          handoffAction: actionSelect?.value || "run"
+        });
       }
     });
 
