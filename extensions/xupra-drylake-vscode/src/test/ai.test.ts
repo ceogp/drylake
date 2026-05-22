@@ -107,6 +107,7 @@ describe("AI providers", () => {
       await provider.refinePurpose(input);
       await provider.refineArchitecture(input);
       await provider.generatePhasePlan(input);
+      await provider.planningChat({ ...input, chatTranscript: "User: hi" });
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -116,6 +117,7 @@ describe("AI providers", () => {
       "https://drylake.xupracorp.com/api/v1/drylake/runbooks/refine-purpose",
       "https://drylake.xupracorp.com/api/v1/drylake/runbooks/refine-architecture",
       "https://drylake.xupracorp.com/api/v1/drylake/runbooks/generate-phases",
+      "https://drylake.xupracorp.com/api/v1/drylake/runbooks/chat",
     ]);
   });
 
@@ -169,7 +171,7 @@ describe("AI providers", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:3008/api/v1/drylake/runbooks/draft");
   });
 
-  it("falls back to External AI Prompt when configured auto has no integrated model", async () => {
+  it("uses Xupra AI even when configured auto has no editor model", async () => {
     models = [];
     const { provider, reason } = await resolveDryLakeAiProvider({
       configuration: configuration({ aiProvider: "auto", environment: "development", apiBaseUrl: "" }) as never,
@@ -177,12 +179,11 @@ describe("AI providers", () => {
       readAccessToken: async () => undefined,
     });
 
-    expect(provider.label).toBe("External AI Prompt");
-    expect(reason).toBeDefined();
-    expect(reason).toMatch(/Xupra AI|User IDE AI/);
+    expect(provider.label).toBe("Xupra AI");
+    expect(reason).toBeUndefined();
   });
 
-  it("selects User IDE AI when an editor model is available", async () => {
+  it("does not select User IDE AI when an editor model is available", async () => {
     models = [{ sendRequest: vi.fn() }];
     const { provider, reason } = await resolveDryLakeAiProvider({
       configuration: configuration({ aiProvider: "auto", environment: "development", apiBaseUrl: "" }) as never,
@@ -190,7 +191,7 @@ describe("AI providers", () => {
       readAccessToken: async () => undefined,
     });
 
-    expect(provider.label).toBe("User IDE AI");
-    expect(reason).toMatch(/Xupra AI/);
+    expect(provider.label).toBe("Xupra AI");
+    expect(reason).toBeUndefined();
   });
 });

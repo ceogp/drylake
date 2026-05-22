@@ -140,12 +140,13 @@ describe("Control Room webview", () => {
     expect(html).toContain("drop-before");
     expect(html).toContain("drop-after");
     expect(html).toContain("Run selected agent");
-    expect(html).toContain("Export .sh script");
-    expect(html).toContain("Export .bat script");
-    expect(html).toContain("Export Markdown");
+    expect(html).toContain('data-handoff-action="script-sh"');
+    expect(html).toContain('data-handoff-action="script-bat"');
+    expect(html).toContain('data-handoff-action="markdown"');
     expect(html).not.toContain("Run with Codex");
     expect(html).toContain("Select phase agent");
-    expect(html).toContain("Select agent");
+    expect(html).toContain('data-handoff-action="run"');
+    expect(html).not.toContain("handoff-action-select");
     expect(html).toContain("Require Approval Between Phases");
   });
 
@@ -232,7 +233,7 @@ describe("Control Room webview", () => {
     }
 
     expect(html).toContain("Gemini CLI");
-    expect(html).toContain("Continue.dev");
+    expect(html).not.toContain("Continue.dev");
     expect(html).toContain("Aider");
     expect(html).toContain("Augment Code");
     expect(html).not.toContain("Cline");

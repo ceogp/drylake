@@ -15,8 +15,6 @@ const agentTargets = [
   "Codex",
   "Gemini CLI",
   "Cursor CLI",
-  "Cline CLI",
-  "Continue CLI",
   "Aider",
   "GitHub Copilot",
   "Augment",

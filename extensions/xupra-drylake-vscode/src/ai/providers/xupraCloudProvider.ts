@@ -7,6 +7,8 @@ import type {
   DryLakeAiProvider,
   GenerateDraftRunbookInput,
   GenerateDraftRunbookResult,
+  PlanningChatInput,
+  PlanningChatResult,
 } from "../DryLakeAiProvider";
 import { DEFAULT_BASE_URL, normalizeBaseUrl } from "../../services/apiClient";
 import type { ConnectionState } from "../../types/package";
@@ -16,6 +18,8 @@ type Endpoint =
   | "/api/v1/drylake/runbooks/refine-purpose"
   | "/api/v1/drylake/runbooks/refine-architecture"
   | "/api/v1/drylake/runbooks/generate-phases";
+
+type ChatEndpoint = "/api/v1/drylake/runbooks/chat";
 
 function resolveBaseUrl(
   configuration: vscode.WorkspaceConfiguration,
@@ -126,6 +130,55 @@ export class XupraCloudProvider implements DryLakeAiProvider {
     }
   }
 
+  private async postChat(endpoint: ChatEndpoint, input: PlanningChatInput): Promise<PlanningChatResult> {
+    const availability = await this.isAvailable();
+    if (!availability.available) {
+      return { error: availability.reason };
+    }
+
+    const baseUrl = resolveBaseUrl(this.configuration, this.backendConfiguration);
+    const token = await this.readAccessToken();
+
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "x-xupra-extension-token": token } : {}),
+        },
+        body: JSON.stringify(input),
+      });
+
+      const text = await response.text();
+      let payload: { reply?: unknown; error?: { message?: string } } | undefined;
+
+      try {
+        payload = JSON.parse(text) as { reply?: unknown; error?: { message?: string } };
+      } catch {
+        payload = undefined;
+      }
+
+      if (!response.ok) {
+        const message = typeof payload?.error?.message === "string"
+          ? payload.error.message
+          : `Xupra AI chat request failed (${response.status}).`;
+        return { error: message.includes(`(${response.status})`) ? message : `${message} (${response.status}).` };
+      }
+
+      if (typeof payload?.reply !== "string" || !payload.reply.trim()) {
+        return { error: "Xupra AI chat returned an empty response." };
+      }
+
+      return { reply: payload.reply };
+    } catch (error) {
+      return {
+        error: error instanceof Error
+          ? `Xupra AI chat request failed: ${error.message}`
+          : "Xupra AI chat request failed.",
+      };
+    }
+  }
+
   generateDraftRunbook(input: GenerateDraftRunbookInput) {
     return this.post("/api/v1/drylake/runbooks/draft", input);
   }
@@ -140,6 +193,10 @@ export class XupraCloudProvider implements DryLakeAiProvider {
 
   generatePhasePlan(input: GenerateDraftRunbookInput) {
     return this.post("/api/v1/drylake/runbooks/generate-phases", input);
+  }
+
+  planningChat(input: PlanningChatInput) {
+    return this.postChat("/api/v1/drylake/runbooks/chat", input);
   }
 
   async clarifyIntent(input: ClarifyIntentInput): Promise<ClarifyIntentResult> {

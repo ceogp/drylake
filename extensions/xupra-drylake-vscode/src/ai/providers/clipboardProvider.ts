@@ -6,6 +6,8 @@ import type {
   DryLakeAiProvider,
   GenerateDraftRunbookInput,
   GenerateDraftRunbookResult,
+  PlanningChatInput,
+  PlanningChatResult,
 } from "../DryLakeAiProvider";
 
 export class ClipboardProvider implements DryLakeAiProvider {
@@ -42,5 +44,9 @@ export class ClipboardProvider implements DryLakeAiProvider {
       promptForExternalAi: generatePhasePlanPrompt(input),
       message: "Copy this phase planning prompt into an external AI tool.",
     };
+  }
+
+  async planningChat(_input: PlanningChatInput): Promise<PlanningChatResult> {
+    return { error: "External AI Prompt is not an integrated Planning Chat LLM." };
   }
 }

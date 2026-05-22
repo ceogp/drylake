@@ -269,7 +269,7 @@ phases:
       - Risks and assumptions are documented.
   - id: 03-provisioning
     title: Preview provisioning
-    agent: copilot
+    agent: continue
     gate: provisioning-approval
     status: pending
     objective: Preview project setup, commands, files, and environment requirements.
@@ -357,6 +357,7 @@ agentTargets:
   openclawSkill: true
 handoff:
   defaultAgent: claude-code
+  autopilot: false
   instructions:
     - Follow phases in order.
     - Do not skip approval gates.

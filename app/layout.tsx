@@ -10,7 +10,6 @@ import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
   getConfiguredAppOrigin,
-  getConfiguredMarketingOrigin,
   isConfiguredAdminInternalHost,
   isConfiguredMarketingHost,
   normalizeHost,
@@ -29,6 +28,8 @@ const monoFont = JetBrains_Mono({
   weight: ["400", "500", "700"],
   subsets: ["latin"],
 });
+
+const xupraHomepage = "https://xupracorp.com";
 
 export const metadata: Metadata = {
   title: {
@@ -63,14 +64,13 @@ export default async function RootLayout({
   const appContext = marketingHostRequest || adminInternalHostRequest
     ? null
     : await getCurrentAppContext({ allowDevFallback });
-  const marketingOrigin = getConfiguredMarketingOrigin();
   const dryLakeOrigin = getConfiguredAppOrigin();
 
   const shell = marketingHostRequest ? (
     <>
       <div className="sticky top-0 z-50 border-b-[4px] border-black bg-[#f7f4ea]">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-          <Link className="flex items-center gap-3" href={marketingOrigin}>
+          <a className="flex items-center gap-3" href={xupraHomepage}>
             <Image
               alt="DryLake logo"
               className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
@@ -81,7 +81,7 @@ export default async function RootLayout({
             <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
               DryLake
             </div>
-          </Link>
+          </a>
           <nav className="hidden items-center gap-3 text-sm font-black uppercase text-black md:flex">
             <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/about">
               About
@@ -128,7 +128,7 @@ export default async function RootLayout({
       <div className="sticky top-0 z-50 border-b-[4px] border-black bg-[#f7f4ea]">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <div className="flex items-center gap-4">
-            <Link className="flex items-center gap-3" href="/">
+            <a className="flex items-center gap-3" href={xupraHomepage}>
               <Image
                 alt="DryLake logo"
                 className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
@@ -139,7 +139,7 @@ export default async function RootLayout({
               <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
                 DryLake
               </div>
-            </Link>
+            </a>
             <nav className="hidden items-center gap-3 text-sm font-black uppercase text-black md:flex">
               <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/upload">
                 Import

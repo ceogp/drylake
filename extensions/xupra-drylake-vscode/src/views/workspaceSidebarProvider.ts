@@ -344,7 +344,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       runbook: {
         sessionName: this.stateStore.getBuildSession()?.id,
         approvalStatus: "No runbook",
-        providerStatus: planningProvider?.label ?? "User IDE AI / External AI Prompt",
+        providerStatus: planningProvider?.label ?? "Xupra AI",
         generatedFiles: [],
       },
       isLoading: false,
@@ -916,7 +916,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       const phaseLabel = runbook.activePhaseId ? runbook.activePhaseId + (runbook.activePhaseTitle ? ': ' + runbook.activePhaseTitle : '') : (runbook.phase || 'none');
       html += '<div class="session-card">';
       html += '<div class="session-name" title="' + escapeHtml(sessionName) + '">' + escapeHtml(sessionName) + '</div>';
-      html += '<div class="session-meta">' + escapeHtml(status) + ' · ' + escapeHtml(runbook.path || 'drylake.xu') + ' · ' + escapeHtml(runbook.providerStatus || 'User IDE AI / External AI Prompt') + '</div>';
+      html += '<div class="session-meta">' + escapeHtml(status) + ' · ' + escapeHtml(runbook.path || 'drylake.xu') + ' · ' + escapeHtml(runbook.providerStatus || 'Xupra AI') + '</div>';
       html += '<div class="phase-row"><span>Active phase: ' + escapeHtml(phaseLabel) + '</span><span class="phase-agent">' + escapeHtml(runbook.activePhaseAgent || 'session default') + '</span></div>';
       html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button></div>';
       html += '<button class="big-action" data-action="startBuildSession">Start New Session</button>';

@@ -14,10 +14,20 @@ export type GenerateDraftRunbookInput = {
   currentRunbook?: ApplicationBuildRunbook;
 };
 
+export type PlanningChatInput = GenerateDraftRunbookInput & {
+  chatTranscript: string;
+};
+
 export type GenerateDraftRunbookResult = {
   runbook?: ApplicationBuildRunbook;
   promptForExternalAi?: string;
   message?: string;
+};
+
+export type PlanningChatResult = {
+  reply?: string;
+  runbook?: ApplicationBuildRunbook;
+  error?: string;
 };
 
 export type ClarifyIntentInput = {
@@ -40,6 +50,7 @@ export interface DryLakeAiProvider {
   refinePurpose(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;
   refineArchitecture(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;
   generatePhasePlan(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;
+  planningChat(input: PlanningChatInput): Promise<PlanningChatResult>;
   clarifyIntent?(input: ClarifyIntentInput): Promise<ClarifyIntentResult>;
 }
 

@@ -126,18 +126,6 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     shellScriptCommand: shellPromptArgCommand("agent -p"),
     batchScriptCommand: batchPromptArgCommand("agent -p"),
   },
-  continue: {
-    id: "continue",
-    label: "Continue.dev",
-    kind: "terminal",
-    executable: "cn",
-    help: "Install Continue CLI and make the `cn` command available on PATH.",
-    terminalCommand: (promptFilePath) => (WINDOWS
-      ? `Get-Content -Raw ${quotePath(promptFilePath)} | cn -p`
-      : `cat ${quotePath(promptFilePath)} | cn -p`),
-    shellScriptCommand: shellPipeCommand("cn -p"),
-    batchScriptCommand: batchPipeCommand("cn -p"),
-  },
   aider: {
     id: "aider",
     label: "Aider",

@@ -5,7 +5,6 @@ export const XU_PHASE_AGENTS = [
   "codex",
   "gemini",
   "cursor",
-  "continue",
   "aider",
   "copilot",
   "augment-code",

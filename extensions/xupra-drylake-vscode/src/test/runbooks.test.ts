@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  chatSendMessageCommand,
   handoffPhaseCommand,
   reorderPhaseCommand,
   runNextPhaseCommand,
@@ -24,6 +25,13 @@ const mocks = vi.hoisted(() => ({
   launchPhaseAgent: vi.fn(),
   writePhaseHandoffFile: vi.fn(),
   writePhaseHandoffScript: vi.fn(),
+  resolveDryLakeAiProvider: vi.fn(),
+  providerIsAvailable: vi.fn(),
+  providerGenerateDraftRunbook: vi.fn(),
+  providerPlanningChat: vi.fn(),
+  providerRefinePurpose: vi.fn(),
+  providerRefineArchitecture: vi.fn(),
+  providerGeneratePhasePlan: vi.fn(),
 }));
 
 vi.mock("vscode", () => ({
@@ -67,6 +75,10 @@ vi.mock("../services/workspaceScanner", () => ({
   scanWorkspaceFiles: vi.fn(async () => []),
 }));
 
+vi.mock("../ai/providerResolver", () => ({
+  resolveDryLakeAiProvider: mocks.resolveDryLakeAiProvider,
+}));
+
 vi.mock("../agents/phaseAgentLauncher", () => ({
   launchPhaseAgent: mocks.launchPhaseAgent,
   phaseHandoffActionFromArg: (arg: unknown) => (
@@ -89,11 +101,33 @@ beforeEach(() => {
   mocks.launchPhaseAgent.mockReset();
   mocks.writePhaseHandoffFile.mockReset();
   mocks.writePhaseHandoffScript.mockReset();
+  mocks.resolveDryLakeAiProvider.mockReset();
+  mocks.providerIsAvailable.mockReset();
+  mocks.providerGenerateDraftRunbook.mockReset();
+  mocks.providerPlanningChat.mockReset();
+  mocks.providerRefinePurpose.mockReset();
+  mocks.providerRefineArchitecture.mockReset();
+  mocks.providerGeneratePhasePlan.mockReset();
   mocks.showWarningMessage.mockResolvedValue("Upgrade to Pro");
   mocks.openTextDocument.mockImplementation(async (document) => document);
   mocks.writePhaseHandoffFile.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-aider.md", path: "/repo/.drylake/handoffs/P-01-aider.md" });
   mocks.writePhaseHandoffScript.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-aider.sh", path: "/repo/.drylake/handoffs/P-01-aider.sh" });
   mocks.launchPhaseAgent.mockResolvedValue({ status: "launched", message: "Started Aider for this phase." });
+  mocks.providerIsAvailable.mockResolvedValue({ available: false, reason: "Xupra AI requires a Pro plan." });
+  mocks.providerGenerateDraftRunbook.mockResolvedValue({ message: "Failed to generate DryLake runbook draft (500)." });
+  mocks.providerPlanningChat.mockResolvedValue({ error: "Failed to run DryLake Planning Chat (500)." });
+  mocks.resolveDryLakeAiProvider.mockResolvedValue({
+    provider: {
+      id: "xupra-pro-ai",
+      label: "Xupra AI",
+      isAvailable: mocks.providerIsAvailable,
+      generateDraftRunbook: mocks.providerGenerateDraftRunbook,
+      planningChat: mocks.providerPlanningChat,
+      refinePurpose: mocks.providerRefinePurpose,
+      refineArchitecture: mocks.providerRefineArchitecture,
+      generatePhasePlan: mocks.providerGeneratePhasePlan,
+    },
+  });
 });
 
 describe("runbook commands", () => {
@@ -176,6 +210,74 @@ describe("runbook commands", () => {
     expect(mocks.showInformationMessage).not.toHaveBeenCalledWith(
       expect.stringContaining("is not available, so DryLake created a local draft runbook."),
     );
+  });
+
+  function chatDeps() {
+    const runbook = createStarterXu({ prompt: "Build checkout", mode: "build-app" });
+    const uri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
+    const messages: Array<{ id: string; ts: number; role: "user" | "ai" | "system"; text: string }> = [];
+    const deps = {
+      apiClient: {},
+      stateStore: {
+        getConnection: vi.fn(() => ({ userEmail: "pro@example.com" })),
+        getAccessToken: vi.fn(async () => "token"),
+        getBuildSession: vi.fn(() => ({
+          id: "session-1",
+          prompt: "Build checkout",
+          mode: "build-app",
+          runbookPath: "drylake.xu",
+          providerId: "xupra-pro-ai",
+          providerLabel: "Xupra AI",
+          createdAt: "2026-05-16T00:00:00.000Z",
+        })),
+        setPlanningProvider: vi.fn(async () => undefined),
+        appendChatMessage: vi.fn(async (message: { role: "user" | "ai" | "system"; text: string }) => {
+          const next = { id: `msg-${messages.length + 1}`, ts: messages.length + 1, ...message };
+          messages.push(next);
+          return next;
+        }),
+        getChatHistory: vi.fn(() => ({ messages })),
+      },
+      sessionStore: {
+        readRunbook: vi.fn(async () => ({ uri, runbook })),
+        writeRunbook: vi.fn(async () => undefined),
+      },
+      controlRoom: {
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+
+    return { deps, messages };
+  }
+
+  it("sends simple planning chat messages to Xupra AI", async () => {
+    const { deps, messages } = chatDeps();
+    mocks.providerIsAvailable.mockResolvedValueOnce({ available: true });
+    mocks.providerPlanningChat.mockResolvedValueOnce({ reply: "Hi. I am Xupra AI." });
+
+    await chatSendMessageCommand(deps as never, "hi");
+
+    expect(mocks.resolveDryLakeAiProvider).toHaveBeenCalledOnce();
+    expect(mocks.providerPlanningChat).toHaveBeenCalledWith(expect.objectContaining({
+      chatTranscript: expect.stringContaining("User: hi"),
+    }));
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
+    expect(messages.at(-1)?.role).toBe("ai");
+    expect(messages.at(-1)?.text).toBe("Hi. I am Xupra AI.");
+  });
+
+  it("reports Planning Chat outages without writing a fallback plan", async () => {
+    const { deps, messages } = chatDeps();
+    mocks.providerIsAvailable.mockResolvedValueOnce({ available: true });
+    mocks.providerPlanningChat.mockResolvedValueOnce({ error: "Failed to run DryLake Planning Chat (500)." });
+
+    await chatSendMessageCommand(deps as never, "Add refund webhook handling.");
+
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
+    expect(messages.at(-1)?.text).toContain("Xupra AI Planning Chat is not working");
+    expect(messages.at(-1)?.text).not.toContain("left unchanged");
+    expect(messages.at(-1)?.text).not.toContain("fallback");
   });
 
   function reorderRunbook(): ApplicationBuildRunbook {

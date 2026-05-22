@@ -11,6 +11,8 @@ import type {
   DryLakeAiProvider,
   GenerateDraftRunbookInput,
   GenerateDraftRunbookResult,
+  PlanningChatInput,
+  PlanningChatResult,
 } from "../DryLakeAiProvider";
 
 async function readResponseText(response: vscode.LanguageModelChatResponse) {
@@ -80,6 +82,45 @@ export class VscodeLmProvider implements DryLakeAiProvider {
 
   generatePhasePlan(input: GenerateDraftRunbookInput) {
     return this.runPrompt(generatePhasePlanPrompt(input));
+  }
+
+  async planningChat(input: PlanningChatInput): Promise<PlanningChatResult> {
+    const models = await vscode.lm.selectChatModels();
+    const model = models[0];
+
+    if (!model) {
+      return { error: "User IDE AI is not available." };
+    }
+
+    const prompt = [
+      "You are Xupra AI inside the DryLake Planning Chat.",
+      "Answer the user's latest message directly and concisely.",
+      "Do not produce canned health-check replies. Do not claim the runbook changed unless you return one through the product flow.",
+      "If the user asks what you are, identify yourself as Xupra AI.",
+      "",
+      `Mode: ${input.mode}`,
+      "",
+      "Original build-session prompt:",
+      input.prompt,
+      "",
+      "Workspace summary:",
+      input.workspaceSummary || "No workspace summary available.",
+      "",
+      "Planning chat transcript:",
+      input.chatTranscript,
+    ].join("\n");
+
+    try {
+      const response = await model.sendRequest([vscode.LanguageModelChatMessage.User(prompt)]);
+      const reply = await readResponseText(response);
+      return reply.trim() ? { reply } : { error: "User IDE AI returned an empty chat response." };
+    } catch (error) {
+      return {
+        error: error instanceof Error
+          ? `User IDE AI chat request failed: ${error.message}`
+          : "User IDE AI chat request failed.",
+      };
+    }
   }
 
   async clarifyIntent(input: ClarifyIntentInput): Promise<ClarifyIntentResult> {

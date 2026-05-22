@@ -1,4 +1,4 @@
-export type InstallTargetSlug = "claude" | "codex" | "gemini" | "cursor" | "cline" | "continue" | "aider" | "copilot" | "augment";
+export type InstallTargetSlug = "claude" | "codex" | "gemini" | "cursor" | "aider" | "copilot" | "augment";
 
 export type InstallTargetInfo = {
   slug: InstallTargetSlug;
@@ -41,22 +41,6 @@ export const installTargets: InstallTargetInfo[] = [
     summary: "DryLake prepares a phase prompt for Cursor CLI workflows.",
     steps: ["Pick Cursor CLI for a phase.", "Choose direct run or export a script.", "Run the phase from your repo."],
     output: "A Cursor CLI handoff scoped to one phase.",
-  },
-  {
-    slug: "cline",
-    name: "Cline",
-    color: "#ff5a1f",
-    summary: "DryLake keeps the Cline handoff ready for VS Code workflow use.",
-    steps: ["Pick Cline for a phase.", "Copy or export the phase prompt.", "Paste it into Cline when ready."],
-    output: "A Cline-ready prompt for the active phase.",
-  },
-  {
-    slug: "continue",
-    name: "Continue CLI",
-    color: "#ffd60a",
-    summary: "DryLake keeps Continue handoffs focused on the active phase.",
-    steps: ["Pick Continue CLI for a phase.", "Copy or export the phase prompt.", "Use it in Continue when the phase is ready."],
-    output: "A Continue-ready prompt for the selected phase.",
   },
   {
     slug: "aider",

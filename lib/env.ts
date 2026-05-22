@@ -41,7 +41,7 @@ const serverEnvSchema = z.object({
   KIMI_BASE_URL: z.url().default("https://api.moonshot.ai/v1"),
   KIMI_MODEL: z.string().default("kimi-k2.6"),
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_MODEL: z.string().default("gpt-5.4-mini"),
+  OPENAI_MODEL: z.string().default("gpt-5.4"),
   SKILLS_SH_API_KEY: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),

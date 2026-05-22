@@ -33,18 +33,24 @@ function extractOpenAiText(payload: {
 }
 
 async function generateWithOpenAi(params: GenerateTextParams) {
-  if (!env.OPENAI_API_KEY) {
-    throw new Error("Xupra AI is not configured.");
+  const apiKey = env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("Xupra AI is not configured: OPENAI_API_KEY is missing.");
+  }
+
+  const model = env.OPENAI_MODEL?.trim();
+  if (!model) {
+    throw new Error("Xupra AI is not configured: OPENAI_MODEL is missing.");
   }
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: env.OPENAI_MODEL,
+      model,
       input: [
         {
           role: "system",
@@ -70,7 +76,7 @@ async function generateWithOpenAi(params: GenerateTextParams) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Xupra AI ${params.taskLabel} failed: ${errorText}`);
+    throw new Error(`Xupra AI ${params.taskLabel} failed (${response.status}): ${errorText.slice(0, 500)}`);
   }
 
   const payload = (await response.json()) as Parameters<typeof extractOpenAiText>[0];

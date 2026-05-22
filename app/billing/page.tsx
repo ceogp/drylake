@@ -244,10 +244,10 @@ export default async function BillingPage({
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Tier Model</p>
             <div className="mt-4 grid gap-3">
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
-                Free: Local Build Sessions, User IDE AI, External AI Prompt
+                Free: scan workspace, import existing runbooks, view + copy + download phase prompts, hand off to your installed coding agents.
               </div>
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
-                Pro ($10/month): Everything in Free + Xupra-hosted AI plan generation
+                Pro ($10/month): Xupra AI Planning Chat and runbook generation. The kanban updates as you talk.
               </div>
             </div>
           </article>

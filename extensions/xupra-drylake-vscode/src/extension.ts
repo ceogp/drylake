@@ -31,7 +31,7 @@ import { signOutCommand } from "./commands/signOut";
 import { ApiClient } from "./services/apiClient";
 import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
-import { requireXupraProAiEntitlement } from "./services/featureGates";
+import { requireXupraProAiEntitlement, hasXupraProAiEntitlement } from "./services/featureGates";
 import { ImportedSkillEditorManager } from "./services/importedSkillEditor";
 import {
   collectRepoContext,
@@ -370,6 +370,7 @@ export async function activate(context: vscode.ExtensionContext) {
     xuSessionStore,
     () => stateStore.getPlanningProvider(),
     () => stateStore.getChatHistory(),
+    () => hasXupraProAiEntitlement(stateStore),
   );
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
@@ -513,7 +514,7 @@ export async function activate(context: vscode.ExtensionContext) {
         activePhaseTitle,
         activePhaseAgent,
         approvalStatus,
-        providerStatus: currentSession?.providerLabel ?? (connection.userEmail ? "User IDE AI / External AI Prompt" : "User IDE AI / External AI Prompt"),
+        providerStatus: currentSession?.providerLabel ?? "Xupra AI",
         generatedFiles: [
           "RUNBOOK.md",
           "phase prompts",
@@ -725,6 +726,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.clearChat", async () => {
     await clearChatCommand(runbookDeps);
+  });
+
+  register("drylake.upgradeToPro", async () => {
+    await vscode.env.openExternal(apiClient.openWebUrl("/billing?source=extension"));
+    await stateStore.setAwaitingPlanRefreshUntil(new Date(Date.now() + 120_000).toISOString());
   });
 
   register("xupra.connect", async () => {

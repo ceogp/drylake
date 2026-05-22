@@ -9,7 +9,6 @@ import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { ChatState, PlanningProviderInfo } from "../services/stateStore";
 import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../xu/types";
-
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
 type ControlRoomView = "pipeline" | "kanban";
 
@@ -106,12 +105,26 @@ function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
   const cardClass = `phase-card ${statusClass(phase.status)}${phase.status === "active" ? " active-phase" : ""}`;
   const selectedAgent = phase.agent;
   const actionHint = selectedAgent ? phaseAgentHint(selectedAgent) : "Select a phase agent before running this phase.";
-  const actionOptions = selectedAgent
-    ? phaseAgentHandoffOptions(selectedAgent).map((option) => (
-      `<option value="${escapeHtml(option.action)}" title="${escapeHtml(option.title)}">${escapeHtml(option.label)}</option>`
-    )).join("")
-    : `<option value="run">Select agent</option>`;
-  const actionDisabled = selectedAgent ? "" : " disabled";
+  const handoffOptions = selectedAgent ? phaseAgentHandoffOptions(selectedAgent) : [];
+  const primary = handoffOptions.find((option) => option.action === "run");
+  const secondary = handoffOptions.filter((option) => option.action !== "run");
+  const primaryLabel = primary?.label ?? "Handoff";
+  const primaryTitle = primary?.title ?? actionHint;
+  const disabled = selectedAgent ? "" : " disabled";
+  const secondaryButtons = secondary
+    .map((option) => {
+      const shortLabel = option.action === "script-sh"
+        ? ".sh"
+        : option.action === "script-bat"
+          ? ".bat"
+          : option.action === "copy"
+            ? "Copy"
+            : option.action === "markdown"
+              ? "MD"
+              : option.label;
+      return `<button type="button" class="handoff-action-btn secondary" data-handoff-phase="${escapeHtml(phase.id)}" data-handoff-action="${escapeHtml(option.action)}" title="${escapeHtml(option.title)}"${disabled}>${escapeHtml(shortLabel)}</button>`;
+    })
+    .join("");
 
   return `<article class="${cardClass}" data-phase-id="${escapeHtml(phase.id)}" data-phase-status="${statusForKanban(phase.status)}"${draggable}>
     <div class="phase-id">${escapeHtml(phase.id)}</div>
@@ -121,8 +134,8 @@ function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
     ${renderAgentSelect(phase)}
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
-      <select class="handoff-action-select" data-handoff-action-for="${escapeHtml(phase.id)}" aria-label="Handoff action for ${escapeHtml(phase.title)}" title="${escapeHtml(actionHint)}"${actionDisabled}>${actionOptions}</select>
-      <button class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" title="${escapeHtml(actionHint)}"${actionDisabled}>Handoff</button>
+      <button type="button" class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" data-handoff-action="run" title="${escapeHtml(primaryTitle)}"${disabled}>${escapeHtml(primaryLabel)}</button>
+      <div class="handoff-secondary">${secondaryButtons}</div>
     </div>
   </article>`;
 }
@@ -218,6 +231,7 @@ type WebviewMessage = {
 
 type PlanningProviderReader = () => PlanningProviderInfo | null;
 type ChatStateReader = () => ChatState;
+type EntitlementReader = () => boolean;
 
 function formatChatTime(ts: number) {
   try {
@@ -227,7 +241,21 @@ function formatChatTime(ts: number) {
   }
 }
 
-function renderChatPanel(state: ChatState, planningProviderLabel: string) {
+function renderChatPanel(state: ChatState, planningProviderLabel: string, entitled: boolean) {
+  if (!entitled) {
+    return `<section class="chat-panel chat-locked" aria-label="Planning chat upgrade required">
+      <div class="chat-header">
+        <span class="chat-eyebrow">Planning Chat</span>
+        <span class="chat-pro-badge">Pro</span>
+      </div>
+      <p class="muted">Xupra AI Planning Chat is a Pro feature. Upgrade to chat with the planner, refine the runbook, and have the kanban update as you talk.</p>
+      <p class="muted">Free DryLake includes scan, import, view, copy, and download. Phase handoff to your installed coding agents stays free.</p>
+      <div class="chat-upgrade-row">
+        <button type="button" class="primary" data-command="drylake.upgradeToPro">Upgrade to Pro</button>
+      </div>
+    </section>`;
+  }
+
   const messages = state.messages.length
     ? state.messages
         .map((message) => {
@@ -267,6 +295,7 @@ export class ControlRoomProvider {
     private readonly sessionStore: XuSessionStore,
     private readonly readPlanningProvider: PlanningProviderReader = () => null,
     private readonly readChatState: ChatStateReader = () => ({ messages: [] }),
+    private readonly readEntitlement: EntitlementReader = () => true,
   ) {}
 
   async createOrShow(context: vscode.ExtensionContext) {
@@ -381,7 +410,8 @@ export class ControlRoomProvider {
     const banner = renderPlanningProviderBanner(planningProvider);
     const chatState = this.readChatState();
     const planningProviderLabel = planningProvider?.label ?? "Planning AI";
-    const chatPanel = renderChatPanel(chatState, planningProviderLabel);
+    const entitled = this.readEntitlement();
+    const chatPanel = renderChatPanel(chatState, planningProviderLabel, entitled);
     const body = runbook ? (view === "kanban" ? renderKanban(runbook) : renderPipeline(runbook)) : renderEmptyState();
     const executionToggle = renderExecutionModeToggle(runbook);
     const runNextButton = runbook?.phases.length ? '<button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>' : "";
@@ -454,9 +484,10 @@ export class ControlRoomProvider {
     .step-item label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 12px; line-height: 1.4; color: var(--drylake-ink); }
     .step-item input[type="checkbox"] { margin-top: 2px; }
     .step-item.done span { text-decoration: line-through; color: #6c655d; }
-    .phase-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-top: 10px; }
-    .handoff-action-select { min-width: 0; width: 100%; padding: 5px 6px; color: var(--drylake-ink); background: var(--drylake-paper); border: 3px solid var(--drylake-ink); border-radius: 4px; font-size: 11px; }
-    .handoff-btn { font-size: 12px; padding: 6px 10px; }
+    .phase-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .handoff-btn { width: 100%; font-size: 12px; padding: 6px 10px; }
+    .handoff-secondary { display: flex; flex-wrap: wrap; gap: 4px; }
+    .handoff-action-btn { flex: 1 1 auto; min-width: 44px; padding: 4px 6px; font-size: 10px; box-shadow: 2px 2px 0 var(--drylake-ink); }
     .chat-panel { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin: 0 0 18px; border: 4px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); }
     .chat-header { display: flex; align-items: center; justify-content: space-between; }
     .chat-eyebrow { color: var(--drylake-blue); text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
@@ -471,6 +502,9 @@ export class ControlRoomProvider {
     .chat-form textarea { min-height: 56px; }
     .chat-form-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
     .chat-hint { font-size: 11px; }
+    .chat-locked { border-color: var(--drylake-blue); background: #f0f6ff; }
+    .chat-pro-badge { padding: 2px 8px; border: 2px solid var(--drylake-ink); border-radius: 999px; background: var(--drylake-yellow); color: var(--drylake-ink); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
+    .chat-upgrade-row { display: flex; justify-content: flex-end; margin-top: 4px; }
     @media (max-width: 860px) { header { flex-direction: column; } .kanban, .mode-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -579,12 +613,10 @@ export class ControlRoomProvider {
 
       const handoffBtn = event.target.closest("[data-handoff-phase]");
       if (handoffBtn) {
-        const card = handoffBtn.closest(".phase-card");
-        const actionSelect = card?.querySelector("[data-handoff-action-for]");
         vscode.postMessage({
           command: "drylake.handoffPhase",
           phaseId: handoffBtn.dataset.handoffPhase,
-          handoffAction: actionSelect?.value || "run"
+          handoffAction: handoffBtn.dataset.handoffAction || "run"
         });
       }
     });

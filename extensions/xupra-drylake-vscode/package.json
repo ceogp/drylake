@@ -1,8 +1,8 @@
 {
   "name": "drylake",
   "displayName": "DryLake — Visual Planning for AI Coding Agents",
-  "description": "Visual kanban and pipeline planner for assigning coding phases to Claude Code, Codex, Gemini CLI, Cursor CLI, Continue CLI, Aider, GitHub Copilot, and Augment.",
-  "version": "0.3.7",
+  "description": "Visual kanban and pipeline planner for assigning coding phases to Claude Code, Codex, Gemini CLI, Cursor CLI, Aider, GitHub Copilot, and Augment.",
+  "version": "0.4.0",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
@@ -39,7 +39,6 @@
     "gemini",
     "gemini-cli",
     "cursor",
-    "continue",
     "aider",
     "augment",
     "augment-code",
@@ -98,32 +97,13 @@
         "drylake.aiProvider": {
           "type": "string",
           "enum": [
-            "auto",
-            "xupra-pro-ai",
-            "user-ide-ai",
-            "external-ai-prompt"
+            "xupra-pro-ai"
           ],
           "enumItemLabels": [
-            "Auto",
-            "Xupra AI",
-            "User IDE AI",
-            "External AI Prompt"
+            "Xupra AI"
           ],
-          "default": "auto",
-          "description": "Provider preference for DryLake AI Coding Agent. Auto tries Xupra AI when your account has access, then User IDE AI, then External AI Prompt."
-        },
-        "drylake.userIdeAiAdapter": {
-          "type": "string",
-          "enum": [
-            "auto",
-            "vs-code-language-model"
-          ],
-          "enumItemLabels": [
-            "Auto",
-            "VS Code Language Model"
-          ],
-          "default": "auto",
-          "description": "Adapter preference for User IDE AI."
+          "default": "xupra-pro-ai",
+          "description": "Provider for DryLake Planning Chat and runbook generation. Planning requires Xupra AI access. Free users can scan and preview their workspace without AI compute."
         },
         "xupra.baseUrl": {
           "type": "string",
@@ -327,6 +307,10 @@
       {
         "command": "drylake.clearChat",
         "title": "DryLake: Clear Planning Chat"
+      },
+      {
+        "command": "drylake.upgradeToPro",
+        "title": "DryLake: Upgrade to Pro"
       },
       {
         "command": "xupra.connect",

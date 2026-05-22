@@ -16,9 +16,15 @@ export const runbookClarifyInputSchema = z.object({
   workspaceSummary: z.string().trim().min(1),
 });
 
+export const runbookPlanningChatInputSchema = runbookGenerationInputSchema.extend({
+  chatTranscript: z.string().trim().min(1),
+});
+
 export type RunbookClarifyInput = z.infer<typeof runbookClarifyInputSchema>;
 
 export type RunbookGenerationInput = z.infer<typeof runbookGenerationInputSchema>;
+
+export type RunbookPlanningChatInput = z.infer<typeof runbookPlanningChatInputSchema>;
 
 const RUNBOOK_SYSTEM_PROMPT = [
   "You are generating a DryLake .xu runbook.",
@@ -49,7 +55,7 @@ function runbookContractLines() {
     "provisioning.safety.executeAutomatically: false",
     "phases: at least five phases",
     "each phase must include id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
-    "phase.agent optional enum: claude-code, codex, gemini, cursor, continue, aider, copilot, augment-code",
+    "phase.agent optional enum: claude-code, codex, gemini, cursor, aider, copilot, augment-code",
     "checks.install, checks.dev, checks.build, checks.test, checks.lint",
     "agentTargets.agentsMd, agentTargets.claudeMd, agentTargets.copilotInstructions, agentTargets.cursorRules, agentTargets.codexSkill, agentTargets.openclawSkill",
     "handoff.defaultAgent, handoff.instructions",
@@ -234,4 +240,38 @@ export async function clarifyRunbookIntent(input: RunbookClarifyInput) {
   });
 
   return { questions: parseClarifyQuestions(content) };
+}
+
+const PLANNING_CHAT_SYSTEM_PROMPT = [
+  "You are Xupra AI inside DryLake Planning Chat.",
+  "Paid users are talking directly to the planning LLM.",
+  "Answer the user's latest planning-chat message directly and concisely.",
+  "If the user asks what you are, identify yourself as Xupra AI.",
+  "Do not claim the runbook changed unless you explicitly describe a planning change that should be applied next.",
+].join(" ");
+
+export async function generatePlanningChatReply(input: RunbookPlanningChatInput) {
+  const userPrompt = [
+    `Mode: ${input.mode}`,
+    "",
+    "Original build-session prompt:",
+    input.prompt,
+    "",
+    "Workspace summary:",
+    input.workspaceSummary || "No workspace summary available.",
+    "",
+    "Current runbook context:",
+    serializeCurrentRunbook(input.currentRunbook),
+    "",
+    "Planning chat transcript:",
+    input.chatTranscript,
+  ].join("\n");
+
+  const reply = await generateAiText({
+    systemPrompt: PLANNING_CHAT_SYSTEM_PROMPT,
+    userPrompt,
+    taskLabel: "planning chat",
+  });
+
+  return { reply };
 }

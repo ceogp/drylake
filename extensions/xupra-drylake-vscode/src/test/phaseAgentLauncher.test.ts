@@ -52,17 +52,7 @@ describe("phase agent launchers", () => {
     expect(labels.join(" ")).not.toContain("Codex");
   });
 
-  it("maps Continue.dev to the Continue CLI command path", () => {
-    const launcher = PHASE_AGENT_LAUNCHERS.continue;
-
-    expect(launcher.kind).toBe("terminal");
-    if (launcher.kind !== "terminal") {
-      throw new Error("Continue.dev should use a terminal launcher.");
-    }
-
-    expect(launcher.executable).toBe("cn");
-    expect(launcher.terminalCommand("/tmp/phase.md")).toContain("cn -p");
-    expect(launcher.shellScriptCommand('"$PROMPT_FILE"')).toContain("cn -p");
-    expect(launcher.batchScriptCommand()).toContain("cn -p");
+  it("does not include Continue.dev as a phase agent launcher", () => {
+    expect((PHASE_AGENT_LAUNCHERS as Record<string, unknown>).continue).toBeUndefined();
   });
 });

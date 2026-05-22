@@ -4,7 +4,7 @@
 
 ![DryLake Control Room kanban](https://drylake.xupracorp.com/marketplace/extension/media/readme-kanban.png)
 
-Each phase card has one **Agent** dropdown. Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Cursor CLI · Continue CLI · Aider · GitHub Copilot · Augment / Auggie** from the planner, then choose what to do with that selected agent: run it, export a script, copy the prompt, or open a Markdown handoff.
+Each phase card has one **Agent** dropdown. Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Cursor CLI · Aider · GitHub Copilot · Augment / Auggie** from the planner, then use the direct action buttons on that card to run, export a script, copy the prompt, or open a Markdown handoff.
 
 ![DryLake pipeline view](https://drylake.xupracorp.com/marketplace/extension/media/readme-pipeline.png)
 
@@ -12,7 +12,7 @@ Each phase card has one **Agent** dropdown. Assign phases to **Claude Code · Op
 
 - **Plans your work as a kanban.** Pending → Active → Validating → Done. Drag phases to reorder them.
 - **One visible agent selector per phase.** Pick Claude Code for design, Aider for patch work, Codex for docs, or another verified launcher directly on the card.
-- **Explicit handoff action selector.** Choose run, `.sh`, `.bat`, copy prompt, or Markdown before pressing Handoff. GitHub Copilot runs through the same Agent dropdown as every other target.
+- **Direct handoff action buttons.** Use Handoff, `.sh`, `.bat`, Copy, or Markdown on the phase card. GitHub Copilot runs through the same Agent dropdown as every other target.
 - **Auto-advance.** Tick all steps in a phase, DryLake completes it and activates the next one.
 - **Planning chat.** Tell DryLake to add a step or change scope; the kanban updates live.
 
@@ -33,12 +33,10 @@ Pick a different agent per phase — or stick with one for the whole session. Se
 2. **OpenAI Codex**
 3. **Gemini CLI**
 4. **Cursor CLI**
-5. **Continue CLI**
-6. **Aider**
-7. **GitHub Copilot** (Copilot Chat)
-8. **Augment / Auggie CLI**
+5. **Aider**
+6. **GitHub Copilot** (Copilot Chat)
+7. **Augment / Auggie CLI**
 
-External AI Prompt remains available as a planning fallback, but it is not a selectable phase handoff agent.
 
 Direct CLI handoff requires the matching command to already be installed and available on `PATH`. If a direct command is missing, DryLake saves the phase handoff, copies the prompt, and opens the Markdown file instead of pretending the launch worked.
 
@@ -49,4 +47,4 @@ Direct CLI handoff requires the matching command to already be installed and ava
 
 ## Non-affiliation
 
-DryLake is not affiliated with Anthropic, OpenAI, Google, GitHub, Microsoft, Cursor, Continue, Aider, Augment, or their respective owners.
+DryLake is not affiliated with Anthropic, OpenAI, Google, GitHub, Microsoft, Cursor, Aider, Augment, or their respective owners.

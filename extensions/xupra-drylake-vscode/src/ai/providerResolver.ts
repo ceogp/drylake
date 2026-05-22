@@ -1,7 +1,5 @@
 import type * as vscode from "vscode";
 
-import { ClipboardProvider } from "./providers/clipboardProvider";
-import { VscodeLmProvider } from "./providers/vscodeLmProvider";
 import { XupraCloudProvider } from "./providers/xupraCloudProvider";
 import type { DryLakeAiProvider, DryLakeProviderId } from "./DryLakeAiProvider";
 import type { ConnectionState } from "../types/package";
@@ -17,42 +15,19 @@ export async function resolveDryLakeAiProvider(params: {
   readConnection: () => ConnectionState;
   readAccessToken: () => Promise<string | undefined>;
 }): Promise<DryLakeProviderResolution> {
-  const configured = String(params.configuration.get("aiProvider", "auto")) as DryLakeProviderId | "auto";
-  const providers: Record<DryLakeProviderId, DryLakeAiProvider> = {
-    "xupra-pro-ai": new XupraCloudProvider(
-      params.configuration,
-      params.readConnection,
-      params.readAccessToken,
-      params.backendConfiguration,
-    ),
-    "user-ide-ai": new VscodeLmProvider(),
-    "external-ai-prompt": new ClipboardProvider(),
-  };
-
-  if (configured !== "auto") {
-    return { provider: providers[configured] ?? providers["external-ai-prompt"] };
-  }
-
-  const fallbackReasons: string[] = [];
-  for (const candidate of [providers["xupra-pro-ai"], providers["user-ide-ai"]]) {
-    const availability = await candidate.isAvailable();
-    if (availability.available) {
-      return {
-        provider: candidate,
-        reason: fallbackReasons.length > 0 ? fallbackReasons.join(" ") : undefined,
-      };
-    }
-
-    if (availability.reason) {
-      fallbackReasons.push(`${candidate.label}: ${availability.reason}`);
-    } else {
-      fallbackReasons.push(`${candidate.label} unavailable.`);
-    }
-  }
+  const configured = String(params.configuration.get("aiProvider", "xupra-pro-ai")) as DryLakeProviderId | "auto";
+  const provider: DryLakeAiProvider = new XupraCloudProvider(
+    params.configuration,
+    params.readConnection,
+    params.readAccessToken,
+    params.backendConfiguration,
+  );
 
   return {
-    provider: providers["external-ai-prompt"],
-    reason: fallbackReasons.length > 0 ? fallbackReasons.join(" ") : undefined,
+    provider,
+    reason: configured !== "xupra-pro-ai" && configured !== "auto"
+      ? "DryLake planning uses Xupra AI only. Free users can scan and preview; planning requires Xupra AI access."
+      : undefined,
   };
 }
 

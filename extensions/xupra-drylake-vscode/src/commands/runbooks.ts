@@ -302,7 +302,9 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
   if (!availability.available && provider.id !== "external-ai-prompt") {
     await deps.stateStore.appendChatMessage({
       role: "system",
-      text: availability.reason ?? `${provider.label} is not available right now.`,
+      text: availability.reason
+        ? `${provider.label} is unavailable: ${availability.reason}`
+        : `${provider.label} is unavailable right now.`,
     });
     await deps.controlRoom.refresh();
     return;
@@ -326,38 +328,27 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
     },
     async () => {
       const workspaceSummary = await buildWorkspaceSummary();
-      const result = await provider.generateDraftRunbook({
-        prompt: refinedPrompt,
+      const result = await provider.planningChat({
+        prompt: session.prompt.trim(),
         mode: session.mode,
         workspaceSummary,
         currentRunbook: current.runbook,
+        chatTranscript,
       });
 
       if (result.runbook) {
         await deps.sessionStore.writeRunbook(current.uri, result.runbook);
-        await deps.stateStore.appendChatMessage({
-          role: "ai",
-          text: "Plan updated. Check the kanban below — let me know what else to change.",
-        });
-      } else if (result.promptForExternalAi) {
-        await openGeneratedPromptDocument("DryLake External AI Prompt", result.promptForExternalAi);
-        await deps.stateStore.appendChatMessage({
-          role: "system",
-          text:
-            result.message ??
-            "I opened an external AI prompt for you. Paste the result back to refine the plan further.",
-        });
-      } else if (result.message) {
-        await deps.stateStore.appendChatMessage({
-          role: "system",
-          text: `${provider.label} could not update the plan: ${result.message} The current DryLake runbook was left unchanged; use the Control Room phases or try again.`,
-        });
-      } else {
-        await deps.stateStore.appendChatMessage({
-          role: "system",
-          text: "I couldn't refine the plan this time. Try rephrasing.",
-        });
       }
+
+      if (result.reply) {
+        await deps.stateStore.appendChatMessage({ role: "ai", text: result.reply });
+        return;
+      }
+
+      await deps.stateStore.appendChatMessage({
+        role: "system",
+        text: `${provider.label} Planning Chat is not working: ${result.error ?? "No response returned."}`,
+      });
     },
   );
 
