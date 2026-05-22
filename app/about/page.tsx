@@ -19,7 +19,7 @@ export default function AboutPage() {
         <div className="grid overflow-hidden rounded-[2.75rem] border border-stone-200 bg-white shadow-[0_30px_90px_rgba(28,15,6,0.12)] lg:grid-cols-[0.9fr_1.1fr]">
           <aside className="bg-[#1c0f06] p-8 text-white md:p-10">
             <Image
-              alt="Xupra logo"
+              alt="DryLake logo"
               className="h-20 w-20 rounded-[1.5rem] border border-white/10 shadow-[0_22px_60px_rgba(0,0,0,0.24)]"
               height={80}
               priority

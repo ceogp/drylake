@@ -31,10 +31,10 @@ const monoFont = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Xupra",
-    template: "%s | Xupra",
+    default: "DryLake",
+    template: "%s | DryLake",
   },
-  description: "Xupra KK builds AI infrastructure products including DryLake, the agent portability platform.",
+  description: "DryLake is a visual kanban and pipeline planner for assigning coding phases to AI coding agents.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -71,7 +71,7 @@ export default async function RootLayout({
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <Link className="flex items-center gap-3" href={marketingOrigin}>
             <Image
-              alt="Xupra logo"
+              alt="DryLake logo"
               className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
               height={44}
               src="/xupra-logo.svg"
@@ -102,7 +102,7 @@ export default async function RootLayout({
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <Link className="flex items-center gap-3" href="/admin">
             <Image
-              alt="Xupra logo"
+              alt="DryLake logo"
               className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
               height={44}
               src="/xupra-logo.svg"
@@ -129,7 +129,7 @@ export default async function RootLayout({
           <div className="flex items-center gap-4">
             <Link className="flex items-center gap-3" href="/">
               <Image
-                alt="Xupra logo"
+                alt="DryLake logo"
                 className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
                 height={44}
                 src="/xupra-logo.svg"
