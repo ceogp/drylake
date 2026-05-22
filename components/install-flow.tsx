@@ -337,27 +337,27 @@ export function InstallFlow({ versionId }: { versionId: string }) {
         <StepBadge label="Install" state={readyForDestination ? "active" : "pending"} />
       </div>
 
-      <p className="rounded-lg bg-stone-100 px-4 py-3 text-sm leading-6 text-stone-700">{message}</p>
+      <p className="tape-card bg-[#f7f4ea] px-4 py-3 text-sm leading-6 text-stone-700">{message}</p>
 
       {isLoadingStatus ? (
-        <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="tape-panel bg-white p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Install</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Loading install flow</h1>
           <div className="mt-5 h-2 overflow-hidden rounded-full bg-stone-100">
-            <div className="h-full w-1/2 rounded-full bg-orange-600" />
+            <div className="h-full w-1/2 rounded-full bg-[#005caf]" />
           </div>
         </section>
       ) : null}
 
       {status && !status.hasSourceFiles ? (
-        <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="tape-panel bg-white p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Import Required</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Import files before installing</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-700">
             The install flow needs source files from your workspace before Kimi can canonicalize them.
           </p>
           <Link
-            className="mt-6 inline-flex rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+            className="tape-button mt-6 inline-flex bg-[#ffd60a] px-5 py-3 text-sm text-black"
             href="/upload"
           >
             Import Files
@@ -366,14 +366,14 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       ) : null}
 
       {status && !status.isPro && upgradeDismissed ? (
-        <section className="rounded-lg border border-orange-200 bg-orange-50 p-6">
+        <section className="tape-panel bg-[#ffd60a] p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Pro Required</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Canonicalization and install are locked</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-700">
             Free accounts can keep importing, viewing, copying, and downloading source files.
           </p>
           <button
-            className="mt-6 rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700 disabled:bg-orange-300"
+            className="tape-button mt-6 bg-white px-5 py-3 text-sm text-black disabled:opacity-60"
             disabled={isUpgrading}
             onClick={() => void startUpgrade()}
             type="button"
@@ -384,14 +384,14 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       ) : null}
 
       {canStartCanonicalization ? (
-        <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="tape-panel bg-white p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Step 2 of 3</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Canonicalize your agents and skills</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-700">
             Kimi AI will analyze your source files and convert them into a portable canonical format.
           </p>
           <button
-            className="mt-6 rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700 disabled:bg-orange-300"
+            className="tape-button mt-6 bg-[#ffd60a] px-5 py-3 text-sm text-black disabled:opacity-60"
             onClick={() => void runCanonicalization()}
             type="button"
           >
@@ -401,28 +401,28 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       ) : null}
 
       {status?.isPro && status.hasSourceFiles && isCanonicalizing ? (
-        <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="tape-panel bg-white p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Step 2 of 3</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Canonicalizing with Kimi AI</h1>
           <p className="mt-2 text-sm leading-6 text-stone-700">
             Analyzing {status.sourceFileCount} source files. This usually takes under 30 seconds.
           </p>
           <div className="mt-5 h-2 overflow-hidden rounded-full bg-stone-100">
-            <div className="h-full w-2/3 rounded-full bg-orange-600" />
+            <div className="h-full w-2/3 rounded-full bg-[#005caf]" />
           </div>
           <p className="mt-3 text-xs text-stone-500">Building portable agents, skills, and rules.</p>
         </section>
       ) : null}
 
       {status?.isPro && blockingCanonicalizationFailed && !isCanonicalizing ? (
-        <section className="rounded-lg border border-red-200 bg-red-50 p-6">
+        <section className="tape-panel bg-red-50 p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-red-700">Canonicalization Failed</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Kimi could not complete this run</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-700">
             {status.canonicalizationError ?? "Review your source files and try again."}
           </p>
           <button
-            className="mt-6 rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+            className="tape-button mt-6 bg-white px-5 py-3 text-sm text-black"
             onClick={() => void runCanonicalization(true)}
             type="button"
           >
@@ -432,7 +432,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       ) : null}
 
       {showCanonicalizationRetryWarning && status ? (
-        <section className="rounded-lg border border-amber-200 bg-amber-50 p-5">
+        <section className="tape-panel bg-amber-50 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-700">Canonicalization Warning</p>
@@ -442,7 +442,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
               <p className="mt-1 text-sm leading-6 text-stone-700">{status.canonicalizationError}</p>
             </div>
             <button
-              className="shrink-0 rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+              className="tape-button shrink-0 bg-white px-5 py-3 text-sm text-black"
               onClick={() => void runCanonicalization(true)}
               type="button"
             >
@@ -453,13 +453,13 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       ) : null}
 
       {needsReview && status?.canonicalizationResult ? (
-        <section className="rounded-lg border border-amber-200 bg-amber-50 p-6">
+        <section className="tape-panel bg-amber-50 p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-700">Review Required</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Canonicalization needs confirmation</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-700">
             Kimi returned a low-confidence result. Review the summary before continuing.
           </p>
-          <div className="mt-5 rounded-lg border border-amber-200 bg-white p-4">
+          <div className="tape-card mt-5 bg-white p-4">
             <p className="font-medium text-amber-900">
               Overall confidence: {formatConfidence(status.canonicalizationResult.confidence)}
             </p>
@@ -474,7 +474,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
             <button
-              className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700"
+              className="tape-button bg-[#ffd60a] px-5 py-3 text-sm text-black"
               onClick={() => {
                 setReviewAccepted(true);
                 setCanonicalizationJustRan(false);
@@ -484,7 +484,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
               Accept all and continue
             </button>
             <button
-              className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+              className="tape-button bg-white px-5 py-3 text-sm text-black"
               onClick={() => void runCanonicalization(true)}
               type="button"
             >
@@ -495,7 +495,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       ) : null}
 
       {readyForDestination && status ? (
-        <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="tape-panel bg-white p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Step 3 of 3</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Where do you want to install?</h1>
           <p className="mt-2 text-sm leading-6 text-stone-700">

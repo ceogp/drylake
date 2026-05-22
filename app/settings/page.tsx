@@ -12,7 +12,7 @@ function DetailCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4">
+    <div className="tape-card bg-[#f7f4ea] p-4">
       <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</p>
       <p className="mt-3 text-sm leading-7 text-stone-800">{value}</p>
     </div>
@@ -26,12 +26,12 @@ export default async function SettingsPage() {
   const profile = appContext.user.profile;
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_48%,_#ffffff_100%)]">
+    <main className="tape-page min-h-screen">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16 md:px-10">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-4">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">User Settings</p>
-            <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
+            <p className="tape-eyebrow">User Settings</p>
+            <h1 className="font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950">
               Account, organization, and personal defaults.
             </h1>
             <p className="max-w-3xl text-lg leading-8 text-stone-700">
@@ -39,15 +39,15 @@ export default async function SettingsPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/app">
+            <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/app">
               Back To App
             </Link>
-            <Link className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/billing">
+            <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/billing">
               Billing
             </Link>
             {isPlatformAdmin && adminInternalOrigin ? (
               <a
-                className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+                className="tape-button bg-[#ffd60a] px-5 py-3 text-sm text-black"
                 href={`${adminInternalOrigin}/admin`}
               >
                 Open Internal Admin
@@ -57,7 +57,7 @@ export default async function SettingsPage() {
         </div>
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="tape-panel bg-white p-6">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Profile</p>
             <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
               {profile?.displayName ?? appContext.user.email}
@@ -74,7 +74,7 @@ export default async function SettingsPage() {
             </div>
           </article>
 
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="tape-panel bg-white p-6">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Active Organization</p>
             <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
               {appContext.organization.name}
@@ -99,7 +99,7 @@ export default async function SettingsPage() {
                 </span>
                 {appContext.organization.tier === "free" ? (
                   <Link
-                    className="rounded-full bg-orange-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
+                    className="tape-button bg-[#ffd60a] px-5 py-2 text-sm text-black"
                     href="/billing"
                   >
                     Upgrade to Pro
@@ -109,11 +109,11 @@ export default async function SettingsPage() {
               <p>Status: {appContext.organization.status}</p>
               <p>Memberships: {appContext.memberships.length}</p>
             </div>
-            <div className="mt-6 rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-4">
+            <div className="tape-card mt-6 bg-[#f7f4ea] p-4">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Available Organizations</p>
               <div className="mt-3 space-y-3 text-sm leading-7 text-stone-700">
                 {appContext.memberships.map((membership) => (
-                  <div key={membership.organizationId} className="flex items-center justify-between gap-4 rounded-2xl bg-white px-4 py-3">
+                  <div key={membership.organizationId} className="flex items-center justify-between gap-4 border-[3px] border-black bg-white px-4 py-3">
                     <span>{membership.organization.name}</span>
                     <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
                       {membership.role}
@@ -126,7 +126,7 @@ export default async function SettingsPage() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-2">
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="tape-panel bg-white p-6">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Workspace Links</p>
             <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
               Recommended next steps
@@ -136,13 +136,13 @@ export default async function SettingsPage() {
               credential and integration setup stay out of the normal onboarding path.
             </p>
             <div className="mt-5 grid gap-3 text-sm">
-              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/app">
+              <Link className="border-[3px] border-black bg-white px-4 py-3 text-stone-800 transition hover:bg-[#ffd60a]" href="/app">
                 Open Dashboard
               </Link>
-              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/extensions/connect">
+              <Link className="border-[3px] border-black bg-white px-4 py-3 text-stone-800 transition hover:bg-[#ffd60a]" href="/extensions/connect">
                 Install or reconnect extension
               </Link>
-              <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-stone-800 transition hover:bg-stone-50" href="/billing">
+              <Link className="border-[3px] border-black bg-white px-4 py-3 text-stone-800 transition hover:bg-[#ffd60a]" href="/billing">
                 Billing and plan
               </Link>
             </div>

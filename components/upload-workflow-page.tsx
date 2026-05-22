@@ -163,15 +163,15 @@ export async function UploadWorkflowPage({ versionId }: { versionId: string }) {
   ].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_48%,_#ffffff_100%)]">
+    <main className="tape-page min-h-screen">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 py-16 md:px-10">
         <div className="space-y-4">
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-orange-700">
+          <p className="tape-eyebrow">
             Import
           </p>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
+              <h1 className="font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950">
                 Skills & Agents
               </h1>
               <p className="mt-3 max-w-3xl text-lg leading-8 text-stone-700">
@@ -179,7 +179,7 @@ export async function UploadWorkflowPage({ versionId }: { versionId: string }) {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <div className="rounded-[1.5rem] border border-stone-200 bg-white px-5 py-4 shadow-sm">
+              <div className="tape-card bg-white px-5 py-4">
                 <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Signed in</p>
                 <p className="mt-2 text-sm text-stone-700">
                   {signedInLabel}

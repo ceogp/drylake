@@ -12,9 +12,9 @@ export async function AppHome() {
 
   if (!workspace) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_48%,_#ffffff_100%)] px-6 py-16">
-        <div className="max-w-2xl rounded-[2rem] border border-stone-200 bg-white p-8 shadow-[0_18px_45px_rgba(120,53,15,0.08)]">
-          <h1 className="font-[family-name:var(--font-heading)] text-4xl font-semibold tracking-[-0.05em] text-stone-950">
+      <main className="tape-page flex min-h-screen items-center justify-center px-6 py-16">
+        <div className="tape-panel max-w-2xl bg-white p-8">
+          <h1 className="font-[family-name:var(--font-heading)] text-4xl font-black uppercase text-stone-950">
             Xupra DryLake needs a starting account.
           </h1>
           <p className="mt-4 text-lg leading-8 text-stone-700">
@@ -26,14 +26,14 @@ export async function AppHome() {
   }
 
   return (
-    <main className="flex min-h-screen flex-1 flex-col bg-[radial-gradient(circle_at_top_left,_rgba(234,88,12,0.16),_transparent_28%),linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_42%,_#ffffff_100%)]">
+    <main className="tape-page flex min-h-screen flex-1 flex-col">
       <section className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-16 md:px-10 lg:py-24">
         <div className="flex flex-col gap-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4 rounded-full border border-orange-300/70 bg-white/80 px-4 py-3 shadow-sm">
+            <div className="tape-card flex items-center gap-4 bg-white px-4 py-3">
               <Image
                 alt="Xupra logo"
-                className="h-12 w-12 rounded-[1rem]"
+                className="h-12 w-12 rounded-[4px] border-[3px] border-black bg-white"
                 height={48}
                 src="/xupra-logo.svg"
                 width={48}
@@ -49,25 +49,25 @@ export async function AppHome() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
-                className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700"
+                className="tape-button bg-[#ffd60a] px-5 py-3 text-sm text-black"
                 href={importWorkspacePath}
               >
                 Import Skills & Agents
               </Link>
               <Link
-                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                className="tape-button bg-white px-5 py-3 text-sm text-black"
                 href="/billing"
               >
                 Billing
               </Link>
               <Link
-                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                className="tape-button bg-white px-5 py-3 text-sm text-black"
                 href="/settings"
               >
                 Settings
               </Link>
               <Link
-                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                className="tape-button bg-white px-5 py-3 text-sm text-black"
                 href="/"
               >
                 View Homepage
@@ -76,7 +76,7 @@ export async function AppHome() {
           </div>
           <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr]">
             <div className="space-y-5">
-              <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950 sm:text-6xl">
+              <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950 sm:text-6xl">
                 Your workspace for the extension-led workflow.
               </h1>
               <p className="max-w-3xl text-lg leading-8 text-stone-700">
@@ -85,7 +85,7 @@ export async function AppHome() {
                 editor extension as needed.
               </p>
             </div>
-            <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_18px_45px_rgba(120,53,15,0.08)]">
+            <div className="tape-panel bg-white p-6">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-stone-500">Active workspace</p>
               <div className="mt-4 space-y-3 text-sm text-stone-700">
                 <p className="text-xl font-semibold text-stone-950">{workspace.organization.name}</p>
@@ -120,7 +120,7 @@ export async function AppHome() {
         </div>
 
         <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-            <article className="rounded-[1.85rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <article className="tape-panel bg-white p-6">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">First run</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
               Import first. Install later.
@@ -130,16 +130,16 @@ export async function AppHome() {
               here so the canonical package has real source files before any extension workflow.
               </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Link className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700" href={importWorkspacePath}>
+              <Link className="tape-button bg-[#ffd60a] px-4 py-2 text-sm text-black" href={importWorkspacePath}>
                 Import Skills & Agents
               </Link>
-              <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/install">
+              <Link className="tape-button bg-white px-4 py-2 text-sm text-black" href="/install">
                 Install
               </Link>
             </div>
           </article>
 
-          <article className="rounded-[1.85rem] border border-stone-200 bg-stone-950 p-6 text-white shadow-[0_18px_45px_rgba(28,25,23,0.20)]">
+          <article className="tape-panel bg-[#111111] p-6 text-white">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-300">Plan state</p>
             <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-white">
               {workspace.organization.tier === "free" ? "Free workspace active" : `${workspace.organization.tier} workspace active`}
@@ -151,7 +151,7 @@ export async function AppHome() {
             {workspace.organization.tier === "free" ? (
               <div className="mt-5">
                 <Link
-                  className="rounded-full bg-orange-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
+                  className="tape-button bg-[#ffd60a] px-5 py-2 text-sm text-black"
                   href="/billing"
                 >
                   Upgrade to Pro
@@ -166,7 +166,7 @@ export async function AppHome() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1fr_1fr_1fr]">
-            <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <article className="tape-panel bg-white p-6">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Extension workflow</p>
             <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
               Start in VS Code or Cursor
@@ -175,16 +175,16 @@ export async function AppHome() {
               Connect the extension, scan the repo, import source files, and install generated outputs where the code already lives.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/connect">
+              <Link className="tape-button bg-white px-4 py-2 text-sm text-black" href="/extensions/connect">
                 Connect extension
               </Link>
-              <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href="/extensions/install">
+              <Link className="tape-button bg-white px-4 py-2 text-sm text-black" href="/extensions/install">
                 Install Extension
               </Link>
             </div>
           </article>
 
-          <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="tape-panel bg-white p-6">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Canonical model</p>
             <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
               Keep one package definition
@@ -194,7 +194,7 @@ export async function AppHome() {
             </p>
           </article>
 
-            <article className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <article className="tape-panel bg-white p-6">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Web control plane</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
               Manage the account layer here
@@ -209,7 +209,7 @@ export async function AppHome() {
         <section className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
           <div className="grid gap-5">
             {workspace.organization.projects.map((project) => (
-              <article key={project.id} className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm">
+              <article key={project.id} className="tape-panel bg-white p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
@@ -222,7 +222,7 @@ export async function AppHome() {
                       {project.description || "No project description yet."}
                     </p>
                   </div>
-                  <Link className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100" href={`/projects/${project.id}`}>
+                  <Link className="tape-button bg-white px-4 py-2 text-sm text-black" href={`/projects/${project.id}`}>
                     Open project
                   </Link>
                 </div>
@@ -230,7 +230,7 @@ export async function AppHome() {
                   {project.packages.map((agentPackage) => (
                     <Link
                       key={agentPackage.id}
-                      className="rounded-full bg-orange-100 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-orange-900"
+                      className="border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs uppercase tracking-[0.14em] text-black"
                       href={`/packages/${agentPackage.id}`}
                     >
                       {agentPackage.name}
@@ -241,7 +241,7 @@ export async function AppHome() {
             ))}
           </div>
 
-          <section className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_18px_45px_rgba(120,53,15,0.08)]">
+          <section className="tape-panel bg-white p-6">
             <h2 className="font-[family-name:var(--font-heading)] text-2xl font-semibold text-stone-950">
               Create Project
             </h2>
@@ -252,13 +252,13 @@ export async function AppHome() {
               <input name="organizationId" type="hidden" value={workspace.organization.id} />
               <label className="grid gap-2 text-sm font-medium text-stone-900">
                 Project name
-                <input className="rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="name" placeholder="Customer Support Agents" required />
+                <input className="border-[3px] border-black px-4 py-3 text-sm" name="name" placeholder="Customer Support Agents" required />
               </label>
               <label className="grid gap-2 text-sm font-medium text-stone-900">
                 Description
-                <textarea className="min-h-28 rounded-2xl border border-stone-300 px-4 py-3 text-sm" name="description" placeholder="What this project is for" />
+                <textarea className="min-h-28 border-[3px] border-black px-4 py-3 text-sm" name="description" placeholder="What this project is for" />
               </label>
-              <button className="mt-2 rounded-full bg-orange-600 px-5 py-3 font-medium text-white transition hover:bg-orange-700" type="submit">
+              <button className="tape-button mt-2 bg-[#ffd60a] px-5 py-3 text-black" type="submit">
                 Create Project
               </button>
             </form>

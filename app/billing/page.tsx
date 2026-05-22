@@ -91,11 +91,11 @@ export default async function BillingPage({
 
   if (env.BILLING_PROVIDER === "clerk") {
     return (
-      <main className="min-h-screen bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_48%,_#ffffff_100%)]">
+      <main className="tape-page min-h-screen">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16 md:px-10">
           <div className="space-y-4">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">Billing</p>
-            <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
+            <p className="tape-eyebrow">Billing</p>
+            <h1 className="font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950">
               Choose your plan with Clerk Billing.
             </h1>
             <p className="max-w-3xl text-lg leading-8 text-stone-700">
@@ -103,7 +103,7 @@ export default async function BillingPage({
             </p>
           </div>
 
-          <section className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+          <section className="tape-panel bg-white p-6">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Plans</p>
             <div className="mt-5">
               <PricingTable
@@ -115,7 +115,7 @@ export default async function BillingPage({
             {returnPath ? (
               <div className="mt-6">
                 <Link
-                  className="inline-block rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                  className="tape-button inline-block bg-white px-5 py-3 text-sm text-black"
                   href={returnPath}
                 >
                   Continue With Free
@@ -125,7 +125,7 @@ export default async function BillingPage({
           </section>
 
           <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-            <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <article className="tape-panel bg-white p-6">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current local mirror</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
                 {getPublicTierLabel(subscription?.tier)}
@@ -136,14 +136,14 @@ export default async function BillingPage({
               </p>
             </article>
 
-            <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <article className="tape-panel bg-white p-6">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Entitlements</p>
               <div className="mt-5 grid gap-3">
                 {ENTITLEMENT_ITEMS.map(({ key, label }) => {
                   const value = Boolean(entitlements[key]);
 
                   return (
-                  <div key={key} className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
+                  <div key={key} className="border-[3px] border-black bg-[#f7f4ea] px-4 py-3 text-sm text-stone-700">
                     <div className="flex items-center justify-between gap-3">
                       <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
                       <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
@@ -160,11 +160,11 @@ export default async function BillingPage({
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_48%,_#ffffff_100%)]">
+    <main className="tape-page min-h-screen">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16 md:px-10">
         <div className="space-y-4">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-orange-700">Billing</p>
-          <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-[-0.05em] text-stone-950">
+          <p className="tape-eyebrow">Billing</p>
+          <h1 className="font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950">
             Choose your plan.
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
@@ -173,7 +173,7 @@ export default async function BillingPage({
         </div>
 
         <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="tape-panel bg-white p-6">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current plan</p>
             <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
               {getPublicTierLabel(subscription?.tier)}
@@ -186,14 +186,14 @@ export default async function BillingPage({
               <form action={createCheckoutAction}>
                 <input name="organizationId" type="hidden" value={organizationId} />
                 <input name="plan" type="hidden" value="pro" />
-                <button className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700" type="submit">
+                  <button className="tape-button bg-[#ffd60a] px-5 py-3 text-sm text-black" type="submit">
                   Upgrade To Pro ($10/mo)
                 </button>
               </form>
               {subscription?.stripeCustomerId ? (
                 <form action={openBillingPortalAction}>
                   <input name="organizationId" type="hidden" value={organizationId} />
-                  <button className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100" type="submit">
+                  <button className="tape-button bg-white px-5 py-3 text-sm text-black" type="submit">
                     Billing Portal
                   </button>
                 </form>
@@ -206,14 +206,14 @@ export default async function BillingPage({
             )}
           </article>
 
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="tape-panel bg-white p-6">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Entitlements</p>
             <div className="mt-5 grid gap-3">
               {ENTITLEMENT_ITEMS.map(({ key, label }) => {
                 const value = Boolean(entitlements[key]);
 
                 return (
-                <div key={key} className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
+                <div key={key} className="border-[3px] border-black bg-[#f7f4ea] px-4 py-3 text-sm text-stone-700">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
                     <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
@@ -227,7 +227,7 @@ export default async function BillingPage({
 
         <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
           {isPlatformAdmin && (
-            <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <article className="tape-panel bg-white p-6">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Stripe Readiness</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
                 {setup.billing.configured ? "Billing is wired." : "Billing still needs live Stripe keys."}

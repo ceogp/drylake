@@ -11,13 +11,13 @@ export default async function InstallPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_48%,_#ffffff_100%)]">
+    <main className="tape-page min-h-screen">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12 md:px-10">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-orange-700">
+          <p className="tape-eyebrow">
             Skills & Agents
           </p>
-          <h1 className="mt-3 font-[family-name:var(--font-heading)] text-4xl font-semibold tracking-[-0.04em] text-stone-950">
+          <h1 className="mt-3 font-[family-name:var(--font-heading)] text-4xl font-black uppercase text-stone-950">
             Install
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-stone-700">
