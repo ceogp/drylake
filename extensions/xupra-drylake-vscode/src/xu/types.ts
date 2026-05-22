@@ -7,11 +7,8 @@ export const XU_PHASE_AGENTS = [
   "cline",
   "continue",
   "aider",
-  "windsurf",
   "copilot",
-  "roo-code",
   "augment-code",
-  "external-ai-prompt",
 ] as const;
 
 export type XuPhaseAgent = (typeof XU_PHASE_AGENTS)[number];

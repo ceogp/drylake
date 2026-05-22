@@ -4,15 +4,15 @@
 
 ![DryLake Control Room kanban](media/readme-kanban.png)
 
-Assign phases to **Claude Code · OpenAI Codex · Cursor · Cline · Continue · Aider · Windsurf · GitHub Copilot · Roo Code · Augment Code** from the planner. DryLake prepares the phase prompt and runs the configured launcher when available, with clipboard export as a fallback.
+Assign phases to **Claude Code · OpenAI Codex · Cursor CLI · Cline CLI · Continue CLI · Aider · GitHub Copilot · Augment / Auggie** from the planner. DryLake saves the phase handoff and launches the selected agent through a verified no-copy path.
 
 ![DryLake pipeline view](media/readme-pipeline.png)
 
 ## What It Does
 
 - **Plans your work as a kanban.** Pending → Active → Validating → Done. Drag phases to reorder them.
-- **One agent per phase.** Pick Claude Code for design, Cline for tests, Codex for docs — whatever you like.
-- **One-click phase run.** Click *Run with agent* on a phase and DryLake starts the configured launcher when available.
+- **One agent per phase.** Pick Claude Code for design, Cline for tests, Codex for docs, or another verified launcher.
+- **One-click phase run.** Click *Run with agent* on a phase and DryLake starts the selected launcher.
 - **Auto-advance.** Tick all steps in a phase, DryLake completes it and activates the next one.
 - **Planning chat.** Tell DryLake to add a step or change scope; the kanban updates live.
 
@@ -27,20 +27,18 @@ Assign phases to **Claude Code · OpenAI Codex · Cursor · Cline · Continue ·
 
 ## Works With Your Coding Agents
 
-Pick a different agent per phase — or stick with one for the whole session. DryLake supports configured launchers and prompt export for:
+Pick a different agent per phase — or stick with one for the whole session. Selectable phase agents have verified launch paths:
 
 1. **Claude Code** (Anthropic)
 2. **OpenAI Codex**
-3. **Cursor**
-4. **Cline** (formerly Claude Dev)
-5. **Continue.dev**
+3. **Cursor CLI**
+4. **Cline CLI**
+5. **Continue CLI**
 6. **Aider**
-7. **Windsurf** (Codeium)
-8. **GitHub Copilot** (incl. Copilot Chat & agent mode)
-9. **Roo Code** (Roo Cline)
-10. **Augment Code**
+7. **GitHub Copilot** (Copilot Chat)
+8. **Augment / Auggie CLI**
 
-Plus **External AI Prompt** mode for ChatGPT, Gemini, DeepSeek, Tabnine, Cody, Plandex, Devin, Blackbox, Traycer, Zed, Replit, Trae, or any other tool outside the listed agents.
+External AI Prompt remains available as a planning fallback, but it is not a selectable phase handoff agent.
 
 ## Support
 
@@ -50,4 +48,4 @@ Plus **External AI Prompt** mode for ChatGPT, Gemini, DeepSeek, Tabnine, Cody, P
 
 ## Non-affiliation
 
-DryLake is not affiliated with Anthropic, OpenAI, GitHub, Microsoft, Cursor, Cline, Continue, Aider, Codeium / Windsurf, Roo, Augment, Tabnine, Sourcegraph / Cody, Plandex, Cognition / Devin, Blackbox, Traycer, Zencoder, Zed, Replit, Trae, Google, DeepSeek, or their respective owners.
+DryLake is not affiliated with Anthropic, OpenAI, GitHub, Microsoft, Cursor, Cline, Continue, Aider, Augment, or their respective owners.

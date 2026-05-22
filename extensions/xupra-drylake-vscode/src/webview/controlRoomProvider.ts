@@ -157,7 +157,7 @@ function renderHandoffCapabilityPanel(runbook: ApplicationBuildRunbook | null) {
   return `<section class="handoff-panel" aria-label="Agent handoff capability">
     <div class="handoff-panel-header">
       <span class="handoff-eyebrow">Agent Handoff</span>
-      <span class="handoff-note">Direct where supported. Prompt fallback where the agent has no verified command input.</span>
+      <span class="handoff-note">Only agents with verified no-copy launch paths are selectable.</span>
     </div>
     <div class="agent-capability-grid">${cards}</div>
   </section>`;

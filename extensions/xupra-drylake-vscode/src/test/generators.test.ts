@@ -74,15 +74,12 @@ describe("runbook generators", () => {
     const expectedPreambles: Record<XuPhaseAgent, string> = {
       "claude-code": "You are running as Claude Code.",
       codex: "You are running as Codex CLI.",
-      cursor: "You are running inside Cursor.",
-      cline: "You are running inside Cline.",
-      continue: "You are running inside Continue.dev.",
+      cursor: "You are running as Cursor CLI.",
+      cline: "You are running as Cline CLI.",
+      continue: "You are running as Continue CLI.",
       aider: "You are running as Aider.",
-      windsurf: "You are running inside Windsurf.",
       copilot: "You are running as GitHub Copilot.",
-      "roo-code": "You are running inside Roo Code.",
-      "augment-code": "You are running inside Augment Code.",
-      "external-ai-prompt": "Copy this prompt into your preferred AI tool.",
+      "augment-code": "You are running as Auggie CLI.",
     };
 
     for (const agent of XU_PHASE_AGENTS) {

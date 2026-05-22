@@ -19,20 +19,11 @@ type VsCodeAgent = {
   commandArgs: (prompt: string) => unknown[];
 };
 
-type ExternalAgent = {
-  kind: "external";
-};
-
-type InstalledPromptAgent = {
-  kind: "installed-prompt";
-  extensionIds: string[];
-};
-
 export type PhaseAgentLauncher = {
   id: XuPhaseAgent;
   label: string;
   help: string;
-} & (TerminalAgent | VsCodeAgent | InstalledPromptAgent | ExternalAgent);
+} & (TerminalAgent | VsCodeAgent);
 
 export type PhaseAgentLaunchResult = {
   status: "launched" | "fallback" | "not-installed" | "failed";
@@ -86,22 +77,28 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
   cursor: {
     id: "cursor",
     label: "Cursor",
-    kind: "external",
-    help: "Cursor runs as a separate editor. Use Copy prompt unless a Cursor CLI/URI launcher is configured in a later build.",
+    kind: "terminal",
+    executable: "agent",
+    help: "Install Cursor CLI and make the `agent` command available on PATH.",
+    terminalCommand: (promptFilePath) => fromPromptFile("agent -p", promptFilePath),
   },
   cline: {
     id: "cline",
     label: "Cline",
-    kind: "installed-prompt",
-    extensionIds: ["saoudrizwan.claude-dev", "cline.cline"],
-    help: "Install Cline in VS Code. DryLake will copy the phase prompt and keep the handoff file ready until Cline exposes a stable command input API.",
+    kind: "terminal",
+    executable: "cline",
+    help: "Install Cline CLI and make the `cline` command available on PATH.",
+    terminalCommand: (promptFilePath) => fromPromptFile("cline --auto-approve false", promptFilePath),
   },
   continue: {
     id: "continue",
     label: "Continue.dev",
-    kind: "installed-prompt",
-    extensionIds: ["continue.continue"],
-    help: "Install Continue.dev in VS Code. DryLake will copy the phase prompt and keep the handoff file ready until direct command input is verified.",
+    kind: "terminal",
+    executable: "cn",
+    help: "Install Continue CLI and make the `cn` command available on PATH.",
+    terminalCommand: (promptFilePath) => (WINDOWS
+      ? `Get-Content -Raw ${quotePath(promptFilePath)} | cn -p`
+      : `cat ${quotePath(promptFilePath)} | cn -p`),
   },
   aider: {
     id: "aider",
@@ -110,12 +107,6 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     executable: "aider",
     help: "Install Aider and make the `aider` command available on PATH.",
     terminalCommand: (promptFilePath) => `aider --message-file ${quotePath(promptFilePath)}`,
-  },
-  windsurf: {
-    id: "windsurf",
-    label: "Windsurf",
-    kind: "external",
-    help: "Windsurf runs as a separate editor. Use Copy prompt unless a Windsurf CLI/URI launcher is configured in a later build.",
   },
   copilot: {
     id: "copilot",
@@ -126,25 +117,13 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     commandArgs: (prompt) => [{ query: prompt }],
     help: "Install GitHub Copilot Chat in VS Code.",
   },
-  "roo-code": {
-    id: "roo-code",
-    label: "Roo Code",
-    kind: "installed-prompt",
-    extensionIds: ["rooveterinaryinc.roo-cline", "roo-cline.roo-cline"],
-    help: "Install Roo Code in VS Code. DryLake will copy the phase prompt and keep the handoff file ready until direct command input is verified.",
-  },
   "augment-code": {
     id: "augment-code",
     label: "Augment Code",
-    kind: "installed-prompt",
-    extensionIds: ["augment.vscode-augment", "augmentcode.augment"],
-    help: "Install Augment Code in VS Code. DryLake will copy the phase prompt and keep the handoff file ready until direct command input is verified.",
-  },
-  "external-ai-prompt": {
-    id: "external-ai-prompt",
-    label: "External AI Prompt",
-    kind: "external",
-    help: "DryLake writes and copies the focused phase prompt for use in any external AI tool.",
+    kind: "terminal",
+    executable: "auggie",
+    help: "Install Auggie CLI and make the `auggie` command available on PATH.",
+    terminalCommand: (promptFilePath) => `auggie --print --instruction-file ${quotePath(promptFilePath)}`,
   },
 };
 
@@ -154,14 +133,6 @@ export function phaseAgentLabel(agent: XuPhaseAgent) {
 
 export function phaseAgentActionLabel(agent: XuPhaseAgent) {
   const launcher = PHASE_AGENT_LAUNCHERS[agent];
-  if (!launcher || launcher.kind === "external") {
-    return "Copy prompt";
-  }
-
-  if (launcher.kind === "installed-prompt") {
-    return `Open ${launcher.label}`;
-  }
-
   return `Run with ${launcher.label}`;
 }
 
@@ -171,45 +142,25 @@ export function phaseAgentHint(agent: XuPhaseAgent) {
 
 export function phaseAgentConnectionLabel(agent: XuPhaseAgent) {
   const launcher = PHASE_AGENT_LAUNCHERS[agent];
-  if (!launcher || launcher.kind === "external") {
-    return "Prompt fallback";
-  }
-
   if (launcher.kind === "terminal") {
     return "Direct CLI";
   }
 
-  if (launcher.kind === "vscode-command") {
-    return "Direct VS Code";
-  }
-
-  return "Prompt-ready";
+  return "Direct VS Code";
 }
 
 export function phaseAgentConnectionTone(agent: XuPhaseAgent) {
   const launcher = PHASE_AGENT_LAUNCHERS[agent];
-  if (!launcher || launcher.kind === "external") {
-    return "fallback";
-  }
-
-  return launcher.kind === "installed-prompt" ? "prompt" : "direct";
+  return launcher.kind === "terminal" || launcher.kind === "vscode-command" ? "direct" : "fallback";
 }
 
 export function phaseAgentConnectionDescription(agent: XuPhaseAgent) {
   const launcher = PHASE_AGENT_LAUNCHERS[agent];
-  if (!launcher || launcher.kind === "external") {
-    return "Saves a handoff file and copies the prompt because this agent runs outside VS Code direct command control.";
-  }
-
   if (launcher.kind === "terminal") {
     return `Runs ${launcher.label} from a VS Code terminal using the saved phase handoff file.`;
   }
 
-  if (launcher.kind === "vscode-command") {
-    return `Opens ${launcher.label} inside VS Code with the phase prompt.`;
-  }
-
-  return `${launcher.label} can be selected for phase ownership, but direct command input is not verified yet.`;
+  return `Opens ${launcher.label} inside VS Code with the phase prompt.`;
 }
 
 function sanitizePathPart(value: string) {
@@ -305,25 +256,6 @@ async function launchVsCodeAgent(params: {
   }
 }
 
-function launchInstalledPromptAgent(params: {
-  launcher: Extract<PhaseAgentLauncher, InstalledPromptAgent>;
-  promptFile: vscode.Uri;
-}) {
-  if (!hasExtension(params.launcher.extensionIds)) {
-    return {
-      status: "not-installed" as const,
-      message: `${params.launcher.label} is not installed. ${params.launcher.help}`,
-      promptFile: params.promptFile,
-    };
-  }
-
-  return {
-    status: "fallback" as const,
-    message: `${params.launcher.label} is installed. DryLake copied the phase prompt and saved a handoff file because direct command input is not verified yet.`,
-    promptFile: params.promptFile,
-  };
-}
-
 export async function launchPhaseAgent(params: {
   agent: XuPhaseAgent;
   prompt: string;
@@ -331,10 +263,10 @@ export async function launchPhaseAgent(params: {
   workspaceUri: vscode.Uri;
 }): Promise<PhaseAgentLaunchResult> {
   const launcher = PHASE_AGENT_LAUNCHERS[params.agent];
-  if (!launcher || launcher.kind === "external") {
+  if (!launcher) {
     return {
       status: "fallback",
-      message: "DryLake copied the phase prompt and saved a handoff file for external use.",
+      message: "DryLake copied the phase prompt and saved a handoff file because this agent is not supported by this build.",
       promptFile: params.promptFile,
     };
   }
@@ -343,9 +275,5 @@ export async function launchPhaseAgent(params: {
     return launchTerminalAgent({ launcher, promptFile: params.promptFile, workspaceUri: params.workspaceUri });
   }
 
-  if (launcher.kind === "vscode-command") {
-    return launchVsCodeAgent({ launcher, prompt: params.prompt, promptFile: params.promptFile });
-  }
-
-  return launchInstalledPromptAgent({ launcher, promptFile: params.promptFile });
+  return launchVsCodeAgent({ launcher, prompt: params.prompt, promptFile: params.promptFile });
 }

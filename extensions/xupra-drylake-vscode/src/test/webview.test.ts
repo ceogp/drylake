@@ -153,9 +153,9 @@ describe("Control Room webview", () => {
     expect(html).toContain("Agent Handoff");
     expect(html).toContain("Direct CLI");
     expect(html).toContain("Direct VS Code");
-    expect(html).toContain("Prompt-ready");
-    expect(html).toContain("Prompt fallback");
-    expect(html).toContain("Direct where supported. Prompt fallback where the agent has no verified command input.");
+    expect(html).not.toContain("Prompt-ready");
+    expect(html).not.toContain("Prompt fallback");
+    expect(html).toContain("Only agents with verified no-copy launch paths are selectable.");
   });
 
   it("renders autopilot toggle state for pipeline and kanban", async () => {
@@ -222,9 +222,10 @@ describe("Control Room webview", () => {
     expect(html).toContain("Cline");
     expect(html).toContain("Continue.dev");
     expect(html).toContain("Aider");
-    expect(html).toContain("Windsurf");
-    expect(html).toContain("Roo Code");
     expect(html).toContain("Augment Code");
+    expect(html).not.toContain("Windsurf");
+    expect(html).not.toContain("Roo Code");
+    expect(html).not.toContain("External AI Prompt");
     expect(html).toContain("Agent for Todo phase");
   });
 

@@ -5,15 +5,12 @@ import type { ApplicationBuildRunbook, BuildSessionState, XuPhase, XuPhaseAgent 
 const AGENT_PREAMBLES: Record<XuPhaseAgent, string> = {
   "claude-code": "You are running as Claude Code. Use the bash tool for file operations.",
   codex: "You are running as Codex CLI. Output shell commands and file patches.",
-  cursor: "You are running inside Cursor. Use the Composer for multi-file edits.",
-  cline: "You are running inside Cline. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
-  continue: "You are running inside Continue.dev. Use the focused phase objective, steps, and acceptance criteria to guide the chat or edit session.",
+  cursor: "You are running as Cursor CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  cline: "You are running as Cline CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  continue: "You are running as Continue CLI. Use the focused phase objective, steps, and acceptance criteria to guide the agent session.",
   aider: "You are running as Aider. Use the focused phase objective, steps, and acceptance criteria to plan patches before editing files.",
-  windsurf: "You are running inside Windsurf. Use the Cascade workflow for multi-file edits and keep the phase acceptance criteria in view.",
   copilot: "You are running as GitHub Copilot. Use inline suggestions and chat.",
-  "roo-code": "You are running inside Roo Code. Use the focused phase objective, steps, and acceptance criteria to execute this phase.",
-  "augment-code": "You are running inside Augment Code. Use the focused phase objective, steps, and acceptance criteria to make repo-aware edits.",
-  "external-ai-prompt": "Copy this prompt into your preferred AI tool.",
+  "augment-code": "You are running as Auggie CLI. Use the focused phase objective, steps, and acceptance criteria to make repo-aware edits.",
 };
 
 const PROVIDER_PREAMBLES: Record<BuildSessionState["providerId"], string> = {
