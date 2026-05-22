@@ -1,6 +1,13 @@
 import * as vscode from "vscode";
 
-import { phaseAgentActionLabel, phaseAgentHint, phaseAgentLabel } from "../agents/phaseAgentLauncher";
+import {
+  phaseAgentActionLabel,
+  phaseAgentConnectionDescription,
+  phaseAgentConnectionLabel,
+  phaseAgentConnectionTone,
+  phaseAgentHint,
+  phaseAgentLabel,
+} from "../agents/phaseAgentLauncher";
 import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { ChatState, PlanningProviderInfo } from "../services/stateStore";
@@ -129,6 +136,31 @@ function renderExecutionModeToggle(runbook: ApplicationBuildRunbook | null) {
     : "DryLake pauses after each phase so you can approve before starting the next phase.";
 
   return `<button class="toggle-btn execution-toggle${enabled ? " active" : ""}" data-command="drylake.toggleAutopilot" title="${escapeHtml(title)}" aria-pressed="${enabled ? "true" : "false"}">${escapeHtml(label)}</button>`;
+}
+
+function renderHandoffCapabilityPanel(runbook: ApplicationBuildRunbook | null) {
+  if (!runbook) {
+    return "";
+  }
+
+  const cards = XU_PHASE_AGENTS.map((agent) => {
+    const tone = phaseAgentConnectionTone(agent);
+    const assignedCount = runbook.phases.filter((phase) => phase.agent === agent).length;
+    const assigned = assignedCount > 0 ? `<span class="agent-count">${assignedCount}</span>` : "";
+
+    return `<div class="agent-capability ${tone}" title="${escapeHtml(phaseAgentConnectionDescription(agent))}">
+      <div class="agent-capability-top"><strong>${escapeHtml(phaseAgentLabel(agent))}</strong>${assigned}</div>
+      <span>${escapeHtml(phaseAgentConnectionLabel(agent))}</span>
+    </div>`;
+  }).join("");
+
+  return `<section class="handoff-panel" aria-label="Agent handoff capability">
+    <div class="handoff-panel-header">
+      <span class="handoff-eyebrow">Agent Handoff</span>
+      <span class="handoff-note">Direct where supported. Prompt fallback where the agent has no verified command input.</span>
+    </div>
+    <div class="agent-capability-grid">${cards}</div>
+  </section>`;
 }
 
 function renderPipeline(runbook: ApplicationBuildRunbook) {
@@ -373,6 +405,7 @@ export class ControlRoomProvider {
     const chatPanel = renderChatPanel(chatState, planningProviderLabel);
     const body = runbook ? (view === "kanban" ? renderKanban(runbook) : renderPipeline(runbook)) : renderEmptyState();
     const executionToggle = renderExecutionModeToggle(runbook);
+    const handoffPanel = renderHandoffCapabilityPanel(runbook);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -436,6 +469,18 @@ export class ControlRoomProvider {
     .planning-banner-eyebrow { color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 10px; letter-spacing: 0.14em; }
     .planning-banner-label { color: var(--vscode-foreground); }
     .planning-banner-reason { color: var(--vscode-descriptionForeground); flex-basis: 100%; }
+    .handoff-panel { display: grid; gap: 10px; padding: 12px; margin: 0 0 16px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
+    .handoff-panel-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .handoff-eyebrow { color: var(--vscode-descriptionForeground); text-transform: uppercase; font-size: 10px; letter-spacing: 0.14em; }
+    .handoff-note { color: var(--vscode-descriptionForeground); font-size: 11px; }
+    .agent-capability-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
+    .agent-capability { min-height: 54px; padding: 8px; border: 1px solid var(--vscode-panel-border); border-radius: 6px; background: var(--vscode-editor-background); }
+    .agent-capability.direct { border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .agent-capability.prompt { border-color: var(--vscode-editorWarning-foreground, #cca700); }
+    .agent-capability.fallback { opacity: 0.84; }
+    .agent-capability-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 5px; font-size: 12px; }
+    .agent-capability span { color: var(--vscode-descriptionForeground); font-size: 11px; }
+    .agent-count { min-width: 18px; padding: 1px 6px; border-radius: 999px; color: var(--vscode-badge-foreground) !important; background: var(--vscode-badge-background); text-align: center; }
     .step-list-wrap { margin-top: 8px; }
     .step-list { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; }
     .step-item label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 12px; line-height: 1.4; color: var(--vscode-foreground); }
@@ -478,6 +523,7 @@ export class ControlRoomProvider {
       </div>
     </header>
     ${banner}
+    ${handoffPanel}
     ${chatPanel}
     ${body}
   </main>

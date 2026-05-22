@@ -144,6 +144,20 @@ describe("Control Room webview", () => {
     expect(html).toContain("Require Approval Between Phases");
   });
 
+  it("renders agent handoff capability status from the launcher registry", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain("Agent Handoff");
+    expect(html).toContain("Direct CLI");
+    expect(html).toContain("Direct VS Code");
+    expect(html).toContain("Prompt-ready");
+    expect(html).toContain("Prompt fallback");
+    expect(html).toContain("Direct where supported. Prompt fallback where the agent has no verified command input.");
+  });
+
   it("renders autopilot toggle state for pipeline and kanban", async () => {
     storedView = "pipeline";
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: autopilotRunbook() }) } as never);

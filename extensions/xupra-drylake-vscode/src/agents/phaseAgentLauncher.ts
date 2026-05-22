@@ -169,6 +169,49 @@ export function phaseAgentHint(agent: XuPhaseAgent) {
   return PHASE_AGENT_LAUNCHERS[agent]?.help ?? "DryLake will export a focused prompt for this phase.";
 }
 
+export function phaseAgentConnectionLabel(agent: XuPhaseAgent) {
+  const launcher = PHASE_AGENT_LAUNCHERS[agent];
+  if (!launcher || launcher.kind === "external") {
+    return "Prompt fallback";
+  }
+
+  if (launcher.kind === "terminal") {
+    return "Direct CLI";
+  }
+
+  if (launcher.kind === "vscode-command") {
+    return "Direct VS Code";
+  }
+
+  return "Prompt-ready";
+}
+
+export function phaseAgentConnectionTone(agent: XuPhaseAgent) {
+  const launcher = PHASE_AGENT_LAUNCHERS[agent];
+  if (!launcher || launcher.kind === "external") {
+    return "fallback";
+  }
+
+  return launcher.kind === "installed-prompt" ? "prompt" : "direct";
+}
+
+export function phaseAgentConnectionDescription(agent: XuPhaseAgent) {
+  const launcher = PHASE_AGENT_LAUNCHERS[agent];
+  if (!launcher || launcher.kind === "external") {
+    return "Saves a handoff file and copies the prompt because this agent runs outside VS Code direct command control.";
+  }
+
+  if (launcher.kind === "terminal") {
+    return `Runs ${launcher.label} from a VS Code terminal using the saved phase handoff file.`;
+  }
+
+  if (launcher.kind === "vscode-command") {
+    return `Opens ${launcher.label} inside VS Code with the phase prompt.`;
+  }
+
+  return `${launcher.label} can be selected for phase ownership, but direct command input is not verified yet.`;
+}
+
 function sanitizePathPart(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "phase";
 }
