@@ -6,6 +6,7 @@ import { renderGeneratedFiles } from "../generators/renderGeneratedFiles";
 import { planGeneratedFiles, summarizeGeneratedFilePlan } from "../generators/planGeneratedFiles";
 import { readWorkspaceExisting, writeGeneratedFiles } from "../generators/writeGeneratedFiles";
 import { renderPhasePrompt } from "../generators/renderPhasePrompt";
+import { launchPhaseAgent, writePhaseHandoffFile } from "../agents/phaseAgentLauncher";
 import { applyApproval } from "../xu/approvalState";
 import { createLocalDraftXu } from "../xu/createLocalDraftXu";
 import { parseXu } from "../xu/parseXu";
@@ -71,6 +72,10 @@ function phaseAgentFromArg(arg: unknown): XuPhaseAgent | undefined {
     : undefined;
 }
 
+function selectedPhaseAgent(runbook: ApplicationBuildRunbook, agent: unknown): XuPhaseAgent {
+  return phaseAgentFromArg(agent) ?? phaseAgentFromArg(runbook.handoff.defaultAgent) ?? "external-ai-prompt";
+}
+
 function phaseStatusFromArg(arg: unknown): Extract<XuStepStatus, "pending" | "active" | "complete"> | undefined {
   return arg === "pending" || arg === "active" || arg === "complete" ? arg : undefined;
 }
@@ -82,6 +87,24 @@ function modeFromArg(arg: unknown): XuMode | undefined {
 
   const normalized = arg.trim();
   return MODE_CHOICES.some((item) => item.mode === normalized) ? (normalized as XuMode) : undefined;
+}
+
+async function requireConnectedBuildSession(deps: RunbookCommandDeps) {
+  if (deps.stateStore.getConnection().userEmail) {
+    return true;
+  }
+
+  const choice = await vscode.window.showWarningMessage(
+    "Connect your DryLake account before starting a Build Session.",
+    "Connect DryLake",
+  );
+
+  if (choice !== "Connect DryLake") {
+    return false;
+  }
+
+  await vscode.commands.executeCommand("xupra.connect");
+  return Boolean(deps.stateStore.getConnection().userEmail);
 }
 
 async function pickMode(arg?: unknown): Promise<XuMode | undefined> {
@@ -416,6 +439,10 @@ export async function startBuildSessionCommand(
     return;
   }
 
+  if (!(await requireConnectedBuildSession(deps))) {
+    return;
+  }
+
   await deps.controlRoom.createOrShow(context);
 
   const provider = await resolveProvider(deps.stateStore);
@@ -675,12 +702,23 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
 
   const buildSession = deps.stateStore.getBuildSession();
   const content = renderPhasePrompt(updated, phase, { activeProvider: buildSession });
+  const agent = selectedPhaseAgent(updated, phase.agent);
+  const workspaceUri = workspaceRoot();
+  const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
   await vscode.env.clipboard.writeText(content);
-  const document = await vscode.workspace.openTextDocument({ language: "markdown", content });
-  await vscode.window.showTextDocument(document, { preview: false });
+  const launchResult = await launchPhaseAgent({ agent, prompt: content, promptFile, workspaceUri });
+
+  if (launchResult.status !== "launched") {
+    const document = await vscode.workspace.openTextDocument(promptFile);
+    await vscode.window.showTextDocument(document, { preview: false });
+  }
+
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
-  void vscode.window.showInformationMessage(`Handoff prompt for ${phase.title} copied to clipboard.`);
+  const notify = launchResult.status === "not-installed" || launchResult.status === "failed"
+    ? vscode.window.showWarningMessage
+    : vscode.window.showInformationMessage;
+  void notify(`${launchResult.message} Prompt also copied to clipboard.`);
 }
 
 export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown, agentArg?: unknown) {

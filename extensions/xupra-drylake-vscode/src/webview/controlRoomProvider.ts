@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 
+import { phaseAgentActionLabel, phaseAgentHint, phaseAgentLabel } from "../agents/phaseAgentLauncher";
 import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { ChatState, PlanningProviderInfo } from "../services/stateStore";
@@ -14,14 +15,6 @@ const MODE_CARDS: Array<[string, XuMode, string]> = [
   ["Create Plan", "plan", "Generate a file-aware plan for a complex repo change."],
   ["Review / Repair", "review", "Review existing code and produce a correction plan."],
 ];
-
-const AGENT_LABELS: Record<XuPhaseAgent, string> = {
-  "claude-code": "Claude Code",
-  codex: "Codex",
-  cursor: "Cursor",
-  copilot: "GitHub Copilot",
-  "external-ai-prompt": "External AI Prompt",
-};
 
 const STATUS_LABELS: Record<XuStepStatus, string> = {
   pending: "pending",
@@ -73,10 +66,10 @@ function statusForKanban(status: XuStepStatus) {
 function renderAgentSelect(phase: XuPhase, fallbackAgent: XuPhaseAgent) {
   const selected = phase.agent ?? fallbackAgent;
 
-  return `<label class="agent-label">Agent<select class="agent-select" data-phase-agent="${escapeHtml(phase.id)}">
+  return `<label class="agent-label">Agent<select class="agent-select" data-phase-agent="${escapeHtml(phase.id)}" aria-label="Agent for ${escapeHtml(phase.title)}" title="${escapeHtml(phaseAgentHint(selected))}">
     ${XU_PHASE_AGENTS.map((agent) => {
       const isSelected = agent === selected ? " selected" : "";
-      return `<option value="${agent}"${isSelected}>${escapeHtml(AGENT_LABELS[agent])}</option>`;
+      return `<option value="${agent}"${isSelected}>${escapeHtml(phaseAgentLabel(agent))}</option>`;
     }).join("")}
   </select></label>`;
 }
@@ -111,6 +104,7 @@ function renderPhaseSteps(phase: XuPhase) {
 function renderPhaseCard(phase: XuPhase, fallbackAgent: XuPhaseAgent, options: { draggable: boolean }) {
   const draggable = options.draggable ? ' draggable="true"' : "";
   const cardClass = `phase-card ${statusClass(phase.status)}${phase.status === "active" ? " active-phase" : ""}`;
+  const selectedAgent = phase.agent ?? fallbackAgent;
 
   return `<article class="${cardClass}" data-phase-id="${escapeHtml(phase.id)}" data-phase-status="${statusForKanban(phase.status)}"${draggable}>
     <div class="phase-id">${escapeHtml(phase.id)}</div>
@@ -120,7 +114,7 @@ function renderPhaseCard(phase: XuPhase, fallbackAgent: XuPhaseAgent, options: {
     ${renderAgentSelect(phase, fallbackAgent)}
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
-      <button class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}">Handoff to agent</button>
+      <button class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" title="${escapeHtml(phaseAgentHint(selectedAgent))}">${escapeHtml(phaseAgentActionLabel(selectedAgent))}</button>
     </div>
   </article>`;
 }

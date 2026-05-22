@@ -1,4 +1,5 @@
 .vscode/**
+.vsix-inspect/**
 src/**
 tsconfig.json
 esbuild.mjs

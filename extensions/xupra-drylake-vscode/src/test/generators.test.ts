@@ -12,6 +12,8 @@ import { renderOpenClawSkill } from "../generators/renderOpenClawSkill";
 import { renderGeneratedFiles } from "../generators/renderGeneratedFiles";
 import { planGeneratedFiles } from "../generators/planGeneratedFiles";
 import { writeGeneratedFiles } from "../generators/writeGeneratedFiles";
+import { XU_PHASE_AGENTS } from "../xu/types";
+import type { XuPhaseAgent } from "../xu/types";
 import * as vscode from "vscode";
 
 const writes = new Map<string, string>();
@@ -66,6 +68,29 @@ describe("runbook generators", () => {
 
     expect(renderPhasePrompt(value, value.phases[0])).toContain("You are running as Codex CLI.");
     expect(renderPhasePrompt(value, value.phases[1])).toContain("You are running as Claude Code.");
+  });
+
+  it("renders phase-agent prompt preambles for every selectable agent", () => {
+    const expectedPreambles: Record<XuPhaseAgent, string> = {
+      "claude-code": "You are running as Claude Code.",
+      codex: "You are running as Codex CLI.",
+      cursor: "You are running inside Cursor.",
+      cline: "You are running inside Cline.",
+      continue: "You are running inside Continue.dev.",
+      aider: "You are running as Aider.",
+      windsurf: "You are running inside Windsurf.",
+      copilot: "You are running as GitHub Copilot.",
+      "roo-code": "You are running inside Roo Code.",
+      "augment-code": "You are running inside Augment Code.",
+      "external-ai-prompt": "Copy this prompt into your preferred AI tool.",
+    };
+
+    for (const agent of XU_PHASE_AGENTS) {
+      const value = runbook();
+      value.phases[0].agent = agent;
+
+      expect(renderPhasePrompt(value, value.phases[0])).toContain(expectedPreambles[agent]);
+    }
   });
 
   it("uses active build-session provider for no-agent phase prompts", () => {

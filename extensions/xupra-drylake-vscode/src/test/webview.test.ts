@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createStarterXu } from "../xu/createStarterXu";
 import { ControlRoomProvider } from "../webview/controlRoomProvider";
+import { XU_PHASE_AGENTS } from "../xu/types";
 import type { ApplicationBuildRunbook } from "../xu/types";
 
 type TestMessage = {
@@ -131,6 +132,8 @@ describe("Control Room webview", () => {
     expect(html).toContain('command: "drylake.reorderPhase"');
     expect(html).toContain("drop-before");
     expect(html).toContain("drop-after");
+    expect(html).toContain("Run with Codex");
+    expect(html).toContain("Run with GitHub Copilot");
   });
 
   it("routes kanban drop messages to phase status updates", async () => {
@@ -155,9 +158,28 @@ describe("Control Room webview", () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);
 
-    await messageHandler?.({ command: "drylake.updatePhaseAgent", phaseId: "active", agent: "cursor" });
+    await messageHandler?.({ command: "drylake.updatePhaseAgent", phaseId: "active", agent: "cline" });
 
-    expect(executed).toContainEqual({ command: "drylake.updatePhaseAgent", args: ["active", "cursor"] });
+    expect(executed).toContainEqual({ command: "drylake.updatePhaseAgent", args: ["active", "cline"] });
+  });
+
+  it("renders every native phase agent in the dropdown", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    for (const agent of XU_PHASE_AGENTS) {
+      expect(html).toContain(`option value="${agent}"`);
+    }
+
+    expect(html).toContain("Cline");
+    expect(html).toContain("Continue.dev");
+    expect(html).toContain("Aider");
+    expect(html).toContain("Windsurf");
+    expect(html).toContain("Roo Code");
+    expect(html).toContain("Augment Code");
+    expect(html).toContain("Agent for Todo phase");
   });
 
   it("persists kanban view selection across refreshes", async () => {

@@ -1,14 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { reorderPhaseCommand, startBuildSessionCommand } from "../commands/runbooks";
+import { handoffPhaseCommand, reorderPhaseCommand, startBuildSessionCommand, updatePhaseAgentCommand } from "../commands/runbooks";
 import { createStarterXu } from "../xu/createStarterXu";
 import type { ApplicationBuildRunbook } from "../xu/types";
 
 const mocks = vi.hoisted(() => ({
   billingUri: { value: "https://drylake.xupracorp.com/billing?source=extension" },
   openExternal: vi.fn(),
+  openTextDocument: vi.fn(),
+  showTextDocument: vi.fn(),
   showInformationMessage: vi.fn(),
   showWarningMessage: vi.fn(),
+  writeClipboard: vi.fn(),
+  executeCommand: vi.fn(),
+  launchPhaseAgent: vi.fn(),
+  writePhaseHandoffFile: vi.fn(),
 }));
 
 vi.mock("vscode", () => ({
@@ -19,10 +25,11 @@ vi.mock("vscode", () => ({
   env: {
     openExternal: mocks.openExternal,
     clipboard: {
-      writeText: vi.fn(),
+      writeText: mocks.writeClipboard,
     },
   },
   window: {
+    showTextDocument: mocks.showTextDocument,
     showInformationMessage: mocks.showInformationMessage,
     showWarningMessage: mocks.showWarningMessage,
     withProgress: vi.fn(async (_options, task) => task()),
@@ -30,6 +37,7 @@ vi.mock("vscode", () => ({
   workspace: {
     workspaceFolders: [{ uri: { fsPath: "C:/repo", path: "/repo" } }],
     asRelativePath: vi.fn((uri: { path?: string; fsPath?: string }) => uri.path ?? uri.fsPath ?? "drylake.xu"),
+    openTextDocument: mocks.openTextDocument,
     getConfiguration: vi.fn((section: string) => ({
       get<T>(key: string, defaultValue?: T) {
         if (section === "drylake" && key === "aiProvider") {
@@ -40,6 +48,9 @@ vi.mock("vscode", () => ({
       },
     })),
   },
+  commands: {
+    executeCommand: mocks.executeCommand,
+  },
 }));
 
 vi.mock("../services/workspaceScanner", () => ({
@@ -47,14 +58,55 @@ vi.mock("../services/workspaceScanner", () => ({
   scanWorkspaceFiles: vi.fn(async () => []),
 }));
 
+vi.mock("../agents/phaseAgentLauncher", () => ({
+  launchPhaseAgent: mocks.launchPhaseAgent,
+  writePhaseHandoffFile: mocks.writePhaseHandoffFile,
+}));
+
 beforeEach(() => {
   mocks.openExternal.mockReset();
+  mocks.openTextDocument.mockReset();
+  mocks.showTextDocument.mockReset();
   mocks.showInformationMessage.mockReset();
   mocks.showWarningMessage.mockReset();
+  mocks.writeClipboard.mockReset();
+  mocks.executeCommand.mockReset();
+  mocks.launchPhaseAgent.mockReset();
+  mocks.writePhaseHandoffFile.mockReset();
   mocks.showWarningMessage.mockResolvedValue("Upgrade to Pro");
+  mocks.openTextDocument.mockImplementation(async (document) => document);
+  mocks.writePhaseHandoffFile.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-roo-code.md", path: "/repo/.drylake/handoffs/P-01-roo-code.md" });
+  mocks.launchPhaseAgent.mockResolvedValue({ status: "launched", message: "Started Roo Code for this phase." });
 });
 
 describe("runbook commands", () => {
+  it("requires users to connect before starting a Build Session", async () => {
+    mocks.showWarningMessage.mockResolvedValueOnce("Connect DryLake");
+    const deps = {
+      apiClient: {},
+      stateStore: {
+        getConnection: vi.fn(() => ({})),
+      },
+      sessionStore: {
+        ensureRunbook: vi.fn(),
+      },
+      controlRoom: {
+        createOrShow: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+
+    await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout");
+
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+      "Connect your DryLake account before starting a Build Session.",
+      "Connect DryLake",
+    );
+    expect(mocks.executeCommand).toHaveBeenCalledWith("xupra.connect");
+    expect(deps.sessionStore.ensureRunbook).not.toHaveBeenCalled();
+    expect(deps.controlRoom.createOrShow).not.toHaveBeenCalled();
+  });
+
   it("prompts connected free users to upgrade when Xupra Pro AI is selected for Build Sessions", async () => {
     const runbook = createStarterXu({ prompt: "Build checkout", mode: "build-app" });
     const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
@@ -127,7 +179,9 @@ describe("runbook commands", () => {
     const writeRunbook = vi.fn(async (_uri: unknown, _runbook: ApplicationBuildRunbook) => undefined);
     const deps = {
       apiClient: {},
-      stateStore: {},
+      stateStore: {
+        getBuildSession: vi.fn(() => null),
+      },
       sessionStore: {
         readRunbook: vi.fn(async () => ({ uri, runbook })),
         writeRunbook,
@@ -172,5 +226,54 @@ describe("runbook commands", () => {
     expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
     expect(deps.controlRoom.refresh).not.toHaveBeenCalled();
     expect(deps.refreshSidebar).not.toHaveBeenCalled();
+  });
+
+  it("persists newly native phase-agent selections", async () => {
+    const { deps } = reorderDeps();
+
+    await updatePhaseAgentCommand(deps as never, "P-01", "cline");
+
+    const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(written.phases.find((phase) => phase.id === "P-01")?.agent).toBe("cline");
+    expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
+    expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+  });
+
+  it("writes handoff files and launches newly native phase agents", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "roo-code";
+    const { deps } = reorderDeps(runbook);
+
+    await handoffPhaseCommand(deps as never, "P-01");
+
+    expect(mocks.writeClipboard).toHaveBeenCalledWith(expect.stringContaining("You are running inside Roo Code."));
+    expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
+      agent: "roo-code",
+      content: expect.stringContaining("You are running inside Roo Code."),
+    }));
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({
+      agent: "roo-code",
+      prompt: expect.stringContaining("You are running inside Roo Code."),
+    }));
+    expect(mocks.openTextDocument).not.toHaveBeenCalled();
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
+    expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
+    expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+  });
+
+  it("opens the saved handoff file when the selected agent is not launchable", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "cursor";
+    const { deps } = reorderDeps(runbook);
+    mocks.launchPhaseAgent.mockResolvedValueOnce({ status: "fallback", message: "DryLake copied the phase prompt." });
+
+    await handoffPhaseCommand(deps as never, "P-01");
+
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "cursor" }));
+    expect(mocks.openTextDocument).toHaveBeenCalledWith({
+      fsPath: "C:/repo/.drylake/handoffs/P-01-roo-code.md",
+      path: "/repo/.drylake/handoffs/P-01-roo-code.md",
+    });
+    expect(mocks.showTextDocument).toHaveBeenCalled();
   });
 });

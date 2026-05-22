@@ -1,6 +1,18 @@
 export type XuStepStatus = "pending" | "active" | "approved" | "needs-revision" | "complete";
 
-export const XU_PHASE_AGENTS = ["claude-code", "codex", "cursor", "copilot", "external-ai-prompt"] as const;
+export const XU_PHASE_AGENTS = [
+  "claude-code",
+  "codex",
+  "cursor",
+  "cline",
+  "continue",
+  "aider",
+  "windsurf",
+  "copilot",
+  "roo-code",
+  "augment-code",
+  "external-ai-prompt",
+] as const;
 
 export type XuPhaseAgent = (typeof XU_PHASE_AGENTS)[number];
 
