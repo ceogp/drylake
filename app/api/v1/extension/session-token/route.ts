@@ -27,7 +27,7 @@ export async function POST() {
     });
   } catch (error) {
     if (error instanceof Error && error.message === "Authentication required") {
-      return unauthorized("Sign in to Xupra DryLake before generating an extension token.");
+      return unauthorized("Sign in to DryLake before generating an extension token.");
     }
 
     console.error(error);

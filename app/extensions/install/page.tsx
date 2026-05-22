@@ -25,7 +25,7 @@ export default function ExtensionInstallPage() {
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
             Use the marketplace listing if you want the normal install flow. After installation,
-            open VS Code and run <span className="font-mono text-xs">Xupra DryLake: Connect</span>
+            open VS Code and run <span className="font-mono text-xs">DryLake: Connect</span>
             .
           </p>
           <a

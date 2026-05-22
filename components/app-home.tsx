@@ -15,7 +15,7 @@ export async function AppHome() {
       <main className="tape-page flex min-h-screen items-center justify-center px-6 py-16">
         <div className="tape-panel max-w-2xl bg-white p-8">
           <h1 className="font-[family-name:var(--font-heading)] text-4xl font-black uppercase text-stone-950">
-            Xupra DryLake needs a starting account.
+            DryLake needs a starting account.
           </h1>
           <p className="mt-4 text-lg leading-8 text-stone-700">
             Seed the database or create the first organization so agent packages, projects, and transfer jobs have a home.
@@ -32,15 +32,15 @@ export async function AppHome() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="tape-card flex items-center gap-4 bg-white px-4 py-3">
               <Image
-                alt="Xupra logo"
+                alt="DryLake logo"
                 className="h-12 w-12 rounded-[4px] border-[3px] border-black bg-white"
                 height={48}
-                src="/xupra-logo.svg"
+                src="/drylake-logo.svg"
                 width={48}
               />
               <div>
                 <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-stone-500">
-                  Xupra DryLake
+                  DryLake
                 </p>
                 <p className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
                   Dashboard

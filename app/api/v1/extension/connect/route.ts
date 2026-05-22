@@ -169,7 +169,7 @@ export async function POST(request: Request) {
       return unauthorized(
         authSetup.mode === "dev"
           ? "Provide dev bootstrap credentials or sign in through the web app first."
-          : "Sign in to Xupra DryLake in the web app before connecting the extension.",
+          : "Sign in to DryLake in the web app before connecting the extension.",
       );
     }
 

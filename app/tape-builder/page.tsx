@@ -22,7 +22,7 @@ const glyphStudies = [
 ];
 
 export const metadata = {
-  title: "Tape Builder Trial | Xupra DryLake",
+  title: "Tape Builder Trial | DryLake",
   description: "Local visual design trial for a packing-tape inspired DryLake visual builder homepage.",
 };
 

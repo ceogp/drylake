@@ -2,6 +2,7 @@ import { SignIn } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
+import { clerkTapeAppearance, DryLakeAuthShell } from "@/components/drylake-auth-shell";
 import { getAuthSetup } from "@/lib/services/auth";
 
 function safeRedirectUrl(value: string | string[] | undefined) {
@@ -41,14 +42,19 @@ export default async function SignInPage({
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#fff7ed_0%,_#fffaf5_48%,_#ffffff_100%)] px-6 py-16">
+    <DryLakeAuthShell
+      eyebrow="Sign in"
+      title="Open your DryLake planning workspace."
+      body="Use the same workspace that keeps phases, handoffs, and agent targets organized."
+    >
       <SignIn
+        appearance={clerkTapeAppearance}
         fallbackRedirectUrl={redirectUrl}
         path={authSetup.signInUrl}
         routing="path"
         signUpFallbackRedirectUrl={redirectUrl}
         signUpUrl={authPathWithRedirect(authSetup.signUpUrl, redirectUrl)}
       />
-    </main>
+    </DryLakeAuthShell>
   );
 }

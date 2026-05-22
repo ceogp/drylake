@@ -3,8 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { ClerkProvider } from "@clerk/nextjs";
 import { headers } from "next/headers";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { setActiveOrganizationAction } from "@/app/actions";
+import { clerkTapeAppearance } from "@/components/drylake-auth-shell";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
@@ -18,14 +19,14 @@ import { getAuthSetup } from "@/lib/services/auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import "./globals.css";
 
-const headingFont = Space_Grotesk({
+const headingFont = Bricolage_Grotesque({
   variable: "--font-heading",
   subsets: ["latin"],
 });
 
-const monoFont = IBM_Plex_Mono({
+const monoFont = JetBrains_Mono({
   variable: "--font-mono",
-  weight: ["400", "500"],
+  weight: ["400", "500", "700"],
   subsets: ["latin"],
 });
 
@@ -74,7 +75,7 @@ export default async function RootLayout({
               alt="DryLake logo"
               className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
               height={44}
-              src="/xupra-logo.svg"
+              src="/drylake-logo.svg"
               width={44}
             />
             <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
@@ -105,7 +106,7 @@ export default async function RootLayout({
               alt="DryLake logo"
               className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
               height={44}
-              src="/xupra-logo.svg"
+              src="/drylake-logo.svg"
               width={44}
             />
             <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
@@ -132,7 +133,7 @@ export default async function RootLayout({
                 alt="DryLake logo"
                 className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
                 height={44}
-                src="/xupra-logo.svg"
+                src="/drylake-logo.svg"
                 width={44}
               />
               <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
@@ -183,7 +184,7 @@ export default async function RootLayout({
       className={`${headingFont.variable} ${monoFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {useClerkUi ? <ClerkProvider>{shell}</ClerkProvider> : shell}
+        {useClerkUi ? <ClerkProvider appearance={clerkTapeAppearance}>{shell}</ClerkProvider> : shell}
       </body>
     </html>
   );

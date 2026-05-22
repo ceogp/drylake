@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof Error && error.message === "Authentication required") {
-      return unauthorized("Sign in to Xupra DryLake before approving the editor connection.");
+      return unauthorized("Sign in to DryLake before approving the editor connection.");
     }
 
     console.error(error);

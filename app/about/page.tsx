@@ -23,7 +23,7 @@ export default function AboutPage() {
               className="h-20 w-20 rounded-[1.5rem] border border-white/10 shadow-[0_22px_60px_rgba(0,0,0,0.24)]"
               height={80}
               priority
-              src="/xupra-logo.svg"
+              src="/drylake-logo.svg"
               width={80}
             />
             <p className="mt-10 font-mono text-xs uppercase tracking-[0.22em] text-orange-200">
