@@ -1,24 +1,84 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
-const glyphs: Record<string, { width: number; paths: string[] }> = {
-  A: { width: 92, paths: ["M14 90 V36 L46 14 L78 36 V90", "M24 58 H68"] },
-  B: { width: 92, paths: ["M18 14 V90", "M18 14 H68 L82 28 V42 L68 54 H18", "M18 54 H70 L84 68 V78 L70 90 H18"] },
-  D: { width: 92, paths: ["M18 14 V90", "M18 14 H66 L82 30 V74 L66 90 H18"] },
-  E: { width: 86, paths: ["M78 14 H18 V90 H80", "M18 52 H68"] },
-  I: { width: 62, paths: ["M10 14 H52", "M31 14 V90", "M10 90 H52"] },
-  K: { width: 90, paths: ["M18 14 V90", "M78 14 L18 58", "M42 46 L80 90"] },
-  L: { width: 78, paths: ["M18 14 V90 H70"] },
-  M: { width: 106, paths: ["M16 90 V14 L53 54 L90 14 V90"] },
-  P: { width: 88, paths: ["M18 90 V14 H66 L80 28 V46 L66 60 H18"] },
-  R: { width: 90, paths: ["M18 90 V14 H66 L80 28 V44 L66 58 H18", "M46 58 L80 90"] },
-  S: { width: 86, paths: ["M76 14 H24 L12 26 V42 L24 54 H62 L76 66 V78 L64 90 H12"] },
-  T: { width: 86, paths: ["M10 14 H76", "M43 14 V90"] },
-  U: { width: 92, paths: ["M16 14 V72 L32 90 H60 L76 72 V14"] },
-  V: { width: 92, paths: ["M14 14 L46 90 L78 14"] },
-  X: { width: 92, paths: ["M16 14 L76 90", "M76 14 L16 90"] },
-  Y: { width: 92, paths: ["M14 14 L46 48 L78 14", "M46 48 V90"] },
-  " ": { width: 38, paths: [] },
+type TapeGlyphVariant = {
+  width: number;
+  paths: string[];
+};
+
+const glyphs: Record<string, TapeGlyphVariant[]> = {
+  A: [
+    { width: 92, paths: ["M4 94 L34 10 H62 L90 94 H66 L60 76 H34 L28 94 Z M40 58 H54 L47 34 Z"] },
+    { width: 92, paths: ["M2 94 L32 10 H58 L92 94 H68 L62 78 H32 L26 94 Z M39 58 H55 L48 32 Z"] },
+  ],
+  B: [
+    { width: 92, paths: ["M8 10 H62 L82 30 L76 48 L88 66 L70 94 H8 Z M32 30 V44 H56 L62 38 L56 30 Z M32 62 V74 H58 L64 68 L58 62 Z"] },
+    { width: 92, paths: ["M8 10 H60 L82 28 L74 48 L88 66 L68 94 H8 Z M32 30 V44 H54 L61 38 L54 30 Z M32 62 V74 H56 L64 68 L56 62 Z"] },
+  ],
+  D: [
+    { width: 92, paths: ["M8 10 H58 L84 34 V70 L58 94 H8 Z M34 32 V72 H52 L62 62 V42 L52 32 Z"] },
+    { width: 92, paths: ["M8 10 H60 L86 32 V68 L60 94 H8 Z M34 31 V73 H52 L64 61 V43 L52 31 Z"] },
+    { width: 92, paths: ["M8 10 H62 L86 34 V66 L62 94 H8 Z M34 32 V72 H52 L64 60 V44 L52 32 Z"] },
+  ],
+  E: [
+    { width: 82, paths: ["M8 10 H78 V30 H32 V42 H68 V62 H32 V74 H80 V94 H8 Z"] },
+    { width: 82, paths: ["M8 10 H78 V30 H34 V43 H70 V62 H34 V75 H80 V94 H8 Z"] },
+  ],
+  I: [{ width: 54, paths: ["M6 10 H48 V28 H36 V76 H48 V94 H6 V76 H18 V28 H6 Z"] }],
+  K: [
+    { width: 90, paths: ["M8 10 H32 V42 L62 10 H88 L50 50 L90 94 H62 L32 60 V94 H8 Z"] },
+    { width: 90, paths: ["M8 10 H32 V44 L66 10 H88 L52 48 L90 94 H62 L32 62 V94 H8 Z"] },
+  ],
+  L: [{ width: 76, paths: ["M8 10 H32 V74 H72 V94 H8 Z"] }],
+  P: [
+    { width: 86, paths: ["M8 10 H60 L82 32 V48 L60 70 H32 V94 H8 Z M32 31 V50 H52 L60 42 V38 L52 31 Z"] },
+    { width: 86, paths: ["M8 10 H58 L80 30 V50 L58 70 H32 V94 H8 Z M32 31 V51 H50 L58 43 V39 L50 31 Z"] },
+  ],
+  R: [
+    { width: 88, paths: ["M8 10 H60 L82 32 V48 L62 68 L86 94 H58 L38 70 H32 V94 H8 Z M32 31 V51 H52 L60 43 V39 L52 31 Z"] },
+    { width: 88, paths: ["M8 10 H58 L80 30 V50 L60 66 L88 94 H58 L36 70 H32 V94 H8 Z M32 31 V51 H50 L58 43 V39 L50 31 Z"] },
+  ],
+  S: [
+    { width: 84, paths: ["M76 10 V30 H30 V42 H62 L78 58 V78 L62 94 H8 V74 H56 V62 H24 L8 46 V26 L24 10 Z"] },
+    { width: 84, paths: ["M78 10 V30 H32 V42 H62 L80 58 V76 L62 94 H8 V74 H54 V62 H24 L6 46 V28 L24 10 Z"] },
+  ],
+  U: [
+    { width: 88, paths: ["M8 10 H32 V70 L42 80 H50 L60 70 V10 H84 V78 L68 94 H24 L8 78 Z"] },
+    { width: 88, paths: ["M8 10 H32 V68 L44 80 H52 L60 72 V10 H84 V78 L66 94 H26 L8 76 Z"] },
+  ],
+  V: [
+    { width: 88, paths: ["M4 10 H30 L44 68 L60 10 H86 L58 94 H30 Z"] },
+    { width: 88, paths: ["M2 10 H28 L43 70 L62 10 H88 L58 94 H28 Z"] },
+  ],
+  X: [
+    { width: 92, paths: ["M4 10 H34 L50 32 L70 10 H92 L62 50 L88 94 H58 L44 68 L24 94 H2 L34 48 Z"] },
+    { width: 92, paths: ["M2 10 H30 L47 35 L66 10 H90 L60 48 L90 94 H60 L43 66 L22 94 H0 L32 50 Z"] },
+    { width: 92, paths: ["M0 10 H28 L46 38 L70 10 H92 L58 52 L88 94 H58 L42 68 L20 94 H0 L32 50 Z"] },
+  ],
+  Y: [
+    { width: 90, paths: ["M4 10 H32 L46 34 L62 10 H88 L58 56 V94 H34 V56 Z"] },
+    { width: 90, paths: ["M2 10 H30 L44 35 L64 10 H90 L58 58 V94 H34 V58 Z"] },
+  ],
+  a: [{ width: 76, paths: ["M10 54 L28 38 H60 L74 52 V94 H54 V82 H28 L10 68 Z M34 54 V66 H54 V54 Z"] }],
+  b: [
+    { width: 76, paths: ["M8 14 H30 V42 H58 L72 56 V78 L56 94 H8 Z M30 58 V78 H48 L54 72 V62 L48 58 Z"] },
+    { width: 76, paths: ["M8 14 H30 V40 H56 L72 54 V78 L56 94 H8 Z M30 58 V78 H48 L54 72 V62 L48 58 Z"] },
+  ],
+  d: [{ width: 78, paths: ["M66 14 V94 H20 L6 80 V56 L22 42 H46 V14 Z M28 58 L24 62 V72 L30 78 H46 V58 Z"] }],
+  e: [{ width: 74, paths: ["M64 38 L72 50 V70 H30 V78 H68 V94 H22 L8 80 V52 L22 38 Z M30 52 V58 H52 V52 Z"] }],
+  i: [{ width: 32, paths: ["M8 34 H28 V94 H8 Z"] }],
+  l: [{ width: 36, paths: ["M8 14 H28 V94 H8 Z"] }],
+  m: [{ width: 112, paths: ["M8 94 V38 H28 V48 L42 38 H58 L70 50 L84 38 H104 V94 H84 V60 L74 50 L62 60 V94 H42 V60 L28 50 V94 Z"] }],
+  p: [{ width: 76, paths: ["M8 38 H58 L72 52 V74 L56 90 H30 V104 H8 Z M30 58 V74 H48 L54 68 V62 L48 58 Z"] }],
+  r: [{ width: 68, paths: ["M8 38 H30 V50 L48 38 H64 V60 H44 L30 72 V94 H8 Z"] }],
+  s: [{ width: 70, paths: ["M62 38 V54 H28 V60 H54 L66 72 V82 L54 94 H10 V78 H46 V72 H20 L8 60 V50 L20 38 Z"] }],
+  u: [{ width: 76, paths: ["M8 38 H30 V72 L36 78 H48 V38 H70 V94 H8 Z"] }],
+  v: [{ width: 74, paths: ["M4 38 H28 L38 72 L50 38 H72 L48 94 H28 Z"] }],
+  x: [
+    { width: 76, paths: ["M2 38 H26 L38 54 L52 38 H74 L50 66 L72 94 H48 L36 76 L22 94 H0 L26 64 Z"] },
+    { width: 76, paths: ["M0 38 H24 L38 56 L54 38 H76 L50 64 L74 94 H50 L36 76 L20 94 H0 L26 64 Z"] },
+  ],
+  " ": [{ width: 34, paths: [] }],
 };
 
 type TapeWordProps = {
@@ -27,6 +87,7 @@ type TapeWordProps = {
   cell?: number;
   gap?: number;
   label: string;
+  variantSet?: number;
 };
 
 const phases = [
@@ -38,7 +99,18 @@ const phases = [
 
 const handoffActions = ["RUN", ".SH", ".BAT", "COPY", "MD", "VS CODE"];
 
-function TapeGlyph({ glyph, color, cell, gap }: { glyph: { width: number; paths: string[] }; color: string; cell: number; gap: number }) {
+const glyphStudies = [
+  { label: "D cut 01", text: "D", variantSet: 0, color: "#005caf", background: "#ffffff" },
+  { label: "D cut 02", text: "D", variantSet: 2, color: "#005caf", background: "#ffffff" },
+  { label: "B cut 01", text: "B", variantSet: 0, color: "#111111", background: "#ffffff" },
+  { label: "B cut 02", text: "B", variantSet: 1, color: "#111111", background: "#ffffff" },
+  { label: "X center low", text: "X", variantSet: 0, color: "#e6007e", background: "#fff7ed" },
+  { label: "X center high", text: "X", variantSet: 2, color: "#e6007e", background: "#fff7ed" },
+  { label: "lowercase word", text: "xupra", variantSet: 1, color: "#36b979", background: "#101010" },
+  { label: "lowercase route", text: "visual", variantSet: 1, color: "#111111", background: "#ffd60a" },
+];
+
+function TapeGlyph({ glyph, color, cell, gap }: { glyph: TapeGlyphVariant; color: string; cell: number; gap: number }) {
   void gap;
   const height = (104 * cell) / 10;
   const width = (glyph.width * cell) / 10;
@@ -55,28 +127,29 @@ function TapeGlyph({ glyph, color, cell, gap }: { glyph: { width: number; paths:
         <path
           key={path}
           d={path}
-          fill="none"
-          stroke={color}
-          strokeLinecap="butt"
-          strokeLinejoin="bevel"
-          strokeWidth="18"
-          vectorEffect="non-scaling-stroke"
+          fill={color}
+          fillRule="evenodd"
         />
       ))}
     </svg>
   );
 }
 
-function TapeWord({ text, color, cell = 9, gap = 3, label }: TapeWordProps) {
+function pickGlyph(character: string, index: number, variantSet: number) {
+  const variants = glyphs[character] ?? glyphs[character.toUpperCase()] ?? glyphs[" "];
+  return variants[(index + variantSet) % variants.length];
+}
+
+function TapeWord({ text, color, cell = 9, gap = 3, label, variantSet = 0 }: TapeWordProps) {
   return (
     <span className="flex flex-wrap items-center gap-y-2" aria-label={label} style={{ columnGap: gap * 4 }}>
-      {text.toUpperCase().split("").map((letter, index) => (
+      {text.split("").map((letter, index) => (
         <TapeGlyph
           key={`${letter}-${index}`}
           color={color}
           cell={cell}
           gap={gap}
-          glyph={glyphs[letter] ?? glyphs[" "]}
+          glyph={pickGlyph(letter, index, variantSet)}
         />
       ))}
     </span>
@@ -85,13 +158,9 @@ function TapeWord({ text, color, cell = 9, gap = 3, label }: TapeWordProps) {
 
 function ArrowTape({ color }: { color: string }) {
   return (
-    <span className="flex items-center" aria-hidden="true">
-      <span className="h-4 w-12 rounded-sm" style={{ background: color }} />
-      <span
-        className="h-0 w-0 border-y-[18px] border-l-[28px] border-y-transparent"
-        style={{ borderLeftColor: color }}
-      />
-    </span>
+    <svg aria-hidden="true" className="h-10 w-24 shrink-0" viewBox="0 0 96 40">
+      <path d="M4 13 H58 V4 L92 20 L58 36 V27 H4 Z" fill={color} />
+    </svg>
   );
 }
 
@@ -117,7 +186,7 @@ export default function TapeBuilderTrialPage() {
             <div className="grid gap-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="bg-[#e84a5f] px-4 py-2">
-                  <TapeWord text="XUPRA" color="#070707" cell={7} gap={2} label="Xupra" />
+                  <TapeWord text="XUPRA" color="#070707" cell={7} gap={2} label="Xupra" variantSet={1} />
                 </div>
                 <div className="bg-[#ff5a1f] px-4 py-2">
                   <TapeWord text="AI" color="#ffffff" cell={7} gap={2} label="AI" />
@@ -126,14 +195,14 @@ export default function TapeBuilderTrialPage() {
 
               <div className="grid gap-2">
                 <div className="bg-[#005caf] px-4 py-3">
-                  <TapeWord text="DRYLAKE" color="#ffffff" cell={8} gap={2} label="DryLake" />
+                  <TapeWord text="DRYLAKE" color="#ffffff" cell={8} gap={2} label="DryLake" variantSet={1} />
                 </div>
                 <div className="flex flex-wrap items-center gap-4 bg-[#f7f4ea] px-4 py-3">
-                  <TapeWord text="VISUAL" color="#36b979" cell={7} gap={2} label="Visual" />
+                  <TapeWord text="visual" color="#36b979" cell={7} gap={2} label="Visual" variantSet={1} />
                   <ArrowTape color="#36b979" />
                 </div>
                 <div className="px-4 py-2">
-                  <TapeWord text="BUILDER" color="#111111" cell={7} gap={2} label="Builder" />
+                  <TapeWord text="builder" color="#111111" cell={7} gap={2} label="Builder" variantSet={1} />
                 </div>
               </div>
 
@@ -197,7 +266,7 @@ export default function TapeBuilderTrialPage() {
           <TapePanel className="bg-white">
             <div className="grid gap-5 md:grid-cols-[0.85fr_1.15fr]">
               <div className="rounded-[6px] bg-[#e6007e] p-5 text-white">
-                <TapeWord text="MAP" color="#ffffff" cell={9} gap={3} label="Map" />
+                <TapeWord text="map" color="#ffffff" cell={8} gap={2} label="Map" />
                 <p className="mt-5 text-sm font-semibold leading-6">A denser, transit-sign homepage rhythm: fewer soft cards, more decisive zones.</p>
               </div>
               <div className="grid gap-3">
@@ -215,6 +284,28 @@ export default function TapeBuilderTrialPage() {
             </div>
           </TapePanel>
         </div>
+
+        <TapePanel className="bg-[#ffd60a]">
+          <div className="grid gap-5">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.22em] text-black/70">Font cut study</p>
+                <h2 className="mt-2 text-3xl font-black uppercase leading-none">Tape should fill the box, not show the roll.</h2>
+              </div>
+              <ArrowTape color="#111111" />
+            </div>
+            <div className="grid gap-3 md:grid-cols-4">
+              {glyphStudies.map((study) => (
+                <article key={study.label} className="rounded-[6px] border-[4px] border-black p-4" style={{ background: study.background }}>
+                  <div className="flex min-h-28 items-center justify-center overflow-hidden">
+                    <TapeWord text={study.text} color={study.color} cell={study.text.length === 1 ? 12 : 4.5} gap={1} label={study.text} variantSet={study.variantSet} />
+                  </div>
+                  <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-black/70">{study.label}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </TapePanel>
       </section>
     </main>
   );
