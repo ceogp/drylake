@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         error instanceof Error &&
         error.message === "Organization is not entitled to use xupra_pro_ai"
       ) {
-        return forbidden("Xupra Pro AI optimization requires a Pro plan.");
+          return forbidden("Xupra AI optimization requires a Pro plan.");
       }
 
       throw error;

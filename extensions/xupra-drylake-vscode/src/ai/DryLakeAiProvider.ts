@@ -34,7 +34,7 @@ export type ClarifyIntentResult = {
 
 export interface DryLakeAiProvider {
   id: DryLakeProviderId;
-  label: "Xupra Pro AI" | "User IDE AI" | "External AI Prompt";
+  label: "Xupra AI" | "User IDE AI" | "External AI Prompt";
   isAvailable(): Promise<DryLakeAiAvailability>;
   generateDraftRunbook(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;
   refinePurpose(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;

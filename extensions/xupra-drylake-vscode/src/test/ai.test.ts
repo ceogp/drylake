@@ -65,7 +65,7 @@ describe("AI providers", () => {
     expect(parsed.runbook?.intent.purpose).toBe("Build the app.");
   });
 
-  it("allows Xupra Pro AI when the account has the new entitlement", async () => {
+  it("allows Xupra AI when the account has the new entitlement", async () => {
     const provider = new XupraCloudProvider(
       configuration({ environment: "production", apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
       () => ({
@@ -85,7 +85,7 @@ describe("AI providers", () => {
     expect(availability.available).toBe(true);
   });
 
-  it("posts all Xupra Pro AI runbook requests to /api/v1 endpoints", async () => {
+  it("posts all Xupra AI runbook requests to /api/v1 endpoints", async () => {
     const provider = new XupraCloudProvider(
       configuration({ apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
       proConnection,
@@ -119,7 +119,7 @@ describe("AI providers", () => {
     ]);
   });
 
-  it("uses xupra.baseUrl for Xupra Pro AI requests when no drylake API override is configured", async () => {
+  it("uses xupra.baseUrl for Xupra AI requests when no drylake API override is configured", async () => {
     const provider = new XupraCloudProvider(
       configuration({ apiBaseUrl: "" }) as never,
       proConnection,
@@ -144,7 +144,7 @@ describe("AI providers", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("https://staging.drylake.xupracorp.com/api/v1/drylake/runbooks/draft");
   });
 
-  it("keeps drylake.apiBaseUrl as an explicit Xupra Pro AI request override", async () => {
+  it("keeps drylake.apiBaseUrl as an explicit Xupra AI request override", async () => {
     const provider = new XupraCloudProvider(
       configuration({ apiBaseUrl: "http://localhost:3008/" }) as never,
       proConnection,
@@ -179,7 +179,7 @@ describe("AI providers", () => {
 
     expect(provider.label).toBe("External AI Prompt");
     expect(reason).toBeDefined();
-    expect(reason).toMatch(/Xupra Pro AI|User IDE AI/);
+    expect(reason).toMatch(/Xupra AI|User IDE AI/);
   });
 
   it("selects User IDE AI when an editor model is available", async () => {
@@ -191,6 +191,6 @@ describe("AI providers", () => {
     });
 
     expect(provider.label).toBe("User IDE AI");
-    expect(reason).toMatch(/Xupra Pro AI/);
+    expect(reason).toMatch(/Xupra AI/);
   });
 });

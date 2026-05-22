@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       await assertEntitlement(organizationId, "xupra_pro_ai");
     } catch (error) {
       if (error instanceof Error && error.message === "Organization is not entitled to use xupra_pro_ai") {
-        return forbidden("Xupra Pro AI requires a Pro plan.");
+        return forbidden("Xupra AI requires a Pro plan.");
       }
 
       throw error;

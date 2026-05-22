@@ -17,7 +17,7 @@ const AGENT_PREAMBLES: Record<XuPhaseAgent, string> = {
 };
 
 const PROVIDER_PREAMBLES: Record<BuildSessionState["providerId"], string> = {
-  "xupra-pro-ai": "Use the active DryLake build-session provider: Xupra Pro AI.",
+  "xupra-pro-ai": "Use the active DryLake build-session provider: Xupra AI.",
   "user-ide-ai": "Use the active DryLake build-session provider: User IDE AI.",
   "external-ai-prompt": "Copy this prompt into your preferred AI tool.",
 };
@@ -71,6 +71,7 @@ export function renderPhasePrompt(runbook: ApplicationBuildRunbook, phase: XuPha
     "",
     "Do not skip approval gates.",
     "Do not modify files unless this phase requires it.",
+    "Work through the phase steps in the listed order.",
     "Use the approved purpose, architecture, and constraints below.",
     "",
     "## Purpose",

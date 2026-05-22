@@ -80,6 +80,11 @@ function phaseStatusFromArg(arg: unknown): Extract<XuStepStatus, "pending" | "ac
   return arg === "pending" || arg === "active" || arg === "complete" ? arg : undefined;
 }
 
+function nextLaunchablePhase(runbook: ApplicationBuildRunbook) {
+  return runbook.phases.find((phase) => phase.status === "active") ??
+    runbook.phases.find((phase) => phase.status !== "complete");
+}
+
 function modeFromArg(arg: unknown): XuMode | undefined {
   if (typeof arg !== "string") {
     return undefined;
@@ -374,7 +379,7 @@ async function applyAiDraft(params: {
   const availability = await params.provider.isAvailable();
   if (!availability.available && params.provider.id !== "external-ai-prompt") {
     if (params.provider.id === "xupra-pro-ai" && params.deps.stateStore.getConnection().userEmail) {
-      await requireXupraProAiEntitlement(params.deps.apiClient, params.deps.stateStore, "Xupra Pro AI");
+      await requireXupraProAiEntitlement(params.deps.apiClient, params.deps.stateStore, "Xupra AI");
       return localDraft;
     }
 
@@ -685,6 +690,14 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
   const phase = current.runbook.phases.find((item) => item.id === phaseId);
   if (!phase) {
     void vscode.window.showWarningMessage(`DryLake could not find phase ${phaseId}.`);
+    return;
+  }
+
+  const launchablePhase = nextLaunchablePhase(current.runbook);
+  if (launchablePhase && launchablePhase.id !== phase.id) {
+    void vscode.window.showWarningMessage(
+      `Complete ${launchablePhase.title} before running ${phase.title}. DryLake runs phases in order.`,
+    );
     return;
   }
 

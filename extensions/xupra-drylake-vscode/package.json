@@ -150,12 +150,12 @@
             "production"
           ],
           "default": "development",
-          "description": "Legacy compatibility setting for older DryLake builds. Xupra Pro AI now targets the configured backend URL directly."
+          "description": "Legacy compatibility setting for older DryLake builds. Xupra AI now targets the configured backend URL directly."
         },
         "drylake.apiBaseUrl": {
           "type": "string",
           "default": "",
-          "description": "Optional API base URL override for Xupra Pro AI runbook generation. Leave empty to use the default DryLake backend."
+          "description": "Optional API base URL override for Xupra AI runbook generation. Leave empty to use the default DryLake backend."
         },
         "drylake.aiProvider": {
           "type": "string",
@@ -167,12 +167,12 @@
           ],
           "enumItemLabels": [
             "Auto",
-            "Xupra Pro AI",
+            "Xupra AI",
             "User IDE AI",
             "External AI Prompt"
           ],
           "default": "auto",
-          "description": "Provider preference for DryLake AI Coding Agent. Auto tries Xupra Pro AI when your account has access, then User IDE AI, then External AI Prompt."
+          "description": "Provider preference for DryLake AI Coding Agent. Auto tries Xupra AI when your account has access, then User IDE AI, then External AI Prompt."
         },
         "drylake.userIdeAiAdapter": {
           "type": "string",

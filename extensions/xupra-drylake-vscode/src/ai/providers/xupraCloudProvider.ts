@@ -32,7 +32,7 @@ function resolveBaseUrl(
 
 export class XupraCloudProvider implements DryLakeAiProvider {
   readonly id = "xupra-pro-ai";
-  readonly label = "Xupra Pro AI";
+  readonly label = "Xupra AI";
 
   constructor(
     private readonly configuration: vscode.WorkspaceConfiguration,
@@ -46,7 +46,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
     const hasXupraProAi = Boolean(connection.entitlements?.xupra_pro_ai);
 
     if (!connection.userEmail || !hasXupraProAi) {
-      return { available: false, reason: "Connect a Xupra account with Xupra Pro AI access to use this provider." };
+      return { available: false, reason: "Connect a Xupra account with Xupra AI access to use this provider." };
     }
 
     return { available: true };
@@ -94,7 +94,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
           message:
             typeof payload?.error?.message === "string"
               ? payload.error.message
-              : `Xupra Pro AI request failed (${response.status}).`,
+              : `Xupra AI request failed (${response.status}).`,
         };
       }
 
@@ -110,7 +110,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       const parsed = parseAiRunbookResponse(content);
       if (!parsed.runbook || !parsed.validation.ok) {
         return {
-          message: `Xupra Pro AI returned invalid .xu: ${parsed.validation.diagnostics
+          message: `Xupra AI returned invalid .xu: ${parsed.validation.diagnostics
             .map((item) => item.message)
             .join("; ")}`,
         };
@@ -120,8 +120,8 @@ export class XupraCloudProvider implements DryLakeAiProvider {
     } catch (error) {
       return {
         message: error instanceof Error
-          ? `Xupra Pro AI request failed: ${error.message}`
-          : "Xupra Pro AI request failed.",
+          ? `Xupra AI request failed: ${error.message}`
+          : "Xupra AI request failed.",
       };
     }
   }
@@ -174,7 +174,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
           message:
             typeof payload?.error?.message === "string"
               ? payload.error.message
-              : `Xupra Pro AI clarify request failed (${response.status}).`,
+              : `Xupra AI clarify request failed (${response.status}).`,
         };
       }
 
@@ -186,8 +186,8 @@ export class XupraCloudProvider implements DryLakeAiProvider {
     } catch (error) {
       return {
         message: error instanceof Error
-          ? `Xupra Pro AI clarify request failed: ${error.message}`
-          : "Xupra Pro AI clarify request failed.",
+          ? `Xupra AI clarify request failed: ${error.message}`
+          : "Xupra AI clarify request failed.",
       };
     }
   }

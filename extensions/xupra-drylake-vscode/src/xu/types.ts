@@ -132,6 +132,6 @@ export type BuildSessionState = {
   createdAt: string;
   runbookPath: string;
   providerId: "xupra-pro-ai" | "user-ide-ai" | "external-ai-prompt";
-  providerLabel: "Xupra Pro AI" | "User IDE AI" | "External AI Prompt";
+  providerLabel: "Xupra AI" | "User IDE AI" | "External AI Prompt";
 };
 

@@ -107,7 +107,7 @@ describe("runbook commands", () => {
     expect(deps.controlRoom.createOrShow).not.toHaveBeenCalled();
   });
 
-  it("prompts connected free users to upgrade when Xupra Pro AI is selected for Build Sessions", async () => {
+  it("prompts connected free users to upgrade when Xupra AI is selected for Build Sessions", async () => {
     const runbook = createStarterXu({ prompt: "Build checkout", mode: "build-app" });
     const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
     const deps = {
@@ -150,7 +150,7 @@ describe("runbook commands", () => {
     await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout");
 
     expect(mocks.showWarningMessage).toHaveBeenCalledWith(
-      "Xupra Pro AI requires a Pro plan. Upgrade to unlock.",
+      "Xupra AI requires a Pro plan. Upgrade to unlock.",
       "Upgrade to Pro",
     );
     expect(deps.apiClient.openWebUrl).toHaveBeenCalledWith("/billing?source=extension");
@@ -259,6 +259,22 @@ describe("runbook commands", () => {
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
     expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+  });
+
+  it("prevents launching a later phase before the active phase is complete", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].status = "active";
+    runbook.phases[1].status = "pending";
+    const { deps } = reorderDeps(runbook);
+
+    await handoffPhaseCommand(deps as never, "P-02");
+
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+      "Complete Phase 1 before running Phase 2. DryLake runs phases in order.",
+    );
+    expect(mocks.writePhaseHandoffFile).not.toHaveBeenCalled();
+    expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
   });
 
   it("opens the saved handoff file when the selected agent is not launchable", async () => {

@@ -128,18 +128,18 @@ describe("runbook generators", () => {
     value.phases[1].agent = undefined;
     const activeProvider = {
       providerId: "xupra-pro-ai" as const,
-      providerLabel: "Xupra Pro AI" as const,
+      providerLabel: "Xupra AI" as const,
     };
 
     const files = renderGeneratedFiles(value, { activeProvider });
     const explicitAgentPhase = files.find((file) => file.logicalPath === ".drylake/generated/phase-01-intake.md");
     const defaultProviderPhase = files.find((file) => file.logicalPath === ".drylake/generated/phase-02-architecture.md");
 
-    expect(defaultProviderPhase?.content).toContain("Use the active DryLake build-session provider: Xupra Pro AI.");
+    expect(defaultProviderPhase?.content).toContain("Use the active DryLake build-session provider: Xupra AI.");
     expect(defaultProviderPhase?.content).toContain(renderPhasePrompt(value, value.phases[1], { activeProvider }).split("\n")[3]);
     expect(defaultProviderPhase?.content).not.toContain("You are running as Claude Code.");
     expect(explicitAgentPhase?.content).toContain("You are running as Codex CLI.");
-    expect(explicitAgentPhase?.content).not.toContain("Use the active DryLake build-session provider: Xupra Pro AI.");
+    expect(explicitAgentPhase?.content).not.toContain("Use the active DryLake build-session provider: Xupra AI.");
   });
 
   it("renders native agent files with generated headers", () => {
