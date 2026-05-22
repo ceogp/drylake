@@ -1,8 +1,24 @@
-Xupra DryLake VS Code Extension
-Copyright (c) Xupra
+DryLake VS Code Extension
+Copyright (c) 2024–2026 Xupra KK, Japan. All rights reserved.
 
-All rights reserved.
+The DryLake VS Code extension software, including all source code, compiled
+binaries, assets, and documentation distributed as part of this package, is
+the proprietary property of Xupra KK.
 
-This extension is provided for evaluation and internal testing unless Xupra grants
-separate written permission. Redistribution, sublicensing, or public marketplace
-publication is not permitted without Xupra approval.
+The frontend source code for the DryLake web application is made available
+on GitHub for reference and community contribution.
+
+Permitted:
+  - Install and use the extension for personal or commercial coding work.
+  - Review published frontend source code on GitHub.
+
+Not permitted without prior written consent from Xupra KK:
+  - Redistribute, sublicense, or resell this extension or its binaries.
+  - Reverse-engineer, decompile, or extract proprietary components.
+  - Use the DryLake name, logo, or trademarks in derivative products.
+
+THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL XUPRA KK BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY ARISING FROM USE OF THIS SOFTWARE.
+
+Contact: support@xupracorp.com

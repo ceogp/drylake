@@ -4,7 +4,7 @@
 
 ![DryLake Control Room kanban](media/readme-kanban.png)
 
-Works with **Claude Code · OpenAI Codex · Cursor · Cline · Continue · Aider · Windsurf · GitHub Copilot · Roo Code · Augment Code** — and any other agent via clipboard handoff.
+Works with **Claude Code · OpenAI Codex · Cursor · Cline · Continue · Aider · Windsurf · GitHub Copilot · Roo Code · Augment Code** as native phase handoff targets — and any other agent via clipboard handoff.
 
 ![DryLake pipeline view](media/readme-pipeline.png)
 
@@ -12,7 +12,7 @@ Works with **Claude Code · OpenAI Codex · Cursor · Cline · Continue · Aider
 
 - **Plans your work as a kanban.** Pending → Active → Validating → Done. Drag phases to reorder them.
 - **One agent per phase.** Pick Claude Code for design, Cline for tests, Codex for docs — whatever you like.
-- **One-click handoff.** Click *Handoff* on a phase and your coding agent opens with the prompt pre-loaded.
+- **One-click handoff.** Click *Handoff* on a phase and DryLake opens a focused prompt, copies it to your clipboard, and keeps that phase active.
 - **Auto-advance.** Tick all steps in a phase, DryLake completes it and activates the next one.
 - **Planning chat.** Tell DryLake to add a step or change scope; the kanban updates live.
 
@@ -22,10 +22,8 @@ Works with **Claude Code · OpenAI Codex · Cursor · Cline · Continue · Aider
 2. Run `DryLake: Start Build Session`.
 3. Paste a ticket, bug report, feature request, or product spec.
 4. Review the kanban DryLake creates.
-5. Click *Handoff* on the active phase. Your coding agent opens with the prompt loaded.
+5. Click *Handoff* on the active phase. DryLake opens and copies the prompt for that agent.
 6. Tick steps off as the agent finishes them. Next phase auto-activates.
-
-No account is required to start a local build session or use External AI Prompt mode.
 
 ## Why Developers Use DryLake
 
@@ -51,7 +49,7 @@ Use Build Sessions when you want AI help without handing a messy repo change to 
 
 ## Works With Your Coding Agents
 
-Pick a different agent per phase — or stick with one for the whole session. DryLake hands off to:
+Pick a different native handoff target per phase — or stick with one for the whole session. DryLake hands off to:
 
 1. **Claude Code** (Anthropic)
 2. **OpenAI Codex** / GPT-4o / GPT-5
@@ -64,7 +62,7 @@ Pick a different agent per phase — or stick with one for the whole session. Dr
 9. **Roo Code** (Roo Cline)
 10. **Augment Code**
 
-Plus **External AI Prompt** mode for ChatGPT, Gemini, DeepSeek, Tabnine, Cody, Plandex, Devin, Blackbox, Traycer, Zed, Replit, Trae, or any other tool — DryLake copies the focused prompt for that phase and you paste it wherever you want.
+Plus **External AI Prompt** mode for ChatGPT, Gemini, DeepSeek, Tabnine, Cody, Plandex, Devin, Blackbox, Traycer, Zed, Replit, Trae, or any other tool outside the native list — DryLake copies the focused prompt for that phase and you paste it wherever you want.
 
 DryLake does not try to replace any of these. It keeps the work clear enough for them to be more useful on complex tasks.
 
@@ -106,21 +104,11 @@ DryLake can also help with agent instruction files and preview workflows when yo
 
 These features support the coding workflow, but they are not the main story. The main story is helping you turn a real development task into shippable AI-assisted work.
 
-## Privacy And Control
-
-- DryLake does not export secrets by default.
-- The local scan runs inside VS Code.
-- You control when import, export, and writeback actions run.
-- Preview files are kept separate until you approve them.
-- Extension tokens are stored in VS Code SecretStorage.
-- Heavy and sensitive folders such as `node_modules`, `.git`, `.next`, `dist`, `build`, `coverage`, and `.venv` are excluded by default.
-
 ## Support
 
 - Homepage: <https://drylake.xupracorp.com/>
 - About Xupra: <https://drylake.xupracorp.com/about>
-- Support: <mailto:support@xupracorp.com>
-- License: see `LICENSE.txt`
+- Support: support@xupracorp.com
 
 ## Non-affiliation
 
