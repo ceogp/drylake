@@ -1,9 +1,6 @@
 import * as vscode from "vscode";
 
 import {
-  phaseAgentConnectionDescription,
-  phaseAgentConnectionLabel,
-  phaseAgentConnectionTone,
   phaseAgentHandoffOptions,
   phaseAgentHint,
   phaseAgentLabel,
@@ -142,31 +139,6 @@ function renderExecutionModeToggle(runbook: ApplicationBuildRunbook | null) {
     : "DryLake pauses after each phase so you can approve before starting the next phase.";
 
   return `<button class="toggle-btn execution-toggle${enabled ? " active" : ""}" data-command="drylake.toggleAutopilot" title="${escapeHtml(title)}" aria-pressed="${enabled ? "true" : "false"}">${escapeHtml(label)}</button>`;
-}
-
-function renderHandoffCapabilityPanel(runbook: ApplicationBuildRunbook | null) {
-  if (!runbook) {
-    return "";
-  }
-
-  const cards = XU_PHASE_AGENTS.map((agent) => {
-    const tone = phaseAgentConnectionTone(agent);
-    const assignedCount = runbook.phases.filter((phase) => phase.agent === agent).length;
-    const assigned = assignedCount > 0 ? `<span class="agent-count">${assignedCount}</span>` : "";
-
-    return `<div class="agent-capability ${tone}" title="${escapeHtml(phaseAgentConnectionDescription(agent))}">
-      <div class="agent-capability-top"><strong>${escapeHtml(phaseAgentLabel(agent))}</strong>${assigned}</div>
-      <span>${escapeHtml(phaseAgentConnectionLabel(agent))}</span>
-    </div>`;
-  }).join("");
-
-  return `<section class="handoff-panel" aria-label="Agent handoff capability">
-    <div class="handoff-panel-header">
-      <span class="handoff-eyebrow">Agent Handoff</span>
-      <span class="handoff-note">Choose direct run, .sh/.bat, Copy, Markdown, or VS Code per phase.</span>
-    </div>
-    <div class="agent-capability-grid">${cards}</div>
-  </section>`;
 }
 
 function renderPipeline(runbook: ApplicationBuildRunbook) {
@@ -413,7 +385,6 @@ export class ControlRoomProvider {
     const body = runbook ? (view === "kanban" ? renderKanban(runbook) : renderPipeline(runbook)) : renderEmptyState();
     const executionToggle = renderExecutionModeToggle(runbook);
     const runNextButton = runbook?.phases.length ? '<button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>' : "";
-    const handoffPanel = renderHandoffCapabilityPanel(runbook);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -478,18 +449,6 @@ export class ControlRoomProvider {
     .planning-banner-eyebrow { color: var(--drylake-blue); text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
     .planning-banner-label { color: var(--drylake-ink); }
     .planning-banner-reason { color: #4b463f; flex-basis: 100%; }
-    .handoff-panel { display: grid; gap: 10px; padding: 12px; margin: 0 0 16px; border: 4px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); }
-    .handoff-panel-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
-    .handoff-eyebrow { color: var(--drylake-blue); text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
-    .handoff-note { color: #4b463f; font-size: 11px; }
-    .agent-capability-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
-    .agent-capability { min-height: 54px; padding: 8px; border: 3px solid var(--drylake-ink); border-radius: 6px; background: var(--drylake-paper); }
-    .agent-capability.direct { background: #e9fff2; border-color: var(--drylake-green); }
-    .agent-capability.prompt { background: #fff7d0; border-color: var(--drylake-yellow); }
-    .agent-capability.fallback { opacity: 0.84; }
-    .agent-capability-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 5px; font-size: 12px; }
-    .agent-capability span { color: #4b463f; font-size: 11px; }
-    .agent-count { min-width: 18px; padding: 1px 6px; border: 2px solid var(--drylake-ink); border-radius: 4px; color: var(--drylake-ink) !important; background: var(--drylake-yellow); text-align: center; }
     .step-list-wrap { margin-top: 8px; }
     .step-list { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; }
     .step-item label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 12px; line-height: 1.4; color: var(--drylake-ink); }
@@ -533,7 +492,6 @@ export class ControlRoomProvider {
       </div>
     </header>
     ${banner}
-    ${handoffPanel}
     ${chatPanel}
     ${body}
   </main>

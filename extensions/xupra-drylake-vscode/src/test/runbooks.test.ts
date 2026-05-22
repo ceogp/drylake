@@ -70,7 +70,7 @@ vi.mock("../services/workspaceScanner", () => ({
 vi.mock("../agents/phaseAgentLauncher", () => ({
   launchPhaseAgent: mocks.launchPhaseAgent,
   phaseHandoffActionFromArg: (arg: unknown) => (
-    typeof arg === "string" && ["run", "script-sh", "script-bat", "copy", "markdown", "vscode"].includes(arg)
+    typeof arg === "string" && ["run", "script-sh", "script-bat", "copy", "markdown"].includes(arg)
       ? arg
       : undefined
   ),
@@ -402,18 +402,18 @@ describe("runbook commands", () => {
     expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
   });
 
-  it("hands off any selected phase to VS Code through GitHub Copilot", async () => {
+  it("runs the selected phase agent without switching to a second agent", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";
     const { deps } = reorderDeps(runbook);
 
-    await handoffPhaseCommand(deps as never, "P-01", "vscode");
+    await handoffPhaseCommand(deps as never, "P-01", "unsupported-action");
 
     expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
-      agent: "copilot",
-      content: expect.stringContaining("You are running as GitHub Copilot."),
+      agent: "codex",
+      content: expect.stringContaining("You are running as Codex CLI."),
     }));
-    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "copilot" }));
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
   });
 
   it("prevents launching a later phase before the active phase is complete", async () => {

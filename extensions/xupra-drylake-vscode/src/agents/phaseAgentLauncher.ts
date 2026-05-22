@@ -34,7 +34,7 @@ export type PhaseAgentLaunchResult = {
   command?: string;
 };
 
-export const PHASE_HANDOFF_ACTIONS = ["run", "script-sh", "script-bat", "copy", "markdown", "vscode"] as const;
+export const PHASE_HANDOFF_ACTIONS = ["run", "script-sh", "script-bat", "copy", "markdown"] as const;
 
 export type PhaseHandoffAction = (typeof PHASE_HANDOFF_ACTIONS)[number];
 
@@ -173,11 +173,6 @@ export function phaseAgentLabel(agent: XuPhaseAgent) {
   return PHASE_AGENT_LAUNCHERS[agent]?.label ?? agent;
 }
 
-export function phaseAgentActionLabel(agent: XuPhaseAgent) {
-  const launcher = PHASE_AGENT_LAUNCHERS[agent];
-  return `Run with ${launcher.label}`;
-}
-
 export function phaseHandoffActionFromArg(arg: unknown): PhaseHandoffAction | undefined {
   return typeof arg === "string" && (PHASE_HANDOFF_ACTIONS as readonly string[]).includes(arg)
     ? (arg as PhaseHandoffAction)
@@ -189,7 +184,7 @@ export function phaseAgentHandoffOptions(agent: XuPhaseAgent): PhaseHandoffOptio
   const options: PhaseHandoffOption[] = [
     {
       action: "run",
-      label: `Run with ${launcher.label}`,
+      label: launcher.kind === "vscode-command" ? "Open in VS Code Chat" : "Run selected agent",
       title: phaseAgentHint(agent),
     },
   ];
@@ -198,12 +193,12 @@ export function phaseAgentHandoffOptions(agent: XuPhaseAgent): PhaseHandoffOptio
     options.push(
       {
         action: "script-sh",
-        label: `${launcher.label} .sh`,
+        label: "Export .sh script",
         title: `Export a bash script that runs ${launcher.label} with this phase prompt.`,
       },
       {
         action: "script-bat",
-        label: `${launcher.label} .bat`,
+        label: "Export .bat script",
         title: `Export a Windows batch script that runs ${launcher.label} with this phase prompt.`,
       },
     );
@@ -212,18 +207,13 @@ export function phaseAgentHandoffOptions(agent: XuPhaseAgent): PhaseHandoffOptio
   options.push(
     {
       action: "copy",
-      label: "Copy",
+      label: "Copy prompt",
       title: "Copy the phase prompt to the clipboard.",
     },
     {
       action: "markdown",
-      label: "Export as Markdown",
+      label: "Export Markdown",
       title: "Save and open the phase prompt as a Markdown handoff file.",
-    },
-    {
-      action: "vscode",
-      label: "VS Code",
-      title: "Open the phase prompt in VS Code with GitHub Copilot Chat.",
     },
   );
 
@@ -232,29 +222,6 @@ export function phaseAgentHandoffOptions(agent: XuPhaseAgent): PhaseHandoffOptio
 
 export function phaseAgentHint(agent: XuPhaseAgent) {
   return PHASE_AGENT_LAUNCHERS[agent]?.help ?? "DryLake will export a focused prompt for this phase.";
-}
-
-export function phaseAgentConnectionLabel(agent: XuPhaseAgent) {
-  const launcher = PHASE_AGENT_LAUNCHERS[agent];
-  if (launcher.kind === "terminal") {
-    return "Direct CLI + scripts";
-  }
-
-  return "Direct VS Code";
-}
-
-export function phaseAgentConnectionTone(agent: XuPhaseAgent) {
-  const launcher = PHASE_AGENT_LAUNCHERS[agent];
-  return launcher.kind === "terminal" || launcher.kind === "vscode-command" ? "direct" : "fallback";
-}
-
-export function phaseAgentConnectionDescription(agent: XuPhaseAgent) {
-  const launcher = PHASE_AGENT_LAUNCHERS[agent];
-  if (launcher.kind === "terminal") {
-    return `Runs ${launcher.label} from a VS Code terminal or exports .sh/.bat scripts using the saved phase handoff file.`;
-  }
-
-  return `Opens ${launcher.label} inside VS Code with the phase prompt.`;
 }
 
 function sanitizePathPart(value: string) {

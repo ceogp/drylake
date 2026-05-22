@@ -139,28 +139,26 @@ describe("Control Room webview", () => {
     expect(html).toContain('command: "drylake.reorderPhase"');
     expect(html).toContain("drop-before");
     expect(html).toContain("drop-after");
-    expect(html).toContain("Run with Codex");
-    expect(html).toContain("Codex .sh");
-    expect(html).toContain("Codex .bat");
-    expect(html).toContain("Export as Markdown");
-    expect(html).toContain("VS Code");
+    expect(html).toContain("Run selected agent");
+    expect(html).toContain("Export .sh script");
+    expect(html).toContain("Export .bat script");
+    expect(html).toContain("Export Markdown");
+    expect(html).not.toContain("Run with Codex");
     expect(html).toContain("Select phase agent");
     expect(html).toContain("Select agent");
     expect(html).toContain("Require Approval Between Phases");
   });
 
-  it("renders agent handoff capability status from the launcher registry", async () => {
+  it("does not render a second agent-selection summary panel", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);
 
     const html = panel?.webview.html ?? "";
 
-    expect(html).toContain("Agent Handoff");
-    expect(html).toContain("Direct CLI + scripts");
-    expect(html).toContain("Direct VS Code");
-    expect(html).not.toContain("Prompt-ready");
-    expect(html).not.toContain("Prompt fallback");
-    expect(html).toContain("Choose direct run, .sh/.bat, Copy, Markdown, or VS Code per phase.");
+    expect(html).not.toContain("Agent Handoff");
+    expect(html).not.toContain("Direct CLI + scripts");
+    expect(html).not.toContain("Direct VS Code");
+    expect(html).not.toContain("Choose direct run, .sh/.bat, Copy, Markdown, or VS Code per phase.");
   });
 
   it("renders autopilot toggle state for pipeline and kanban", async () => {

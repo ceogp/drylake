@@ -4,7 +4,7 @@
 
 ![DryLake Control Room kanban](https://drylake.xupracorp.com/marketplace/extension/media/readme-kanban.png)
 
-Each phase card has an **Agent** dropdown and a **Handoff action** dropdown. Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Cursor CLI · Continue CLI · Aider · GitHub Copilot · Augment / Auggie** from the planner. DryLake saves the phase handoff and exposes direct run, `.sh`, `.bat`, Copy, Markdown, and VS Code actions.
+Each phase card has one **Agent** dropdown. Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Cursor CLI · Continue CLI · Aider · GitHub Copilot · Augment / Auggie** from the planner, then choose what to do with that selected agent: run it, export a script, copy the prompt, or open a Markdown handoff.
 
 ![DryLake pipeline view](https://drylake.xupracorp.com/marketplace/extension/media/readme-pipeline.png)
 
@@ -12,7 +12,7 @@ Each phase card has an **Agent** dropdown and a **Handoff action** dropdown. Ass
 
 - **Plans your work as a kanban.** Pending → Active → Validating → Done. Drag phases to reorder them.
 - **One visible agent selector per phase.** Pick Claude Code for design, Aider for patch work, Codex for docs, or another verified launcher directly on the card.
-- **Explicit handoff action selector.** Choose direct run, `.sh`, `.bat`, Copy, Markdown, or VS Code before pressing Handoff.
+- **Explicit handoff action selector.** Choose run, `.sh`, `.bat`, copy prompt, or Markdown before pressing Handoff. GitHub Copilot runs through the same Agent dropdown as every other target.
 - **Auto-advance.** Tick all steps in a phase, DryLake completes it and activates the next one.
 - **Planning chat.** Tell DryLake to add a step or change scope; the kanban updates live.
 

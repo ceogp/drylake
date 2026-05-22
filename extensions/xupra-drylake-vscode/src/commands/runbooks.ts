@@ -754,11 +754,10 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
   await deps.sessionStore.writeRunbook(current.uri, updated);
 
   const buildSession = deps.stateStore.getBuildSession();
-  const promptAgent: XuPhaseAgent = handoffAction === "vscode" ? "copilot" : agent;
-  const promptPhase = { ...phase, agent: promptAgent };
+  const promptPhase = { ...phase, agent };
   const content = renderPhasePrompt(updated, promptPhase, { activeProvider: buildSession });
   const workspaceUri = workspaceRoot();
-  const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent: promptAgent, content });
+  const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
 
   let message = "";
   let warning = false;
@@ -783,8 +782,7 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
       message = `DryLake could not export a script for this phase: ${detail}`;
     }
   } else {
-    const launchAgent: XuPhaseAgent = handoffAction === "vscode" ? "copilot" : agent;
-    const launchResult = await launchPhaseAgent({ agent: launchAgent, prompt: content, promptFile, workspaceUri });
+    const launchResult = await launchPhaseAgent({ agent, prompt: content, promptFile, workspaceUri });
 
     if (launchResult.status !== "launched") {
       await vscode.env.clipboard.writeText(content);
