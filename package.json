@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "vitest run && npm --prefix extensions/xupra-drylake-vscode test",
+    "test:backend": "vitest run test/backend",
+    "test:extension": "npm --prefix extensions/xupra-drylake-vscode test",
     "typecheck": "next typegen && tsc --noEmit",
     "validate:local": "tsx scripts/validate-local.ts",
     "worker:once": "tsx scripts/run-worker.ts",
@@ -59,6 +62,7 @@
     "prisma": "^7.7.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   }
 }

@@ -44,7 +44,9 @@ export type PhaseHandoffOption = {
   title: string;
 };
 
-const WINDOWS = process.platform === "win32";
+function isWindows() {
+  return process.platform === "win32";
+}
 
 function quotePowerShell(value: string) {
   return `"${value.replace(/`/g, "``").replace(/"/g, '`"')}"`;
@@ -55,12 +57,12 @@ function quoteShell(value: string) {
 }
 
 function quotePath(value: string) {
-  return WINDOWS ? quotePowerShell(value) : quoteShell(value);
+  return isWindows() ? quotePowerShell(value) : quoteShell(value);
 }
 
 function fromPromptFile(command: string, promptFilePath: string) {
   const path = quotePath(promptFilePath);
-  if (WINDOWS) {
+  if (isWindows()) {
     return `$prompt = Get-Content -Raw ${path}; ${command} $prompt`;
   }
 
@@ -90,7 +92,7 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     kind: "terminal",
     executable: "claude",
     help: "Install Claude Code CLI and make the `claude` command available on PATH.",
-    terminalCommand: (promptFilePath) => (WINDOWS
+    terminalCommand: (promptFilePath) => (isWindows()
       ? `Get-Content -Raw ${quotePath(promptFilePath)} | claude -p`
       : `cat ${quotePath(promptFilePath)} | claude -p`),
     shellScriptCommand: shellPipeCommand("claude -p"),
@@ -267,7 +269,7 @@ export async function writePhaseHandoffScript(params: {
 
 async function executableExists(executable: string) {
   try {
-    await execFile(WINDOWS ? "where" : "which", [executable]);
+    await execFile(isWindows() ? "where" : "which", [executable]);
     return true;
   } catch {
     return false;
@@ -296,6 +298,7 @@ async function launchTerminalAgent(params: {
   const terminal = vscode.window.createTerminal({
     name: `DryLake: ${params.launcher.label}`,
     cwd: params.workspaceUri.fsPath,
+    ...(isWindows() ? { shellPath: "powershell.exe" } : {}),
   });
   terminal.show(true);
   terminal.sendText(command, true);

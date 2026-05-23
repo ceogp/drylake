@@ -22,7 +22,7 @@ import type { DryLakeAiProvider } from "../ai/DryLakeAiProvider";
 import type { ApiClient } from "../services/apiClient";
 import type { StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
-import { requireXupraProAiEntitlement } from "../services/featureGates";
+import { hasXupraProAiEntitlement, requireXupraProAiEntitlement } from "../services/featureGates";
 import { scanWorkspaceFiles, getWorkspaceDisplayName } from "../services/workspaceScanner";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { ApplicationBuildRunbook, XuMode, XuPhaseAgent, XuStepStatus } from "../xu/types";
@@ -150,6 +150,19 @@ async function resolveProvider(stateStore: StateStore): Promise<DryLakeAiProvide
   });
 
   return resolution.provider;
+}
+
+async function requireSelectedXupraAiAccess(deps: RunbookCommandDeps, provider: DryLakeAiProvider) {
+  if (provider.id !== "xupra-pro-ai" || !deps.stateStore.getConnection().userEmail) {
+    return true;
+  }
+
+  if (hasXupraProAiEntitlement(deps.stateStore)) {
+    return true;
+  }
+
+  await requireXupraProAiEntitlement(deps.apiClient, deps.stateStore, "Xupra AI");
+  return false;
 }
 
 async function buildWorkspaceSummary() {
@@ -370,6 +383,14 @@ async function applyAiDraft(params: {
   provider: DryLakeAiProvider;
   openExternalPrompt: boolean;
 }): Promise<{ runbook: ApplicationBuildRunbook; providerGenerated: boolean; providerMessage?: string }> {
+  if (!(await requireSelectedXupraAiAccess(params.deps, params.provider))) {
+    return {
+      runbook: params.runbook,
+      providerGenerated: false,
+      providerMessage: "Xupra AI requires a Pro plan.",
+    };
+  }
+
   const workspaceSummary = await buildWorkspaceSummary();
   const localDraft = createLocalDraftXu({
     prompt: params.prompt,
@@ -381,11 +402,6 @@ async function applyAiDraft(params: {
 
   const availability = await params.provider.isAvailable();
   if (!availability.available && params.provider.id !== "external-ai-prompt") {
-    if (params.provider.id === "xupra-pro-ai" && params.deps.stateStore.getConnection().userEmail) {
-      await requireXupraProAiEntitlement(params.deps.apiClient, params.deps.stateStore, "Xupra AI");
-      return { runbook: localDraft, providerGenerated: false, providerMessage: availability.reason };
-    }
-
     void vscode.window.showInformationMessage(
       `${params.provider.label} is not available, so DryLake created a local draft runbook.`,
     );
@@ -454,6 +470,15 @@ export async function startBuildSessionCommand(
   await deps.controlRoom.createOrShow(context);
 
   const provider = await resolveProvider(deps.stateStore);
+  if (!(await requireSelectedXupraAiAccess(deps, provider))) {
+    await deps.stateStore.clearChatHistory();
+    await deps.stateStore.appendChatMessage({
+      role: "system",
+      text: "Xupra AI requires a Pro plan. Upgrade to start AI-generated build sessions.",
+    });
+    await deps.controlRoom.refresh();
+    return;
+  }
 
   await vscode.window.withProgress(
     {
@@ -521,6 +546,11 @@ export async function generateDraftRunbookCommand(deps: RunbookCommandDeps) {
   }
 
   const provider = await resolveProvider(deps.stateStore);
+  if (!(await requireSelectedXupraAiAccess(deps, provider))) {
+    await deps.controlRoom.refresh();
+    return;
+  }
+
   const ensured = await deps.sessionStore.ensureRunbook({ prompt: prompt.trim(), mode });
   await applyAiDraft({
     deps,
@@ -719,7 +749,7 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
   }
 
   const launchablePhase = nextLaunchablePhase(current.runbook);
-  if (launchablePhase && launchablePhase.id !== phase.id) {
+  if (handoffAction === "run" && launchablePhase && launchablePhase.id !== phase.id) {
     void vscode.window.showWarningMessage(
       `Complete ${launchablePhase.title} before running ${phase.title}. DryLake runs phases in order.`,
     );
@@ -732,21 +762,9 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
     return;
   }
 
-  const updated: ApplicationBuildRunbook = {
-    ...current.runbook,
-    phases: current.runbook.phases.map((item) => {
-      if (item.id !== phaseId) {
-        return item.status === "active" ? { ...item, status: "pending" } : item;
-      }
-      return { ...item, status: "active" };
-    }),
-  };
-
-  await deps.sessionStore.writeRunbook(current.uri, updated);
-
   const buildSession = deps.stateStore.getBuildSession();
   const promptPhase = { ...phase, agent };
-  const content = renderPhasePrompt(updated, promptPhase, { activeProvider: buildSession });
+  const content = renderPhasePrompt(current.runbook, promptPhase, { activeProvider: buildSession });
   const workspaceUri = workspaceRoot();
   const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
 
@@ -774,6 +792,19 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
     }
   } else {
     const launchResult = await launchPhaseAgent({ agent, prompt: content, promptFile, workspaceUri });
+
+    if (launchResult.status === "launched") {
+      const updated: ApplicationBuildRunbook = {
+        ...current.runbook,
+        phases: current.runbook.phases.map((item) => {
+          if (item.id !== phaseId) {
+            return item.status === "active" ? { ...item, status: "pending" } : item;
+          }
+          return { ...item, status: "active" };
+        }),
+      };
+      await deps.sessionStore.writeRunbook(current.uri, updated);
+    }
 
     if (launchResult.status !== "launched") {
       await vscode.env.clipboard.writeText(content);

@@ -207,6 +207,7 @@ describe("runbook commands", () => {
     expect(deps.apiClient.openWebUrl).toHaveBeenCalledWith("/billing?source=extension");
     expect(mocks.openExternal).toHaveBeenCalledWith(mocks.billingUri);
     expect(deps.stateStore.setAwaitingPlanRefreshUntil).toHaveBeenCalledWith(expect.any(String));
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
     expect(mocks.showInformationMessage).not.toHaveBeenCalledWith(
       expect.stringContaining("is not available, so DryLake created a local draft runbook."),
     );
@@ -473,6 +474,7 @@ describe("runbook commands", () => {
     expect(mocks.writeClipboard).toHaveBeenCalledWith(expect.stringContaining("You are running as Gemini CLI."));
     expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
     expect(mocks.openTextDocument).not.toHaveBeenCalled();
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
   });
 
   it("exports selected phase prompts as markdown", async () => {
@@ -488,6 +490,7 @@ describe("runbook commands", () => {
       path: "/repo/.drylake/handoffs/P-01-codex.md",
     });
     expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
   });
 
   it("exports CLI handoff scripts", async () => {
@@ -502,6 +505,7 @@ describe("runbook commands", () => {
       shell: "bat",
     }));
     expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
   });
 
   it("runs the selected phase agent without switching to a second agent", async () => {
@@ -548,5 +552,6 @@ describe("runbook commands", () => {
       path: "/repo/.drylake/handoffs/P-01-codex.md",
     });
     expect(mocks.showTextDocument).toHaveBeenCalled();
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
   });
 });

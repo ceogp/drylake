@@ -1,10 +1,24 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PHASE_AGENT_LAUNCHERS,
   PHASE_HANDOFF_ACTIONS,
+  launchPhaseAgent,
   phaseAgentHandoffOptions,
 } from "../agents/phaseAgentLauncher";
+
+const mocks = vi.hoisted(() => ({
+  execFile: vi.fn(),
+  createTerminal: vi.fn(),
+  terminal: {
+    show: vi.fn(),
+    sendText: vi.fn(),
+  },
+}));
+
+vi.mock("node:child_process", () => ({
+  execFile: mocks.execFile,
+}));
 
 vi.mock("vscode", () => ({
   Uri: {
@@ -20,7 +34,7 @@ vi.mock("vscode", () => ({
     },
   },
   window: {
-    createTerminal: vi.fn(),
+    createTerminal: mocks.createTerminal,
   },
   extensions: {
     getExtension: vi.fn(),
@@ -29,6 +43,14 @@ vi.mock("vscode", () => ({
     executeCommand: vi.fn(),
   },
 }));
+
+beforeEach(() => {
+  mocks.execFile.mockReset();
+  mocks.createTerminal.mockReset();
+  mocks.terminal.show.mockReset();
+  mocks.terminal.sendText.mockReset();
+  mocks.createTerminal.mockReturnValue(mocks.terminal);
+});
 
 describe("phase agent launchers", () => {
   it("keeps GitHub Copilot as an agent choice instead of a second handoff mode", () => {
@@ -85,5 +107,53 @@ describe("phase agent launchers", () => {
     expect(PHASE_AGENT_LAUNCHERS.gemini.terminalCommand("/tmp/prompt.md")).toContain("gemini -p");
     expect(PHASE_AGENT_LAUNCHERS.gemini.shellScriptCommand('"$PROMPT_FILE"')).toBe('gemini -p "$(cat "$PROMPT_FILE")"');
     expect(PHASE_AGENT_LAUNCHERS.copilot.commandId).toBe("workbench.action.chat.open");
+  });
+
+  it("uses a PowerShell terminal for Windows direct launches", async () => {
+    const platform = vi.spyOn(process, "platform", "get").mockReturnValue("win32");
+    mocks.execFile.mockImplementation((_file, _args, callback) => callback(null, "", ""));
+
+    try {
+      const result = await launchPhaseAgent({
+        agent: "codex",
+        prompt: "Implement phase one.",
+        promptFile: { fsPath: "C:\\repo\\.drylake\\handoffs\\P-01-codex.md", path: "/repo/.drylake/handoffs/P-01-codex.md" } as never,
+        workspaceUri: { fsPath: "C:\\repo", path: "/repo" } as never,
+      });
+
+      expect(result.status).toBe("launched");
+      expect(mocks.execFile).toHaveBeenCalledWith("where", ["codex"], expect.any(Function));
+      expect(mocks.createTerminal).toHaveBeenCalledWith(expect.objectContaining({
+        cwd: "C:\\repo",
+        shellPath: "powershell.exe",
+      }));
+      expect(mocks.terminal.sendText).toHaveBeenCalledWith(
+        expect.stringContaining("Get-Content -Raw"),
+        true,
+      );
+      expect(mocks.terminal.sendText).toHaveBeenCalledWith(
+        expect.stringContaining("codex exec"),
+        true,
+      );
+    } finally {
+      platform.mockRestore();
+    }
+  });
+
+  it("returns the manual fallback result when a terminal executable is missing", async () => {
+    mocks.execFile.mockImplementation((_file, _args, callback) => callback(new Error("missing executable")));
+    const promptFile = { fsPath: "/repo/.drylake/handoffs/P-01-codex.md", path: "/repo/.drylake/handoffs/P-01-codex.md" };
+
+    const result = await launchPhaseAgent({
+      agent: "codex",
+      prompt: "Implement phase one.",
+      promptFile: promptFile as never,
+      workspaceUri: { fsPath: "/repo", path: "/repo" } as never,
+    });
+
+    expect(result.status).toBe("not-installed");
+    expect(result.promptFile).toBe(promptFile);
+    expect(result.message).toContain("OpenAI Codex is not installed");
+    expect(mocks.createTerminal).not.toHaveBeenCalled();
   });
 });
