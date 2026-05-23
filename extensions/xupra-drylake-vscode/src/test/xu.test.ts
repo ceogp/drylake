@@ -33,10 +33,27 @@ describe("xu runbooks", () => {
 
   it("validates required fields", () => {
     const runbook = createStarterXu({ prompt: "Build", mode: "plan" });
+    runbook.metadata.status = "approved";
     const result = validateXu(runbook);
 
     expect(result.ok).toBe(false);
     expect(result.diagnostics.some((diagnostic) => diagnostic.path === "intent.purpose")).toBe(true);
+  });
+
+  it("validates the local starter draft scaffold", () => {
+    const runbook = createStarterXu({ prompt: "Fix the login button color", mode: "build-app" });
+    const result = validateXu(runbook);
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("does not require five phases", () => {
+    const runbook = validRunbook();
+    runbook.phases = runbook.phases.slice(0, 3);
+
+    const result = validateXu(runbook);
+
+    expect(result.ok).toBe(true);
   });
 
   it("normalizes optional fields and keeps provisioning preview-only", () => {

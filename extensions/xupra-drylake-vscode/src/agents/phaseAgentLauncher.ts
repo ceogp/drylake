@@ -284,6 +284,7 @@ async function launchTerminalAgent(params: {
   launcher: Extract<PhaseAgentLauncher, TerminalAgent>;
   promptFile: vscode.Uri;
   workspaceUri: vscode.Uri;
+  terminalName?: string;
 }) {
   const available = await executableExists(params.launcher.executable);
   if (!available) {
@@ -296,7 +297,7 @@ async function launchTerminalAgent(params: {
 
   const command = params.launcher.terminalCommand(params.promptFile.fsPath);
   const terminal = vscode.window.createTerminal({
-    name: `DryLake: ${params.launcher.label}`,
+    name: params.terminalName ?? `DryLake: ${params.launcher.label}`,
     cwd: params.workspaceUri.fsPath,
     ...(isWindows() ? { shellPath: "powershell.exe" } : {}),
   });
@@ -358,6 +359,34 @@ export async function launchPhaseAgent(params: {
 
   if (launcher.kind === "terminal") {
     return launchTerminalAgent({ launcher, promptFile: params.promptFile, workspaceUri: params.workspaceUri });
+  }
+
+  return launchVsCodeAgent({ launcher, prompt: params.prompt, promptFile: params.promptFile });
+}
+
+export async function launchAgentTask(params: {
+  agent: XuPhaseAgent;
+  prompt: string;
+  promptFile: vscode.Uri;
+  workspaceUri: vscode.Uri;
+  terminalName: string;
+}): Promise<PhaseAgentLaunchResult> {
+  const launcher = PHASE_AGENT_LAUNCHERS[params.agent];
+  if (!launcher) {
+    return {
+      status: "fallback",
+      message: "DryLake saved the task prompt because this agent is not supported by this build.",
+      promptFile: params.promptFile,
+    };
+  }
+
+  if (launcher.kind === "terminal") {
+    return launchTerminalAgent({
+      launcher,
+      promptFile: params.promptFile,
+      workspaceUri: params.workspaceUri,
+      terminalName: params.terminalName,
+    });
   }
 
   return launchVsCodeAgent({ launcher, prompt: params.prompt, promptFile: params.promptFile });

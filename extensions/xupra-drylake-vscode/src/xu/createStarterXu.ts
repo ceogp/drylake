@@ -68,6 +68,7 @@ export function createStarterXu(params: {
         executeAutomatically: false,
       },
     },
+    // Local draft scaffold only, not an AI-generated plan. Integrated AI should replace this with a task-specific phase plan.
     phases: [
       {
         id: "01-intake",

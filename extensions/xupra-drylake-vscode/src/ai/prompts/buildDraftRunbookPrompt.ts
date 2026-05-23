@@ -1,5 +1,8 @@
 import type { GenerateDraftRunbookInput } from "../DryLakeAiProvider";
 
+const PHASE_COUNT_INSTRUCTION =
+  "phases: determine the correct number of phases for this specific task. Simple tasks may need 3 phases. Complex tasks may need 8 or more. Do not default to 5. Each phase must be meaningful and non-redundant.";
+
 export function buildDraftRunbookPrompt(input: GenerateDraftRunbookInput) {
   return [
     "You are generating a DryLake .xu runbook.",
@@ -22,7 +25,8 @@ export function buildDraftRunbookPrompt(input: GenerateDraftRunbookInput) {
     "provisioning.commands, provisioning.filesToCreate, provisioning.environmentVariables, provisioning.externalServices",
     "provisioning.safety.requiresApprovalBeforeExecution: true",
     "provisioning.safety.executeAutomatically: false",
-    "phases: at least five phases with id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
+    PHASE_COUNT_INSTRUCTION,
+    "each phase must include id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
     "phase.agent optional enum: claude-code, codex, gemini, cursor, copilot",
     "",
     `Mode: ${input.mode}`,

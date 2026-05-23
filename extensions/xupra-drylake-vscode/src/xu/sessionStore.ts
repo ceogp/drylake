@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import { buildApprovalRecord, type ApprovalType } from "./approvalState";
 import { createStarterXu } from "./createStarterXu";
+import type { PendingPlanChangeSet } from "./pendingPlanChanges";
 import { parseXu } from "./parseXu";
 import { renderXu } from "./renderXu";
 import type { ApplicationBuildRunbook, BuildSessionState, XuMode } from "./types";
@@ -122,5 +123,133 @@ export class XuSessionStore {
     );
     await writeUtf8(uri, `${JSON.stringify(record, null, 2)}\n`);
     return record;
+  }
+
+  async readPendingPlanChange(): Promise<PendingPlanChangeSet | null> {
+    const uri = vscode.Uri.joinPath(workspaceRoot(), ".drylake", "pending-plan-changes", "current.json");
+    let text = "";
+
+    try {
+      text = await readUtf8(uri);
+    } catch {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(text) as Partial<PendingPlanChangeSet>;
+      if (
+        parsed.status !== "pending" ||
+        typeof parsed.id !== "string" ||
+        typeof parsed.sourceChatMessageId !== "string" ||
+        typeof parsed.createdAt !== "string" ||
+        typeof parsed.baseRunbookPath !== "string" ||
+        !parsed.proposedRunbook ||
+        !Array.isArray(parsed.affectedPhaseIds)
+      ) {
+        return null;
+      }
+
+      return {
+        id: parsed.id,
+        sourceChatMessageId: parsed.sourceChatMessageId,
+        createdAt: parsed.createdAt,
+        baseRunbookPath: parsed.baseRunbookPath,
+        proposedRunbook: parsed.proposedRunbook,
+        affectedPhaseIds: parsed.affectedPhaseIds.filter((item): item is string => typeof item === "string"),
+        phaseSummaries: parsed.phaseSummaries ?? {},
+        phaseResolutions: parsed.phaseResolutions ?? {},
+        status: parsed.status,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async writePendingPlanChange(record: PendingPlanChangeSet) {
+    const uri = vscode.Uri.joinPath(workspaceRoot(), ".drylake", "pending-plan-changes", "current.json");
+    await writeUtf8(uri, `${JSON.stringify(record, null, 2)}\n`);
+  }
+
+  async clearPendingPlanChange() {
+    const uri = vscode.Uri.joinPath(workspaceRoot(), ".drylake", "pending-plan-changes", "current.json");
+    try {
+      await vscode.workspace.fs.delete(uri);
+    } catch {
+      // Nothing to clear.
+    }
+  }
+
+  async archiveCurrentRunbook() {
+    const current = await this.readRunbook();
+    if (!current) {
+      return null;
+    }
+
+    const id = timestampId();
+    const folder = vscode.Uri.joinPath(workspaceRoot(), ".drylake", "sessions", id);
+    await vscode.workspace.fs.createDirectory(folder);
+    const archivedRunbookUri = vscode.Uri.joinPath(folder, "drylake.xu");
+    await writeUtf8(archivedRunbookUri, renderXu(current.runbook));
+    await writeUtf8(vscode.Uri.joinPath(folder, "archive.json"), `${JSON.stringify({
+      id,
+      archivedAt: new Date().toISOString(),
+      name: current.runbook.metadata.name,
+      sourcePath: vscode.workspace.asRelativePath(current.uri, false).replace(/\\/g, "/"),
+    }, null, 2)}\n`);
+    await vscode.workspace.fs.delete(current.uri);
+
+    return { id, uri: archivedRunbookUri, runbook: current.runbook };
+  }
+
+  async clearPendingPlanChanges() {
+    const folder = vscode.Uri.joinPath(workspaceRoot(), ".drylake", "pending-plan-changes");
+    try {
+      await vscode.workspace.fs.delete(folder, { recursive: true, useTrash: false });
+    } catch {
+      // No pending plan changes is already the desired reset state.
+    }
+  }
+
+  async listArchivedSessions() {
+    const folder = vscode.Uri.joinPath(workspaceRoot(), ".drylake", "sessions");
+    let entries: [string, vscode.FileType][] = [];
+
+    try {
+      entries = await vscode.workspace.fs.readDirectory(folder);
+    } catch {
+      return [];
+    }
+
+    const sessions: Array<{ id: string; name: string; uri: vscode.Uri; archivedAt?: string }> = [];
+    for (const [id, type] of entries) {
+      if (type !== vscode.FileType.Directory) {
+        continue;
+      }
+
+      const sessionFolder = vscode.Uri.joinPath(folder, id);
+      const runbookUri = vscode.Uri.joinPath(sessionFolder, "drylake.xu");
+      let name = id;
+      let archivedAt: string | undefined;
+
+      try {
+        const metadata = JSON.parse(await readUtf8(vscode.Uri.joinPath(sessionFolder, "archive.json"))) as {
+          name?: unknown;
+          archivedAt?: unknown;
+        };
+        name = typeof metadata.name === "string" && metadata.name.trim() ? metadata.name : id;
+        archivedAt = typeof metadata.archivedAt === "string" ? metadata.archivedAt : undefined;
+      } catch {
+        try {
+          const parsed = parseXu(await readUtf8(runbookUri));
+          name = parsed.runbook?.metadata.name ?? id;
+        } catch {
+          name = id;
+        }
+      }
+
+      sessions.push({ id, name, uri: runbookUri, archivedAt });
+    }
+
+    return sessions.sort((left, right) => right.id.localeCompare(left.id));
   }
 }

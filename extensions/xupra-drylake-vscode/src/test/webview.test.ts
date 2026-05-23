@@ -15,11 +15,14 @@ type TestMessage = {
   agent?: unknown;
   handoffAction?: unknown;
   status?: unknown;
+  text?: unknown;
+  mode?: unknown;
 };
 
 let messageHandler: ((message: TestMessage) => Promise<void>) | undefined;
 let panel: { webview: { html: string; onDidReceiveMessage: ReturnType<typeof vi.fn> } } | undefined;
 let storedView: unknown;
+let storedChatCollapsed: unknown;
 const executed: Array<{ command: string; args: unknown[] }> = [];
 
 vi.mock("vscode", () => ({
@@ -57,8 +60,17 @@ function context() {
   return {
     subscriptions: [],
     workspaceState: {
-      get: vi.fn(() => storedView),
-      update: vi.fn(async (_key: string, value: unknown) => {
+      get: vi.fn((key: string) => {
+        if (key === "drylake.controlRoomChatCollapsed") {
+          return storedChatCollapsed;
+        }
+        return storedView;
+      }),
+      update: vi.fn(async (key: string, value: unknown) => {
+        if (key === "drylake.controlRoomChatCollapsed") {
+          storedChatCollapsed = value;
+          return;
+        }
         storedView = value;
       }),
     },
@@ -88,6 +100,7 @@ beforeEach(() => {
   messageHandler = undefined;
   panel = undefined;
   storedView = undefined;
+  storedChatCollapsed = undefined;
 });
 
 describe("Control Room webview", () => {
@@ -153,6 +166,7 @@ describe("Control Room webview", () => {
     expect(html).toContain('data-handoff-action="run"');
     expect(html).not.toContain("handoff-action-select");
     expect(html).toContain("Require Approval Between Phases");
+    expect(html).toContain("Planning Chat");
   });
 
   it("does not render a second agent-selection summary panel", async () => {
@@ -241,6 +255,43 @@ describe("Control Room webview", () => {
     expect(executed).toContainEqual({ command: "drylake.handoffPhase", args: ["active", "script-sh"] });
   });
 
+  it("renders pending plan-change overlays and routes approval actions", async () => {
+    const currentRunbook = runbook();
+    const proposedRunbook: ApplicationBuildRunbook = {
+      ...currentRunbook,
+      phases: currentRunbook.phases.map((phase) =>
+        phase.id === "active" ? { ...phase, objective: "Updated objective" } : phase,
+      ),
+    };
+    const provider = new ControlRoomProvider({
+      readRunbook: async () => ({ runbook: currentRunbook }),
+      readPendingPlanChange: async () => ({
+        id: "plan-change-1",
+        sourceChatMessageId: "msg-1",
+        createdAt: "2026-05-23T00:00:00.000Z",
+        baseRunbookPath: "drylake.xu",
+        proposedRunbook,
+        affectedPhaseIds: ["active"],
+        phaseSummaries: { active: "Objective changes" },
+        phaseResolutions: {},
+        status: "pending",
+      }),
+    } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+    expect(html).toContain("Proposed change");
+    expect(html).toContain("Objective changes");
+    expect(html).toContain("Apply");
+    expect(html).toContain("Keep current");
+
+    await messageHandler?.({ command: "drylake.approvePlanChange", phaseId: "active" });
+    await messageHandler?.({ command: "drylake.rejectPlanChange", phaseId: "active" });
+
+    expect(executed).toContainEqual({ command: "drylake.approvePlanChange", args: ["active"] });
+    expect(executed).toContainEqual({ command: "drylake.rejectPlanChange", args: ["active"] });
+  });
+
   it("renders every native phase agent in the dropdown", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);
@@ -252,6 +303,8 @@ describe("Control Room webview", () => {
     }
 
     expect(html).toContain("Gemini CLI");
+    expect(html).not.toContain("Blackbox");
+    expect(html).not.toContain("Droid");
     expect(html).not.toContain("Continue.dev");
     expect(html).not.toContain("Aider");
     expect(html).not.toContain("Augment Code");
@@ -283,6 +336,86 @@ describe("Control Room webview", () => {
 
     expect(storedView).toBe("kanban");
     expect(panel?.webview.html).toContain('class="kanban"');
+  });
+
+  it("routes first chat messages to build-session generation with the selected mode", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => null } as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({
+      command: "drylake.startBuildSession",
+      mode: "phases",
+      text: "Break this task into steps.",
+    });
+
+    expect(executed).toContainEqual({
+      command: "drylake.startBuildSession",
+      args: ["phases", "Break this task into steps."],
+    });
+  });
+
+  it("renders nano planning banner for free users without locking chat", async () => {
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => null } as never,
+      () => ({ id: "xupra-pro-ai", label: "Xupra AI" }),
+      () => ({ messages: [] }),
+      () => "nano",
+    );
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain("gpt-5.4-nano");
+    expect(html).toContain("GPT 5.5 + Claude Opus 4.6");
+    expect(html).toContain("xupra.openBilling");
+    expect(html).toContain('id="chatInput"');
+    expect(html).not.toContain("chat-locked");
+    expect(html).not.toContain("Xupra AI Planning Chat is a Pro feature");
+  });
+
+  it("hides the nano planning banner for foundation and unknown model tiers", async () => {
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => null } as never,
+      () => ({ id: "xupra-pro-ai", label: "Xupra AI" }),
+      () => ({ messages: [] }),
+      () => "foundation",
+    );
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).not.toContain("gpt-5.4-nano");
+    expect(html).not.toContain("Free planning model");
+    expect(html).not.toContain("You are using");
+    expect(html).not.toContain("Upgrade to use Xupra AI foundation models (GPT");
+  });
+
+  it("renders an inline planning skeleton while plan generation is in progress", async () => {
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => null } as never,
+      () => null,
+      () => ({ messages: [] }),
+      () => null,
+      () => true,
+    );
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain('class="loading-state"');
+    expect(html).toContain("DryLake is generating your plan");
+    expect(html).not.toContain("No plan yet");
+  });
+
+  it("collapses and expands the chat panel", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({ command: "drylake.toggleChatCollapsed" });
+
+    expect(storedChatCollapsed).toBe(true);
+    expect(panel?.webview.html).toContain('class="chat-panel collapsed"');
+    expect(panel?.webview.html).not.toContain('id="chatInput"');
   });
 });
 

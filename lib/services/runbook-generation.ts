@@ -1,4 +1,4 @@
-import { dump } from "js-yaml";
+import { dump, load } from "js-yaml";
 import { z } from "zod";
 
 import { generateAiText } from "@/lib/services/ai-text";
@@ -26,11 +26,18 @@ export type RunbookGenerationInput = z.infer<typeof runbookGenerationInputSchema
 
 export type RunbookPlanningChatInput = z.infer<typeof runbookPlanningChatInputSchema>;
 
+type RunbookGenerationOptions = {
+  model?: string;
+};
+
 const RUNBOOK_SYSTEM_PROMPT = [
   "You are generating a DryLake .xu runbook.",
   "Return only YAML.",
   "Do not wrap the response in Markdown fences.",
 ].join(" ");
+
+const RUNBOOK_PHASE_COUNT_INSTRUCTION =
+  "phases: determine the correct number of phases for this specific task. Simple tasks may need 3 phases. Complex tasks may need 8 or more. Do not default to 5. Each phase must be meaningful and non-redundant.";
 
 function runbookContractLines() {
   return [
@@ -53,7 +60,7 @@ function runbookContractLines() {
     "provisioning.commands, provisioning.filesToCreate, provisioning.environmentVariables, provisioning.externalServices",
     "provisioning.safety.requiresApprovalBeforeExecution: true",
     "provisioning.safety.executeAutomatically: false",
-    "phases: at least five phases",
+    RUNBOOK_PHASE_COUNT_INSTRUCTION,
     "each phase must include id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
     "phase.agent optional enum: claude-code, codex, gemini, cursor, aider, copilot, augment-code",
     "checks.install, checks.dev, checks.build, checks.test, checks.lint",
@@ -122,20 +129,23 @@ async function generateRunbookYaml(params: {
   input: RunbookGenerationInput;
   taskLabel: string;
   prompt: string;
+  model?: string;
 }) {
   const content = await generateAiText({
     systemPrompt: RUNBOOK_SYSTEM_PROMPT,
     userPrompt: params.prompt,
     taskLabel: params.taskLabel,
+    model: params.model,
   });
 
   return { content };
 }
 
-export async function buildRunbookDraftPrompt(input: RunbookGenerationInput) {
+export async function buildRunbookDraftPrompt(input: RunbookGenerationInput, options: RunbookGenerationOptions = {}) {
   return generateRunbookYaml({
     input,
     taskLabel: "runbook draft",
+    model: options.model,
     prompt: [
       basePromptSections(input),
       "",
@@ -146,10 +156,11 @@ export async function buildRunbookDraftPrompt(input: RunbookGenerationInput) {
   });
 }
 
-export async function refineRunbookPurposePrompt(input: RunbookGenerationInput) {
+export async function refineRunbookPurposePrompt(input: RunbookGenerationInput, options: RunbookGenerationOptions = {}) {
   return generateRunbookYaml({
     input,
     taskLabel: "runbook purpose refinement",
+    model: options.model,
     prompt: [
       basePromptSections(input),
       "",
@@ -161,10 +172,11 @@ export async function refineRunbookPurposePrompt(input: RunbookGenerationInput) 
   });
 }
 
-export async function refineRunbookArchitecturePrompt(input: RunbookGenerationInput) {
+export async function refineRunbookArchitecturePrompt(input: RunbookGenerationInput, options: RunbookGenerationOptions = {}) {
   return generateRunbookYaml({
     input,
     taskLabel: "runbook architecture refinement",
+    model: options.model,
     prompt: [
       basePromptSections(input),
       "",
@@ -176,17 +188,19 @@ export async function refineRunbookArchitecturePrompt(input: RunbookGenerationIn
   });
 }
 
-export async function generateRunbookPhasePlanPrompt(input: RunbookGenerationInput) {
+export async function generateRunbookPhasePlanPrompt(input: RunbookGenerationInput, options: RunbookGenerationOptions = {}) {
   return generateRunbookYaml({
     input,
     taskLabel: "runbook phase plan",
+    model: options.model,
     prompt: [
       basePromptSections(input),
       "",
       "Revise the current runbook.",
       "Use the provided current runbook document as the source of truth when it is present; keep prior approved sections unless the new request requires a change.",
       "Focus this revision on phase-by-phase execution planning and acceptance criteria.",
-      "Ensure there are at least five phases and every phase has gate, status, objective, inputs, outputs, steps, and acceptance.",
+      RUNBOOK_PHASE_COUNT_INSTRUCTION,
+      "Ensure every phase has gate, status, objective, inputs, outputs, steps, and acceptance.",
       "Keep checks, agentTargets, and handoff aligned with the execution plan.",
     ].join("\n"),
   });
@@ -220,7 +234,7 @@ function parseClarifyQuestions(raw: string): string[] {
   return lines.slice(0, 4);
 }
 
-export async function clarifyRunbookIntent(input: RunbookClarifyInput) {
+export async function clarifyRunbookIntent(input: RunbookClarifyInput, options: RunbookGenerationOptions = {}) {
   const userPrompt = [
     `Mode: ${input.mode}`,
     "",
@@ -237,6 +251,7 @@ export async function clarifyRunbookIntent(input: RunbookClarifyInput) {
     systemPrompt: CLARIFY_SYSTEM_PROMPT,
     userPrompt,
     taskLabel: "runbook clarifying questions",
+    model: options.model,
   });
 
   return { questions: parseClarifyQuestions(content) };
@@ -244,13 +259,72 @@ export async function clarifyRunbookIntent(input: RunbookClarifyInput) {
 
 const PLANNING_CHAT_SYSTEM_PROMPT = [
   "You are Xupra AI inside DryLake Planning Chat.",
-  "Paid users are talking directly to the planning LLM.",
-  "Answer the user's latest planning-chat message directly and concisely.",
+  "Users are talking directly to the planning LLM.",
+  "Return a JSON object with a reply string.",
+  "Answer the user's latest planning-chat message directly and concisely in reply.",
+  "When the user requests a concrete plan change and you can produce a complete updated .xu plan, include proposedRunbook as an ApplicationBuildRunbook object.",
   "If the user asks what you are, identify yourself as Xupra AI.",
   "Do not claim the runbook changed unless you explicitly describe a planning change that should be applied next.",
 ].join(" ");
 
-export async function generatePlanningChatReply(input: RunbookPlanningChatInput) {
+function stripMarkdownFence(value: string) {
+  const trimmed = value.trim();
+  const fenced = trimmed.match(/^```(?:json|yaml|yml|xu)?\s*([\s\S]*?)\s*```$/i);
+  return fenced ? fenced[1].trim() : trimmed;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseProposedRunbook(value: unknown) {
+  let candidate = value;
+
+  if (typeof value === "string") {
+    try {
+      candidate = load(stripMarkdownFence(value));
+    } catch {
+      return undefined;
+    }
+  }
+
+  if (
+    isRecord(candidate) &&
+    candidate.kind === "ApplicationBuildRunbook" &&
+    Array.isArray(candidate.phases)
+  ) {
+    return candidate;
+  }
+
+  return undefined;
+}
+
+function parsePlanningChatReply(raw: string) {
+  const trimmed = stripMarkdownFence(raw);
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(trimmed) as unknown;
+  } catch {
+    try {
+      parsed = load(trimmed);
+    } catch {
+      parsed = undefined;
+    }
+  }
+
+  if (isRecord(parsed) && typeof parsed.reply === "string" && parsed.reply.trim().length > 0) {
+    const proposedRunbook = parseProposedRunbook(parsed.proposedRunbook);
+    return proposedRunbook
+      ? { reply: parsed.reply.trim(), proposedRunbook }
+      : { reply: parsed.reply.trim() };
+  }
+
+  // Plain text is still accepted for compatibility with existing prompts and providers.
+  return { reply: raw.trim() };
+}
+
+export async function generatePlanningChatReply(input: RunbookPlanningChatInput, options: RunbookGenerationOptions = {}) {
   const userPrompt = [
     `Mode: ${input.mode}`,
     "",
@@ -271,7 +345,8 @@ export async function generatePlanningChatReply(input: RunbookPlanningChatInput)
     systemPrompt: PLANNING_CHAT_SYSTEM_PROMPT,
     userPrompt,
     taskLabel: "planning chat",
+    model: options.model,
   });
 
-  return { reply };
+  return parsePlanningChatReply(reply);
 }

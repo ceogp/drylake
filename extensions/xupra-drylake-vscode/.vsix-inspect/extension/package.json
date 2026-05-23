@@ -1,0 +1,597 @@
+{
+  "name": "drylake",
+  "displayName": "DryLake — Visual Planning for AI Coding Agents",
+  "description": "Visual, easy planning of your coding-agent workflow. Kanban + pipeline planner that hands off to Claude Code, Codex, Cursor, Cline, Continue, Aider, Windsurf, GitHub Copilot, Roo Code, Augment, and more.",
+  "version": "0.3.1",
+  "private": false,
+  "publisher": "xupracorp",
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "preview": false,
+  "icon": "media/icon.png",
+  "homepage": "https://drylake.xupracorp.com/",
+  "bugs": {
+    "url": "https://drylake.xupracorp.com/about"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Machine Learning",
+    "Programming Languages",
+    "Education",
+    "Snippets",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "ai-agent",
+    "ai-agents",
+    "ai-coding",
+    "ai-coding-agent",
+    "ai-pair-programming",
+    "ai-planner",
+    "ai-planning",
+    "agent",
+    "agentic",
+    "agentic-coding",
+    "agent-workflow",
+    "autonomous-agent",
+    "autonomous-coding",
+    "autocomplete",
+    "code-generation",
+    "code-completion",
+    "code-assistant",
+    "coding-agent",
+    "coding-assistant",
+    "coding-copilot",
+    "vibe-coding",
+    "spec-driven",
+    "plan-mode",
+    "planning",
+    "kanban",
+    "pipeline",
+    "workflow",
+    "chat",
+    "chatgpt",
+    "llm",
+    "gpt",
+    "gpt-4",
+    "gpt-4o",
+    "gpt-5",
+    "openai",
+    "o1",
+    "o3",
+    "anthropic",
+    "claude",
+    "claude-code",
+    "claude-sonnet",
+    "claude-opus",
+    "codex",
+    "copilot",
+    "github-copilot",
+    "cursor",
+    "cursor-ai",
+    "cline",
+    "continue",
+    "continue-dev",
+    "aider",
+    "windsurf",
+    "roo-code",
+    "roo-cline",
+    "augment",
+    "augment-code",
+    "tabnine",
+    "cody",
+    "sourcegraph",
+    "sourcegraph-cody",
+    "plandex",
+    "devin",
+    "sweep",
+    "zencoder",
+    "blackbox",
+    "blackboxai",
+    "traycer",
+    "replit",
+    "zed",
+    "trae",
+    "gemini",
+    "google-gemini",
+    "deepseek",
+    "qwen",
+    "llama",
+    "mistral",
+    "groq",
+    "perplexity",
+    "refactor",
+    "refactoring",
+    "bug-fix",
+    "debugging",
+    "feature-development",
+    "ticket-to-code",
+    "pull-request",
+    "pr-review",
+    "code-review",
+    "test-planning",
+    "testing",
+    "validation",
+    "build-session",
+    "build-sessions",
+    "developer-workflow",
+    "developer-tools",
+    "productivity",
+    "repo-context",
+    "repo-aware",
+    "codebase-context",
+    "prompt-engineering",
+    "prompts",
+    "vscode-ai",
+    "xupra",
+    "drylake"
+  ],
+  "galleryBanner": {
+    "color": "#f6ebdc",
+    "theme": "light"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onUri"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "DryLake",
+      "properties": {
+        "drylake.environment": {
+          "type": "string",
+          "enum": [
+            "development",
+            "production"
+          ],
+          "default": "development",
+          "description": "Legacy compatibility setting for older DryLake builds. Xupra Pro AI now targets the configured backend URL directly."
+        },
+        "drylake.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Optional API base URL override for Xupra Pro AI runbook generation. Leave empty to use the default DryLake backend."
+        },
+        "drylake.aiProvider": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "xupra-pro-ai",
+            "user-ide-ai",
+            "external-ai-prompt"
+          ],
+          "enumItemLabels": [
+            "Auto",
+            "Xupra Pro AI",
+            "User IDE AI",
+            "External AI Prompt"
+          ],
+          "default": "auto",
+          "description": "Provider preference for DryLake AI Coding Agent. Auto tries Xupra Pro AI when your account has access, then User IDE AI, then External AI Prompt."
+        },
+        "drylake.userIdeAiAdapter": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "vs-code-language-model"
+          ],
+          "enumItemLabels": [
+            "Auto",
+            "VS Code Language Model"
+          ],
+          "default": "auto",
+          "description": "Adapter preference for User IDE AI."
+        },
+        "xupra.baseUrl": {
+          "type": "string",
+          "default": "https://drylake.xupracorp.com",
+          "description": "Base URL for the Xupra DryLake backend."
+        },
+        "xupra.devEmail": {
+          "type": "string",
+          "default": "owner@xupra.local",
+          "description": "Development email used before real auth is connected."
+        },
+        "xupra.devDisplayName": {
+          "type": "string",
+          "default": "Xupra Owner",
+          "description": "Development display name used before real auth is connected."
+        },
+        "xupra.autoScanOnOpen": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically import supported files when a workspace opens."
+        },
+        "xupra.includeGlobalAgentFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include default global agent folders such as ~/.codex, ~/.claude, and ~/.cursor when scanning."
+        },
+        "xupra.additionalScanPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional file patterns for unusual agent locations."
+        },
+        "xupra.scan.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.env",
+            "**/.env.*",
+            "**/secrets/**"
+          ],
+          "description": "Additional glob patterns excluded from the workspace scan. Built-in excludes for node_modules, .git, dist, build, etc. always apply."
+        },
+        "xupra.openDashboardAfterConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the Xupra dashboard in your browser after a successful connection."
+        },
+        "xupra.defaultTargetPlatform": {
+          "type": "string",
+          "enum": [
+            "codex",
+            "claude_code",
+            "claude_agents",
+            "cursor",
+            "windsurf",
+            "cline",
+            "roo",
+            "copilot",
+            "gemini",
+            "junie",
+            "warp",
+            "generic"
+          ],
+          "default": "claude_code",
+          "description": "Default target platform for compatibility and export actions."
+        },
+        "xupra.pullGeneratedFilesAfterExport": {
+          "type": "boolean",
+          "default": false,
+          "description": "Pull generated files into the workspace after export preview."
+        },
+        "xupra.confirmBeforeWriteback": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask for confirmation before writing generated files into the current workspace."
+        },
+        "xupra.logLevel": {
+          "type": "string",
+          "enum": [
+            "error",
+            "info",
+            "debug"
+          ],
+          "default": "info",
+          "description": "Logging verbosity for the extension."
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "xu",
+        "aliases": [
+          "Xupra Execution Unit",
+          "xu"
+        ],
+        "extensions": [
+          ".xu"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "xupra",
+          "title": "DryLake",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "xupra": [
+        {
+          "id": "xupra.projects",
+          "name": "Workspace",
+          "type": "webview"
+        },
+        {
+          "id": "xupra.jobs",
+          "name": "Jobs"
+        },
+        {
+          "id": "xupra.help",
+          "name": "Help"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "xupra.jobs",
+        "contents": "Jobs appear here after an import, compatibility check, or export starts.",
+        "when": "true"
+      }
+    ],
+    "commands": [
+      {
+        "command": "drylake.startBuildSession",
+        "title": "DryLake: Start Build Session"
+      },
+      {
+        "command": "drylake.openControlRoom",
+        "title": "DryLake: Open Control Room"
+      },
+      {
+        "command": "drylake.generateDraftRunbook",
+        "title": "DryLake: Generate Draft XU Runbook"
+      },
+      {
+        "command": "drylake.validateXuRunbook",
+        "title": "DryLake: Validate XU Runbook"
+      },
+      {
+        "command": "drylake.approvePurpose",
+        "title": "DryLake: Approve Purpose"
+      },
+      {
+        "command": "drylake.approveArchitecture",
+        "title": "DryLake: Approve Architecture"
+      },
+      {
+        "command": "drylake.previewProvisioningPlan",
+        "title": "DryLake: Preview Provisioning Plan"
+      },
+      {
+        "command": "drylake.generateAgentFiles",
+        "title": "DryLake: Generate Agent Files"
+      },
+      {
+        "command": "drylake.exportHandoffPrompt",
+        "title": "DryLake: Export Agent Handoff Prompt"
+      },
+      {
+        "command": "drylake.runNextPhase",
+        "title": "DryLake: Run Next Phase"
+      },
+      {
+        "command": "drylake.updatePhaseAgent",
+        "title": "DryLake: Update Phase Agent"
+      },
+      {
+        "command": "drylake.updatePhaseStatus",
+        "title": "DryLake: Update Phase Status"
+      },
+      {
+        "command": "drylake.reorderPhase",
+        "title": "DryLake: Reorder Phase"
+      },
+      {
+        "command": "drylake.toggleStep",
+        "title": "DryLake: Toggle Step Status"
+      },
+      {
+        "command": "drylake.handoffPhase",
+        "title": "DryLake: Hand Off Phase"
+      },
+      {
+        "command": "drylake.chatSendMessage",
+        "title": "DryLake: Send Planning Chat Message"
+      },
+      {
+        "command": "drylake.clearChat",
+        "title": "DryLake: Clear Planning Chat"
+      },
+      {
+        "command": "xupra.connect",
+        "title": "DryLake: Connect"
+      },
+      {
+        "command": "xupra.pasteToken",
+        "title": "DryLake: Paste Extension Token"
+      },
+      {
+        "command": "xupra.openWebApp",
+        "title": "DryLake: Open Web App"
+      },
+      {
+        "command": "xupra.refreshProjects",
+        "title": "DryLake: Refresh Projects"
+      },
+      {
+        "command": "xupra.refreshPlan",
+        "title": "DryLake: Refresh Plan"
+      },
+      {
+        "command": "xupra.signOut",
+        "title": "DryLake: Sign Out"
+      },
+      {
+        "command": "xupra.scanWorkspace",
+        "title": "DryLake: Scan Agent Configs"
+      },
+      {
+        "command": "xupra.importWorkspace",
+        "title": "DryLake: Import Agent Configs"
+      },
+      {
+        "command": "xupra.importDefaultLocations",
+        "title": "DryLake: Import Default Agent Configs"
+      },
+      {
+        "command": "xupra.importFolder",
+        "title": "DryLake: Import Agent Configs From Folder"
+      },
+      {
+        "command": "xupra.resetWorkspaceState",
+        "title": "DryLake: Reset Workspace State"
+      },
+      {
+        "command": "xupra.checkCompatibility",
+        "title": "DryLake: Validate Agent Configs"
+      },
+      {
+        "command": "xupra.exportPreview",
+        "title": "DryLake: Preview Agent Config Changes"
+      },
+      {
+        "command": "xupra.installToRuntime",
+        "title": "DryLake: Sync Agent Configs to Claude/Codex/Cursor"
+      },
+      {
+        "command": "xupra.pullPackage",
+        "title": "DryLake: Pull Generated Agent Files Into Workspace"
+      },
+      {
+        "command": "xupra.showRecentJobs",
+        "title": "DryLake: Show Recent Jobs"
+      },
+      {
+        "command": "xupra.createAgent",
+        "title": "DryLake: Create Agent"
+      },
+      {
+        "command": "xupra.openSettings",
+        "title": "DryLake: Open Extension Settings"
+      },
+      {
+        "command": "xupra.openAccountSettings",
+        "title": "DryLake: Open Account Settings"
+      },
+      {
+        "command": "xupra.openBilling",
+        "title": "DryLake: Open Billing"
+      },
+      {
+        "command": "xupra.contactSupport",
+        "title": "DryLake: Contact Support"
+      },
+      {
+        "command": "xupra.openHowItWorks",
+        "title": "DryLake: How It Works"
+      },
+      {
+        "command": "xupra.openInstallGuide",
+        "title": "DryLake: Open Install Page"
+      },
+      {
+        "command": "xupra.openConnectPage",
+        "title": "DryLake: Open Extension Connect Page"
+      },
+      {
+        "command": "xupra.openGetStarted",
+        "title": "DryLake: Open Import Page"
+      },
+      {
+        "command": "xupra.uninstallImportedAgent",
+        "title": "DryLake: Uninstall Imported Agent (Delete Runtime File)"
+      },
+      {
+        "command": "xupra.uninstallImportedSkill",
+        "title": "DryLake: Uninstall Imported Skill (Delete Runtime File)"
+      },
+      {
+        "command": "xupra.clearImportCache",
+        "title": "DryLake: Clear Stale Import Cache"
+      },
+      {
+        "command": "xupra.optimizeFile",
+        "title": "DryLake: Optimize with Xupra AI (Pro)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "drylake.updatePhaseAgent",
+          "when": "false"
+        },
+        {
+          "command": "drylake.updatePhaseStatus",
+          "when": "false"
+        },
+        {
+          "command": "drylake.reorderPhase",
+          "when": "false"
+        },
+        {
+          "command": "drylake.toggleStep",
+          "when": "false"
+        },
+        {
+          "command": "drylake.handoffPhase",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "xupra.signOut",
+          "when": "view == xupra.projects && xupra.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.resetWorkspaceState",
+          "when": "view == xupra.help",
+          "group": "navigation"
+        },
+        {
+          "command": "xupra.openSettings",
+          "when": "view == xupra.help",
+          "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "xupra.optimizeFile",
+          "when": "resourceFilename == AGENTS.md || resourceFilename == CLAUDE.md || resourceFilename == GEMINI.md || resourceFilename == WARP.md || resourceFilename == .rules || resourceFilename == .roorules || resourceFilename == .clinerules || resourceExtname == .toml && resourcePath =~ /\\.codex[\\\\/]agents[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.claude[\\\\/]agents[\\\\/]/ || resourceExtname == .mdc && resourcePath =~ /\\.cursor[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.windsurf[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.clinerules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.roo[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.github[\\\\/](copilot-instructions\\.md|instructions[\\\\/])/ || resourceExtname == .md && resourcePath =~ /\\.junie[\\\\/]guidelines\\.md/",
+          "group": "navigation@9"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "xupra.optimizeFile",
+          "when": "resourceFilename == AGENTS.md || resourceFilename == CLAUDE.md || resourceFilename == GEMINI.md || resourceFilename == WARP.md || resourceFilename == .rules || resourceFilename == .roorules || resourceFilename == .clinerules || resourceExtname == .toml && resourcePath =~ /\\.codex[\\\\/]agents[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.claude[\\\\/]agents[\\\\/]/ || resourceExtname == .mdc && resourcePath =~ /\\.cursor[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.windsurf[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.clinerules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.roo[\\\\/]rules[\\\\/]/ || resourceExtname == .md && resourcePath =~ /\\.github[\\\\/](copilot-instructions\\.md|instructions[\\\\/])/ || resourceExtname == .md && resourcePath =~ /\\.junie[\\\\/]guidelines\\.md/",
+          "group": "7_modification"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "node esbuild.mjs",
+    "test": "vitest run",
+    "lint": "tsc --noEmit",
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "check:cursor": "node scripts/check-cursor-compatibility.mjs",
+    "prepackage": "npm run build",
+    "package:vsix": "npx @vscode/vsce package --allow-star-activation --allow-missing-repository --baseContentUrl https://drylake.xupracorp.com/marketplace/extension/ --baseImagesUrl https://drylake.xupracorp.com/marketplace/extension/",
+    "package:development": "node scripts/package-development-extension.mjs",
+    "install:vsix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-vsix.ps1",
+    "reinstall:vsix": "npm run package:vsix && npm run install:vsix",
+    "uninstall:vscode": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-vscode-extension.ps1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.15.3",
+    "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.9.1",
+    "esbuild": "^0.25.3",
+    "sharp": "^0.34.5",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.5"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.1"
+  }
+}

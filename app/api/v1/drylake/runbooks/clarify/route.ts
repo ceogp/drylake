@@ -1,9 +1,9 @@
-import { forbidden, fromZodError, internalError, ok, unauthorized } from "@/lib/api/http";
-import { assertEntitlement } from "@/lib/services/entitlements";
+import { fromZodError, internalError, ok, unauthorized } from "@/lib/api/http";
 import {
   clarifyRunbookIntent,
   runbookClarifyInputSchema,
 } from "@/lib/services/runbook-generation";
+import { resolveRunbookPlanningAccess } from "@/lib/services/runbook-planning-access";
 import {
   getRequestOrganizationId,
   INVALID_EXTENSION_TOKEN_ERROR,
@@ -21,19 +21,10 @@ export async function POST(request: Request) {
 
     const organizationId = await getRequestOrganizationId(request);
 
-    try {
-      await assertEntitlement(organizationId, "xupra_pro_ai");
-    } catch (error) {
-      if (error instanceof Error && error.message === "Organization is not entitled to use xupra_pro_ai") {
-        return forbidden("Xupra AI requires a Pro plan.");
-      }
+    const access = await resolveRunbookPlanningAccess(organizationId);
+    const result = await clarifyRunbookIntent(parsed.data, { model: access.model });
 
-      throw error;
-    }
-
-    const result = await clarifyRunbookIntent(parsed.data);
-
-    return ok(result);
+    return ok({ ...result, modelTier: access.tier });
   } catch (error) {
     if (error instanceof Error && error.message === REQUEST_AUTHENTICATION_REQUIRED_ERROR) {
       return unauthorized();

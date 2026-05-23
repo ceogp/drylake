@@ -18,6 +18,10 @@ const AWAITING_PLAN_REFRESH_KEY = "xupra.awaitingPlanRefreshUntil";
 const BUILD_SESSION_KEY = "drylake.buildSession";
 const PLANNING_PROVIDER_KEY = "drylake.planningProvider";
 const CHAT_HISTORY_KEY = "drylake.chatHistory";
+const LAST_MODEL_TIER_KEY = "drylake.lastModelTier";
+const PLANNING_LOADING_KEY = "drylake.planningLoading";
+
+export type PlanningModelTier = "nano" | "foundation";
 
 export type ActivePhaseSummary = {
   phaseId: string;
@@ -133,6 +137,23 @@ export class StateStore {
 
   async setPlanningProvider(info: PlanningProviderInfo | null): Promise<void> {
     await this.context.workspaceState.update(PLANNING_PROVIDER_KEY, info);
+  }
+
+  getLastModelTier(): PlanningModelTier | null {
+    const value = this.context.workspaceState.get<PlanningModelTier | null>(LAST_MODEL_TIER_KEY, null);
+    return value === "nano" || value === "foundation" ? value : null;
+  }
+
+  async setLastModelTier(tier: PlanningModelTier | null): Promise<void> {
+    await this.context.workspaceState.update(LAST_MODEL_TIER_KEY, tier);
+  }
+
+  getPlanningLoading(): boolean {
+    return Boolean(this.context.workspaceState.get<boolean>(PLANNING_LOADING_KEY, false));
+  }
+
+  async setPlanningLoading(loading: boolean): Promise<void> {
+    await this.context.workspaceState.update(PLANNING_LOADING_KEY, loading);
   }
 
   getChatHistory(): ChatState {

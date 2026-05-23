@@ -315,4 +315,22 @@ export class ApiClient {
     });
   }
 
+  async planRunnerAssignments(params: {
+    taskPrompt: string;
+    agents: Array<{ agentId: string; label: string }>;
+  }) {
+    return this.request<{
+      assignments: Array<{
+        agentId: string;
+        subtaskSummary: string;
+        scopeBoundary: string;
+      }>;
+      modelTier: "nano" | "foundation";
+    }>("/api/v1/drylake/runner/plan-assignments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
 }

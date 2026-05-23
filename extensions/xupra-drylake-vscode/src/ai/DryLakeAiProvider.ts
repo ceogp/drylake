@@ -1,6 +1,7 @@
 import type { ApplicationBuildRunbook, XuMode } from "../xu/types";
 
 export type DryLakeProviderId = "xupra-pro-ai" | "user-ide-ai" | "external-ai-prompt";
+export type RunbookModelTier = "nano" | "foundation";
 
 export type DryLakeAiAvailability = {
   available: boolean;
@@ -22,12 +23,14 @@ export type GenerateDraftRunbookResult = {
   runbook?: ApplicationBuildRunbook;
   promptForExternalAi?: string;
   message?: string;
+  modelTier?: RunbookModelTier;
 };
 
 export type PlanningChatResult = {
   reply?: string;
   runbook?: ApplicationBuildRunbook;
   error?: string;
+  modelTier?: RunbookModelTier;
 };
 
 export type ClarifyIntentInput = {
@@ -40,6 +43,7 @@ export type ClarifyIntentResult = {
   questions?: string[];
   promptForExternalAi?: string;
   message?: string;
+  modelTier?: RunbookModelTier;
 };
 
 export interface DryLakeAiProvider {

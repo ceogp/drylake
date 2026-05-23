@@ -9,6 +9,7 @@ import { pullPackageCommand } from "./commands/pullPackage";
 import { refreshProjectsCommand } from "./commands/refreshProjects";
 import {
   approveArchitectureCommand,
+  approvePlanChangeCommand,
   approvePurposeCommand,
   chatSendMessageCommand,
   clearChatCommand,
@@ -16,8 +17,11 @@ import {
   generateAgentFilesCommand,
   generateDraftRunbookCommand,
   handoffPhaseCommand,
+  newSessionCommand,
   openControlRoomCommand,
+  openSessionsCommand,
   previewProvisioningPlanCommand,
+  rejectPlanChangeCommand,
   reorderPhaseCommand,
   runNextPhaseCommand,
   startBuildSessionCommand,
@@ -31,7 +35,7 @@ import { signOutCommand } from "./commands/signOut";
 import { ApiClient } from "./services/apiClient";
 import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
-import { requireXupraProAiEntitlement, hasXupraProAiEntitlement } from "./services/featureGates";
+import { requireXupraProAiEntitlement } from "./services/featureGates";
 import { ImportedSkillEditorManager } from "./services/importedSkillEditor";
 import {
   collectRepoContext,
@@ -52,6 +56,7 @@ import { SkillCreationPanel } from "./views/skillCreationPanel";
 import { createStatusBar } from "./views/statusBar";
 import { WorkspaceSidebarProvider } from "./views/workspaceSidebarProvider";
 import { ControlRoomProvider } from "./webview/controlRoomProvider";
+import { MultiAgentRunnerProvider } from "./webview/multiAgentRunnerProvider";
 import { getLogger } from "./utils/logging";
 import { XuSessionStore } from "./xu/sessionStore";
 
@@ -366,11 +371,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const apiClient = new ApiClient(configuration);
   const stateStore = new StateStore(context);
   const xuSessionStore = new XuSessionStore();
+  const multiAgentRunner = new MultiAgentRunnerProvider(apiClient);
   const controlRoom = new ControlRoomProvider(
     xuSessionStore,
     () => stateStore.getPlanningProvider(),
     () => stateStore.getChatHistory(),
-    () => hasXupraProAiEntitlement(stateStore),
+    () => stateStore.getLastModelTier(),
+    () => stateStore.getPlanningLoading(),
   );
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
@@ -557,6 +564,9 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.window.registerWebviewViewProvider("xupra.projects", workspaceSidebar, {
     webviewOptions: { retainContextWhenHidden: true }
   }));
+  context.subscriptions.push(vscode.window.registerWebviewViewProvider("drylake.multiAgentRunner", multiAgentRunner, {
+    webviewOptions: { retainContextWhenHidden: true }
+  }));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.jobs", jobsView));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.help", helpView));
 
@@ -664,6 +674,22 @@ export async function activate(context: vscode.ExtensionContext) {
     await openControlRoomCommand(runbookDeps, context);
   });
 
+  register("drylake.openMultiAgentRunner", async () => {
+    await multiAgentRunner.createOrShow(context);
+  });
+
+  register("drylake.multiAgentPlanAssignments", async (...args: unknown[]) => {
+    await multiAgentRunner.planAssignmentsFromCommand(args[0], args[1]);
+  });
+
+  register("drylake.multiAgentApproveAssignments", async (...args: unknown[]) => {
+    await multiAgentRunner.approveAssignmentsFromCommand(args[0]);
+  });
+
+  register("drylake.multiAgentRun", async () => {
+    await multiAgentRunner.runApprovedAssignmentsFromCommand();
+  });
+
   register("drylake.generateDraftRunbook", async () => {
     await generateDraftRunbookCommand(runbookDeps);
   });
@@ -720,12 +746,28 @@ export async function activate(context: vscode.ExtensionContext) {
     await handoffPhaseCommand(runbookDeps, args[0], args[1]);
   });
 
+  register("drylake.approvePlanChange", async (...args: unknown[]) => {
+    await approvePlanChangeCommand(runbookDeps, args[0]);
+  });
+
+  register("drylake.rejectPlanChange", async (...args: unknown[]) => {
+    await rejectPlanChangeCommand(runbookDeps, args[0]);
+  });
+
   register("drylake.chatSendMessage", async (...args: unknown[]) => {
     await chatSendMessageCommand(runbookDeps, args[0]);
   });
 
   register("drylake.clearChat", async () => {
     await clearChatCommand(runbookDeps);
+  });
+
+  register("drylake.newSession", async () => {
+    await newSessionCommand(runbookDeps);
+  });
+
+  register("drylake.openSessions", async () => {
+    await openSessionsCommand(runbookDeps);
   });
 
   register("drylake.upgradeToPro", async () => {

@@ -26,7 +26,7 @@ export async function resolveDryLakeAiProvider(params: {
   return {
     provider,
     reason: configured !== "xupra-pro-ai" && configured !== "auto"
-      ? "DryLake planning uses Xupra AI only. Free users can scan and preview; planning requires Xupra AI access."
+      ? "DryLake planning uses Xupra AI. Free users are routed to the nano planning model."
       : undefined,
   };
 }

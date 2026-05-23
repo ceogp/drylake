@@ -9,6 +9,7 @@ import type {
   GenerateDraftRunbookResult,
   PlanningChatInput,
   PlanningChatResult,
+  RunbookModelTier,
 } from "../DryLakeAiProvider";
 import { DEFAULT_BASE_URL, normalizeBaseUrl } from "../../services/apiClient";
 import type { ConnectionState } from "../../types/package";
@@ -20,6 +21,20 @@ type Endpoint =
   | "/api/v1/drylake/runbooks/generate-phases";
 
 type ChatEndpoint = "/api/v1/drylake/runbooks/chat";
+
+function modelTierFrom(value: unknown): RunbookModelTier | undefined {
+  return value === "nano" || value === "foundation" ? value : undefined;
+}
+
+function runbookFrom(value: unknown) {
+  if (!value) {
+    return undefined;
+  }
+
+  const content = typeof value === "string" ? value : JSON.stringify(value);
+  const parsed = parseAiRunbookResponse(content);
+  return parsed.runbook && parsed.validation.ok ? parsed.runbook : undefined;
+}
 
 function resolveBaseUrl(
   configuration: vscode.WorkspaceConfiguration,
@@ -47,10 +62,9 @@ export class XupraCloudProvider implements DryLakeAiProvider {
 
   async isAvailable() {
     const connection = this.readConnection();
-    const hasXupraProAi = Boolean(connection.entitlements?.xupra_pro_ai);
 
-    if (!connection.userEmail || !hasXupraProAi) {
-      return { available: false, reason: "Connect a Xupra account with Xupra AI access to use this provider." };
+    if (!connection.userEmail) {
+      return { available: false, reason: "Connect a Xupra account to use DryLake planning." };
     }
 
     return { available: true };
@@ -78,7 +92,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       const text = await response.text();
       let content = text;
       let payload:
-        | { runbook?: unknown; xu?: unknown; content?: string; yaml?: string; error?: { message?: string } }
+        | { runbook?: unknown; xu?: unknown; content?: string; yaml?: string; error?: { message?: string }; modelTier?: unknown }
         | undefined;
 
       try {
@@ -88,6 +102,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
           content?: string;
           yaml?: string;
           error?: { message?: string };
+          modelTier?: unknown;
         };
       } catch {
         payload = undefined;
@@ -120,7 +135,8 @@ export class XupraCloudProvider implements DryLakeAiProvider {
         };
       }
 
-      return { runbook: parsed.runbook };
+      const modelTier = modelTierFrom(payload?.modelTier);
+      return { runbook: parsed.runbook, ...(modelTier ? { modelTier } : {}) };
     } catch (error) {
       return {
         message: error instanceof Error
@@ -150,10 +166,18 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       });
 
       const text = await response.text();
-      let payload: { reply?: unknown; error?: { message?: string } } | undefined;
+      let payload:
+        | { reply?: unknown; proposedRunbook?: unknown; runbook?: unknown; error?: { message?: string }; modelTier?: unknown }
+        | undefined;
 
       try {
-        payload = JSON.parse(text) as { reply?: unknown; error?: { message?: string } };
+        payload = JSON.parse(text) as {
+          reply?: unknown;
+          proposedRunbook?: unknown;
+          runbook?: unknown;
+          error?: { message?: string };
+          modelTier?: unknown;
+        };
       } catch {
         payload = undefined;
       }
@@ -169,7 +193,9 @@ export class XupraCloudProvider implements DryLakeAiProvider {
         return { error: "Xupra AI chat returned an empty response." };
       }
 
-      return { reply: payload.reply };
+      const modelTier = modelTierFrom(payload.modelTier);
+      const runbook = runbookFrom(payload.proposedRunbook ?? payload.runbook);
+      return { reply: payload.reply, ...(runbook ? { runbook } : {}), ...(modelTier ? { modelTier } : {}) };
     } catch (error) {
       return {
         error: error instanceof Error
@@ -219,9 +245,9 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       });
 
       const text = await response.text();
-      let payload: { questions?: unknown; error?: { message?: string } } | undefined;
+      let payload: { questions?: unknown; modelTier?: unknown; error?: { message?: string } } | undefined;
       try {
-        payload = JSON.parse(text) as { questions?: unknown; error?: { message?: string } };
+        payload = JSON.parse(text) as { questions?: unknown; modelTier?: unknown; error?: { message?: string } };
       } catch {
         payload = undefined;
       }
@@ -239,7 +265,8 @@ export class XupraCloudProvider implements DryLakeAiProvider {
         ? payload.questions.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
         : [];
 
-      return { questions };
+      const modelTier = modelTierFrom(payload?.modelTier);
+      return { questions, ...(modelTier ? { modelTier } : {}) };
     } catch (error) {
       return {
         message: error instanceof Error

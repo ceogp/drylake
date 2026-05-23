@@ -209,6 +209,11 @@
           "id": "xupra",
           "title": "DryLake",
           "icon": "media/icon.svg"
+        },
+        {
+          "id": "drylake-runner",
+          "title": "DryLake Runner",
+          "icon": "media/runner.svg"
         }
       ]
     },
@@ -227,6 +232,13 @@
           "id": "xupra.help",
           "name": "Help"
         }
+      ],
+      "drylake-runner": [
+        {
+          "id": "drylake.multiAgentRunner",
+          "name": "Multi-Agent Runner",
+          "type": "webview"
+        }
       ]
     },
     "viewsWelcome": [
@@ -239,11 +251,27 @@
     "commands": [
       {
         "command": "drylake.startBuildSession",
-        "title": "DryLake: Start Build Session"
+        "title": "DryLake: Generate Plan from Chat"
       },
       {
         "command": "drylake.openControlRoom",
         "title": "DryLake: Open Control Room"
+      },
+      {
+        "command": "drylake.openMultiAgentRunner",
+        "title": "DryLake: Open Multi-Agent Runner"
+      },
+      {
+        "command": "drylake.multiAgentPlanAssignments",
+        "title": "DryLake: Plan Multi-Agent Assignments"
+      },
+      {
+        "command": "drylake.multiAgentApproveAssignments",
+        "title": "DryLake: Approve Multi-Agent Assignments"
+      },
+      {
+        "command": "drylake.multiAgentRun",
+        "title": "DryLake: Run Approved Multi-Agent Assignments"
       },
       {
         "command": "drylake.generateDraftRunbook",
@@ -298,12 +326,28 @@
         "title": "DryLake: Hand Off Phase"
       },
       {
+        "command": "drylake.approvePlanChange",
+        "title": "DryLake: Apply Pending Plan Change"
+      },
+      {
+        "command": "drylake.rejectPlanChange",
+        "title": "DryLake: Keep Current Phase Plan"
+      },
+      {
         "command": "drylake.chatSendMessage",
         "title": "DryLake: Send Planning Chat Message"
       },
       {
         "command": "drylake.clearChat",
         "title": "DryLake: Clear Planning Chat"
+      },
+      {
+        "command": "drylake.newSession",
+        "title": "DryLake: New Planning Session"
+      },
+      {
+        "command": "drylake.openSessions",
+        "title": "DryLake: Open Archived Sessions"
       },
       {
         "command": "drylake.upgradeToPro",
@@ -446,6 +490,26 @@
         },
         {
           "command": "drylake.handoffPhase",
+          "when": "false"
+        },
+        {
+          "command": "drylake.approvePlanChange",
+          "when": "false"
+        },
+        {
+          "command": "drylake.rejectPlanChange",
+          "when": "false"
+        },
+        {
+          "command": "drylake.multiAgentPlanAssignments",
+          "when": "false"
+        },
+        {
+          "command": "drylake.multiAgentApproveAssignments",
+          "when": "false"
+        },
+        {
+          "command": "drylake.multiAgentRun",
           "when": "false"
         }
       ],

@@ -37,7 +37,9 @@ export function validateXu(runbook: ApplicationBuildRunbook): XuValidationResult
   }
 
   requireString(diagnostics, "metadata.name", runbook.metadata.name, "Runbook must have metadata.name.");
-  requireString(diagnostics, "intent.purpose", runbook.intent.purpose, "Runbook must have intent.purpose.");
+  if (runbook.metadata.status !== "draft") {
+    requireString(diagnostics, "intent.purpose", runbook.intent.purpose, "Runbook must have intent.purpose.");
+  }
   requireArray(diagnostics, "phases", runbook.phases, "Runbook must include at least one phase.");
 
   runbook.phases.forEach((phase, index) => {

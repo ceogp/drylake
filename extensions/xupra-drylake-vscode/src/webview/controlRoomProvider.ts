@@ -5,18 +5,21 @@ import {
   phaseAgentHint,
   phaseAgentLabel,
 } from "../agents/phaseAgentLauncher";
+import { describePhaseChange, isPendingPhaseUnresolved } from "../xu/pendingPlanChanges";
 import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
-import type { ChatState, PlanningProviderInfo } from "../services/stateStore";
+import type { ChatState, PlanningModelTier, PlanningProviderInfo } from "../services/stateStore";
 import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../xu/types";
+import type { PendingPlanChangeSet } from "../xu/pendingPlanChanges";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
+const CONTROL_ROOM_CHAT_COLLAPSED_KEY = "drylake.controlRoomChatCollapsed";
 type ControlRoomView = "pipeline" | "kanban";
 
 const MODE_CARDS: Array<[string, XuMode, string]> = [
-  ["Build App", "build-app", "Turn an app idea into purpose, architecture, steps, and a ship plan."],
+  ["Build", "build-app", "Turn an app idea into purpose, architecture, steps, and a ship plan."],
   ["Break Into Steps", "phases", "Clarify intent, then split the task into safe coding steps."],
-  ["Create Plan", "plan", "Generate a file-aware plan for a complex repo change."],
-  ["Review / Repair", "review", "Review existing code and produce a correction plan."],
+  ["Plan", "plan", "Generate a file-aware plan for a complex repo change."],
+  ["Review", "review", "Review existing code and produce a correction plan."],
 ];
 
 const STATUS_LABELS: Record<XuStepStatus, string> = {
@@ -38,6 +41,12 @@ function escapeHtml(value: unknown) {
 
 function controlRoomViewFrom(value: unknown): ControlRoomView {
   return value === "kanban" ? "kanban" : "pipeline";
+}
+
+function modeFrom(value: unknown): XuMode {
+  return typeof value === "string" && MODE_CARDS.some(([, mode]) => mode === value)
+    ? (value as XuMode)
+    : "build-app";
 }
 
 function autopilotEnabled(runbook: ApplicationBuildRunbook | null) {
@@ -100,7 +109,32 @@ function renderPhaseSteps(phase: XuPhase) {
   </div>`;
 }
 
-function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
+function renderPlanChangeOverlay(
+  phase: XuPhase,
+  runbook: ApplicationBuildRunbook,
+  pendingPlanChange: PendingPlanChangeSet | null,
+) {
+  if (!pendingPlanChange || !isPendingPhaseUnresolved(pendingPlanChange, phase.id)) {
+    return "";
+  }
+
+  const summary = pendingPlanChange.phaseSummaries[phase.id] ??
+    describePhaseChange(runbook, pendingPlanChange.proposedRunbook, phase.id);
+
+  return `<div class="plan-change-overlay" aria-label="Pending plan change">
+    <div class="plan-change-eyebrow">Proposed change</div>
+    <p>${escapeHtml(summary)}</p>
+    <div class="plan-change-actions">
+      <button type="button" class="plan-change-apply" data-plan-change-action="approve" data-phase-id="${escapeHtml(phase.id)}">Apply</button>
+      <button type="button" class="plan-change-reject secondary" data-plan-change-action="reject" data-phase-id="${escapeHtml(phase.id)}">Keep current</button>
+    </div>
+  </div>`;
+}
+
+function renderPhaseCard(
+  phase: XuPhase,
+  options: { draggable: boolean; runbook: ApplicationBuildRunbook; pendingPlanChange: PendingPlanChangeSet | null },
+) {
   const draggable = options.draggable ? ' draggable="true"' : "";
   const cardClass = `phase-card ${statusClass(phase.status)}${phase.status === "active" ? " active-phase" : ""}`;
   const selectedAgent = phase.agent;
@@ -140,6 +174,7 @@ function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
         <div class="handoff-menu-items">${secondaryButtons}</div>
       </details>
     </div>
+    ${renderPlanChangeOverlay(phase, options.runbook, options.pendingPlanChange)}
   </article>`;
 }
 
@@ -157,65 +192,73 @@ function renderExecutionModeToggle(runbook: ApplicationBuildRunbook | null) {
   return `<button class="toggle-btn execution-toggle${enabled ? " active" : ""}" data-command="drylake.toggleAutopilot" title="${escapeHtml(title)}" aria-pressed="${enabled ? "true" : "false"}">${escapeHtml(label)}</button>`;
 }
 
-function renderPipeline(runbook: ApplicationBuildRunbook) {
+function renderPipeline(runbook: ApplicationBuildRunbook, pendingPlanChange: PendingPlanChangeSet | null) {
   return `<section class="pipeline" aria-label="Build Session pipeline">
     ${runbook.phases.map((phase, index) => {
-      const card = renderPhaseCard(phase, { draggable: true });
+      const card = renderPhaseCard(phase, { draggable: true, runbook, pendingPlanChange });
       return index < runbook.phases.length - 1 ? `${card}<div class="arrow" aria-hidden="true">&rarr;</div>` : card;
     }).join("")}
   </section>`;
 }
 
-function renderKanbanColumn(title: string, status: "pending" | "active" | "complete", phases: XuPhase[]) {
+function renderKanbanColumn(
+  title: string,
+  status: "pending" | "active" | "complete",
+  phases: XuPhase[],
+  runbook: ApplicationBuildRunbook,
+  pendingPlanChange: PendingPlanChangeSet | null,
+) {
   return `<section class="kanban-column" data-drop-status="${status}">
     <div class="column-header"><span>${escapeHtml(title)}</span><span class="count">${phases.length}</span></div>
     <div class="column-body">
-      ${phases.map((phase) => renderPhaseCard(phase, { draggable: true })).join("")}
+      ${phases.map((phase) => renderPhaseCard(phase, { draggable: true, runbook, pendingPlanChange })).join("")}
       <div class="drop-zone">Drop phase here</div>
     </div>
   </section>`;
 }
 
-function renderKanban(runbook: ApplicationBuildRunbook) {
+function renderKanban(runbook: ApplicationBuildRunbook, pendingPlanChange: PendingPlanChangeSet | null) {
   const pending = runbook.phases.filter((phase) => statusForKanban(phase.status) === "pending");
   const active = runbook.phases.filter((phase) => statusForKanban(phase.status) === "active");
   const complete = runbook.phases.filter((phase) => statusForKanban(phase.status) === "complete");
 
   return `<section class="kanban" aria-label="Build Session kanban">
-    ${renderKanbanColumn("To Do", "pending", pending)}
-    ${renderKanbanColumn("In Progress", "active", active)}
-    ${renderKanbanColumn("Done", "complete", complete)}
+    ${renderKanbanColumn("To Do", "pending", pending, runbook, pendingPlanChange)}
+    ${renderKanbanColumn("In Progress", "active", active, runbook, pendingPlanChange)}
+    ${renderKanbanColumn("Done", "complete", complete, runbook, pendingPlanChange)}
   </section>`;
 }
 
-function renderEmptyState() {
-  return `<section class="empty-state">
-    <div class="eyebrow">Build Session</div>
-    <h2>Start with a ticket, bug, or feature request.</h2>
-    <p>DryLake will turn the task into a clear coding plan you can review and run with your AI tool.</p>
-    <div class="prompt-panel">
-      <div class="mode-grid">
-        ${MODE_CARDS.map(([title, mode, description], index) => `<button class="mode-card${index === 0 ? " selected" : ""}" data-mode="${mode}"><strong>${escapeHtml(title)}</strong>${escapeHtml(description)}</button>`).join("")}
-      </div>
-      <textarea id="promptText" placeholder="Paste the full task here. Include constraints, must-haves, non-goals, and anything the agent should avoid."></textarea>
-      <button id="submitPrompt" class="primary">Start Build Session</button>
-    </div>
+function renderKanbanEmptyState() {
+  return `<section class="empty-state kanban-empty">
+    <h2>No plan yet</h2>
+    <p>Describe your task in the chat above — the AI will generate phases here.</p>
   </section>`;
 }
 
-function renderPlanningProviderBanner(info: PlanningProviderInfo | null) {
-  if (!info) {
-    return "";
+function renderKanbanLoadingState() {
+  const cards = [1, 2, 3].map((index) => `<div class="loading-card" aria-hidden="true">
+    <span class="loading-line short"></span>
+    <span class="loading-line"></span>
+    <span class="loading-line"></span>
+    <span class="loading-line medium"></span>
+  </div>`).join("");
+
+  return `<section class="loading-state" aria-live="polite" aria-busy="true">
+    <div class="loading-title">DryLake is generating your plan...</div>
+    <div class="loading-grid">${cards}</div>
+  </section>`;
+}
+
+function renderPlanningModelBanner(modelTier: PlanningModelTier | null) {
+  if (modelTier === "nano") {
+    return `<section class="nano-banner" aria-label="Free planning model">
+      <span class="nano-banner-text">⚡ You are using <strong>gpt-5.4-nano</strong>. Upgrade to use Xupra AI foundation models (GPT 5.5 + Claude Opus 4.6).</span>
+      <button type="button" class="nano-banner-cta" data-command="xupra.openBilling">Upgrade to Pro →</button>
+    </section>`;
   }
 
-  const reason = info.reason ? `<span class="planning-banner-reason">${escapeHtml(info.reason)}</span>` : "";
-  const tone = info.id === "external-ai-prompt" ? "fallback" : info.id === "xupra-pro-ai" ? "pro" : "ide";
-
-  return `<section class="planning-banner ${tone}" aria-label="Planning AI">
-    <span class="planning-banner-eyebrow">Planning AI</span>
-    <strong class="planning-banner-label">${escapeHtml(info.label)}</strong>
-    ${reason}
-  </section>`;
+  return "";
 }
 
 type WebviewMessage = {
@@ -230,11 +273,13 @@ type WebviewMessage = {
   handoffAction?: unknown;
   status?: unknown;
   text?: unknown;
+  mode?: unknown;
 };
 
 type PlanningProviderReader = () => PlanningProviderInfo | null;
 type ChatStateReader = () => ChatState;
-type EntitlementReader = () => boolean;
+type LastModelTierReader = () => PlanningModelTier | null;
+type PlanningLoadingReader = () => boolean;
 
 function formatChatTime(ts: number) {
   try {
@@ -244,21 +289,10 @@ function formatChatTime(ts: number) {
   }
 }
 
-function renderChatPanel(state: ChatState, planningProviderLabel: string, entitled: boolean) {
-  if (!entitled) {
-    return `<section class="chat-panel chat-locked" aria-label="Planning chat upgrade required">
-      <div class="chat-header">
-        <span class="chat-eyebrow">Planning Chat</span>
-        <span class="chat-pro-badge">Pro</span>
-      </div>
-      <p class="muted">Xupra AI Planning Chat is a Pro feature. Upgrade to chat with the planner, refine the runbook, and have the kanban update as you talk.</p>
-      <p class="muted">Free DryLake includes scan, import, view, copy, and download. Phase handoff to your installed coding agents stays free.</p>
-      <div class="chat-upgrade-row">
-        <button type="button" class="primary" data-command="drylake.upgradeToPro">Upgrade to Pro</button>
-      </div>
-    </section>`;
-  }
-
+function renderChatPanel(state: ChatState, planningProviderLabel: string, hasPlan: boolean, collapsed: boolean) {
+  const modeChips = MODE_CARDS.map(([title, mode], index) => {
+    return `<button type="button" class="mode-chip${index === 0 ? " active" : ""}" data-mode="${mode}" aria-pressed="${index === 0 ? "true" : "false"}">${escapeHtml(title)}</button>`;
+  }).join("");
   const messages = state.messages.length
     ? state.messages
         .map((message) => {
@@ -272,21 +306,25 @@ function renderChatPanel(state: ChatState, planningProviderLabel: string, entitl
           </div>`;
         })
         .join("")
-    : `<div class="chat-empty">Chat with the planning AI here. As you discuss the plan, the kanban below will update.</div>`;
+    : `<div class="chat-empty">Describe what you want to build. The AI will generate a phased plan and populate the kanban below.</div>`;
 
-  return `<section class="chat-panel" aria-label="Planning chat">
+  return `<section class="chat-panel${collapsed ? " collapsed" : ""}" aria-label="Planning chat" data-has-plan="${hasPlan ? "true" : "false"}">
     <div class="chat-header">
       <span class="chat-eyebrow">Planning Chat</span>
-      <button type="button" class="chat-clear secondary" data-command="drylake.clearChat">Clear</button>
-    </div>
-    <div class="chat-messages" id="chatMessages">${messages}</div>
-    <form class="chat-form" id="chatForm">
-      <textarea id="chatInput" rows="2" placeholder="Tell the planning AI what you want, or answer its questions. Shift+Enter for a new line."></textarea>
-      <div class="chat-form-row">
-        <span class="chat-hint muted">Enter to send</span>
-        <button type="submit">Send</button>
+      <div class="chat-controls">
+        <button type="button" class="chat-clear secondary" data-command="drylake.clearChat">Clear</button>
+        <button type="button" class="collapse-btn secondary" data-command="drylake.toggleChatCollapsed">${collapsed ? "Expand" : "Collapse"}</button>
       </div>
-    </form>
+    </div>
+    ${collapsed ? "" : `<div class="chat-messages" id="chatMessages">${messages}</div>
+      <div class="mode-row">${modeChips}</div>
+      <form class="chat-form" id="chatForm">
+        <textarea id="chatInput" rows="2" placeholder="${hasPlan ? "Tell the planning AI what to refine." : "e.g. Build a Stripe checkout flow with webhook handling"}"></textarea>
+        <div class="chat-form-row">
+          <span class="chat-hint muted">Enter to send</span>
+          <button type="submit">Send</button>
+        </div>
+      </form>`}
   </section>`;
 }
 
@@ -298,7 +336,8 @@ export class ControlRoomProvider {
     private readonly sessionStore: XuSessionStore,
     private readonly readPlanningProvider: PlanningProviderReader = () => null,
     private readonly readChatState: ChatStateReader = () => ({ messages: [] }),
-    private readonly readEntitlement: EntitlementReader = () => true,
+    private readonly readLastModelTier: LastModelTierReader = () => null,
+    private readonly readPlanningLoading: PlanningLoadingReader = () => false,
   ) {}
 
   async createOrShow(context: vscode.ExtensionContext) {
@@ -350,13 +389,34 @@ export class ControlRoomProvider {
         return;
       }
 
+      if (message.command === "drylake.toggleChatCollapsed") {
+        const current = Boolean(context.workspaceState?.get(CONTROL_ROOM_CHAT_COLLAPSED_KEY));
+        await context.workspaceState?.update(CONTROL_ROOM_CHAT_COLLAPSED_KEY, !current);
+        await this.refresh();
+        return;
+      }
+
       if (message.command === "drylake.handoffPhase") {
         await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0], message.handoffAction ?? message.args?.[1]);
         return;
       }
 
+      if (message.command === "drylake.approvePlanChange" || message.command === "drylake.rejectPlanChange") {
+        await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0]);
+        return;
+      }
+
       if (message.command === "drylake.chatSendMessage") {
         await vscode.commands.executeCommand(message.command, message.text ?? message.args?.[0]);
+        return;
+      }
+
+      if (message.command === "drylake.startBuildSession") {
+        await vscode.commands.executeCommand(
+          message.command,
+          modeFrom(message.mode ?? message.args?.[0]),
+          message.text ?? message.args?.[1],
+        );
         return;
       }
 
@@ -394,28 +454,36 @@ export class ControlRoomProvider {
     }
 
     let runbook: ApplicationBuildRunbook | null = null;
+    let pendingPlanChange: PendingPlanChangeSet | null = null;
     try {
       runbook = (await this.sessionStore.readRunbook())?.runbook ?? null;
+      pendingPlanChange = await this.sessionStore.readPendingPlanChange?.() ?? null;
     } catch {
       runbook = null;
+      pendingPlanChange = null;
     }
 
-    this.panel.webview.html = this.renderHtml(runbook);
+    this.panel.webview.html = this.renderHtml(runbook, pendingPlanChange);
   }
 
   private currentView(): ControlRoomView {
     return controlRoomViewFrom(this.context?.workspaceState?.get(CONTROL_ROOM_VIEW_KEY));
   }
 
-  private renderHtml(runbook: ApplicationBuildRunbook | null) {
+  private chatCollapsed(): boolean {
+    return Boolean(this.context?.workspaceState?.get(CONTROL_ROOM_CHAT_COLLAPSED_KEY));
+  }
+
+  private renderHtml(runbook: ApplicationBuildRunbook | null, pendingPlanChange: PendingPlanChangeSet | null) {
     const view = this.currentView();
     const planningProvider = this.readPlanningProvider();
-    const banner = renderPlanningProviderBanner(planningProvider);
     const chatState = this.readChatState();
     const planningProviderLabel = planningProvider?.label ?? "Planning AI";
-    const entitled = this.readEntitlement();
-    const chatPanel = renderChatPanel(chatState, planningProviderLabel, entitled);
-    const body = runbook ? (view === "kanban" ? renderKanban(runbook) : renderPipeline(runbook)) : renderEmptyState();
+    const banner = renderPlanningModelBanner(this.readLastModelTier());
+    const chatPanel = renderChatPanel(chatState, planningProviderLabel, Boolean(runbook), this.chatCollapsed());
+    const body = this.readPlanningLoading()
+      ? renderKanbanLoadingState()
+      : runbook ? (view === "kanban" ? renderKanban(runbook, pendingPlanChange) : renderPipeline(runbook, pendingPlanChange)) : renderKanbanEmptyState();
     const executionToggle = renderExecutionModeToggle(runbook);
     const runNextButton = runbook?.phases.length ? '<button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>' : "";
 
@@ -429,7 +497,7 @@ export class ControlRoomProvider {
     :root { --drylake-paper: #f7f4ea; --drylake-ink: #111111; --drylake-yellow: #ffd60a; --drylake-blue: #005caf; --drylake-pink: #e6007e; --drylake-green: #36b979; --drylake-orange: #ff5a1f; --drylake-white: #ffffff; }
     body { margin: 0; color: var(--drylake-ink); background: var(--drylake-paper); font-family: var(--vscode-font-family); }
     main { max-width: 1180px; margin: 0 auto; padding: 24px; }
-    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; padding: 16px; border: 5px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); box-shadow: 10px 10px 0 var(--drylake-ink); }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; padding: 12px 16px; border: 4px solid var(--drylake-ink); border-radius: 6px; background: var(--drylake-white); box-shadow: 6px 6px 0 var(--drylake-ink); }
     h1 { margin: 0; font-size: 24px; }
     h2 { margin: 8px 0; font-size: 20px; }
     h3, p { margin: 0; }
@@ -470,12 +538,22 @@ export class ControlRoomProvider {
     .drop-zone { padding: 10px; border: 3px dashed var(--drylake-ink); border-radius: 6px; color: #4b463f; text-align: center; font-size: 11px; }
     .kanban-column.drag-over .drop-zone { border-color: var(--drylake-blue); color: var(--drylake-blue); }
     .empty-state { border: 5px solid var(--drylake-ink); border-radius: 8px; padding: 18px; background: var(--drylake-white); box-shadow: 10px 10px 0 var(--drylake-ink); }
+    .loading-state { border: 5px dashed var(--drylake-ink); border-radius: 8px; padding: 18px; background: var(--drylake-white); box-shadow: 10px 10px 0 var(--drylake-ink); }
+    .loading-title { margin-bottom: 12px; color: var(--drylake-blue); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.12em; }
+    .loading-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .loading-card { display: flex; flex-direction: column; gap: 9px; min-height: 170px; border: 4px solid var(--drylake-ink); border-radius: 6px; padding: 12px; background: var(--drylake-paper); }
+    .loading-line { display: block; height: 10px; border-radius: 999px; background: linear-gradient(90deg, #d8d2c6, #fff, #d8d2c6); background-size: 200% 100%; animation: pulse 1.2s ease-in-out infinite; }
+    .loading-line.short { width: 44%; }
+    .loading-line.medium { width: 70%; }
+    @keyframes pulse { from { background-position: 200% 0; } to { background-position: -200% 0; } }
     .prompt-panel { margin-top: 14px; display: grid; gap: 12px; }
     textarea { width: 100%; min-height: 170px; resize: vertical; color: var(--drylake-ink); background: var(--drylake-white); border: 3px solid var(--drylake-ink); border-radius: 4px; padding: 12px; line-height: 1.45; }
-    .mode-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .mode-card { min-height: 92px; color: var(--drylake-ink); background: var(--drylake-white); border-color: var(--drylake-ink); text-align: left; }
-    .mode-card.selected { background: var(--drylake-yellow); border-color: var(--drylake-ink); }
-    .mode-card strong { display: block; margin-bottom: 6px; }
+    .mode-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mode-chip { padding: 4px 8px; border-radius: 999px; background: var(--drylake-white); font-size: 10px; box-shadow: none; }
+    .mode-chip.active { background: var(--drylake-yellow); }
+    .nano-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; margin: 0 0 14px; border: 3px solid var(--drylake-orange); border-radius: 6px; background: #fff7ed; font-size: 12px; }
+    .nano-banner-text { color: #7c3a00; }
+    .nano-banner-cta { padding: 4px 10px; font-size: 11px; white-space: nowrap; }
     .planning-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; margin: 0 0 16px; border: 4px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); font-size: 12px; }
     .planning-banner.pro { border-color: var(--drylake-blue); }
     .planning-banner.fallback { border-color: var(--drylake-orange); }
@@ -496,10 +574,17 @@ export class ControlRoomProvider {
     .handoff-menu[open] summary::after { content: " ▴"; }
     .handoff-menu-items { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 6px; padding: 6px; border: 3px solid var(--drylake-ink); border-radius: 6px; background: var(--drylake-paper); }
     .handoff-menu-item { padding: 5px 7px; font-size: 10px; box-shadow: 2px 2px 0 var(--drylake-ink); background: var(--drylake-white); }
+    .plan-change-overlay { margin-top: 10px; padding: 9px; border: 3px solid var(--drylake-orange); border-radius: 5px; background: #fff7ed; }
+    .plan-change-eyebrow { color: #7c3a00; text-transform: uppercase; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; }
+    .plan-change-overlay p { margin: 5px 0 8px; color: var(--drylake-ink); font-size: 11px; line-height: 1.35; }
+    .plan-change-actions { display: grid; grid-template-columns: 1fr; gap: 5px; }
+    .plan-change-actions button { padding: 5px 7px; font-size: 10px; box-shadow: 2px 2px 0 var(--drylake-ink); }
     .chat-panel { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin: 0 0 18px; border: 4px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); }
+    .chat-panel.collapsed { padding: 8px 14px; }
     .chat-header { display: flex; align-items: center; justify-content: space-between; }
     .chat-eyebrow { color: var(--drylake-blue); text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
-    .chat-clear { padding: 4px 8px; font-size: 11px; }
+    .chat-controls { display: flex; gap: 6px; }
+    .chat-clear, .collapse-btn { padding: 4px 8px; font-size: 11px; box-shadow: 2px 2px 0 var(--drylake-ink); }
     .chat-messages { display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
     .chat-message { padding: 8px 10px; border: 3px solid var(--drylake-ink); border-radius: 6px; background: var(--drylake-paper); }
     .chat-message.user { border-color: var(--drylake-blue); }
@@ -510,25 +595,23 @@ export class ControlRoomProvider {
     .chat-form textarea { min-height: 56px; }
     .chat-form-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
     .chat-hint { font-size: 11px; }
-    .chat-locked { border-color: var(--drylake-blue); background: #f0f6ff; }
-    .chat-pro-badge { padding: 2px 8px; border: 2px solid var(--drylake-ink); border-radius: 999px; background: var(--drylake-yellow); color: var(--drylake-ink); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
-    .chat-upgrade-row { display: flex; justify-content: flex-end; margin-top: 4px; }
-    @media (max-width: 860px) { header { flex-direction: column; } .kanban, .mode-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) { header, .nano-banner { align-items: flex-start; flex-direction: column; } .kanban { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <main>
     <header>
       <div>
-        <div class="eyebrow">DryLake Build Session</div>
+        <div class="eyebrow">DryLake Control Room</div>
         <h1>DryLake Control Room</h1>
-        <p class="muted">Visual kanban and pipeline planner for coding-agent work.</p>
       </div>
       <div class="actions">
         <div class="toggle-group" role="group" aria-label="Control Room view">
           <button class="toggle-btn${view === "pipeline" ? " active" : ""}" data-view="pipeline">Pipeline</button>
           <button class="toggle-btn${view === "kanban" ? " active" : ""}" data-view="kanban">Kanban</button>
         </div>
+        <button class="secondary" data-command="drylake.openSessions">Sessions</button>
+        <button class="secondary" data-command="drylake.newSession">New Session</button>
         ${executionToggle}
         ${runNextButton}
       </div>
@@ -556,7 +639,12 @@ export class ControlRoomProvider {
       if (!text) {
         return;
       }
-      vscode.postMessage({ command: "drylake.chatSendMessage", text: text });
+      const hasPlan = document.querySelector(".chat-panel")?.dataset.hasPlan === "true";
+      vscode.postMessage({
+        command: hasPlan ? "drylake.chatSendMessage" : "drylake.startBuildSession",
+        text: text,
+        mode: selectedMode
+      });
       chatInput.value = "";
     }
     chatForm?.addEventListener("submit", (event) => {
@@ -605,17 +693,32 @@ export class ControlRoomProvider {
         return;
       }
 
-      const modeCard = event.target.closest(".mode-card[data-mode]");
-      if (modeCard) {
-        selectedMode = modeCard.dataset.mode || "build-app";
-        document.querySelectorAll(".mode-card").forEach((card) => card.classList.toggle("selected", card === modeCard));
-        document.getElementById("promptText")?.focus();
+      const modeChip = event.target.closest(".mode-chip[data-mode]");
+      if (modeChip) {
+        selectedMode = modeChip.dataset.mode || "build-app";
+        document.querySelectorAll(".mode-chip").forEach((chip) => {
+          const active = chip === modeChip;
+          chip.classList.toggle("active", active);
+          chip.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        document.getElementById("chatInput")?.focus();
         return;
       }
 
       const commandEl = event.target.closest("[data-command]");
       if (commandEl) {
         vscode.postMessage({ command: commandEl.dataset.command, args: [] });
+        return;
+      }
+
+      const planChangeBtn = event.target.closest("[data-plan-change-action]");
+      if (planChangeBtn) {
+        vscode.postMessage({
+          command: planChangeBtn.dataset.planChangeAction === "approve"
+            ? "drylake.approvePlanChange"
+            : "drylake.rejectPlanChange",
+          phaseId: planChangeBtn.dataset.phaseId
+        });
         return;
       }
 
@@ -736,16 +839,6 @@ export class ControlRoomProvider {
       clearDropIndicators();
 
       vscode.postMessage({ command: "drylake.updatePhaseStatus", phaseId, status: column.dataset.dropStatus });
-    });
-
-    document.getElementById("submitPrompt")?.addEventListener("click", () => {
-      const prompt = document.getElementById("promptText")?.value.trim() || "";
-      if (!prompt) {
-        document.getElementById("promptText")?.focus();
-        return;
-      }
-
-      vscode.postMessage({ command: "drylake.startBuildSession", args: [selectedMode, prompt] });
     });
   </script>
 </body>

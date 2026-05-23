@@ -14,6 +14,11 @@ import {
 } from "../agents/phaseAgentLauncher";
 import { applyApproval } from "../xu/approvalState";
 import { createLocalDraftXu } from "../xu/createLocalDraftXu";
+import {
+  applyApprovedPhaseChange,
+  createPendingPlanChangeSet,
+  resolvePendingPhase,
+} from "../xu/pendingPlanChanges";
 import { parseXu } from "../xu/parseXu";
 import { renderXu } from "../xu/renderXu";
 import { validateXu } from "../xu/validateXu";
@@ -22,7 +27,6 @@ import type { DryLakeAiProvider } from "../ai/DryLakeAiProvider";
 import type { ApiClient } from "../services/apiClient";
 import type { StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
-import { hasXupraProAiEntitlement, requireXupraProAiEntitlement } from "../services/featureGates";
 import { scanWorkspaceFiles, getWorkspaceDisplayName } from "../services/workspaceScanner";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { ApplicationBuildRunbook, XuMode, XuPhaseAgent, XuStepStatus } from "../xu/types";
@@ -94,6 +98,10 @@ function nextLaunchablePhase(runbook: ApplicationBuildRunbook) {
     runbook.phases.find((phase) => phase.status !== "complete");
 }
 
+function executionHasStarted(runbook: ApplicationBuildRunbook) {
+  return runbook.phases.some((phase) => phase.status === "active");
+}
+
 function modeFromArg(arg: unknown): XuMode | undefined {
   if (typeof arg !== "string") {
     return undefined;
@@ -152,17 +160,10 @@ async function resolveProvider(stateStore: StateStore): Promise<DryLakeAiProvide
   return resolution.provider;
 }
 
-async function requireSelectedXupraAiAccess(deps: RunbookCommandDeps, provider: DryLakeAiProvider) {
-  if (provider.id !== "xupra-pro-ai" || !deps.stateStore.getConnection().userEmail) {
-    return true;
+async function persistModelTier(stateStore: StateStore, modelTier: unknown): Promise<void> {
+  if (modelTier === "nano" || modelTier === "foundation") {
+    await stateStore.setLastModelTier(modelTier);
   }
-
-  if (hasXupraProAiEntitlement(deps.stateStore)) {
-    return true;
-  }
-
-  await requireXupraProAiEntitlement(deps.apiClient, deps.stateStore, "Xupra AI");
-  return false;
 }
 
 async function buildWorkspaceSummary() {
@@ -225,16 +226,6 @@ async function maybeImportExternalResult(sessionStore: XuSessionStore, currentUr
   }
 }
 
-async function collectClarificationsForPrompt(params: {
-  provider: DryLakeAiProvider;
-  prompt: string;
-  mode: XuMode;
-}): Promise<string> {
-  // Clarifying questions now happen inside the Control Room chat panel.
-  // This helper is kept as a no-op so any older call sites continue to compile.
-  return params.prompt;
-}
-
 async function seedChatWithClarifyingQuestions(params: {
   deps: RunbookCommandDeps;
   provider: DryLakeAiProvider;
@@ -245,7 +236,7 @@ async function seedChatWithClarifyingQuestions(params: {
     await params.deps.stateStore.appendChatMessage({
       role: "ai",
       text:
-        "I've drafted a starter plan based on your prompt. Tell me anything else I should know and I'll refine it.",
+        "I've drafted a plan based on your prompt. Tell me anything else I should know and I'll refine it.",
     });
     return;
   }
@@ -257,6 +248,7 @@ async function seedChatWithClarifyingQuestions(params: {
       mode: params.mode,
       workspaceSummary,
     });
+    await persistModelTier(params.deps.stateStore, result.modelTier);
 
     const questions = Array.isArray(result.questions)
       ? result.questions.filter((item) => typeof item === "string" && item.trim().length > 0)
@@ -266,8 +258,8 @@ async function seedChatWithClarifyingQuestions(params: {
       await params.deps.stateStore.appendChatMessage({
         role: result.message ? "system" : "ai",
         text: result.message
-          ? `DryLake created a local starter plan, but ${params.provider.label} could not generate follow-up questions: ${result.message}`
-          : "I've drafted a starter plan. Tell me anything else I should know and I'll refine it.",
+          ? `${params.provider.label} generated the plan, but could not generate follow-up questions: ${result.message}`
+          : "I've drafted the plan. Tell me anything else I should know and I'll refine it.",
       });
       return;
     }
@@ -285,7 +277,7 @@ async function seedChatWithClarifyingQuestions(params: {
     console.warn("DryLake clarifying questions failed:", error);
     await params.deps.stateStore.appendChatMessage({
       role: "ai",
-      text: "I've drafted a starter plan. Tell me anything else I should know and I'll refine it.",
+      text: "I've drafted the plan. Tell me anything else I should know and I'll refine it.",
     });
   }
 }
@@ -296,74 +288,96 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
     return;
   }
 
-  await deps.stateStore.appendChatMessage({ role: "user", text });
+  const userMessage = await deps.stateStore.appendChatMessage({ role: "user", text });
+  await deps.stateStore.setPlanningLoading(true);
   await deps.controlRoom.refresh();
 
-  const session = deps.stateStore.getBuildSession();
-  const current = await deps.sessionStore.readRunbook();
-  if (!session || !current) {
-    await deps.stateStore.appendChatMessage({
-      role: "system",
-      text: "Start a build session first, then I can refine the plan based on what you say here.",
-    });
-    await deps.controlRoom.refresh();
-    return;
-  }
-
-  const provider = await resolveProvider(deps.stateStore);
-  const availability = await provider.isAvailable();
-  if (!availability.available && provider.id !== "external-ai-prompt") {
-    await deps.stateStore.appendChatMessage({
-      role: "system",
-      text: availability.reason
-        ? `${provider.label} is unavailable: ${availability.reason}`
-        : `${provider.label} is unavailable right now.`,
-    });
-    await deps.controlRoom.refresh();
-    return;
-  }
-
-  const chatHistory = deps.stateStore.getChatHistory().messages;
-  const chatTranscript = chatHistory
-    .map((message) => {
-      const speaker = message.role === "user" ? "User" : message.role === "system" ? "DryLake" : "Planning AI";
-      return `${speaker}: ${message.text}`;
-    })
-    .join("\n");
-
-  const refinedPrompt = `${session.prompt.trim()}\n\nPlanning chat so far:\n${chatTranscript}`;
-
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "DryLake is refining the plan...",
-      cancellable: false,
-    },
-    async () => {
-      const workspaceSummary = await buildWorkspaceSummary();
-      const result = await provider.planningChat({
-        prompt: session.prompt.trim(),
-        mode: session.mode,
-        workspaceSummary,
-        currentRunbook: current.runbook,
-        chatTranscript,
-      });
-
-      if (result.runbook) {
-        await deps.sessionStore.writeRunbook(current.uri, result.runbook);
-      }
-
-      if (result.reply) {
-        await deps.stateStore.appendChatMessage({ role: "ai", text: result.reply });
-        return;
-      }
-
+  try {
+    const session = deps.stateStore.getBuildSession();
+    const current = await deps.sessionStore.readRunbook();
+    if (!session || !current) {
       await deps.stateStore.appendChatMessage({
         role: "system",
-        text: `${provider.label} Planning Chat is not working: ${result.error ?? "No response returned."}`,
+        text: "Start a build session first, then I can refine the plan based on what you say here.",
       });
-    },
-  );
+      await deps.stateStore.setPlanningLoading(false);
+      await deps.controlRoom.refresh();
+      return;
+    }
+
+    const provider = await resolveProvider(deps.stateStore);
+    const availability = await provider.isAvailable();
+    if (!availability.available && provider.id !== "external-ai-prompt") {
+      await deps.stateStore.appendChatMessage({
+        role: "system",
+        text: availability.reason
+          ? `${provider.label} is unavailable: ${availability.reason}`
+          : `${provider.label} is unavailable right now.`,
+      });
+      await deps.stateStore.setPlanningLoading(false);
+      await deps.controlRoom.refresh();
+      return;
+    }
+
+    const chatHistory = deps.stateStore.getChatHistory().messages;
+    const chatTranscript = chatHistory
+      .map((message) => {
+        const speaker = message.role === "user" ? "User" : message.role === "system" ? "DryLake" : "Planning AI";
+        return `${speaker}: ${message.text}`;
+      })
+      .join("\n");
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "DryLake is refining your plan...",
+        cancellable: false,
+      },
+      async () => {
+        const workspaceSummary = await buildWorkspaceSummary();
+        const result = await provider.planningChat({
+          prompt: session.prompt.trim(),
+          mode: session.mode,
+          workspaceSummary,
+          currentRunbook: current.runbook,
+          chatTranscript,
+        });
+        await persistModelTier(deps.stateStore, result.modelTier);
+
+        if (result.runbook) {
+          if (executionHasStarted(current.runbook)) {
+            const pending = createPendingPlanChangeSet({
+              sourceChatMessageId: userMessage.id,
+              baseRunbookPath: relativePath(current.uri),
+              currentRunbook: current.runbook,
+              proposedRunbook: result.runbook,
+            });
+
+            if (pending.affectedPhaseIds.length > 0) {
+              await deps.sessionStore.writePendingPlanChange(pending);
+            } else {
+              await deps.sessionStore.clearPendingPlanChange();
+            }
+          } else {
+            await deps.sessionStore.writeRunbook(current.uri, result.runbook);
+            await deps.sessionStore.clearPendingPlanChange();
+          }
+        }
+
+        if (result.reply) {
+          await deps.stateStore.appendChatMessage({ role: "ai", text: result.reply });
+          return;
+        }
+
+        await deps.stateStore.appendChatMessage({
+          role: "system",
+          text: `${provider.label} Planning Chat is not working: ${result.error ?? "No response returned."}`,
+        });
+      },
+    );
+  } finally {
+    await deps.stateStore.setPlanningLoading(false);
+  }
 
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
@@ -372,6 +386,123 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
 export async function clearChatCommand(deps: RunbookCommandDeps) {
   await deps.stateStore.clearChatHistory();
   await deps.controlRoom.refresh();
+}
+
+export async function newSessionCommand(deps: RunbookCommandDeps) {
+  const current = await deps.sessionStore.readRunbook();
+  if (current) {
+    const active = current.runbook.phases.find((phase) => phase.status === "active");
+    if (active) {
+      const choice = await vscode.window.showWarningMessage(
+        `Phase ${active.title} is still active. Starting a new session will archive the current plan. Continue?`,
+        { modal: true },
+        "Archive & Start New",
+      );
+
+      if (choice !== "Archive & Start New") {
+        return;
+      }
+    }
+
+    await deps.sessionStore.archiveCurrentRunbook();
+  }
+
+  await deps.stateStore.clearBuildSession();
+  await deps.stateStore.clearChatHistory();
+  await deps.stateStore.setPlanningLoading(false);
+  await deps.sessionStore.clearPendingPlanChanges();
+  await deps.controlRoom.refresh();
+  await deps.refreshSidebar();
+}
+
+function phaseIdFromArg(arg: unknown) {
+  return typeof arg === "string" ? arg.trim() : "";
+}
+
+export async function approvePlanChangeCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown) {
+  const phaseId = phaseIdFromArg(phaseIdArg);
+  if (!phaseId) {
+    void vscode.window.showWarningMessage("DryLake could not apply the plan change because no phase was specified.");
+    return;
+  }
+
+  const current = await deps.sessionStore.readRunbook();
+  const pending = await deps.sessionStore.readPendingPlanChange();
+  if (!current || !pending || pending.status !== "pending") {
+    void vscode.window.showWarningMessage("No pending DryLake plan change is available.");
+    return;
+  }
+
+  if (!pending.affectedPhaseIds.includes(phaseId) || pending.phaseResolutions[phaseId]) {
+    void vscode.window.showWarningMessage(`No unresolved plan change exists for phase ${phaseId}.`);
+    return;
+  }
+
+  const updatedRunbook = applyApprovedPhaseChange(current.runbook, pending, phaseId);
+  const updatedPending = resolvePendingPhase(pending, phaseId, "approved");
+
+  await deps.sessionStore.writeRunbook(current.uri, updatedRunbook);
+  await deps.sessionStore.writePendingPlanChange(updatedPending);
+  await deps.controlRoom.refresh();
+  await deps.refreshSidebar();
+  void vscode.window.showInformationMessage(`Applied proposed change for phase ${phaseId}.`);
+}
+
+export async function rejectPlanChangeCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown) {
+  const phaseId = phaseIdFromArg(phaseIdArg);
+  if (!phaseId) {
+    void vscode.window.showWarningMessage("DryLake could not reject the plan change because no phase was specified.");
+    return;
+  }
+
+  const pending = await deps.sessionStore.readPendingPlanChange();
+  if (!pending || pending.status !== "pending") {
+    void vscode.window.showWarningMessage("No pending DryLake plan change is available.");
+    return;
+  }
+
+  if (!pending.affectedPhaseIds.includes(phaseId) || pending.phaseResolutions[phaseId]) {
+    void vscode.window.showWarningMessage(`No unresolved plan change exists for phase ${phaseId}.`);
+    return;
+  }
+
+  const updatedPending = resolvePendingPhase(pending, phaseId, "rejected");
+
+  await deps.sessionStore.writePendingPlanChange(updatedPending);
+  await deps.controlRoom.refresh();
+  await deps.refreshSidebar();
+  void vscode.window.showInformationMessage(`Kept current phase ${phaseId}.`);
+}
+
+export async function openSessionsCommand(deps: RunbookCommandDeps) {
+  const sessions = await deps.sessionStore.listArchivedSessions();
+  if (sessions.length === 0) {
+    void vscode.window.showInformationMessage("No archived DryLake sessions yet.");
+    return;
+  }
+
+  const picked = await vscode.window.showQuickPick(
+    sessions.map((session) => ({
+      label: session.name,
+      description: session.archivedAt ?? session.id,
+      session,
+    })),
+    {
+      placeHolder: "Open an archived DryLake session read-only.",
+      ignoreFocusOut: true,
+    },
+  );
+
+  if (!picked) {
+    return;
+  }
+
+  const bytes = await vscode.workspace.fs.readFile(picked.session.uri);
+  const document = await vscode.workspace.openTextDocument({
+    language: "xu",
+    content: new TextDecoder("utf-8").decode(bytes),
+  });
+  await vscode.window.showTextDocument(document, { preview: false });
 }
 
 async function applyAiDraft(params: {
@@ -383,14 +514,6 @@ async function applyAiDraft(params: {
   provider: DryLakeAiProvider;
   openExternalPrompt: boolean;
 }): Promise<{ runbook: ApplicationBuildRunbook; providerGenerated: boolean; providerMessage?: string }> {
-  if (!(await requireSelectedXupraAiAccess(params.deps, params.provider))) {
-    return {
-      runbook: params.runbook,
-      providerGenerated: false,
-      providerMessage: "Xupra AI requires a Pro plan.",
-    };
-  }
-
   const workspaceSummary = await buildWorkspaceSummary();
   const localDraft = createLocalDraftXu({
     prompt: params.prompt,
@@ -403,13 +526,13 @@ async function applyAiDraft(params: {
   const availability = await params.provider.isAvailable();
   if (!availability.available && params.provider.id !== "external-ai-prompt") {
     void vscode.window.showInformationMessage(
-      `${params.provider.label} is not available, so DryLake created a local draft runbook.`,
+      `${params.provider.label} is not available, so the manual draft command created a local draft runbook.`,
     );
     return { runbook: localDraft, providerGenerated: false, providerMessage: availability.reason };
   }
 
   if (params.provider.id === "external-ai-prompt" && !params.openExternalPrompt) {
-    void vscode.window.showInformationMessage("DryLake created a local draft runbook.");
+    void vscode.window.showInformationMessage("The manual draft command created a local draft runbook.");
     return { runbook: localDraft, providerGenerated: false };
   }
 
@@ -419,6 +542,7 @@ async function applyAiDraft(params: {
     workspaceSummary,
     currentRunbook: localDraft,
   });
+  await persistModelTier(params.deps.stateStore, result.modelTier);
 
   if (result.runbook) {
     await params.deps.sessionStore.writeRunbook(params.runbookUri, result.runbook);
@@ -435,6 +559,52 @@ async function applyAiDraft(params: {
   }
 
   return { runbook: localDraft, providerGenerated: false, providerMessage: result.message };
+}
+
+async function generateFirstMessageDraft(params: {
+  deps: RunbookCommandDeps;
+  prompt: string;
+  mode: XuMode;
+  provider: DryLakeAiProvider;
+}): Promise<{ runbookUri: vscode.Uri; providerGenerated: boolean; providerMessage?: string }> {
+  const workspaceSummary = await buildWorkspaceSummary();
+  const runbookUri = (await params.deps.sessionStore.findRunbookUri()) ??
+    params.deps.sessionStore.getDefaultRunbookUri();
+
+  const availability = await params.provider.isAvailable();
+  if (!availability.available && params.provider.id !== "external-ai-prompt") {
+    return {
+      runbookUri,
+      providerGenerated: false,
+      providerMessage: availability.reason ?? `${params.provider.label} is unavailable right now.`,
+    };
+  }
+
+  try {
+    const result = await params.provider.generateDraftRunbook({
+      prompt: params.prompt,
+      mode: params.mode,
+      workspaceSummary,
+    });
+    await persistModelTier(params.deps.stateStore, result.modelTier);
+
+    if (result.runbook) {
+      await params.deps.sessionStore.writeRunbook(runbookUri, result.runbook);
+      return { runbookUri, providerGenerated: true };
+    }
+
+    return {
+      runbookUri,
+      providerGenerated: false,
+      providerMessage: result.message ?? `${params.provider.label} did not return a runbook.`,
+    };
+  } catch (error) {
+    return {
+      runbookUri,
+      providerGenerated: false,
+      providerMessage: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export async function openControlRoomCommand(deps: RunbookCommandDeps, context: vscode.ExtensionContext) {
@@ -470,57 +640,51 @@ export async function startBuildSessionCommand(
   await deps.controlRoom.createOrShow(context);
 
   const provider = await resolveProvider(deps.stateStore);
-  if (!(await requireSelectedXupraAiAccess(deps, provider))) {
-    await deps.stateStore.clearChatHistory();
-    await deps.stateStore.appendChatMessage({
-      role: "system",
-      text: "Xupra AI requires a Pro plan. Upgrade to start AI-generated build sessions.",
-    });
-    await deps.controlRoom.refresh();
-    return;
-  }
+  await deps.stateStore.setPlanningLoading(true);
+  await deps.controlRoom.refresh();
 
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "Starting DryLake build session...",
-      cancellable: false,
-    },
-    async () => {
-      const cleanedPrompt = prompt.trim();
-      await deps.stateStore.clearChatHistory();
-      await deps.stateStore.appendChatMessage({ role: "user", text: cleanedPrompt });
+  try {
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "DryLake is generating your plan...",
+        cancellable: false,
+      },
+      async () => {
+        const cleanedPrompt = prompt.trim();
+        await deps.stateStore.clearChatHistory();
+        await deps.stateStore.appendChatMessage({ role: "user", text: cleanedPrompt });
+        await deps.controlRoom.refresh();
 
-      const ensured = await deps.sessionStore.ensureRunbook({ prompt: cleanedPrompt, mode });
-      const session = await deps.sessionStore.createSession({
-        prompt: cleanedPrompt,
-        mode,
-        runbookPath: relativePath(ensured.uri),
-        providerId: provider.id,
-        providerLabel: provider.label,
-      });
-      await deps.stateStore.setBuildSession(session);
-      const draftResult = await applyAiDraft({
-        deps,
-        prompt: cleanedPrompt,
-        mode,
-        runbook: ensured.runbook,
-        runbookUri: ensured.uri,
-        provider,
-        openExternalPrompt: false,
-      });
-      if (draftResult.providerGenerated) {
-        await seedChatWithClarifyingQuestions({ deps, provider, prompt: cleanedPrompt, mode });
-      } else {
-        await deps.stateStore.appendChatMessage({
-          role: "system",
-          text: draftResult.providerMessage
-            ? `DryLake created a local starter plan, but ${provider.label} could not replace it: ${draftResult.providerMessage}`
-            : "DryLake created a local starter plan. Review and run phases from the Control Room.",
+        const draftResult = await generateFirstMessageDraft({
+          deps,
+          prompt: cleanedPrompt,
+          mode,
+          provider,
         });
-      }
-    },
-  );
+        const session = await deps.sessionStore.createSession({
+          prompt: cleanedPrompt,
+          mode,
+          runbookPath: relativePath(draftResult.runbookUri),
+          providerId: provider.id,
+          providerLabel: provider.label,
+        });
+        await deps.stateStore.setBuildSession(session);
+        if (draftResult.providerGenerated) {
+          await seedChatWithClarifyingQuestions({ deps, provider, prompt: cleanedPrompt, mode });
+        } else {
+          await deps.stateStore.appendChatMessage({
+            role: "system",
+            text: draftResult.providerMessage
+              ? `${provider.label} could not generate a plan: ${draftResult.providerMessage}`
+              : `${provider.label} could not generate a plan.`,
+          });
+        }
+      },
+    );
+  } finally {
+    await deps.stateStore.setPlanningLoading(false);
+  }
 
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
@@ -546,11 +710,6 @@ export async function generateDraftRunbookCommand(deps: RunbookCommandDeps) {
   }
 
   const provider = await resolveProvider(deps.stateStore);
-  if (!(await requireSelectedXupraAiAccess(deps, provider))) {
-    await deps.controlRoom.refresh();
-    return;
-  }
-
   const ensured = await deps.sessionStore.ensureRunbook({ prompt: prompt.trim(), mode });
   await applyAiDraft({
     deps,

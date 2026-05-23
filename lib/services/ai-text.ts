@@ -5,6 +5,7 @@ type GenerateTextParams = {
   systemPrompt: string;
   userPrompt: string;
   taskLabel: string;
+  model?: string;
 };
 
 const XUPRA_AI_IDENTITY_PROMPT = [
@@ -39,7 +40,7 @@ async function generateWithOpenAi(params: GenerateTextParams) {
     throw new Error("Xupra AI is not configured: OPENAI_API_KEY is missing.");
   }
 
-  const model = env.OPENAI_MODEL?.trim();
+  const model = params.model?.trim() || env.OPENAI_MODEL?.trim();
   if (!model) {
     throw new Error("Xupra AI is not configured: OPENAI_MODEL is missing.");
   }

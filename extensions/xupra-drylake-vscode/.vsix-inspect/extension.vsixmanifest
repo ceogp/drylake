@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+	<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+		<Metadata>
+			<Identity Language="en-US" Id="drylake" Version="0.3.1" Publisher="xupracorp" />
+			<DisplayName>DryLake — Visual Planning for AI Coding Agents</DisplayName>
+			<Description xml:space="preserve">Visual, easy planning of your coding-agent workflow. Kanban + pipeline planner that hands off to Claude Code, Codex, Cursor, Cline, Continue, Aider, Windsurf, GitHub Copilot, Roo Code, Augment, and more.</Description>
+			<Tags>ai,ai-agent,ai-agents,ai-coding,ai-coding-agent,ai-pair-programming,ai-planner,ai-planning,agent,agentic,agentic-coding,agent-workflow,autonomous-agent,autonomous-coding,autocomplete,code-generation,code-completion,code-assistant,coding-agent,coding-assistant,coding-copilot,vibe-coding,spec-driven,plan-mode,planning,kanban,pipeline,workflow,chat,chatgpt,llm,gpt,gpt-4,gpt-4o,gpt-5,openai,o1,o3,anthropic,claude,claude-code,claude-sonnet,claude-opus,codex,copilot,github-copilot,cursor,cursor-ai,cline,continue,continue-dev,aider,windsurf,roo-code,roo-cline,augment,augment-code,tabnine,cody,sourcegraph,sourcegraph-cody,plandex,devin,sweep,zencoder,blackbox,blackboxai,traycer,replit,zed,trae,gemini,google-gemini,deepseek,qwen,llama,mistral,groq,perplexity,refactor,refactoring,bug-fix,debugging,feature-development,ticket-to-code,pull-request,pr-review,code-review,test-planning,testing,validation,build-session,build-sessions,developer-workflow,developer-tools,productivity,repo-context,repo-aware,codebase-context,prompt-engineering,prompts,vscode-ai,xupra,drylake,xu,XupraExecutionUnit,__ext_xu</Tags>
+			<Categories>AI,Chat,Machine Learning,Programming Languages,Education,Snippets,Other</Categories>
+			<GalleryFlags>Public</GalleryFlags>
+			
+			<Properties>
+				<Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.100.0" />
+				<Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="" />
+				<Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="" />
+				<Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="workspace" />
+				<Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="" />
+				<Property Id="Microsoft.VisualStudio.Code.EnabledApiProposals" Value="" />
+				
+				<Property Id="Microsoft.VisualStudio.Code.ExecutesCode" Value="true" />
+				
+				
+				<Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="https://drylake.xupracorp.com/about" />
+				<Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="https://drylake.xupracorp.com/" />
+				<Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="#f6ebdc" />
+				<Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="light" />
+				<Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="true" />
+				<Property Id="Microsoft.VisualStudio.Services.Content.Pricing" Value="Free"/>
+
+				
+				
+			</Properties>
+			<License>extension/LICENSE.txt</License>
+			<Icon>extension/media/icon.png</Icon>
+		</Metadata>
+		<Installation>
+			<InstallationTarget Id="Microsoft.VisualStudio.Code"/>
+		</Installation>
+		<Dependencies/>
+		<Assets>
+			<Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
+			<Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/readme.md" Addressable="true" />
+<Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE.txt" Addressable="true" />
+<Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/media/icon.png" Addressable="true" />
+		</Assets>
+	</PackageManifest>

@@ -6,6 +6,8 @@ import { ClipboardProvider } from "../ai/providers/clipboardProvider";
 import { XupraCloudProvider } from "../ai/providers/xupraCloudProvider";
 import { resolveDryLakeAiProvider } from "../ai/providerResolver";
 import { parseAiRunbookResponse } from "../ai/parseAiRunbookResponse";
+import { buildDraftRunbookPrompt } from "../ai/prompts/buildDraftRunbookPrompt";
+import { generatePhasePlanPrompt } from "../ai/prompts/generatePhasePlanPrompt";
 
 let models: unknown[] = [];
 
@@ -65,6 +67,21 @@ describe("AI providers", () => {
     expect(parsed.runbook?.intent.purpose).toBe("Build the app.");
   });
 
+  it("asks AI to determine the phase count from task complexity", () => {
+    const input = {
+      prompt: "Fix the login button color",
+      mode: "build-app" as const,
+      workspaceSummary: "Workspace: test",
+    };
+
+    const draftPrompt = buildDraftRunbookPrompt(input);
+    const phasePlanPrompt = generatePhasePlanPrompt(input);
+
+    expect(draftPrompt).toContain("determine the correct number of phases for this specific task");
+    expect(phasePlanPrompt).toContain("Simple tasks may need 3 phases");
+    expect(`${draftPrompt}\n${phasePlanPrompt}`).not.toContain("at least five phases");
+  });
+
   it("allows Xupra AI when the account has the new entitlement", async () => {
     const provider = new XupraCloudProvider(
       configuration({ environment: "production", apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
@@ -119,6 +136,91 @@ describe("AI providers", () => {
       "https://drylake.xupracorp.com/api/v1/drylake/runbooks/generate-phases",
       "https://drylake.xupracorp.com/api/v1/drylake/runbooks/chat",
     ]);
+  });
+
+  it("returns model tier metadata from Xupra AI draft and chat responses", async () => {
+    const provider = new XupraCloudProvider(
+      configuration({ apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
+      proConnection,
+      async () => "token",
+    );
+    const runbook = createStarterXu({ prompt: "Build app", mode: "build-app" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        content: renderXu(runbook),
+        modelTier: "nano",
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        reply: "Use a queue for retries.",
+        modelTier: "foundation",
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const input = {
+        prompt: "Build app",
+        mode: "build-app" as const,
+        workspaceSummary: "Workspace: test",
+      };
+
+      await expect(provider.generateDraftRunbook(input)).resolves.toMatchObject({
+        runbook: expect.any(Object),
+        modelTier: "nano",
+      });
+      await expect(provider.planningChat({ ...input, chatTranscript: "User: hi" })).resolves.toEqual({
+        reply: "Use a queue for retries.",
+        modelTier: "foundation",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("parses proposed runbooks from Xupra AI chat responses", async () => {
+    const provider = new XupraCloudProvider(
+      configuration({ apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
+      proConnection,
+      async () => "token",
+    );
+    const runbook = createStarterXu({ prompt: "Build app", mode: "build-app" });
+    runbook.phases[0].objective = "Updated objective";
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
+      reply: "I drafted an updated phase.",
+      proposedRunbook: runbook,
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      await expect(provider.planningChat({
+        prompt: "Build app",
+        mode: "build-app",
+        workspaceSummary: "Workspace: test",
+        chatTranscript: "User: update phase one",
+      })).resolves.toMatchObject({
+        reply: "I drafted an updated phase.",
+        runbook: expect.objectContaining({
+          phases: expect.arrayContaining([
+            expect.objectContaining({ objective: "Updated objective" }),
+          ]),
+        }),
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it("uses xupra.baseUrl for Xupra AI requests when no drylake API override is configured", async () => {
