@@ -3,6 +3,7 @@
 src/**
 tsconfig.json
 esbuild.mjs
+vitest.config.mts
 README.md
 package-lock.json
 scripts/svg-to-png.mjs
