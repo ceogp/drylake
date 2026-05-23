@@ -5,9 +5,7 @@ export const XU_PHASE_AGENTS = [
   "codex",
   "gemini",
   "cursor",
-  "aider",
   "copilot",
-  "augment-code",
 ] as const;
 
 export type XuPhaseAgent = (typeof XU_PHASE_AGENTS)[number];

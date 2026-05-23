@@ -36,23 +36,54 @@ describe("phase agent launchers", () => {
 
     const labels = phaseAgentHandoffOptions("copilot").map((option) => option.label);
 
-    expect(labels).toEqual(["Open in VS Code Chat", "Copy prompt", "Export Markdown"]);
+    expect(labels).toEqual(["Open Chat Handoff", "Copy prompt", "Open Markdown"]);
   });
 
   it("uses generic handoff action labels after the phase agent is selected", () => {
     const labels = phaseAgentHandoffOptions("codex").map((option) => option.label);
 
     expect(labels).toEqual([
-      "Run selected agent",
+      "Run Handoff",
       "Export .sh script",
       "Export .bat script",
       "Copy prompt",
-      "Export Markdown",
+      "Open Markdown",
     ]);
     expect(labels.join(" ")).not.toContain("Codex");
   });
 
-  it("does not include Continue.dev as a phase agent launcher", () => {
+  it("does not include unverified phase agent launchers", () => {
     expect((PHASE_AGENT_LAUNCHERS as Record<string, unknown>).continue).toBeUndefined();
+    expect((PHASE_AGENT_LAUNCHERS as Record<string, unknown>).aider).toBeUndefined();
+    expect((PHASE_AGENT_LAUNCHERS as Record<string, unknown>)["augment-code"]).toBeUndefined();
+  });
+
+  it("uses verified v1 launcher commands", () => {
+    expect(PHASE_AGENT_LAUNCHERS["claude-code"].kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS["codex"].kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.cursor.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.gemini.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.copilot.kind).toBe("vscode-command");
+
+    if (
+      PHASE_AGENT_LAUNCHERS["claude-code"].kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.codex.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.cursor.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.gemini.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.copilot.kind !== "vscode-command"
+    ) {
+      throw new Error("Unexpected launcher kind");
+    }
+
+    expect(PHASE_AGENT_LAUNCHERS["claude-code"].terminalCommand("/tmp/prompt.md")).toContain("claude -p");
+    expect(PHASE_AGENT_LAUNCHERS.codex.terminalCommand("/tmp/prompt.md")).toContain("codex exec");
+    expect(PHASE_AGENT_LAUNCHERS.codex.shellScriptCommand('"$PROMPT_FILE"')).toBe('codex exec "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS.codex.batchScriptCommand()).toContain("codex exec $prompt");
+    expect(PHASE_AGENT_LAUNCHERS.cursor.executable).toBe("cursor-agent");
+    expect(PHASE_AGENT_LAUNCHERS.cursor.terminalCommand("/tmp/prompt.md")).toContain("cursor-agent -p");
+    expect(PHASE_AGENT_LAUNCHERS.cursor.shellScriptCommand('"$PROMPT_FILE"')).toBe('cursor-agent -p "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS.gemini.terminalCommand("/tmp/prompt.md")).toContain("gemini -p");
+    expect(PHASE_AGENT_LAUNCHERS.gemini.shellScriptCommand('"$PROMPT_FILE"')).toBe('gemini -p "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS.copilot.commandId).toBe("workbench.action.chat.open");
   });
 });

@@ -1,7 +1,7 @@
 {
   "name": "drylake",
   "displayName": "DryLake — Visual Planning for AI Coding Agents",
-  "description": "Visual kanban and pipeline planner for assigning coding phases to Claude Code, Codex, Gemini CLI, Cursor CLI, Aider, GitHub Copilot, and Augment.",
+  "description": "Visual kanban and pipeline planner for assigning coding phases to Claude Code, OpenAI Codex, Gemini CLI, Cursor CLI, and GitHub Copilot Chat.",
   "version": "0.4.0",
   "private": false,
   "publisher": "xupracorp",
@@ -39,9 +39,6 @@
     "gemini",
     "gemini-cli",
     "cursor",
-    "aider",
-    "augment",
-    "augment-code",
     "intellisense",
     "snippets",
     "refactor",

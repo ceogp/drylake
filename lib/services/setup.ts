@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
+import { getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 import { getAuthSetup } from "@/lib/services/auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 
@@ -21,6 +22,7 @@ async function getOrganizationContext() {
 export async function getSetupStatus() {
   const auth = getAuthSetup();
   const { organizationId } = await getOrganizationContext();
+  const openAiConfigured = await getOpenAiApiKey().then(Boolean).catch(() => false);
 
   const [subscription, credentials, integrations] = organizationId
     ? await Promise.all([
@@ -88,7 +90,7 @@ export async function getSetupStatus() {
             ].filter(Boolean),
     },
     openai: {
-      configured: Boolean(env.OPENAI_API_KEY),
+      configured: openAiConfigured,
       model: env.OPENAI_MODEL,
     },
     storage: {

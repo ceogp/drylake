@@ -66,20 +66,17 @@ describe("runbook generators", () => {
     const value = runbook();
     value.phases[0].agent = "codex";
 
-    expect(renderPhasePrompt(value, value.phases[0])).toContain("You are running as Codex CLI.");
+    expect(renderPhasePrompt(value, value.phases[0])).toContain("You are running as OpenAI Codex.");
     expect(renderPhasePrompt(value, value.phases[1])).toContain("You are running as Claude Code.");
   });
 
   it("renders phase-agent prompt preambles for every selectable agent", () => {
     const expectedPreambles: Record<XuPhaseAgent, string> = {
       "claude-code": "You are running as Claude Code.",
-      codex: "You are running as Codex CLI.",
+      codex: "You are running as OpenAI Codex.",
       gemini: "You are running as Gemini CLI.",
       cursor: "You are running as Cursor CLI.",
-      continue: "You are running as Continue CLI.",
-      aider: "You are running as Aider.",
-      copilot: "You are running as GitHub Copilot.",
-      "augment-code": "You are running as Auggie CLI.",
+      copilot: "You are running as GitHub Copilot Chat.",
     };
 
     for (const agent of XU_PHASE_AGENTS) {
@@ -114,7 +111,7 @@ describe("runbook generators", () => {
       },
     });
 
-    expect(prompt).toContain("You are running as Codex CLI.");
+    expect(prompt).toContain("You are running as OpenAI Codex.");
     expect(prompt).not.toContain("Use the active DryLake build-session provider: User IDE AI.");
   });
 
@@ -135,7 +132,7 @@ describe("runbook generators", () => {
     expect(defaultProviderPhase?.content).toContain("Use the active DryLake build-session provider: Xupra AI.");
     expect(defaultProviderPhase?.content).toContain(renderPhasePrompt(value, value.phases[1], { activeProvider }).split("\n")[3]);
     expect(defaultProviderPhase?.content).not.toContain("You are running as Claude Code.");
-    expect(explicitAgentPhase?.content).toContain("You are running as Codex CLI.");
+    expect(explicitAgentPhase?.content).toContain("You are running as OpenAI Codex.");
     expect(explicitAgentPhase?.content).not.toContain("Use the active DryLake build-session provider: Xupra AI.");
   });
 

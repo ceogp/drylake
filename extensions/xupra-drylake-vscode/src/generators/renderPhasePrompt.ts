@@ -4,12 +4,10 @@ import type { ApplicationBuildRunbook, BuildSessionState, XuPhase, XuPhaseAgent 
 
 const AGENT_PREAMBLES: Record<XuPhaseAgent, string> = {
   "claude-code": "You are running as Claude Code. Use the bash tool for file operations.",
-  codex: "You are running as Codex CLI. Output shell commands and file patches.",
+  codex: "You are running as OpenAI Codex. Output shell commands and file patches.",
   gemini: "You are running as Gemini CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
   cursor: "You are running as Cursor CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
-  aider: "You are running as Aider. Use the focused phase objective, steps, and acceptance criteria to plan patches before editing files.",
-  copilot: "You are running as GitHub Copilot. Use inline suggestions and chat.",
-  "augment-code": "You are running as Auggie CLI. Use the focused phase objective, steps, and acceptance criteria to make repo-aware edits.",
+  copilot: "You are running as GitHub Copilot Chat. Use chat handoff context to guide the next coding step.",
 };
 
 const PROVIDER_PREAMBLES: Record<BuildSessionState["providerId"], string> = {

@@ -1,10 +1,12 @@
 import { ok } from "@/lib/api/http";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
+import { getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 import { getAuthSetup } from "@/lib/services/auth";
 
 export async function GET() {
   const db = await prisma.$queryRawUnsafe("SELECT 1 as ok").then(() => "ok").catch(() => "error");
+  const openAiConfigured = await getOpenAiApiKey().then(Boolean).catch(() => false);
   const auth = getAuthSetup();
   const clerkConfigured = Boolean(
     env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
@@ -39,7 +41,7 @@ export async function GET() {
       billingConfigured,
       clerkConfigured,
       stripeConfigured,
-      openaiConfigured: Boolean(env.OPENAI_API_KEY),
+      openaiConfigured: openAiConfigured,
       storageConfigured:
         env.ARTIFACT_STORAGE_DRIVER === "local"
           ? true

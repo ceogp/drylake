@@ -114,15 +114,15 @@ function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
   const secondaryButtons = secondary
     .map((option) => {
       const shortLabel = option.action === "script-sh"
-        ? ".sh"
+        ? "Export .sh"
         : option.action === "script-bat"
-          ? ".bat"
+          ? "Export .bat"
           : option.action === "copy"
-            ? "Copy"
+            ? "Copy prompt"
             : option.action === "markdown"
-              ? "MD"
+              ? "Open Markdown"
               : option.label;
-      return `<button type="button" class="handoff-action-btn secondary" data-handoff-phase="${escapeHtml(phase.id)}" data-handoff-action="${escapeHtml(option.action)}" title="${escapeHtml(option.title)}"${disabled}>${escapeHtml(shortLabel)}</button>`;
+      return `<button type="button" class="handoff-menu-item" data-handoff-phase="${escapeHtml(phase.id)}" data-handoff-action="${escapeHtml(option.action)}" title="${escapeHtml(option.title)}"${disabled}>${escapeHtml(shortLabel)}</button>`;
     })
     .join("");
 
@@ -135,7 +135,10 @@ function renderPhaseCard(phase: XuPhase, options: { draggable: boolean }) {
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
       <button type="button" class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" data-handoff-action="run" title="${escapeHtml(primaryTitle)}"${disabled}>${escapeHtml(primaryLabel)}</button>
-      <div class="handoff-secondary">${secondaryButtons}</div>
+      <details class="handoff-menu">
+        <summary>Export</summary>
+        <div class="handoff-menu-items">${secondaryButtons}</div>
+      </details>
     </div>
   </article>`;
 }
@@ -486,8 +489,13 @@ export class ControlRoomProvider {
     .step-item.done span { text-decoration: line-through; color: #6c655d; }
     .phase-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
     .handoff-btn { width: 100%; font-size: 12px; padding: 6px 10px; }
-    .handoff-secondary { display: flex; flex-wrap: wrap; gap: 4px; }
-    .handoff-action-btn { flex: 1 1 auto; min-width: 44px; padding: 4px 6px; font-size: 10px; box-shadow: 2px 2px 0 var(--drylake-ink); }
+    .handoff-menu { position: relative; }
+    .handoff-menu summary { list-style: none; width: 100%; padding: 5px 8px; border: 3px solid var(--drylake-ink); border-radius: 4px; color: var(--drylake-ink); background: var(--drylake-white); font-size: 11px; font-weight: 800; text-align: center; cursor: pointer; box-shadow: 2px 2px 0 var(--drylake-ink); }
+    .handoff-menu summary::-webkit-details-marker { display: none; }
+    .handoff-menu summary::after { content: " ▾"; }
+    .handoff-menu[open] summary::after { content: " ▴"; }
+    .handoff-menu-items { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 6px; padding: 6px; border: 3px solid var(--drylake-ink); border-radius: 6px; background: var(--drylake-paper); }
+    .handoff-menu-item { padding: 5px 7px; font-size: 10px; box-shadow: 2px 2px 0 var(--drylake-ink); background: var(--drylake-white); }
     .chat-panel { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin: 0 0 18px; border: 4px solid var(--drylake-ink); border-radius: 8px; background: var(--drylake-white); }
     .chat-header { display: flex; align-items: center; justify-content: space-between; }
     .chat-eyebrow { color: var(--drylake-blue); text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }

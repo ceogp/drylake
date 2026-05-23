@@ -4,11 +4,11 @@ import { ArrowTape, TapePanel, TapeWord } from "@/components/tape-brand";
 const phases = [
   { id: "01", title: "Prompt", body: "Paste a ticket, sketch, or repo goal.", bg: "#ffd60a", fg: "#151515" },
   { id: "02", title: "Plan", body: "DryLake splits the build into ordered phases.", bg: "#005caf", fg: "#ffffff" },
-  { id: "03", title: "Assign", body: "Choose Codex, Copilot, Gemini, Cline, or Aider per phase.", bg: "#e6007e", fg: "#ffffff" },
-  { id: "04", title: "Handoff", body: "Run direct, export scripts, copy, markdown, or VS Code.", bg: "#36b979", fg: "#07140d" },
+  { id: "03", title: "Assign", body: "Choose Claude Code, Codex, Gemini, Cursor, or Copilot Chat per phase.", bg: "#e6007e", fg: "#ffffff" },
+  { id: "04", title: "Handoff", body: "Run Handoff first, with script, copy, and Markdown exports as utilities.", bg: "#36b979", fg: "#07140d" },
 ];
 
-const handoffActions = ["RUN", ".SH", ".BAT", "COPY", "MD", "VS CODE"];
+const handoffActions = ["RUN HANDOFF", "EXPORT", ".SH", ".BAT", "COPY", "MD"];
 
 const glyphStudies = [
   { label: "D cut 01", text: "D", variantSet: 0, color: "#005caf", background: "#ffffff" },
@@ -56,7 +56,7 @@ export default function TapeBuilderTrialPage() {
               </div>
 
               <div className="max-w-2xl text-base font-medium leading-7 text-stone-800 md:text-lg">
-                Plan the work as a build map, pick the agent for each phase, then hand off through the path that fits the tool.
+                Plan the work as a build map, pick the agent for each phase, then run the handoff or use export utilities.
               </div>
 
               <div className="flex flex-wrap gap-3">

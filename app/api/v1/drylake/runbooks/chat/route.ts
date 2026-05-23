@@ -31,9 +31,22 @@ export async function POST(request: Request) {
       throw error;
     }
 
-    const result = await generatePlanningChatReply(parsed.data);
-
-    return ok(result);
+    try {
+      const result = await generatePlanningChatReply(parsed.data);
+      return ok(result);
+    } catch (error) {
+      // Hide config errors from user, log real error
+      if (
+        error instanceof Error &&
+        (error.message.includes("OPENAI_API_KEY is missing") ||
+         error.message.includes("OPENAI_MODEL is missing") ||
+         error.message.includes("Xupra AI is not configured"))
+      ) {
+        console.error("[Xupra AI Planning Chat config error]", error);
+        return internalError("Chat is unavailable. Please try again later.");
+      }
+      throw error;
+    }
   } catch (error) {
     if (error instanceof Error && error.message === REQUEST_AUTHENTICATION_REQUIRED_ERROR) {
       return unauthorized();

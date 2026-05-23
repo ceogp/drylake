@@ -12,12 +12,10 @@ export const metadata: Metadata = {
 
 const agentTargets = [
   "Claude Code",
-  "Codex",
+  "OpenAI Codex",
   "Gemini CLI",
   "Cursor CLI",
-  "Aider",
-  "GitHub Copilot",
-  "Augment",
+  "GitHub Copilot Chat",
 ];
 
 const contactCards = [

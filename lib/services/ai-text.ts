@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 
 type GenerateTextParams = {
   systemPrompt: string;
@@ -33,7 +34,7 @@ function extractOpenAiText(payload: {
 }
 
 async function generateWithOpenAi(params: GenerateTextParams) {
-  const apiKey = env.OPENAI_API_KEY?.trim();
+  const apiKey = await getOpenAiApiKey({ required: true });
   if (!apiKey) {
     throw new Error("Xupra AI is not configured: OPENAI_API_KEY is missing.");
   }

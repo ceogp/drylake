@@ -98,7 +98,7 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
   },
   codex: {
     id: "codex",
-    label: "Codex",
+    label: "OpenAI Codex",
     kind: "terminal",
     executable: "codex",
     help: "Install Codex CLI and make the `codex` command available on PATH.",
@@ -118,42 +118,22 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
   },
   cursor: {
     id: "cursor",
-    label: "Cursor",
+    label: "Cursor CLI",
     kind: "terminal",
-    executable: "agent",
-    help: "Install Cursor CLI and make the `agent` command available on PATH.",
-    terminalCommand: (promptFilePath) => fromPromptFile("agent -p", promptFilePath),
-    shellScriptCommand: shellPromptArgCommand("agent -p"),
-    batchScriptCommand: batchPromptArgCommand("agent -p"),
-  },
-  aider: {
-    id: "aider",
-    label: "Aider",
-    kind: "terminal",
-    executable: "aider",
-    help: "Install Aider and make the `aider` command available on PATH.",
-    terminalCommand: (promptFilePath) => `aider --message-file ${quotePath(promptFilePath)}`,
-    shellScriptCommand: (promptFileRef) => `aider --message-file ${promptFileRef}`,
-    batchScriptCommand: () => `aider --message-file "%PROMPT_FILE%"`,
+    executable: "cursor-agent",
+    help: "Install Cursor CLI and make the `cursor-agent` command available on PATH.",
+    terminalCommand: (promptFilePath) => fromPromptFile("cursor-agent -p", promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("cursor-agent -p"),
+    batchScriptCommand: batchPromptArgCommand("cursor-agent -p"),
   },
   copilot: {
     id: "copilot",
-    label: "GitHub Copilot",
+    label: "GitHub Copilot Chat",
     kind: "vscode-command",
     extensionIds: ["github.copilot-chat", "github.copilot"],
     commandId: "workbench.action.chat.open",
     commandArgs: (prompt) => [{ query: prompt }],
     help: "Install GitHub Copilot Chat in VS Code.",
-  },
-  "augment-code": {
-    id: "augment-code",
-    label: "Augment Code",
-    kind: "terminal",
-    executable: "auggie",
-    help: "Install Auggie CLI and make the `auggie` command available on PATH.",
-    terminalCommand: (promptFilePath) => `auggie --print --instruction-file ${quotePath(promptFilePath)}`,
-    shellScriptCommand: (promptFileRef) => `auggie --print --instruction-file ${promptFileRef}`,
-    batchScriptCommand: () => `auggie --print --instruction-file "%PROMPT_FILE%"`,
   },
 };
 
@@ -172,7 +152,7 @@ export function phaseAgentHandoffOptions(agent: XuPhaseAgent): PhaseHandoffOptio
   const options: PhaseHandoffOption[] = [
     {
       action: "run",
-      label: launcher.kind === "vscode-command" ? "Open in VS Code Chat" : "Run selected agent",
+      label: launcher.kind === "vscode-command" ? "Open Chat Handoff" : "Run Handoff",
       title: phaseAgentHint(agent),
     },
   ];
@@ -200,7 +180,7 @@ export function phaseAgentHandoffOptions(agent: XuPhaseAgent): PhaseHandoffOptio
     },
     {
       action: "markdown",
-      label: "Export Markdown",
+      label: "Open Markdown",
       title: "Save and open the phase prompt as a Markdown handoff file.",
     },
   );

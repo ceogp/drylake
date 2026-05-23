@@ -139,10 +139,15 @@ describe("Control Room webview", () => {
     expect(html).toContain('command: "drylake.reorderPhase"');
     expect(html).toContain("drop-before");
     expect(html).toContain("drop-after");
-    expect(html).toContain("Run selected agent");
+    expect(html).toContain("Run Handoff");
+    expect(html).toContain("<summary>Export</summary>");
     expect(html).toContain('data-handoff-action="script-sh"');
     expect(html).toContain('data-handoff-action="script-bat"');
     expect(html).toContain('data-handoff-action="markdown"');
+    expect(html).toContain("Copy prompt");
+    expect(html).toContain("Open Markdown");
+    expect(html).not.toContain("handoff-secondary");
+    expect(html).not.toContain("handoff-action-btn");
     expect(html).not.toContain("Run with Codex");
     expect(html).toContain("Select phase agent");
     expect(html).toContain('data-handoff-action="run"');
@@ -160,6 +165,20 @@ describe("Control Room webview", () => {
     expect(html).not.toContain("Direct CLI + scripts");
     expect(html).not.toContain("Direct VS Code");
     expect(html).not.toContain("Choose direct run, .sh/.bat, Copy, Markdown, or VS Code per phase.");
+  });
+
+  it("renders one agent selector per phase and keeps exports in a secondary menu", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+    const agentSelectorCount = html.match(/class="agent-select"/g)?.length ?? 0;
+    const phaseCardCount = html.match(/class="phase-card/g)?.length ?? 0;
+
+    expect(agentSelectorCount).toBe(phaseCardCount);
+    expect(html).toContain('class="handoff-menu"');
+    expect(html).toContain('data-handoff-action="run"');
+    expect(html).not.toContain("handoff-action-select");
   });
 
   it("renders autopilot toggle state for pipeline and kanban", async () => {
@@ -208,9 +227,9 @@ describe("Control Room webview", () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);
 
-    await messageHandler?.({ command: "drylake.updatePhaseAgent", phaseId: "active", agent: "aider" });
+    await messageHandler?.({ command: "drylake.updatePhaseAgent", phaseId: "active", agent: "gemini" });
 
-    expect(executed).toContainEqual({ command: "drylake.updatePhaseAgent", args: ["active", "aider"] });
+    expect(executed).toContainEqual({ command: "drylake.updatePhaseAgent", args: ["active", "gemini"] });
   });
 
   it("routes handoff action messages to phase handoff commands", async () => {
@@ -234,8 +253,8 @@ describe("Control Room webview", () => {
 
     expect(html).toContain("Gemini CLI");
     expect(html).not.toContain("Continue.dev");
-    expect(html).toContain("Aider");
-    expect(html).toContain("Augment Code");
+    expect(html).not.toContain("Aider");
+    expect(html).not.toContain("Augment Code");
     expect(html).not.toContain("Cline");
     expect(html).not.toContain("Windsurf");
     expect(html).not.toContain("Roo Code");

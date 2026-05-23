@@ -122,26 +122,33 @@ if [ "${NODE_ENV:-}" = "production" ]; then
   [ -z "${STRIPE_WEBHOOK_SECRET:-}" ] && missing_vars+=("STRIPE_WEBHOOK_SECRET")
   [ "${BILLING_ENFORCEMENT_MODE:-}" != "strict" ] && missing_vars+=("BILLING_ENFORCEMENT_MODE=strict")
 
-  # Encryption
-  [ -z "${APP_ENCRYPTION_KEY:-}" ] && missing_vars+=("APP_ENCRYPTION_KEY")
+  secrets_provider="${SECRETS_PROVIDER:-env}"
+
+  if [ "$secrets_provider" = "aws_secrets_manager" ]; then
+    [ -z "${AWS_REGION:-}" ] && missing_vars+=("AWS_REGION (SECRETS_PROVIDER=aws_secrets_manager)")
+  else
+    [ -z "${APP_ENCRYPTION_KEY:-}" ] && missing_vars+=("APP_ENCRYPTION_KEY")
+  fi
 
   # Admin
   [ -z "${ADMIN_INTERNAL_BASIC_AUTH_USERNAME:-}" ] && missing_vars+=("ADMIN_INTERNAL_BASIC_AUTH_USERNAME")
   [ -z "${ADMIN_INTERNAL_BASIC_AUTH_PASSWORD:-}" ] && missing_vars+=("ADMIN_INTERNAL_BASIC_AUTH_PASSWORD")
 
   # AI provider
-  ai_provider="${AI_PROVIDER:-openai}"
-  case "$ai_provider" in
-    kimi)
-      [ -z "${KIMI_API_KEY:-}" ] && missing_vars+=("KIMI_API_KEY (AI_PROVIDER=kimi)")
-      ;;
-    anthropic)
-      [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${CLAUDE_API_KEY:-}" ] && missing_vars+=("ANTHROPIC_API_KEY or CLAUDE_API_KEY (AI_PROVIDER=anthropic)")
-      ;;
-    *)
-      [ -z "${OPENAI_API_KEY:-}" ] && missing_vars+=("OPENAI_API_KEY (AI_PROVIDER=openai)")
-      ;;
-  esac
+  if [ "$secrets_provider" != "aws_secrets_manager" ]; then
+    ai_provider="${AI_PROVIDER:-openai}"
+    case "$ai_provider" in
+      kimi)
+        [ -z "${KIMI_API_KEY:-}" ] && missing_vars+=("KIMI_API_KEY (AI_PROVIDER=kimi)")
+        ;;
+      anthropic)
+        [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${CLAUDE_API_KEY:-}" ] && missing_vars+=("ANTHROPIC_API_KEY or CLAUDE_API_KEY (AI_PROVIDER=anthropic)")
+        ;;
+      *)
+        [ -z "${OPENAI_API_KEY:-}" ] && missing_vars+=("OPENAI_API_KEY (AI_PROVIDER=openai)")
+        ;;
+    esac
+  fi
 
   if [ "${#missing_vars[@]}" -gt 0 ]; then
     echo "ERROR: Missing or invalid required production env vars:" >&2

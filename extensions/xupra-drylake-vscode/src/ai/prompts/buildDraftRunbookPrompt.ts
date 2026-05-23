@@ -23,7 +23,7 @@ export function buildDraftRunbookPrompt(input: GenerateDraftRunbookInput) {
     "provisioning.safety.requiresApprovalBeforeExecution: true",
     "provisioning.safety.executeAutomatically: false",
     "phases: at least five phases with id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
-    "phase.agent optional enum: claude-code, codex, gemini, cursor, aider, copilot, augment-code",
+    "phase.agent optional enum: claude-code, codex, gemini, cursor, copilot",
     "",
     `Mode: ${input.mode}`,
     "",

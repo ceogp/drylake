@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { getKimiApiKey, getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 
 export type AssistedNormalization = {
   summary: string;
@@ -128,14 +129,15 @@ async function normalizeWithOpenAi(params: {
     content: string;
   }>;
 }) {
-  if (!env.OPENAI_API_KEY) {
+  const apiKey = await getOpenAiApiKey();
+  if (!apiKey) {
     return null;
   }
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -203,14 +205,15 @@ async function normalizeWithKimi(params: {
     content: string;
   }>;
 }) {
-  if (!env.KIMI_API_KEY) {
+  const apiKey = await getKimiApiKey();
+  if (!apiKey) {
     return null;
   }
 
   const response = await fetch(`${env.KIMI_BASE_URL.replace(/\/+$/, "")}/chat/completions`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.KIMI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
