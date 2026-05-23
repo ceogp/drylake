@@ -4,7 +4,6 @@ import {
   PHASE_AGENT_LAUNCHERS,
   PHASE_HANDOFF_ACTIONS,
   launchPhaseAgent,
-  phaseHandoffActionFromArg,
   phaseAgentHandoffOptions,
 } from "../agents/phaseAgentLauncher";
 import { XU_PHASE_AGENTS } from "../xu/types";
@@ -56,10 +55,6 @@ beforeEach(() => {
   mocks.createTerminal.mockReturnValue(mocks.terminal);
 });
 
-function expectNoPhaseStatusUpdateCommand() {
-  expect(mocks.executeCommand).not.toHaveBeenCalledWith("drylake.updatePhaseStatus", expect.anything(), expect.anything());
-}
-
 const FUTURE_PHASE_AGENTS = ["blackbox", "droid", "aider", "augment-code", "continue", "cline"] as const;
 
 describe("phase agent launchers", () => {
@@ -82,22 +77,6 @@ describe("phase agent launchers", () => {
       "Open Markdown",
     ]);
     expect(labels.join(" ")).not.toContain("Codex");
-  });
-
-  // Export-only actions must never change phase status.
-  describe("export-only handoff actions", () => {
-    it.each([
-      ["Copy action", "copy"],
-      ["Markdown action", "markdown"],
-      ["Export .sh", "script-sh"],
-      ["Export .bat", "script-bat"],
-    ] as const)(
-      "%s does not change phase status",
-      (_label, action) => {
-        expect(phaseHandoffActionFromArg(action)).toBe(action);
-        expectNoPhaseStatusUpdateCommand();
-      },
-    );
   });
 
   it("does not include unverified phase agent launchers", () => {
@@ -182,7 +161,6 @@ describe("phase agent launchers", () => {
         expect.stringContaining("codex exec"),
         true,
       );
-      expectNoPhaseStatusUpdateCommand();
     } finally {
       platform.mockRestore();
     }
@@ -214,7 +192,6 @@ describe("phase agent launchers", () => {
         expect.stringContaining("gemini -p"),
         true,
       );
-      expectNoPhaseStatusUpdateCommand();
     } finally {
       platform.mockRestore();
     }
@@ -235,7 +212,6 @@ describe("phase agent launchers", () => {
     expect(result.promptFile).toBe(promptFile);
     expect(result.message).toContain("OpenAI Codex is not installed");
     expect(mocks.createTerminal).not.toHaveBeenCalled();
-    expectNoPhaseStatusUpdateCommand();
   });
 
   it("returns install guidance when Gemini CLI is missing", async () => {
@@ -254,6 +230,5 @@ describe("phase agent launchers", () => {
     expect(result.message).toContain("Gemini CLI is not installed");
     expect(result.message).toContain("Install Gemini CLI");
     expect(mocks.createTerminal).not.toHaveBeenCalled();
-    expectNoPhaseStatusUpdateCommand();
   });
 });

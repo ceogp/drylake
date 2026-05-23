@@ -7,7 +7,7 @@ Only agents in `XU_PHASE_AGENTS` are selectable in the Control Room.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | claude-code | terminal | claude | ✅ | ✅ | message + .md | ✅ | ✅ | ✅ | ✅ verified |
 | OpenAI Codex | codex | terminal | codex | ✅ | ✅ | message + .md | ✅ | ✅ | ✅ | ✅ verified |
-| Gemini CLI | gemini | terminal | gemini | ✅ | ✅ | message + .md | ✅ | ✅ | ✅ | 🔲 pending |
+| Gemini CLI | gemini | terminal | gemini | ✅ | ✅ | message + .md | ✅ | ✅ | ✅ | ✅ verified |
 | Cursor CLI | cursor | terminal | cursor-agent | ✅ | ✅ | message + .md | ✅ | ✅ | ✅ | ✅ verified |
 | GitHub Copilot Chat | copilot | vscode-command | github.copilot-chat | ❌ | ❌ | message + .md | ✅ | ✅ | ✅ | ✅ verified |
 

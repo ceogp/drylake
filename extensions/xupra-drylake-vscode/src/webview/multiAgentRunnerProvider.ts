@@ -6,6 +6,8 @@ import {
   phaseAgentLabel,
 } from "../agents/phaseAgentLauncher";
 import type { ApiClient } from "../services/apiClient";
+import type { MultiAgentAssignmentPlan } from "../types/multiAgentRun";
+import { MultiAgentRunStore } from "../xu/multiAgentRunStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { XuPhaseAgent } from "../xu/types";
 
@@ -101,13 +103,6 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, "&#39;");
 }
 
-async function writeUtf8(uri: vscode.Uri, content: string) {
-  const directoryPath = uri.path.includes("/") ? uri.path.slice(0, uri.path.lastIndexOf("/")) : uri.path;
-  const directory = uri.with({ path: directoryPath || "/" });
-  await vscode.workspace.fs.createDirectory(directory);
-  await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(content));
-}
-
 function parseAgents(value: unknown): XuPhaseAgent[] {
   const values = Array.isArray(value) ? value : [];
   const valid = new Set<string>(XU_PHASE_AGENTS);
@@ -195,55 +190,6 @@ function parseEditedAssignments(value: unknown, current: RunnerAssignment[]) {
 
 function runDirectory(root: vscode.Uri, runId: string) {
   return vscode.Uri.joinPath(root, ".drylake", "runs", runId);
-}
-
-class MultiAgentRunStore {
-  constructor(private readonly root: vscode.Uri) {}
-
-  async writeRun(run: RunnerRun) {
-    const uri = vscode.Uri.joinPath(runDirectory(this.root, run.id), "run.json");
-    await writeUtf8(uri, `${JSON.stringify(run, null, 2)}\n`);
-  }
-
-  async writeAssignmentPlan(run: RunnerRun) {
-    const uri = vscode.Uri.joinPath(runDirectory(this.root, run.id), "assignment-plan.json");
-    await writeUtf8(uri, `${JSON.stringify({
-      runId: run.id,
-      taskPrompt: run.taskPrompt,
-      assignmentSource: run.assignmentSource,
-      assignmentApprovedAt: run.assignmentApprovedAt,
-      modelTier: run.modelTier,
-      assignments: run.assignments,
-      conflictWarning: run.conflictWarning,
-    }, null, 2)}\n`);
-  }
-
-  async writePrompt(run: RunnerRun, assignment: RunnerAssignment) {
-    const uri = vscode.Uri.joinPath(runDirectory(this.root, run.id), assignment.agentId, "prompt.md");
-    const content = [
-      `# DryLake Multi-Agent Runner: ${assignment.agentLabel}`,
-      "",
-      "You are one participant in a DryLake multi-agent run.",
-      "Work only inside your assigned scope boundary. Do not modify files or behavior assigned to another agent.",
-      "",
-      "## Top-level task",
-      "",
-      run.taskPrompt,
-      "",
-      "## Your assignment",
-      "",
-      assignment.subtaskSummary,
-      "",
-      "## Scope boundary",
-      "",
-      assignment.scopeBoundary,
-      "",
-      "Report what you changed, what you verified, and any blockers.",
-      "",
-    ].join("\n");
-    await writeUtf8(uri, content);
-    return { uri, content };
-  }
 }
 
 function renderIdle(run: RunnerRun | null) {
@@ -432,7 +378,9 @@ export class MultiAgentRunnerProvider {
 
     if (message.command === "rerun") {
       await this.rerunAgent(message.agent);
+      return;
     }
+
   }
 
   private refresh() {
@@ -445,11 +393,54 @@ export class MultiAgentRunnerProvider {
   }
 
   private store() {
-    return new MultiAgentRunStore(workspaceRoot());
+    return new MultiAgentRunStore();
   }
 
   private async writeAuditLog(run: RunnerRun) {
-    await this.store().writeRun(run);
+    const uri = vscode.Uri.joinPath(runDirectory(workspaceRoot(), run.id), "run.json");
+    await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(workspaceRoot(), ".drylake", "runs", run.id));
+    await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(`${JSON.stringify(run, null, 2)}\n`));
+  }
+
+  private assignmentPlan(run: RunnerRun): MultiAgentAssignmentPlan {
+    return {
+      runId: run.id,
+      taskPrompt: run.taskPrompt,
+      assignmentSource: run.assignmentSource,
+      assignmentApprovedAt: run.assignmentApprovedAt,
+      modelTier: run.modelTier,
+      assignments: run.assignments.map((assignment) => ({
+        agentId: assignment.agentId,
+        label: assignment.agentLabel,
+        assignmentSummary: assignment.subtaskSummary,
+        assignmentBoundary: assignment.scopeBoundary,
+      })),
+      conflictWarning: run.conflictWarning,
+    };
+  }
+
+  private promptContent(run: RunnerRun, assignment: RunnerAssignment) {
+    return [
+      `# DryLake Multi-Agent Runner: ${assignment.agentLabel}`,
+      "",
+      "You are one participant in a DryLake multi-agent run.",
+      "Work only inside your assigned scope boundary. Do not modify files or behavior assigned to another agent.",
+      "",
+      "## Top-level task",
+      "",
+      run.taskPrompt,
+      "",
+      "## Your assignment",
+      "",
+      assignment.subtaskSummary,
+      "",
+      "## Scope boundary",
+      "",
+      assignment.scopeBoundary,
+      "",
+      "Report what you changed, what you verified, and any blockers.",
+      "",
+    ].join("\n");
   }
 
   private buildRun(task: string, agents: XuPhaseAgent[], modelTier: RunnerModelTier | null = null): RunnerRun {
@@ -530,7 +521,7 @@ export class MultiAgentRunnerProvider {
             : agent;
         });
         this.currentRun = run;
-        await this.store().writeAssignmentPlan(run);
+        await this.store().writeAssignmentPlan(this.assignmentPlan(run));
         await this.writeAuditLog(run);
       },
     );
@@ -556,7 +547,7 @@ export class MultiAgentRunnerProvider {
     const conflictWarning = detectBoundaryConflict(approvedAssignments);
     if (conflictWarning) {
       this.currentRun = { ...this.currentRun, assignments: approvedAssignments, conflictWarning };
-      await this.store().writeAssignmentPlan(this.currentRun);
+      await this.store().writeAssignmentPlan(this.assignmentPlan(this.currentRun));
       await this.writeAuditLog(this.currentRun);
       this.refresh();
       void vscode.window.showWarningMessage(conflictWarning);
@@ -581,7 +572,7 @@ export class MultiAgentRunnerProvider {
       }),
     };
 
-    await this.store().writeAssignmentPlan(this.currentRun);
+    await this.store().writeAssignmentPlan(this.assignmentPlan(this.currentRun));
     await this.writeAuditLog(this.currentRun);
     await this.launchApprovedAssignments(this.currentRun);
   }
@@ -616,12 +607,13 @@ export class MultiAgentRunnerProvider {
     this.refresh();
 
     const results = await Promise.allSettled(runningRun.assignments.map(async (assignment) => {
-      const promptFile = await store.writePrompt(runningRun, assignment);
+      const content = this.promptContent(runningRun, assignment);
+      const promptFile = await store.writeAgentPrompt(runningRun.id, assignment.agentId, content);
       const terminalName = `DryLake: ${assignment.agentLabel} — ${taskSlug}`;
       const launch = await launchAgentTask({
         agent: assignment.agentId,
-        prompt: promptFile.content,
-        promptFile: promptFile.uri,
+        prompt: content,
+        promptFile,
         workspaceUri: root,
         terminalName,
       });
@@ -637,7 +629,7 @@ export class MultiAgentRunnerProvider {
         command: launch.command ?? null,
         installError: launch.status === "launched" ? null : launch.message,
         message: launch.message,
-        promptFile: promptFile.uri.toString(),
+        promptFile: promptFile.toString(),
         terminalName,
       };
     }));

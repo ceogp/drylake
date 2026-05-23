@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "extensions/*/dist/**",
     "extensions/*/node_modules/**",
+    "extensions/*/.vsix-inspect/**",
   ]),
 ]);
 

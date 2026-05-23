@@ -708,6 +708,19 @@ describe("runbook commands", () => {
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });
 
+  it("marks the phase active after a successful handoff launch", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps } = reorderDeps(runbook);
+
+    await handoffPhaseCommand(deps as never, "P-01");
+
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
+    const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(written.phases.find((phase) => phase.id === "P-01")?.status).toBe("active");
+  });
+
   // Export-only actions must never change phase status.
   describe("export-only handoff actions", () => {
     it.each([
@@ -718,12 +731,14 @@ describe("runbook commands", () => {
     ] as const)("%s does not change phase status through command dispatch", async (_label, action, shell) => {
       const runbook = reorderRunbook();
       runbook.phases[0].agent = "codex";
+      const originalPhaseStatuses = runbook.phases.map((phase) => ({ id: phase.id, status: phase.status }));
       const { deps } = reorderDeps(runbook);
 
       await handoffPhaseCommand(deps as never, "P-01", action);
 
       expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
       expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
+      expect(runbook.phases.map((phase) => ({ id: phase.id, status: phase.status }))).toEqual(originalPhaseStatuses);
       expectNoPhaseStatusUpdateCommand();
 
       if (action === "copy") {
@@ -841,6 +856,7 @@ describe("runbook commands", () => {
   it("does not mark a phase active when the selected agent executable is missing", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";
+    const originalPhaseStatuses = runbook.phases.map((phase) => ({ id: phase.id, status: phase.status }));
     const { deps } = reorderDeps(runbook);
     mocks.launchPhaseAgent.mockResolvedValueOnce({
       status: "not-installed",
@@ -851,6 +867,7 @@ describe("runbook commands", () => {
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
     expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
+    expect(runbook.phases.map((phase) => ({ id: phase.id, status: phase.status }))).toEqual(originalPhaseStatuses);
     expectNoPhaseStatusUpdateCommand();
   });
 });

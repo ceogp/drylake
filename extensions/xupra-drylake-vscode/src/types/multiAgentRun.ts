@@ -12,12 +12,13 @@ export type MultiAgentAssignment = {
 };
 
 export type MultiAgentAssignmentPlan = {
-  id: string;
   runId: string;
   taskPrompt: string;
-  source: MultiAgentAssignmentSource;
-  approvedAt: string | null;
-  agents: MultiAgentAssignment[];
+  assignmentSource: MultiAgentAssignmentSource;
+  assignmentApprovedAt: string | null;
+  modelTier: "nano" | "foundation" | null;
+  assignments: MultiAgentAssignment[];
+  conflictWarning: string | null;
 };
 
 export type AgentRunEntry = {

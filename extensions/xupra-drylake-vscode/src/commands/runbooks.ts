@@ -29,7 +29,7 @@ import type { StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
 import { scanWorkspaceFiles, getWorkspaceDisplayName } from "../services/workspaceScanner";
 import { XU_PHASE_AGENTS } from "../xu/types";
-import type { ApplicationBuildRunbook, XuMode, XuPhaseAgent, XuStepStatus } from "../xu/types";
+import type { ApplicationBuildRunbook, BuildSessionState, XuMode, XuPhaseAgent, XuStepStatus } from "../xu/types";
 
 type RunbookCommandDeps = {
   apiClient: ApiClient;
@@ -293,19 +293,62 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
   await deps.controlRoom.refresh();
 
   try {
-    const session = deps.stateStore.getBuildSession();
+    const provider = await resolveProvider(deps.stateStore);
     const current = await deps.sessionStore.readRunbook();
-    if (!session || !current) {
-      await deps.stateStore.appendChatMessage({
-        role: "system",
-        text: "Start a build session first, then I can refine the plan based on what you say here.",
-      });
-      await deps.stateStore.setPlanningLoading(false);
-      await deps.controlRoom.refresh();
+
+    if (!current) {
+      const mode = deps.stateStore.getBuildSession()?.mode ?? "build-app";
+
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "DryLake is generating your plan...",
+          cancellable: false,
+        },
+        async () => {
+          const draftResult = await generateFirstMessageDraft({
+            deps,
+            prompt: text,
+            mode,
+            provider,
+          });
+          const session = await deps.sessionStore.createSession({
+            prompt: text,
+            mode,
+            runbookPath: relativePath(draftResult.runbookUri),
+            providerId: provider.id,
+            providerLabel: provider.label,
+          });
+          await deps.stateStore.setBuildSession(session);
+          if (draftResult.providerGenerated) {
+            await seedChatWithClarifyingQuestions({ deps, provider, prompt: text, mode });
+          } else {
+            await deps.stateStore.appendChatMessage({
+              role: "system",
+              text: draftResult.providerMessage
+                ? `${provider.label} could not generate a plan: ${draftResult.providerMessage}`
+                : `${provider.label} could not generate a plan.`,
+            });
+          }
+        },
+      );
       return;
     }
 
-    const provider = await resolveProvider(deps.stateStore);
+    let session = deps.stateStore.getBuildSession();
+    if (!session) {
+      session = {
+        id: `recovered-${Date.now()}`,
+        mode: current.runbook.metadata.mode ?? "build-app",
+        prompt: current.runbook.intent.rawPrompt,
+        createdAt: new Date().toISOString(),
+        runbookPath: relativePath(current.uri),
+        providerId: provider.id,
+        providerLabel: provider.label,
+      } satisfies BuildSessionState;
+      await deps.stateStore.setBuildSession(session);
+    }
+
     const availability = await provider.isAvailable();
     if (!availability.available && provider.id !== "external-ai-prompt") {
       await deps.stateStore.appendChatMessage({
@@ -314,8 +357,6 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
           ? `${provider.label} is unavailable: ${availability.reason}`
           : `${provider.label} is unavailable right now.`,
       });
-      await deps.stateStore.setPlanningLoading(false);
-      await deps.controlRoom.refresh();
       return;
     }
 
@@ -377,10 +418,9 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
     );
   } finally {
     await deps.stateStore.setPlanningLoading(false);
+    await deps.controlRoom.refresh();
+    await deps.refreshSidebar();
   }
-
-  await deps.controlRoom.refresh();
-  await deps.refreshSidebar();
 }
 
 export async function clearChatCommand(deps: RunbookCommandDeps) {
