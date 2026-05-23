@@ -89,7 +89,7 @@ export default async function RootLayout({
             <a className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href={dryLakeOrigin}>
               DryLake
             </a>
-            <a className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href={`${dryLakeOrigin}/billing`}>
+            <a className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href={`${dryLakeOrigin}/pricing`}>
               Pricing
             </a>
           </nav>

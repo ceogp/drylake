@@ -9,16 +9,16 @@ import {
   tapeColors,
 } from "@/components/tape-brand";
 import {
-  getConfiguredAppOrigin,
+  getConfiguredAppUrlForPath,
   isConfiguredMarketingHost,
   normalizeHost,
 } from "@/lib/site-hosts";
 import { installTargets } from "@/lib/install-targets";
 
 const steps = [
-  { id: "01", title: "Import", body: "Choose a repo folder or selected files.", bg: tapeColors.yellow, fg: tapeColors.ink },
-  { id: "02", title: "Canonicalize", body: "Convert raw source into portable agents, skills, rules, and instructions with Kimi.", bg: tapeColors.blue, fg: tapeColors.white },
-  { id: "03", title: "Install", body: "Pick Cursor, Codex, Claude, or a custom path and let the extension write files.", bg: tapeColors.green, fg: tapeColors.ink },
+  { id: "01", title: "Plan", body: "Drop in a ticket, bug report, feature request, or product spec.", bg: tapeColors.yellow, fg: tapeColors.ink },
+  { id: "02", title: "Organize", body: "DryLake splits the work into ordered kanban phases with steps and validation.", bg: tapeColors.blue, fg: tapeColors.white },
+  { id: "03", title: "Handoff", body: "Pick Claude Code, Codex, Gemini, Cursor CLI, or Copilot Chat and run the phase handoff.", bg: tapeColors.green, fg: tapeColors.ink },
 ];
 
 function ActionLink({ href, children, variant = "yellow" }: { href: string; children: ReactNode; variant?: "yellow" | "white" }) {
@@ -59,11 +59,13 @@ function PhaseBoard() {
 }
 
 function PlatformPanel() {
+  const signUpHref = getConfiguredAppUrlForPath("/sign-up", "redirect_url=/workspace");
+
   return (
     <TapePanel className="bg-white">
       <div className="grid gap-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-3xl font-black uppercase leading-none">Install targets</h2>
+          <h2 className="text-3xl font-black uppercase leading-none">Agent handoffs</h2>
           <ArrowTape color="#111111" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -71,7 +73,7 @@ function PlatformPanel() {
             <Link
               key={target.slug}
               className="border-[4px] border-black px-4 py-3 font-mono text-xs font-black uppercase tracking-[0.14em] transition hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#111]"
-              href={`/install-targets/${target.slug}`}
+              href={signUpHref}
               style={{ background: target.color }}
             >
               {target.name}
@@ -84,9 +86,8 @@ function PlatformPanel() {
 }
 
 function HomeExperience({ marketing }: { marketing: boolean }) {
-  const dryLakeOrigin = getConfiguredAppOrigin();
-  const primaryHref = marketing ? dryLakeOrigin : "/upload";
-  const secondaryHref = marketing ? `${dryLakeOrigin}/upload` : "/install";
+  const primaryHref = marketing ? getConfiguredAppUrlForPath("/sign-up", "redirect_url=/workspace") : "/upload";
+  const secondaryHref = marketing ? getConfiguredAppUrlForPath("/pricing") : "/pricing";
   const headline = "Visual Kanban and Pipeline Planner for coding agents.";
 
   return (
@@ -108,8 +109,8 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
               {headline}
             </h1>
             <div className="flex flex-wrap gap-3">
-              <ActionLink href={primaryHref}>{marketing ? "Open DryLake" : "Start build"}</ActionLink>
-              <ActionLink href={secondaryHref} variant="white">{marketing ? "Import skills" : "Open installer"}</ActionLink>
+              <ActionLink href={primaryHref}>{marketing ? "Start Planning" : "Start build"}</ActionLink>
+              <ActionLink href={secondaryHref} variant="white">Pricing</ActionLink>
             </div>
           </div>
 
