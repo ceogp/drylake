@@ -8,6 +8,7 @@ RELEASE_TAR="${RELEASE_TAR:?RELEASE_TAR is required}"
 ENV_FILE="${ENV_FILE:?ENV_FILE is required}"
 
 export DEBIAN_FRONTEND=noninteractive
+sed -i 's/\r$//' "$ENV_FILE"
 set -a
 source "$ENV_FILE"
 set +a
