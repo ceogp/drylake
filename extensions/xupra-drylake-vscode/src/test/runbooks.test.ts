@@ -161,7 +161,7 @@ beforeEach(() => {
 });
 
 describe("runbook commands", () => {
-  it("requires users to connect before starting a Build Session", async () => {
+  it("requires users to connect before starting a DryLake plan", async () => {
     mocks.showWarningMessage.mockResolvedValueOnce("Connect DryLake");
     const deps = {
       apiClient: {},
@@ -180,7 +180,7 @@ describe("runbook commands", () => {
     await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout");
 
     expect(mocks.showWarningMessage).toHaveBeenCalledWith(
-      "Connect your DryLake account before starting a Build Session.",
+      "Connect your DryLake account before starting a DryLake plan.",
       "Connect DryLake",
     );
     expect(mocks.executeCommand).toHaveBeenCalledWith("xupra.connect");
@@ -643,8 +643,10 @@ describe("runbook commands", () => {
         setPlanningLoading: vi.fn(async () => undefined),
       },
       sessionStore: {
+        findRunbookUri: vi.fn(async () => ({ path: "/repo/drylake.xu" })),
         readRunbook: vi.fn(async () => ({ uri: { path: "/repo/drylake.xu" }, runbook })),
         archiveCurrentRunbook: vi.fn(async () => ({ id: "archive-1", uri: { path: "/repo/.drylake/sessions/archive-1/drylake.xu" }, runbook })),
+        deleteCurrentPlan: vi.fn(async () => true),
         clearPendingPlanChanges: vi.fn(async () => undefined),
       },
       controlRoom: {
@@ -663,6 +665,37 @@ describe("runbook commands", () => {
     expect(deps.sessionStore.clearPendingPlanChanges).toHaveBeenCalledOnce();
     expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+  });
+
+  it("deletes the current plan and clears pending plan changes when requested", async () => {
+    const runbook = createStarterXu({ prompt: "Build checkout", mode: "build-app" });
+    const deps = {
+      apiClient: {},
+      stateStore: {
+        clearBuildSession: vi.fn(async () => undefined),
+        clearChatHistory: vi.fn(async () => undefined),
+        setPlanningLoading: vi.fn(async () => undefined),
+      },
+      sessionStore: {
+        findRunbookUri: vi.fn(async () => ({ path: "/repo/drylake.xu" })),
+        readRunbook: vi.fn(async () => ({ uri: { path: "/repo/drylake.xu" }, runbook })),
+        archiveCurrentRunbook: vi.fn(async () => ({ id: "archive-1", uri: { path: "/repo/.drylake/sessions/archive-1/drylake.xu" }, runbook })),
+        deleteCurrentPlan: vi.fn(async () => true),
+        clearPendingPlanChanges: vi.fn(async () => undefined),
+      },
+      controlRoom: {
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+    mocks.showWarningMessage.mockResolvedValueOnce("Delete & Start New");
+
+    await newSessionCommand(deps as never);
+
+    expect(deps.sessionStore.archiveCurrentRunbook).not.toHaveBeenCalled();
+    expect(deps.sessionStore.deleteCurrentPlan).toHaveBeenCalledOnce();
+    expect(deps.stateStore.clearBuildSession).toHaveBeenCalledOnce();
+    expect(deps.sessionStore.clearPendingPlanChanges).toHaveBeenCalledOnce();
   });
 
   function reorderRunbook(): ApplicationBuildRunbook {

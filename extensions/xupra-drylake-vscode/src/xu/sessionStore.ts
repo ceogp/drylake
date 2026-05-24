@@ -201,6 +201,17 @@ export class XuSessionStore {
     return { id, uri: archivedRunbookUri, runbook: current.runbook };
   }
 
+  async deleteCurrentPlan() {
+    const uri = await this.findRunbookUri();
+    if (!uri) {
+      return false;
+    }
+
+    await vscode.workspace.fs.delete(uri, { useTrash: false });
+    await this.clearPendingPlanChanges();
+    return true;
+  }
+
   async clearPendingPlanChanges() {
     const folder = vscode.Uri.joinPath(workspaceRoot(), ".drylake", "pending-plan-changes");
     try {

@@ -11,8 +11,10 @@ import {
   approveArchitectureCommand,
   approvePlanChangeCommand,
   approvePurposeCommand,
+  archiveCurrentPlanCommand,
   chatSendMessageCommand,
   clearChatCommand,
+  deleteCurrentPlanCommand,
   exportHandoffPromptCommand,
   generateAgentFilesCommand,
   generateDraftRunbookCommand,
@@ -59,9 +61,7 @@ import { ControlRoomProvider } from "./webview/controlRoomProvider";
 import { MultiAgentRunnerProvider } from "./webview/multiAgentRunnerProvider";
 import { openPhaseAgentSetupReport } from "./agents/phaseAgentLauncher";
 import { renderPhasePrompt } from "./generators/renderPhasePrompt";
-import { renderRunbookMd } from "./generators/renderRunbookMd";
 import { getLogger } from "./utils/logging";
-import { estimateTokens, formatEstimatedTokens } from "./utils/tokenEstimate";
 import { XuSessionStore } from "./xu/sessionStore";
 
 const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
@@ -482,9 +482,7 @@ export async function activate(context: vscode.ExtensionContext) {
     let activePhaseId: string | undefined;
     let activePhaseTitle: string | undefined;
     let activePhaseAgent: string | undefined;
-    let activePhaseTokenEstimate: string | undefined;
-    let runbookTokenEstimate: string | undefined;
-    let approvalStatus = "No runbook";
+    let approvalStatus = "No plan";
     try {
       const currentRunbook = await xuSessionStore.readRunbook();
       if (currentRunbook) {
@@ -495,17 +493,6 @@ export async function activate(context: vscode.ExtensionContext) {
         activePhaseId = activeSummary?.phaseId;
         activePhaseTitle = activeSummary?.phaseTitle;
         activePhaseAgent = activeSummary?.agent ?? currentRunbook.runbook.handoff.defaultAgent;
-        const activePhase = activePhaseId
-          ? currentRunbook.runbook.phases.find((phase) => phase.id === activePhaseId)
-          : undefined;
-        if (activePhase) {
-          activePhaseTokenEstimate = formatEstimatedTokens(
-            estimateTokens(renderPhasePrompt(currentRunbook.runbook, activePhase), "phase"),
-          );
-        }
-        runbookTokenEstimate = formatEstimatedTokens(
-          estimateTokens(renderRunbookMd(currentRunbook.runbook), "workspace"),
-        );
         currentPhase = activePhaseTitle;
         approvalStatus = [
           currentRunbook.runbook.confirmation.userApprovedIntent ? "Purpose approved" : "Purpose pending",
@@ -513,8 +500,13 @@ export async function activate(context: vscode.ExtensionContext) {
         ].join(" / ");
       }
     } catch {
-      currentRunbookPath = undefined;
-      approvalStatus = "Runbook has diagnostics";
+      const currentRunbookUri = await xuSessionStore.findRunbookUri().catch(() => null);
+      currentRunbookPath = currentRunbookUri
+        ? vscode.workspace.asRelativePath(currentRunbookUri, false).replace(/\\/g, "/")
+        : undefined;
+      currentRunbookName = currentRunbookPath ? "Plan needs repair" : undefined;
+      currentRunbookStatus = currentRunbookPath ? "needs repair" : undefined;
+      approvalStatus = "Plan has diagnostics";
     }
 
     const currentSession = stateStore.getBuildSession();
@@ -537,12 +529,10 @@ export async function activate(context: vscode.ExtensionContext) {
         activePhaseId,
         activePhaseTitle,
         activePhaseAgent,
-        activePhaseTokenEstimate,
-        runbookTokenEstimate,
         approvalStatus,
         providerStatus: currentSession?.providerLabel ?? "Xupra AI",
         generatedFiles: [
-          "RUNBOOK.md",
+          "Plan summary",
           "phase prompts",
           "AGENTS.md",
           "CLAUDE.md",
@@ -817,6 +807,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.newSession", async () => {
     await newSessionCommand(runbookDeps);
+  });
+
+  register("drylake.archiveCurrentPlan", async () => {
+    await archiveCurrentPlanCommand(runbookDeps);
+  });
+
+  register("drylake.deleteCurrentPlan", async () => {
+    await deleteCurrentPlanCommand(runbookDeps);
   });
 
   register("drylake.openSessions", async () => {

@@ -60,7 +60,7 @@ const MODE_CHOICES: Array<vscode.QuickPickItem & { mode: XuMode }> = [
   },
   {
     label: "Review / Repair",
-    description: "Review existing code and produce a correction runbook",
+    description: "Review existing code and produce a correction plan",
     mode: "review",
   },
 ];
@@ -69,7 +69,7 @@ const PLANNING_PROVIDER_CHOICES: Array<vscode.QuickPickItem & { providerId: DryL
   {
     label: "DryLake AI Planning",
     description: "Xupra hosted",
-    detail: "Default hosted planner for chat-first DryLake build sessions.",
+    detail: "Default hosted planner for chat-first DryLake planning.",
     providerId: "xupra-pro-ai",
   },
   {
@@ -126,10 +126,12 @@ const DIRECT_PROVIDER_SETUP: Record<DirectPlanningProviderId, {
   },
 };
 
+const NO_LOCAL_PLAN_MESSAGE = "No local DryLake plan found. Open the Control Room to create one.";
+
 function workspaceRoot() {
   const root = vscode.workspace.workspaceFolders?.[0]?.uri;
   if (!root) {
-    throw new Error("Open a workspace folder before starting a DryLake build session.");
+    throw new Error("Open a workspace folder before starting a DryLake plan.");
   }
 
   return root;
@@ -332,7 +334,7 @@ async function requireConnectedBuildSession(deps: RunbookCommandDeps) {
   }
 
   const choice = await vscode.window.showWarningMessage(
-    "Connect your DryLake account before starting a Build Session.",
+    "Connect your DryLake account before starting a DryLake plan.",
     "Connect DryLake",
   );
 
@@ -465,7 +467,7 @@ async function maybeImportExternalResult(sessionStore: XuSessionStore, currentUr
   if (choice === "Paste Result") {
     const pasted = await vscode.window.showInputBox({
       title: "Paste External AI Result",
-      prompt: "Paste the YAML runbook returned by your external AI tool.",
+      prompt: "Paste the YAML plan returned by your external AI tool.",
       ignoreFocusOut: true,
     });
 
@@ -700,31 +702,90 @@ export async function clearChatCommand(deps: RunbookCommandDeps) {
   await deps.controlRoom.refresh();
 }
 
-export async function newSessionCommand(deps: RunbookCommandDeps) {
-  const current = await deps.sessionStore.readRunbook();
-  if (current) {
-    const active = current.runbook.phases.find((phase) => phase.status === "active");
-    if (active) {
-      const choice = await vscode.window.showWarningMessage(
-        `Phase ${active.title} is still active. Starting a new session will archive the current plan. Continue?`,
-        { modal: true },
-        "Archive & Start New",
-      );
-
-      if (choice !== "Archive & Start New") {
-        return;
-      }
-    }
-
-    await deps.sessionStore.archiveCurrentRunbook();
-  }
-
+async function clearCurrentPlanningState(deps: RunbookCommandDeps) {
   await deps.stateStore.clearBuildSession();
   await deps.stateStore.clearChatHistory();
   await deps.stateStore.setPlanningLoading(false);
   await deps.sessionStore.clearPendingPlanChanges();
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
+}
+
+export async function newSessionCommand(deps: RunbookCommandDeps) {
+  const existingUri = await deps.sessionStore.findRunbookUri();
+  if (existingUri) {
+    let current: Awaited<ReturnType<XuSessionStore["readRunbook"]>> = null;
+    let readError = "";
+    try {
+      current = await deps.sessionStore.readRunbook();
+    } catch (error) {
+      readError = error instanceof Error ? error.message : String(error);
+    }
+
+    const planPath = relativePath(existingUri);
+    const active = current?.runbook.phases.find((phase) => phase.status === "active");
+    const activeDetail = active ? ` Phase ${active.title} is still active.` : "";
+    const invalidDetail = !current && readError ? " The current plan has diagnostics, so it can be deleted but not archived automatically." : "";
+    const choices = current ? ["Archive & Start New", "Delete & Start New"] : ["Delete & Start New"];
+    const choice = await vscode.window.showWarningMessage(
+      `Start a new DryLake plan? DryLake found an existing local plan at ${planPath}.${activeDetail}${invalidDetail} Archive keeps a copy under .drylake/sessions. Delete removes the local plan file.`,
+      { modal: true },
+      ...choices,
+    );
+
+    if (choice === "Archive & Start New") {
+      await deps.sessionStore.archiveCurrentRunbook();
+    } else if (choice === "Delete & Start New") {
+      await deps.sessionStore.deleteCurrentPlan();
+    } else {
+      return;
+    }
+  }
+
+  await clearCurrentPlanningState(deps);
+}
+
+export async function archiveCurrentPlanCommand(deps: RunbookCommandDeps) {
+  let archived: Awaited<ReturnType<XuSessionStore["archiveCurrentRunbook"]>> = null;
+  try {
+    archived = await deps.sessionStore.archiveCurrentRunbook();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    void vscode.window.showWarningMessage(
+      `DryLake could not archive the current plan because it could not be read: ${detail}`,
+    );
+    return;
+  }
+
+  if (!archived) {
+    void vscode.window.showInformationMessage("No local DryLake plan is available to archive.");
+    return;
+  }
+
+  await clearCurrentPlanningState(deps);
+  void vscode.window.showInformationMessage("DryLake archived the current plan. Open the Control Room to create a new one.");
+}
+
+export async function deleteCurrentPlanCommand(deps: RunbookCommandDeps) {
+  const uri = await deps.sessionStore.findRunbookUri();
+  if (!uri) {
+    void vscode.window.showInformationMessage("No local DryLake plan is available to delete.");
+    return;
+  }
+
+  const choice = await vscode.window.showWarningMessage(
+    `Delete the local DryLake plan at ${relativePath(uri)}? This cannot be undone by DryLake.`,
+    { modal: true },
+    "Delete Plan",
+  );
+
+  if (choice !== "Delete Plan") {
+    return;
+  }
+
+  await deps.sessionStore.deleteCurrentPlan();
+  await clearCurrentPlanningState(deps);
+  void vscode.window.showInformationMessage("DryLake deleted the local plan. Open the Control Room to create a new one.");
 }
 
 function phaseIdFromArg(arg: unknown) {
@@ -838,13 +899,13 @@ async function applyAiDraft(params: {
   const availability = await params.provider.isAvailable();
   if (!availability.available && params.provider.id !== "external-ai-prompt") {
     void vscode.window.showInformationMessage(
-      `${params.provider.label} is not available, so the manual draft command created a local draft runbook.`,
+      `${params.provider.label} is not available, so the manual draft command created a local draft plan.`,
     );
     return { runbook: localDraft, providerGenerated: false, providerMessage: availability.reason };
   }
 
   if (params.provider.id === "external-ai-prompt" && !params.openExternalPrompt) {
-    void vscode.window.showInformationMessage("The manual draft command created a local draft runbook.");
+    void vscode.window.showInformationMessage("The manual draft command created a local draft plan.");
     return { runbook: localDraft, providerGenerated: false };
   }
 
@@ -908,7 +969,7 @@ async function generateFirstMessageDraft(params: {
     return {
       runbookUri,
       providerGenerated: false,
-      providerMessage: result.message ?? `${params.provider.label} did not return a runbook.`,
+      providerMessage: result.message ?? `${params.provider.label} did not return a valid plan.`,
     };
   } catch (error) {
     return {
@@ -1020,7 +1081,7 @@ export async function generateDraftRunbookCommand(deps: RunbookCommandDeps) {
   const current = await deps.sessionStore.readRunbook();
   const defaultPrompt = current?.runbook.intent.rawPrompt ?? deps.stateStore.getBuildSession()?.prompt ?? "";
   const prompt = await vscode.window.showInputBox({
-    title: "Generate Draft XU Runbook",
+    title: "Generate Draft DryLake Plan",
     prompt: "Describe the task to convert into drylake.xu.",
     value: defaultPrompt,
     ignoreFocusOut: true,
@@ -1061,7 +1122,7 @@ export async function validateXuRunbookCommand(deps: RunbookCommandDeps) {
     const bytes = await vscode.workspace.fs.readFile(uri);
     text = new TextDecoder("utf-8").decode(bytes);
   } catch {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1081,7 +1142,7 @@ export async function validateXuRunbookCommand(deps: RunbookCommandDeps) {
 async function approve(deps: RunbookCommandDeps, type: "purpose" | "architecture") {
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1116,7 +1177,7 @@ export async function approveArchitectureCommand(deps: RunbookCommandDeps) {
 export async function previewProvisioningPlanCommand(deps: RunbookCommandDeps) {
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1148,7 +1209,7 @@ export async function previewProvisioningPlanCommand(deps: RunbookCommandDeps) {
 export async function generateAgentFilesCommand(deps: RunbookCommandDeps) {
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1182,13 +1243,13 @@ function nextPhase(runbook: ApplicationBuildRunbook) {
 export async function exportHandoffPromptCommand(deps: RunbookCommandDeps) {
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
   const phase = nextPhase(current.runbook);
   if (!phase) {
-    void vscode.window.showWarningMessage("drylake.xu has no phases.");
+    void vscode.window.showWarningMessage("The current DryLake plan has no phases.");
     return;
   }
 
@@ -1203,7 +1264,7 @@ export async function exportHandoffPromptCommand(deps: RunbookCommandDeps) {
 export async function runNextPhaseCommand(deps: RunbookCommandDeps) {
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1226,7 +1287,7 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
 
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1331,7 +1392,7 @@ export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdA
 
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1369,7 +1430,7 @@ export async function updatePhaseStatusCommand(deps: RunbookCommandDeps, phaseId
 
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1399,7 +1460,7 @@ export async function updatePhaseStatusCommand(deps: RunbookCommandDeps, phaseId
 export async function toggleAutopilotCommand(deps: RunbookCommandDeps) {
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1447,7 +1508,7 @@ export async function toggleStepCommand(
 
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 
@@ -1558,7 +1619,7 @@ export async function reorderPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
 
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
-    void vscode.window.showWarningMessage("No drylake.xu runbook found. Start a build session first.");
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
     return;
   }
 

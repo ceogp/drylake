@@ -183,7 +183,7 @@ describe("Multi-Agent Runner webview", () => {
     expect(mocks.launchAgentTask).not.toHaveBeenCalled();
     expect(panel?.webview.html).toContain("Assignment Review");
     expect(panel?.webview.html).toContain("Implement checkout API routes.");
-    expect(panel?.webview.html).toContain("Handoff prompt");
+    expect(panel?.webview.html).not.toContain("token-meter");
     expect(panel?.webview.html).toContain("Approve & Launch");
     expect(mocks.writeFile).toHaveBeenCalledWith(
       expect.objectContaining({ path: expect.stringContaining("assignment-plan.json") }),
@@ -213,7 +213,7 @@ describe("Multi-Agent Runner webview", () => {
     );
     expect(panel?.webview.html).toContain("Run in Progress");
     expect(panel?.webview.html).toContain("Implement checkout API and tests.");
-    expect(panel?.webview.html).toContain("Prompt");
+    expect(panel?.webview.html).not.toContain("token-meter");
     expect(panel?.webview.html).toContain("Mark complete");
     expect(panel?.webview.html).toContain("Mark failed");
   });
@@ -245,7 +245,7 @@ describe("Multi-Agent Runner webview", () => {
       ],
     });
     expect(panel?.webview.html).toContain("Hermes Agent");
-    expect(panel?.webview.html).toContain("Handoff prompt");
+    expect(panel?.webview.html).not.toContain("token-meter");
 
     await messageHandler?.({
       command: "approve",

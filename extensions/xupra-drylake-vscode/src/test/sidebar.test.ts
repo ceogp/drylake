@@ -50,7 +50,7 @@ function sidebarHtml() {
 }
 
 describe("sidebar reshape", () => {
-  it("renders Build Session before account chrome", () => {
+  it("renders DryLake plan before account chrome", () => {
     const html = sidebarHtml();
     const renderConnected = html.slice(html.indexOf("function renderConnected"), html.indexOf("function renderDisconnected"));
 
@@ -69,20 +69,20 @@ describe("sidebar reshape", () => {
     expect(html).not.toContain('<details class="disclosure nested" open');
   });
 
-  it("shows Control Room as the first Build Session action and demotes legacy actions into Advanced", () => {
+  it("shows the Control Room as the first plan action and demotes legacy actions into Advanced", () => {
     const html = sidebarHtml();
     const renderBuildSession = html.slice(html.indexOf("function renderBuildSession"), html.indexOf("function formatPlatform"));
-    const noSessionBranch = renderBuildSession.slice(renderBuildSession.indexOf("No active Build Session"), renderBuildSession.indexOf("const sessionName"));
+    const noSessionBranch = renderBuildSession.slice(renderBuildSession.indexOf("No active plan"), renderBuildSession.indexOf("const sessionName"));
 
-    expect(html).toContain("No active Build Session");
-    expect(html).toContain('data-action="startBuildSession"');
+    expect(html).toContain("No active plan");
     expect(html).toContain('data-action="openControlRoom"');
     expect(noSessionBranch.indexOf('data-action="openControlRoom"')).toBeGreaterThan(-1);
-    expect(noSessionBranch.indexOf('data-action="openControlRoom"')).toBeLessThan(
-      noSessionBranch.indexOf('data-action="startBuildSession"'),
-    );
-    expect(html).toContain("activePhaseTokenEstimate");
-    expect(html).toContain("runbookTokenEstimate");
+    expect(html).toContain('data-action="newSession"');
+    expect(html).toContain('data-action="archiveCurrentPlan"');
+    expect(html).toContain('data-action="deleteCurrentPlan"');
+    expect(html).not.toContain("activePhaseTokenEstimate");
+    expect(html).not.toContain("runbookTokenEstimate");
+    expect(html).not.toContain("token-row");
     expect(html).not.toContain('data-action="exportHandoffPrompt"');
     expect(html).not.toContain("Run Next Phase");
     expect(html).toContain('<details class="disclosure"><summary><span>Advanced</span>');
@@ -116,7 +116,7 @@ describe("sidebar reshape", () => {
     const state = (provider as unknown as { _buildState: () => SidebarState })._buildState();
 
     expect(state.runbook?.sessionName).toBe("session-123");
-    expect(state.runbook?.approvalStatus).toBe("No runbook");
+    expect(state.runbook?.approvalStatus).toBe("No plan");
   });
 
   it("summarizes the first non-complete phase for the sidebar", () => {

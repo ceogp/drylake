@@ -30,8 +30,6 @@ export type SidebarState = {
     activePhaseId?: string;
     activePhaseTitle?: string;
     activePhaseAgent?: string;
-    activePhaseTokenEstimate?: string;
-    runbookTokenEstimate?: string;
     approvalStatus?: string;
     providerStatus?: string;
     generatedFiles?: string[];
@@ -56,6 +54,9 @@ type InboundAction =
   | "pullPackage"
   | "startBuildSession"
   | "openControlRoom"
+  | "newSession"
+  | "archiveCurrentPlan"
+  | "deleteCurrentPlan"
   | "validateXuRunbook"
   | "generateAgentFiles"
   ;
@@ -203,6 +204,15 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
           case "openControlRoom":
             await vscode.commands.executeCommand("drylake.openControlRoom");
             break;
+          case "newSession":
+            await vscode.commands.executeCommand("drylake.newSession");
+            break;
+          case "archiveCurrentPlan":
+            await vscode.commands.executeCommand("drylake.archiveCurrentPlan");
+            break;
+          case "deleteCurrentPlan":
+            await vscode.commands.executeCommand("drylake.deleteCurrentPlan");
+            break;
           case "validateXuRunbook":
             await vscode.commands.executeCommand("drylake.validateXuRunbook");
             break;
@@ -345,7 +355,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       selection,
       runbook: {
         sessionName: this.stateStore.getBuildSession()?.id,
-        approvalStatus: "No runbook",
+        approvalStatus: "No plan",
         providerStatus: planningProvider?.label ?? "Xupra AI",
         generatedFiles: [],
       },
@@ -682,6 +692,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     .action-row {
       display: flex;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     .action-btn {
@@ -710,6 +721,17 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       color: #090a0a;
       background: #6ee7b7;
       border-color: #6ee7b7;
+    }
+
+    .action-btn.danger {
+      color: #fca5a5;
+      border-color: rgba(248, 113, 113, 0.4);
+    }
+
+    .action-btn.danger:hover {
+      color: #fee2e2;
+      border-color: rgba(248, 113, 113, 0.75);
+      background: rgba(248, 113, 113, 0.12);
     }
 
     .group-item {
@@ -754,7 +776,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       font-weight: 700;
     }
 
-    .session-meta, .phase-row, .token-row {
+    .session-meta, .phase-row, .plan-note {
       color: var(--xupra-muted);
       font-size: 0.88em;
       line-height: 1.35;
@@ -773,24 +795,12 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       white-space: nowrap;
     }
 
-    .token-row {
-      display: grid;
-      gap: 4px;
+    .plan-note {
       padding: 7px;
-      border: 1px solid var(--xupra-line);
+      border: 1px solid rgba(251, 146, 60, 0.35);
       border-radius: 4px;
-      background: var(--xupra-bg);
-    }
-
-    .token-row span {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .token-row strong {
-      color: var(--xupra-green);
-      white-space: nowrap;
+      background: rgba(251, 146, 60, 0.08);
+      color: #fed7aa;
     }
 
     .actions-section {
@@ -964,10 +974,10 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
 
     function renderBuildSession(state) {
       const runbook = state.runbook || {};
-      let html = '<div class="section"><div class="section-header"><span class="section-label">BUILD SESSION</span></div>';
+      let html = '<div class="section"><div class="section-header"><span class="section-label">DRYLAKE PLAN</span></div>';
 
       if (!runbook.path && !runbook.sessionName) {
-        html += '<div class="session-card"><div class="session-name">No active Build Session</div><div class="session-meta">Open the Control Room to paste a ticket, bug, or feature request and create a guided coding plan.</div><button class="big-action primary" data-action="openControlRoom">Open Control Room</button><button class="big-action" data-action="startBuildSession">Start Build Session</button></div></div>';
+        html += '<div class="session-card"><div class="session-name">No active plan</div><div class="session-meta">Open the Control Room to paste a ticket, bug, or feature request and create a guided coding plan.</div><button class="big-action primary" data-action="openControlRoom">Create New Plan</button></div></div>';
         return html;
       }
 
@@ -976,20 +986,10 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       const phaseLabel = runbook.activePhaseId ? runbook.activePhaseId + (runbook.activePhaseTitle ? ': ' + runbook.activePhaseTitle : '') : (runbook.phase || 'none');
       html += '<div class="session-card">';
       html += '<div class="session-name" title="' + escapeHtml(sessionName) + '">' + escapeHtml(sessionName) + '</div>';
-      html += '<div class="session-meta">' + escapeHtml(status) + ' · ' + escapeHtml(runbook.path || 'drylake.xu') + ' · ' + escapeHtml(runbook.providerStatus || 'Xupra AI') + '</div>';
+      html += '<div class="session-meta">' + escapeHtml(status) + ' · Local plan file: ' + escapeHtml(runbook.path || 'drylake.xu') + ' · ' + escapeHtml(runbook.providerStatus || 'Xupra AI') + '</div>';
       html += '<div class="phase-row"><span>Active phase: ' + escapeHtml(phaseLabel) + '</span><span class="phase-agent">' + escapeHtml(runbook.activePhaseAgent || 'session default') + '</span></div>';
-      if (runbook.activePhaseTokenEstimate || runbook.runbookTokenEstimate) {
-        html += '<div class="token-row">';
-        if (runbook.activePhaseTokenEstimate) {
-          html += '<span>Phase prompt <strong>' + escapeHtml(runbook.activePhaseTokenEstimate) + '</strong></span>';
-        }
-        if (runbook.runbookTokenEstimate) {
-          html += '<span>Runbook <strong>' + escapeHtml(runbook.runbookTokenEstimate) + '</strong></span>';
-        }
-        html += '</div>';
-      }
-      html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button></div>';
-      html += '<button class="big-action" data-action="startBuildSession">Start New Session</button>';
+      html += '<div class="plan-note">Existing local plan found. Continue it, archive it, or delete it before starting over.</div>';
+      html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Continue</button><button class="action-btn" data-action="newSession">New Plan</button><button class="action-btn" data-action="archiveCurrentPlan">Archive</button><button class="action-btn danger" data-action="deleteCurrentPlan">Delete</button></div>';
       html += '</div></div>';
       return html;
     }
@@ -1186,7 +1186,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         + '<button class="' + exportClass + '" data-action="exportPreview">Preview Agent Config Changes' + (isPro ? "" : lockSuffix) + '</button>'
         + '<button class="' + exportClass + '" data-action="installToRuntime">Sync Agent Configs' + (isPro ? "" : lockSuffix) + '</button>'
         + '<button class="big-action" data-action="pullPackage">Pull Generated Agent Files</button>'
-        + '<button class="big-action" data-action="generateAgentFiles">Preview Build Session Files</button>'
+        + '<button class="big-action" data-action="generateAgentFiles">Preview Plan Files</button>'
         + '<button class="big-action" data-action="validateXuRunbook">Validate drylake.xu</button>'
         + renderImportedWorkspace(state)
         + '</div></details>';
@@ -1210,7 +1210,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     function renderDisconnected(state) {
-      const loading = state && state.isLoading ? "Loading workspace..." : "Connect Xupra for Pro AI. Local runbooks work without an account.";
+      const loading = state && state.isLoading ? "Loading workspace..." : "Connect Xupra for Pro AI. Local plans work without an account.";
       let html = '<div class="panel">';
       html += renderBuildSession(state || {});
       html += '<div class="section"><div class="section-header"><span class="section-label">XUPRA ACCOUNT</span></div><div class="connect-cta"><div class="connect-title">Signed out</div><div class="connect-subtitle">' + escapeHtml(loading) + '</div><button class="action-btn" data-action="connect">Connect Xupra for Pro AI</button></div></div>';

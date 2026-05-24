@@ -5,11 +5,9 @@ import {
   phaseAgentHint,
   phaseAgentLabel,
 } from "../agents/phaseAgentLauncher";
-import { renderPhasePrompt } from "../generators/renderPhasePrompt";
 import { describePhaseChange, isPendingPhaseUnresolved } from "../xu/pendingPlanChanges";
 import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
-import { estimateTokens, formatEstimatedTokens } from "../utils/tokenEstimate";
 import type { ChatState, PlanningModelTier, PlanningProviderInfo } from "../services/stateStore";
 import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
 import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../xu/types";
@@ -148,10 +146,6 @@ function renderPlanChangeOverlay(
   </div>`;
 }
 
-function renderTokenMeter(label: string, content: string) {
-  return `<div class="token-meter" title="Approximate prompt token estimate."><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatEstimatedTokens(estimateTokens(content)))}</strong></div>`;
-}
-
 function renderPhaseCard(
   phase: XuPhase,
   options: { draggable: boolean; runbook: ApplicationBuildRunbook; pendingPlanChange: PendingPlanChangeSet | null },
@@ -166,7 +160,6 @@ function renderPhaseCard(
   const primaryLabel = primary?.label ?? "Handoff";
   const primaryTitle = primary?.title ?? actionHint;
   const disabled = selectedAgent ? "" : " disabled";
-  const tokenMeter = renderTokenMeter("Prompt", renderPhasePrompt(options.runbook, phase));
   const secondaryButtons = secondary
     .map((option) => {
       const shortLabel = option.action === "script-sh"
@@ -187,7 +180,6 @@ function renderPhaseCard(
     <h3 class="phase-title">${escapeHtml(phase.title)}</h3>
     <span class="badge ${statusClass(phase.status)}">${escapeHtml(STATUS_LABELS[phase.status])}</span>
     <p class="objective" title="${escapeHtml(phase.objective)}">${escapeHtml(phase.objective || "No objective recorded.")}</p>
-    ${tokenMeter}
     ${renderAgentSelect(phase)}
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
@@ -217,7 +209,7 @@ function renderExecutionModeToggle(runbook: ApplicationBuildRunbook | null) {
 }
 
 function renderPipeline(runbook: ApplicationBuildRunbook, pendingPlanChange: PendingPlanChangeSet | null) {
-  return `<section class="pipeline" aria-label="Build Session pipeline">
+  return `<section class="pipeline" aria-label="DryLake plan pipeline">
     ${runbook.phases.map((phase, index) => {
       const card = renderPhaseCard(phase, { draggable: true, runbook, pendingPlanChange });
       return index < runbook.phases.length - 1 ? `${card}<div class="arrow" aria-hidden="true">&rarr;</div>` : card;
@@ -246,7 +238,7 @@ function renderKanban(runbook: ApplicationBuildRunbook, pendingPlanChange: Pendi
   const active = runbook.phases.filter((phase) => statusForKanban(phase.status) === "active");
   const complete = runbook.phases.filter((phase) => statusForKanban(phase.status) === "complete");
 
-  return `<section class="kanban" aria-label="Build Session kanban">
+  return `<section class="kanban" aria-label="DryLake plan kanban">
     ${renderKanbanColumn("To Do", "pending", pending, runbook, pendingPlanChange)}
     ${renderKanbanColumn("In Progress", "active", active, runbook, pendingPlanChange)}
     ${renderKanbanColumn("Done", "complete", complete, runbook, pendingPlanChange)}
@@ -565,7 +557,7 @@ export class ControlRoomProvider {
     .toggle-btn.active { color: #090a0a; background: var(--drylake-green); border-color: var(--drylake-green); }
     .pipeline { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 10px; }
     .arrow { display: flex; align-items: center; padding: 0 8px; color: var(--drylake-orange); font-size: 22px; font-weight: 900; flex: 0 0 auto; }
-    .phase-card { min-width: 190px; max-width: 220px; flex: 0 0 210px; border: 1px solid var(--drylake-line); border-radius: 8px; padding: 12px; background: var(--drylake-panel); box-shadow: none; }
+    .phase-card { min-width: 210px; max-width: 220px; flex: 0 0 210px; min-height: 360px; display: flex; flex-direction: column; border: 1px solid var(--drylake-line); border-radius: 8px; padding: 12px; background: var(--drylake-panel); box-shadow: none; overflow: hidden; }
     .phase-card.active, .phase-card.active-phase { border-color: var(--drylake-orange); background: var(--drylake-orange-soft); }
     .phase-card.approved, .phase-card.complete { border-color: rgba(52, 211, 153, 0.65); }
     .phase-card.complete { opacity: 0.82; }
@@ -579,9 +571,7 @@ export class ControlRoomProvider {
     .badge { display: inline-block; margin-bottom: 8px; padding: 2px 7px; border: 1px solid var(--drylake-line); border-radius: 4px; color: var(--drylake-muted); background: var(--drylake-bg); font-size: 10px; font-weight: 800; }
     .badge.active { border-color: rgba(251, 146, 60, 0.6); background: var(--drylake-orange-soft); color: #fed7aa; }
     .badge.approved, .badge.complete { border-color: rgba(52, 211, 153, 0.55); background: var(--drylake-green-soft); color: #a7f3d0; }
-    .objective { min-height: 32px; margin-bottom: 8px; font-size: 11px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .token-meter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; padding: 4px 6px; border: 1px solid var(--drylake-line); border-radius: 4px; background: var(--drylake-bg); color: var(--drylake-muted); font-size: 10px; font-weight: 800; }
-    .token-meter strong { color: #a7f3d0; font-weight: 900; white-space: nowrap; }
+    .objective { height: 34px; min-height: 34px; margin-bottom: 8px; font-size: 11px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .agent-label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
     .agent-select { width: 100%; margin-top: 4px; padding: 4px 6px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 11px; }
     .step-count { margin-top: 8px; font-size: 10px; }
@@ -590,7 +580,7 @@ export class ControlRoomProvider {
     .column-header { display: flex; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--drylake-line); color: var(--drylake-text); background: var(--drylake-panel-2); text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.12em; }
     .count { padding: 1px 7px; border: 1px solid var(--drylake-line); border-radius: 4px; color: var(--drylake-green); background: var(--drylake-bg); }
     .column-body { min-height: 280px; padding: 10px; }
-    .kanban .phase-card { width: 100%; max-width: none; min-width: 0; margin-bottom: 8px; }
+    .kanban .phase-card { width: 100%; max-width: none; min-width: 0; min-height: 360px; margin-bottom: 8px; }
     .drop-zone { padding: 10px; border: 1px dashed #3f3f46; border-radius: 6px; text-align: center; font-size: 11px; }
     .kanban-column.drag-over .drop-zone { border-color: var(--drylake-orange); color: #fed7aa; }
     .empty-state, .loading-state { border: 1px solid var(--drylake-line); border-radius: 8px; padding: 18px; background: var(--drylake-panel); box-shadow: none; }
@@ -617,12 +607,12 @@ export class ControlRoomProvider {
     .planning-banner.pro { border-color: rgba(52, 211, 153, 0.5); }
     .planning-banner.fallback { border-color: rgba(251, 146, 60, 0.5); }
     .planning-banner-label { color: var(--drylake-text); }
-    .step-list-wrap { margin-top: 8px; }
-    .step-list { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; }
+    .step-list-wrap { margin-top: 8px; max-height: 106px; overflow: hidden; }
+    .step-list { list-style: none; padding: 0 2px 0 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; max-height: 82px; overflow-y: auto; }
     .step-item label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 12px; line-height: 1.4; color: var(--drylake-text); }
     .step-item input[type="checkbox"] { margin-top: 2px; accent-color: var(--drylake-green); }
     .step-item.done span { text-decoration: line-through; color: #71717a; }
-    .phase-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .phase-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding-top: 10px; }
     .handoff-btn { width: 100%; font-size: 12px; padding: 6px 10px; }
     .handoff-menu { position: relative; }
     .handoff-menu summary { list-style: none; width: 100%; padding: 5px 8px; border: 1px solid #3f3f46; border-radius: 4px; color: var(--drylake-text); background: var(--drylake-bg); font-size: 11px; font-weight: 800; text-align: center; cursor: pointer; box-shadow: none; }
@@ -631,7 +621,7 @@ export class ControlRoomProvider {
     .handoff-menu[open] summary::after { content: " ▴"; }
     .handoff-menu-items { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 6px; padding: 6px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
     .handoff-menu-item { padding: 5px 7px; font-size: 10px; box-shadow: none; background: var(--drylake-bg); color: var(--drylake-text); border-color: #3f3f46; }
-    .plan-change-overlay { margin-top: 10px; padding: 9px; border: 1px solid rgba(251, 146, 60, 0.55); border-radius: 5px; background: var(--drylake-orange-soft); }
+    .plan-change-overlay { margin-top: 10px; padding: 9px; border: 1px solid rgba(251, 146, 60, 0.55); border-radius: 5px; background: var(--drylake-orange-soft); flex: 0 0 auto; }
     .plan-change-eyebrow { text-transform: uppercase; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; }
     .plan-change-overlay p { margin: 5px 0 8px; color: var(--drylake-text); font-size: 11px; line-height: 1.35; }
     .plan-change-actions { display: grid; grid-template-columns: 1fr; gap: 5px; }
@@ -667,7 +657,7 @@ export class ControlRoomProvider {
           <button class="toggle-btn${view === "kanban" ? " active" : ""}" data-view="kanban">Kanban</button>
         </div>
         <button class="secondary" data-command="drylake.openSessions">Sessions</button>
-        <button class="secondary" data-command="drylake.newSession">New Session</button>
+        <button class="secondary" data-command="drylake.newSession">New Plan</button>
         ${executionToggle}
         ${runNextButton}
       </div>

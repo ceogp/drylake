@@ -13,7 +13,6 @@ import type { MultiAgentAssignmentPlan } from "../types/multiAgentRun";
 import { MultiAgentRunStore } from "../xu/multiAgentRunStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { XuPhaseAgent } from "../xu/types";
-import { estimateTokens, formatEstimatedTokens } from "../utils/tokenEstimate";
 
 type RunnerStatus = "idle" | "assignment-review" | "running" | "results";
 type RunnerAgentStatus = "pending" | "running" | "complete" | "failed";
@@ -188,19 +187,6 @@ function runnerPromptContent(run: RunnerRun, assignment: RunnerAssignment, hando
   ].join("\n");
 }
 
-function renderTokenMeter(label: string, content: string, scope: Parameters<typeof estimateTokens>[1]) {
-  return `<div class="token-meter"><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatEstimatedTokens(estimateTokens(content, scope)))}</strong></div>`;
-}
-
-function runnerAgentTokenMeter(run: RunnerRun, agent: RunnerAgentResult) {
-  const assignment = run.assignments.find((item) => item.agentId === agent.id);
-  if (!assignment) {
-    return "";
-  }
-
-  return renderTokenMeter("Prompt", runnerPromptContent(run, assignment), "runner-assignment");
-}
-
 function parseEditedAssignments(value: unknown, current: RunnerAssignment[]) {
   const byAgent = new Map(current.map((assignment) => [assignment.agentId, assignment]));
   const rows = Array.isArray(value) ? value : [];
@@ -240,12 +226,10 @@ function renderIdle(run: RunnerRun | null, pendingPrompt: string, pendingAgents:
     ? `<section class="last-run"><span>Last run</span><strong>${escapeHtml(run.taskPrompt)}</strong><em>${escapeHtml(run.status)}</em></section>`
     : "";
   const checkedAgents = new Set(pendingAgents.length > 0 ? pendingAgents : ["codex"]);
-  const tokenLabel = formatEstimatedTokens(estimateTokens(pendingPrompt, "runner-task"));
 
   return `<section class="runner-idle">
     <label class="section-label" for="runnerPrompt">Phase / task prompt</label>
     <textarea id="runnerPrompt" rows="5" placeholder="Select a phase from DryLake Control Room, or describe a task to split across agents.">${escapeHtml(pendingPrompt)}</textarea>
-    <div class="token-meter"><span>Phase / task prompt</span><strong id="taskTokenEstimate">${escapeHtml(tokenLabel)}</strong></div>
     <div class="section-label">Agents</div>
     <div class="agent-list">
       ${RUNNER_AGENTS.map((agent) => {
@@ -272,7 +256,6 @@ function renderAssignmentReview(run: RunnerRun) {
   const tier = run.modelTier === "nano" ? `<div class="note">Planned with gpt-5.4-nano.</div>` : "";
   const cards = run.assignments.map((assignment) => `<article class="assignment-card" data-assignment-agent="${escapeHtml(assignment.agentId)}">
     <div class="agent-info"><span class="agent-icon">${escapeHtml(assignment.agentLabel.slice(0, 1))}</span><span><strong>${escapeHtml(assignment.agentLabel)}</strong><em>${escapeHtml(assignment.scopeBoundary)}</em></span></div>
-    ${renderTokenMeter("Handoff prompt", runnerPromptContent(run, assignment), "runner-assignment")}
     <label class="field-label">Subtask summary
       <textarea class="assignment-summary" rows="4" data-assignment-summary="${escapeHtml(assignment.agentId)}">${escapeHtml(assignment.subtaskSummary)}</textarea>
     </label>
@@ -298,7 +281,6 @@ function renderRun(run: RunnerRun) {
   const cards = run.agents.map((agent) => `<article class="run-card">
     <div class="agent-info"><span class="agent-icon">${escapeHtml(agent.label.slice(0, 1))}</span><span><strong>${escapeHtml(agent.label)}</strong><em>${escapeHtml(agent.terminalName ?? "No terminal")}</em></span></div>
     <div class="run-actions"><span class="status-badge ${agent.status}">${escapeHtml(agent.status)}</span><button class="link-button" data-open-agent="${escapeHtml(agent.id)}">View terminal</button></div>
-    ${runnerAgentTokenMeter(run, agent)}
     <p><strong>${escapeHtml(agent.assignmentSummary)}</strong></p>
     <p>${escapeHtml(agent.message)}</p>
     ${renderReviewActions(agent)}
@@ -324,7 +306,6 @@ function renderReviewActions(agent: RunnerAgentResult) {
 function renderResults(run: RunnerRun) {
   const cards = run.agents.map((agent) => `<article class="run-card">
     <div class="agent-info"><span class="agent-icon">${escapeHtml(agent.label.slice(0, 1))}</span><span><strong>${escapeHtml(agent.label)}</strong><span class="status-badge ${agent.status}">${escapeHtml(agent.status)}</span></span></div>
-    ${runnerAgentTokenMeter(run, agent)}
     <p><strong>${escapeHtml(agent.assignmentSummary)}</strong></p>
     <p>${escapeHtml(agent.message)}</p>
     <div class="result-actions">
@@ -872,8 +853,6 @@ export class MultiAgentRunnerProvider {
     .assignment-summary { margin-top: 6px; min-height: 76px; }
     .boundary { display: grid; gap: 4px; margin-top: 4px; color: var(--runner-muted); }
     .boundary strong { color: var(--runner-text); font-weight: 700; }
-    .token-meter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 10px; padding: 6px 8px; border: 1px solid var(--runner-line); border-radius: 4px; background: var(--runner-bg); color: var(--runner-muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
-    .token-meter strong { color: #a7f3d0; font-weight: 900; white-space: nowrap; text-transform: none; letter-spacing: 0; }
     .warning { margin: 8px 0; padding: 8px; border: 1px solid rgba(251, 146, 60, 0.45); background: rgba(251, 146, 60, 0.12); color: #fed7aa; border-radius: 4px; }
     .note { margin: 8px 0; color: var(--runner-muted); }
     .status-badge { padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 800; }
@@ -898,18 +877,6 @@ export class MultiAgentRunnerProvider {
     function selectedAgents() {
       return Array.from(document.querySelectorAll(".agent-row input[type='checkbox']:checked")).map((item) => item.value);
     }
-    function formatTokenEstimate(tokens) {
-      if (tokens >= 1000000) {
-        return "~" + (tokens / 1000000).toFixed(1).replace(/\\.0$/, "") + "m tokens";
-      }
-      if (tokens >= 1000) {
-        return "~" + (tokens / 1000).toFixed(1).replace(/\\.0$/, "") + "k tokens";
-      }
-      return "~" + tokens + " tokens";
-    }
-    function estimatedTokens(text) {
-      return text.length === 0 ? 0 : Math.max(1, Math.ceil(text.length / 4));
-    }
     function editedAssignments() {
       return Array.from(document.querySelectorAll("[data-assignment-summary]")).map((item) => ({
         agentId: item.dataset.assignmentSummary,
@@ -923,11 +890,7 @@ export class MultiAgentRunnerProvider {
         target.textContent = count === 1 ? "1 agent selected" : count + " agents selected";
       }
       const run = document.getElementById("runAgents");
-      const tokenTarget = document.getElementById("taskTokenEstimate");
       const prompt = document.getElementById("runnerPrompt")?.value || "";
-      if (tokenTarget) {
-        tokenTarget.textContent = formatTokenEstimate(estimatedTokens(prompt));
-      }
       if (run) {
         run.disabled = count === 0 || !prompt.trim();
       }

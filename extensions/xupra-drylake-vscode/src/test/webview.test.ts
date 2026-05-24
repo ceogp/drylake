@@ -316,7 +316,7 @@ describe("Control Room webview", () => {
 
     expect(html).toContain("Gemini CLI");
     expect(html).toContain("Hermes Agent");
-    expect(html).toContain("Prompt");
+    expect(html).not.toContain("token-meter");
     expect(html).not.toContain("Blackbox");
     expect(html).not.toContain("Droid");
     expect(html).not.toContain("Continue.dev");
