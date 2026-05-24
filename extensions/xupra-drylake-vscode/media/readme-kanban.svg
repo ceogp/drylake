@@ -1,131 +1,123 @@
-<svg width="1400" height="860" viewBox="0 0 1400 860" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+<svg width="1400" height="860" viewBox="0 0 1400 860" xmlns="http://www.w3.org/2000/svg" font-family="Inter, Segoe UI, Arial, sans-serif">
   <defs>
-    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f7f4ea"/>
-      <stop offset="100%" stop-color="#efe7d4"/>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#090a0a"/>
+      <stop offset="100%" stop-color="#141716"/>
     </linearGradient>
-    <linearGradient id="headerFill" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#fff7ed"/>
+    <linearGradient id="active" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b2c22"/>
+      <stop offset="100%" stop-color="#121816"/>
     </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000000" flood-opacity="0.38"/>
+    </filter>
   </defs>
 
-  <rect width="1400" height="860" rx="28" fill="url(#paper)"/>
-  <rect x="22" y="22" width="1356" height="816" rx="24" fill="none" stroke="#111111" stroke-width="4"/>
+  <rect width="1400" height="860" rx="28" fill="url(#surface)"/>
+  <rect x="22" y="22" width="1356" height="816" rx="24" fill="none" stroke="#27272a" stroke-width="2"/>
 
-  <rect x="38" y="34" width="1324" height="92" rx="12" fill="url(#headerFill)" stroke="#111111" stroke-width="5"/>
-  <text x="64" y="65" fill="#005caf" font-size="12" letter-spacing="2.4" font-weight="900">DRYLAKE BUILD SESSION</text>
-  <text x="64" y="100" fill="#111111" font-size="30" font-weight="900">DryLake Control Room</text>
-  <text x="64" y="121" fill="#4b463f" font-size="14" font-weight="700">Visual kanban and pipeline planner for coding-agent work.</text>
-  <rect x="882" y="56" width="118" height="36" rx="8" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-  <text x="918" y="79" fill="#111111" font-size="12" font-weight="900">Pipeline</text>
-  <rect x="1012" y="56" width="106" height="36" rx="8" fill="#ffd60a" stroke="#111111" stroke-width="3"/>
-  <text x="1047" y="79" fill="#111111" font-size="12" font-weight="900">Kanban</text>
-  <rect x="1130" y="56" width="130" height="36" rx="8" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-  <text x="1154" y="79" fill="#111111" font-size="12" font-weight="900">Autopilot</text>
+  <g filter="url(#softShadow)">
+    <rect x="46" y="42" width="1308" height="102" rx="10" fill="#111414" stroke="#27272a"/>
+    <text x="76" y="76" fill="#6ee7b7" font-size="12" letter-spacing="2.6" font-weight="800">DRYLAKE VISUAL PLANNER</text>
+    <text x="76" y="114" fill="#f4f4f5" font-size="31" font-weight="760">Control room for AI agent work</text>
+    <text x="76" y="136" fill="#a1a1aa" font-size="14" font-weight="520">Plan phases, choose the agent, launch the handoff, then validate the resulting workspace.</text>
 
-  <rect x="38" y="146" width="1324" height="56" rx="10" fill="#ffffff" stroke="#005caf" stroke-width="4"/>
-  <text x="64" y="168" fill="#005caf" font-size="10" letter-spacing="1.8" font-weight="900">PLANNING AI</text>
-  <text x="64" y="187" fill="#111111" font-size="15" font-weight="900">Xupra AI</text>
-  <text x="176" y="187" fill="#4b463f" font-size="13" font-weight="700">Live planning chat updates the runbook and kanban as you talk.</text>
+    <rect x="880" y="70" width="118" height="38" rx="6" fill="#34d399" stroke="#34d399"/>
+    <text x="914" y="94" fill="#08110d" font-size="12" font-weight="800">Kanban</text>
+    <rect x="1012" y="70" width="120" height="38" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+    <text x="1044" y="94" fill="#d4d4d8" font-size="12" font-weight="760">Pipeline</text>
+    <rect x="1146" y="70" width="146" height="38" rx="6" fill="#090a0a" stroke="#fb923c"/>
+    <text x="1177" y="94" fill="#fed7aa" font-size="12" font-weight="760">Autopilot off</text>
+  </g>
 
-  <rect x="38" y="220" width="1324" height="154" rx="12" fill="#ffffff" stroke="#111111" stroke-width="4"/>
-  <text x="62" y="246" fill="#005caf" font-size="10" letter-spacing="1.9" font-weight="900">PLANNING CHAT</text>
-  <rect x="62" y="260" width="1220" height="42" rx="8" fill="#f7f4ea" stroke="#111111" stroke-width="3"/>
-  <text x="84" y="286" fill="#111111" font-size="14" font-weight="700">Add rollback notes and split verification into a separate phase.</text>
-  <rect x="1286" y="260" width="50" height="42" rx="8" fill="#ff5a1f" stroke="#111111" stroke-width="3"/>
-  <text x="1298" y="286" fill="#ffffff" font-size="13" font-weight="900">Send</text>
+  <g>
+    <rect x="46" y="164" width="1308" height="70" rx="10" fill="#111414" stroke="#27272a"/>
+    <text x="76" y="192" fill="#fb923c" font-size="11" letter-spacing="2" font-weight="800">PLANNING CHAT</text>
+    <text x="76" y="215" fill="#f4f4f5" font-size="16" font-weight="700">"Split validation out, keep the next phase pending until I approve it."</text>
+    <rect x="1074" y="181" width="120" height="36" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+    <text x="1110" y="204" fill="#d4d4d8" font-size="12" font-weight="760">Preview</text>
+    <rect x="1208" y="181" width="104" height="36" rx="6" fill="#34d399" stroke="#34d399"/>
+    <text x="1236" y="204" fill="#08110d" font-size="12" font-weight="800">Apply</text>
+  </g>
 
-  <rect x="62" y="318" width="540" height="38" rx="8" fill="#f7f4ea" stroke="#005caf" stroke-width="3"/>
-  <text x="78" y="341" fill="#005caf" font-size="10" letter-spacing="1.5" font-weight="900">YOU</text>
-  <text x="126" y="341" fill="#111111" font-size="13" font-weight="700">Use Codex for docs and Copilot for the discovery pass.</text>
-
-  <rect x="620" y="318" width="716" height="38" rx="8" fill="#fff7ed" stroke="#ff5a1f" stroke-width="3"/>
-  <text x="636" y="341" fill="#ff5a1f" font-size="10" letter-spacing="1.5" font-weight="900">XUPRA AI</text>
-  <text x="716" y="341" fill="#111111" font-size="13" font-weight="700">Updated the phase agents and added a validation handoff before Done.</text>
-
-  <g transform="translate(38 388)">
+  <g transform="translate(46 266)">
     <g>
-      <rect x="0" y="0" width="420" height="42" rx="8" fill="#ffd60a" stroke="#111111" stroke-width="4"/>
-      <text x="16" y="27" fill="#111111" font-size="12" letter-spacing="2.2" font-weight="900">TO DO</text>
-      <rect x="372" y="9" width="28" height="24" rx="6" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-      <text x="383" y="26" fill="#111111" font-size="12" font-weight="900">2</text>
+      <rect x="0" y="0" width="408" height="42" rx="8" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="18" y="27" fill="#d4d4d8" font-size="12" letter-spacing="2.2" font-weight="800">PENDING</text>
+      <rect x="356" y="9" width="32" height="24" rx="6" fill="#111414" stroke="#3f3f46"/>
+      <text x="368" y="26" fill="#a1a1aa" font-size="12" font-weight="800">2</text>
 
-      <rect x="0" y="56" width="420" height="286" rx="10" fill="#ffffff" stroke="#111111" stroke-width="4"/>
-      <text x="18" y="84" fill="#005caf" font-size="10" letter-spacing="1.6" font-weight="900">PHASE 04</text>
-      <text x="18" y="112" fill="#111111" font-size="18" font-weight="900">Validation pass</text>
-      <rect x="18" y="126" width="86" height="24" rx="6" fill="#ffd60a" stroke="#111111" stroke-width="3"/>
-      <text x="35" y="143" fill="#111111" font-size="11" font-weight="900">pending</text>
-      <text x="18" y="172" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">OBJECTIVE</text>
-      <text x="18" y="191" fill="#4b463f" font-size="12">Run tests, review logs,</text>
-      <text x="18" y="208" fill="#4b463f" font-size="12">and close the ticket cleanly.</text>
-      <text x="18" y="234" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">AGENT</text>
-      <rect x="18" y="242" width="206" height="32" rx="6" fill="#f7f4ea" stroke="#111111" stroke-width="3"/>
-      <text x="34" y="263" fill="#111111" font-size="12" font-weight="900">OpenAI Codex</text>
-      <text x="202" y="263" fill="#111111" font-size="12" font-weight="900">v</text>
-      <text x="18" y="296" fill="#4b463f" font-size="11">0 / 3 complete</text>
-      <text x="18" y="316" fill="#111111" font-size="12">[ ] Run unit tests</text>
-      <text x="18" y="336" fill="#111111" font-size="12">[ ] Regression sweep</text>
-      <text x="18" y="356" fill="#111111" font-size="12">[ ] Release notes</text>
-      <rect x="18" y="372" width="230" height="34" rx="6" fill="#ffd60a" stroke="#111111" stroke-width="3"/>
-      <text x="86" y="394" fill="#111111" font-size="12" font-weight="900">Run Handoff</text>
-      <rect x="262" y="372" width="140" height="34" rx="6" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-      <text x="306" y="394" fill="#111111" font-size="12" font-weight="900">Export v</text>
+      <rect x="0" y="58" width="408" height="292" rx="10" fill="#111414" stroke="#27272a"/>
+      <text x="22" y="90" fill="#6ee7b7" font-size="10" letter-spacing="1.8" font-weight="800">PHASE 04</text>
+      <text x="22" y="122" fill="#f4f4f5" font-size="22" font-weight="760">Validation pass</text>
+      <rect x="22" y="140" width="90" height="26" rx="13" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="43" y="158" fill="#a1a1aa" font-size="11" font-weight="760">pending</text>
+      <text x="22" y="194" fill="#71717a" font-size="11" letter-spacing="1.5" font-weight="800">OBJECTIVE</text>
+      <text x="22" y="216" fill="#d4d4d8" font-size="13">Run focused tests, review terminal output,</text>
+      <text x="22" y="235" fill="#d4d4d8" font-size="13">and record validation notes.</text>
+      <text x="22" y="270" fill="#71717a" font-size="11" letter-spacing="1.5" font-weight="800">AGENT</text>
+      <rect x="22" y="282" width="204" height="34" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="38" y="304" fill="#f4f4f5" font-size="13" font-weight="760">OpenAI Codex</text>
+      <text x="204" y="304" fill="#a1a1aa" font-size="13" font-weight="760">v</text>
+      <text x="22" y="348" fill="#a1a1aa" font-size="12">0 / 3 complete</text>
+      <text x="22" y="374" fill="#d4d4d8" font-size="13">[ ] Unit test sweep</text>
+      <text x="22" y="396" fill="#d4d4d8" font-size="13">[ ] Inspect changed files</text>
+      <rect x="22" y="424" width="190" height="36" rx="6" fill="#34d399" stroke="#34d399"/>
+      <text x="68" y="447" fill="#08110d" font-size="13" font-weight="800">Run Handoff</text>
+      <rect x="226" y="424" width="128" height="36" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="263" y="447" fill="#d4d4d8" font-size="13" font-weight="760">Export</text>
     </g>
 
-    <g transform="translate(452 0)">
-      <rect x="0" y="0" width="420" height="42" rx="8" fill="#ff5a1f" stroke="#111111" stroke-width="4"/>
-      <text x="16" y="27" fill="#ffffff" font-size="12" letter-spacing="2.2" font-weight="900">IN PROGRESS</text>
-      <rect x="372" y="9" width="28" height="24" rx="6" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-      <text x="383" y="26" fill="#111111" font-size="12" font-weight="900">1</text>
+    <g transform="translate(450 0)">
+      <rect x="0" y="0" width="408" height="42" rx="8" fill="#17251d" stroke="#34d399"/>
+      <text x="18" y="27" fill="#6ee7b7" font-size="12" letter-spacing="2.2" font-weight="800">RUNNING</text>
+      <rect x="356" y="9" width="32" height="24" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="368" y="26" fill="#6ee7b7" font-size="12" font-weight="800">1</text>
 
-      <rect x="0" y="56" width="420" height="340" rx="10" fill="#fff7ed" stroke="#ff5a1f" stroke-width="6"/>
-      <text x="20" y="86" fill="#ff5a1f" font-size="10" letter-spacing="1.6" font-weight="900">PHASE 03 . ACTIVE</text>
-      <text x="20" y="116" fill="#111111" font-size="19" font-weight="900">Webhook rollout</text>
-      <rect x="20" y="130" width="74" height="24" rx="6" fill="#ff5a1f" stroke="#111111" stroke-width="3"/>
-      <text x="38" y="147" fill="#ffffff" font-size="11" font-weight="900">active</text>
-      <text x="20" y="174" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">OBJECTIVE</text>
-      <text x="20" y="193" fill="#4b463f" font-size="12">Ship the live chat fix,</text>
-      <text x="20" y="210" fill="#4b463f" font-size="12">verify auth and provider flow.</text>
-      <text x="20" y="236" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">AGENT</text>
-      <rect x="20" y="244" width="210" height="32" rx="6" fill="#f7f4ea" stroke="#111111" stroke-width="3"/>
-      <text x="36" y="265" fill="#111111" font-size="12" font-weight="900">Claude Code</text>
-      <text x="209" y="265" fill="#111111" font-size="12" font-weight="900">v</text>
-      <text x="20" y="298" fill="#4b463f" font-size="11">1 / 3 complete</text>
-      <text x="20" y="316" fill="#4b463f" font-size="12">[x] Add route handling</text>
-      <text x="20" y="336" fill="#111111" font-size="12" font-weight="900">[ ] Verify provider key</text>
-      <text x="20" y="356" fill="#111111" font-size="12">[ ] Production smoke test</text>
-      <rect x="20" y="372" width="230" height="34" rx="6" fill="#ffd60a" stroke="#111111" stroke-width="3"/>
-      <text x="88" y="394" fill="#111111" font-size="12" font-weight="900">Run Handoff</text>
-      <rect x="264" y="372" width="140" height="34" rx="6" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-      <text x="308" y="394" fill="#111111" font-size="12" font-weight="900">Export v</text>
+      <rect x="0" y="58" width="408" height="450" rx="10" fill="url(#active)" stroke="#34d399" stroke-width="2"/>
+      <text x="22" y="92" fill="#6ee7b7" font-size="10" letter-spacing="1.8" font-weight="800">PHASE 03 . ACTIVE</text>
+      <text x="22" y="124" fill="#f4f4f5" font-size="22" font-weight="760">Auth polish</text>
+      <rect x="22" y="142" width="82" height="26" rx="13" fill="#34d399" stroke="#34d399"/>
+      <text x="46" y="160" fill="#08110d" font-size="11" font-weight="800">active</text>
+      <text x="22" y="196" fill="#71717a" font-size="11" letter-spacing="1.5" font-weight="800">OBJECTIVE</text>
+      <text x="22" y="218" fill="#d4d4d8" font-size="13">Fix dark-mode auth rendering and package</text>
+      <text x="22" y="237" fill="#d4d4d8" font-size="13">new marketplace screenshots.</text>
+      <text x="22" y="272" fill="#71717a" font-size="11" letter-spacing="1.5" font-weight="800">AGENT</text>
+      <rect x="22" y="284" width="206" height="34" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="38" y="306" fill="#f4f4f5" font-size="13" font-weight="760">Claude Code</text>
+      <text x="206" y="306" fill="#a1a1aa" font-size="13" font-weight="760">v</text>
+      <text x="22" y="348" fill="#a1a1aa" font-size="12">1 / 3 complete</text>
+      <text x="22" y="376" fill="#a1a1aa" font-size="13">[x] Update shell styling</text>
+      <text x="22" y="402" fill="#f4f4f5" font-size="13" font-weight="760">[ ] Package VSIX</text>
+      <text x="22" y="428" fill="#d4d4d8" font-size="13">[ ] Publish marketplace update</text>
+      <rect x="22" y="452" width="146" height="36" rx="6" fill="#090a0a" stroke="#fb923c"/>
+      <text x="58" y="475" fill="#fed7aa" font-size="13" font-weight="760">Terminal</text>
+      <rect x="182" y="452" width="154" height="36" rx="6" fill="#34d399" stroke="#34d399"/>
+      <text x="219" y="475" fill="#08110d" font-size="13" font-weight="800">Mark done</text>
     </g>
 
-    <g transform="translate(904 0)">
-      <rect x="0" y="0" width="420" height="42" rx="8" fill="#36b979" stroke="#111111" stroke-width="4"/>
-      <text x="16" y="27" fill="#111111" font-size="12" letter-spacing="2.2" font-weight="900">DONE</text>
-      <rect x="372" y="9" width="28" height="24" rx="6" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-      <text x="383" y="26" fill="#111111" font-size="12" font-weight="900">2</text>
+    <g transform="translate(900 0)">
+      <rect x="0" y="0" width="408" height="42" rx="8" fill="#111414" stroke="#27272a"/>
+      <text x="18" y="27" fill="#a1a1aa" font-size="12" letter-spacing="2.2" font-weight="800">VALIDATED</text>
+      <rect x="356" y="9" width="32" height="24" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="368" y="26" fill="#a1a1aa" font-size="12" font-weight="800">2</text>
 
-      <rect x="0" y="56" width="420" height="140" rx="10" fill="#ffffff" stroke="#36b979" stroke-width="4"/>
-      <text x="18" y="84" fill="#005caf" font-size="10" letter-spacing="1.6" font-weight="900">PHASE 02</text>
-      <text x="18" y="112" fill="#4b463f" font-size="18" font-weight="900" text-decoration="line-through">API contracts</text>
-      <text x="18" y="138" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">AGENT</text>
-      <rect x="18" y="146" width="196" height="30" rx="6" fill="#f7f4ea" stroke="#111111" stroke-width="3"/>
-      <text x="34" y="166" fill="#111111" font-size="12" font-weight="900">Cursor CLI</text>
-      <text x="197" y="166" fill="#111111" font-size="12" font-weight="900">v</text>
-      <text x="248" y="166" fill="#4b463f" font-size="12">12 / 12 complete</text>
+      <rect x="0" y="58" width="408" height="150" rx="10" fill="#111414" stroke="#27272a"/>
+      <text x="22" y="90" fill="#6ee7b7" font-size="10" letter-spacing="1.8" font-weight="800">PHASE 02</text>
+      <text x="22" y="122" fill="#a1a1aa" font-size="20" font-weight="760" text-decoration="line-through">Control room layout</text>
+      <rect x="22" y="144" width="190" height="32" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="38" y="165" fill="#d4d4d8" font-size="13" font-weight="760">Cursor</text>
+      <text x="246" y="165" fill="#a1a1aa" font-size="12">8 / 8 complete</text>
 
-      <rect x="0" y="214" width="420" height="140" rx="10" fill="#ffffff" stroke="#36b979" stroke-width="4"/>
-      <text x="18" y="242" fill="#005caf" font-size="10" letter-spacing="1.6" font-weight="900">PHASE 01</text>
-      <text x="18" y="270" fill="#4b463f" font-size="18" font-weight="900" text-decoration="line-through">Discovery</text>
-      <text x="18" y="296" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">AGENT</text>
-      <rect x="18" y="304" width="196" height="30" rx="6" fill="#f7f4ea" stroke="#111111" stroke-width="3"/>
-      <text x="34" y="324" fill="#111111" font-size="12" font-weight="900">Copilot Chat</text>
-      <text x="197" y="324" fill="#111111" font-size="12" font-weight="900">v</text>
-      <text x="248" y="324" fill="#4b463f" font-size="12">6 / 6 complete</text>
+      <rect x="0" y="228" width="408" height="150" rx="10" fill="#111414" stroke="#27272a"/>
+      <text x="22" y="260" fill="#6ee7b7" font-size="10" letter-spacing="1.8" font-weight="800">PHASE 01</text>
+      <text x="22" y="292" fill="#a1a1aa" font-size="20" font-weight="760" text-decoration="line-through">Repository scan</text>
+      <rect x="22" y="314" width="190" height="32" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="38" y="335" fill="#d4d4d8" font-size="13" font-weight="760">Copilot Chat</text>
+      <text x="246" y="335" fill="#a1a1aa" font-size="12">6 / 6 complete</text>
     </g>
   </g>
 
-  <text x="700" y="824" fill="#4b463f" font-size="14" font-weight="800" text-anchor="middle">Kanban shows the real flow: one Agent selector per phase, one Run Handoff action, and secondary exports.</text>
+  <rect x="360" y="802" width="680" height="34" rx="17" fill="#090a0a" stroke="#27272a"/>
+  <text x="700" y="824" fill="#a1a1aa" font-size="14" font-weight="700" text-anchor="middle">V1 review flow: inspect attempts, validate the workspace, and record status per agent.</text>
 </svg>

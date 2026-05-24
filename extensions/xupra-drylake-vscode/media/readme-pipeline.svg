@@ -1,110 +1,95 @@
-<svg width="1400" height="620" viewBox="0 0 1400 620" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+<svg width="1400" height="620" viewBox="0 0 1400 620" xmlns="http://www.w3.org/2000/svg" font-family="Inter, Segoe UI, Arial, sans-serif">
   <defs>
-    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f7f4ea"/>
-      <stop offset="100%" stop-color="#efe7d4"/>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#090a0a"/>
+      <stop offset="100%" stop-color="#141716"/>
     </linearGradient>
-    <marker id="arrow" markerWidth="16" markerHeight="16" refX="13" refY="8" orient="auto">
-      <path d="M0 0 L16 8 L0 16 Z" fill="#111111"/>
+    <marker id="arrow" markerWidth="18" markerHeight="18" refX="15" refY="9" orient="auto">
+      <path d="M0 0 L18 9 L0 18 Z" fill="#3f3f46"/>
     </marker>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000000" flood-opacity="0.38"/>
+    </filter>
   </defs>
 
-  <rect width="1400" height="620" rx="28" fill="url(#paper)"/>
-  <rect x="22" y="22" width="1356" height="576" rx="24" fill="none" stroke="#111111" stroke-width="4"/>
+  <rect width="1400" height="620" rx="28" fill="url(#surface)"/>
+  <rect x="22" y="22" width="1356" height="576" rx="24" fill="none" stroke="#27272a" stroke-width="2"/>
 
-  <rect x="38" y="34" width="1324" height="92" rx="12" fill="#ffffff" stroke="#111111" stroke-width="5"/>
-  <text x="64" y="65" fill="#005caf" font-size="12" letter-spacing="2.2" font-weight="900">PIPELINE VIEW</text>
-  <text x="64" y="100" fill="#111111" font-size="30" font-weight="900">DryLake Control Room</text>
-  <text x="64" y="121" fill="#4b463f" font-size="14" font-weight="700">Pipeline cards use the same agent selector, Run Handoff button, and export menu as Kanban.</text>
-  <rect x="900" y="56" width="106" height="36" rx="8" fill="#ffd60a" stroke="#111111" stroke-width="3"/>
-  <text x="934" y="79" fill="#111111" font-size="12" font-weight="900">Pipeline</text>
-  <rect x="1018" y="56" width="104" height="36" rx="8" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-  <text x="1053" y="79" fill="#111111" font-size="12" font-weight="900">Kanban</text>
-  <rect x="1134" y="56" width="170" height="36" rx="8" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-  <text x="1162" y="79" fill="#111111" font-size="12" font-weight="900">Run Next Phase</text>
+  <g filter="url(#softShadow)">
+    <rect x="46" y="42" width="1308" height="102" rx="10" fill="#111414" stroke="#27272a"/>
+    <text x="76" y="76" fill="#fb923c" font-size="12" letter-spacing="2.6" font-weight="800">PIPELINE VIEW</text>
+    <text x="76" y="114" fill="#f4f4f5" font-size="31" font-weight="760">Plan, launch, validate, repeat</text>
+    <text x="76" y="136" fill="#a1a1aa" font-size="14" font-weight="520">Each phase keeps one agent assignment and one clear handoff. Manual validation controls keep status honest.</text>
 
-  <rect x="38" y="146" width="1324" height="56" rx="10" fill="#ffffff" stroke="#005caf" stroke-width="4"/>
-  <text x="64" y="168" fill="#005caf" font-size="10" letter-spacing="1.8" font-weight="900">PLANNING AI</text>
-  <text x="64" y="187" fill="#111111" font-size="15" font-weight="900">Xupra AI</text>
-  <text x="176" y="187" fill="#4b463f" font-size="13" font-weight="700">Purpose approved. Architecture approved. Active phase is ready for handoff.</text>
+    <rect x="892" y="70" width="126" height="38" rx="6" fill="#34d399" stroke="#34d399"/>
+    <text x="927" y="94" fill="#08110d" font-size="12" font-weight="800">Pipeline</text>
+    <rect x="1032" y="70" width="116" height="38" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+    <text x="1066" y="94" fill="#d4d4d8" font-size="12" font-weight="760">Kanban</text>
+    <rect x="1162" y="70" width="132" height="38" rx="6" fill="#090a0a" stroke="#fb923c"/>
+    <text x="1190" y="94" fill="#fed7aa" font-size="12" font-weight="760">Review run</text>
+  </g>
 
-  <g transform="translate(54 240)">
+  <g transform="translate(54 220)">
     <g>
-      <rect x="0" y="0" width="244" height="236" rx="10" fill="#ffffff" stroke="#36b979" stroke-width="4"/>
-      <text x="16" y="28" fill="#005caf" font-size="10" letter-spacing="1.5" font-weight="900">PHASE 01 . COMPLETE</text>
-      <text x="16" y="58" fill="#4b463f" font-size="20" font-weight="900" text-decoration="line-through">Discovery</text>
-      <text x="16" y="84" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">OBJECTIVE</text>
-      <text x="16" y="102" fill="#4b463f" font-size="12">Scan the repo and list</text>
-      <text x="16" y="118" fill="#4b463f" font-size="12">real constraints.</text>
-      <text x="16" y="144" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">AGENT</text>
-      <rect x="16" y="152" width="196" height="32" rx="6" fill="#f7f4ea" stroke="#111111" stroke-width="3"/>
-      <text x="30" y="173" fill="#111111" font-size="12" font-weight="900">Copilot Chat</text>
-      <text x="193" y="173" fill="#111111" font-size="12" font-weight="900">v</text>
-      <text x="16" y="204" fill="#4b463f" font-size="12">[x] Repo scan</text>
-      <text x="16" y="222" fill="#4b463f" font-size="12">[x] Entry points</text>
-      <text x="16" y="246" fill="#111111" font-size="12" font-weight="900">6 / 6 complete</text>
+      <rect x="0" y="0" width="240" height="260" rx="10" fill="#111414" stroke="#27272a"/>
+      <text x="18" y="34" fill="#6ee7b7" font-size="10" letter-spacing="1.6" font-weight="800">PHASE 01 . VALIDATED</text>
+      <text x="18" y="68" fill="#a1a1aa" font-size="20" font-weight="760" text-decoration="line-through">Repository scan</text>
+      <text x="18" y="98" fill="#71717a" font-size="11" letter-spacing="1.3" font-weight="800">AGENT</text>
+      <rect x="18" y="112" width="180" height="34" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="34" y="134" fill="#d4d4d8" font-size="13" font-weight="760">Copilot Chat</text>
+      <text x="18" y="174" fill="#a1a1aa" font-size="13">[x] Map entry points</text>
+      <text x="18" y="198" fill="#a1a1aa" font-size="13">[x] List constraints</text>
+      <text x="18" y="230" fill="#6ee7b7" font-size="13" font-weight="760">6 / 6 complete</text>
     </g>
 
-    <line x1="258" y1="118" x2="302" y2="118" stroke="#111111" stroke-width="4" marker-end="url(#arrow)"/>
+    <line x1="260" y1="130" x2="306" y2="130" stroke="#3f3f46" stroke-width="4" marker-end="url(#arrow)"/>
 
-    <g transform="translate(320 0)">
-      <rect x="0" y="0" width="244" height="236" rx="10" fill="#ffffff" stroke="#36b979" stroke-width="4"/>
-      <text x="16" y="28" fill="#005caf" font-size="10" letter-spacing="1.5" font-weight="900">PHASE 02 . COMPLETE</text>
-      <text x="16" y="58" fill="#4b463f" font-size="20" font-weight="900" text-decoration="line-through">API layer</text>
-      <text x="16" y="84" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">OBJECTIVE</text>
-      <text x="16" y="102" fill="#4b463f" font-size="12">Lock request shapes and</text>
-      <text x="16" y="118" fill="#4b463f" font-size="12">wire service boundaries.</text>
-      <text x="16" y="144" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">AGENT</text>
-      <rect x="16" y="152" width="196" height="32" rx="6" fill="#f7f4ea" stroke="#111111" stroke-width="3"/>
-      <text x="30" y="173" fill="#111111" font-size="12" font-weight="900">Cursor CLI</text>
-      <text x="193" y="173" fill="#111111" font-size="12" font-weight="900">v</text>
-      <text x="16" y="204" fill="#4b463f" font-size="12">[x] Contracts</text>
-      <text x="16" y="222" fill="#4b463f" font-size="12">[x] Route map</text>
-      <text x="16" y="246" fill="#111111" font-size="12" font-weight="900">12 / 12 complete</text>
+    <g transform="translate(326 0)">
+      <rect x="0" y="0" width="240" height="260" rx="10" fill="#111414" stroke="#27272a"/>
+      <text x="18" y="34" fill="#6ee7b7" font-size="10" letter-spacing="1.6" font-weight="800">PHASE 02 . VALIDATED</text>
+      <text x="18" y="68" fill="#a1a1aa" font-size="20" font-weight="760" text-decoration="line-through">UI alignment</text>
+      <text x="18" y="98" fill="#71717a" font-size="11" letter-spacing="1.3" font-weight="800">AGENT</text>
+      <rect x="18" y="112" width="180" height="34" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="34" y="134" fill="#d4d4d8" font-size="13" font-weight="760">Cursor</text>
+      <text x="18" y="174" fill="#a1a1aa" font-size="13">[x] Header and app pages</text>
+      <text x="18" y="198" fill="#a1a1aa" font-size="13">[x] Extension sidebar</text>
+      <text x="18" y="230" fill="#6ee7b7" font-size="13" font-weight="760">8 / 8 complete</text>
     </g>
 
-    <line x1="578" y1="118" x2="624" y2="118" stroke="#111111" stroke-width="4" marker-end="url(#arrow)"/>
+    <line x1="586" y1="130" x2="632" y2="130" stroke="#3f3f46" stroke-width="4" marker-end="url(#arrow)"/>
 
-    <g transform="translate(642 -18)">
-      <rect x="0" y="0" width="314" height="272" rx="12" fill="#fff7ed" stroke="#ff5a1f" stroke-width="6"/>
-      <text x="18" y="34" fill="#ff5a1f" font-size="10" letter-spacing="1.6" font-weight="900">PHASE 03 . ACTIVE</text>
-      <text x="18" y="66" fill="#111111" font-size="21" font-weight="900">Production verification</text>
-      <rect x="18" y="82" width="74" height="24" rx="6" fill="#ff5a1f" stroke="#111111" stroke-width="3"/>
-      <text x="36" y="99" fill="#ffffff" font-size="11" font-weight="900">active</text>
-      <text x="18" y="126" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">OBJECTIVE</text>
-      <text x="18" y="144" fill="#4b463f" font-size="12">Push the chat fix live,</text>
-      <text x="18" y="160" fill="#4b463f" font-size="12">verify the env, then smoke test.</text>
-      <text x="18" y="188" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">AGENT</text>
-      <rect x="18" y="196" width="228" height="32" rx="6" fill="#f7f4ea" stroke="#111111" stroke-width="3"/>
-      <text x="34" y="217" fill="#111111" font-size="12" font-weight="900">Claude Code</text>
-      <text x="226" y="217" fill="#111111" font-size="12" font-weight="900">v</text>
-      <text x="18" y="248" fill="#4b463f" font-size="12">[x] Sync production env</text>
-      <text x="18" y="266" fill="#111111" font-size="12" font-weight="900">[ ] Retry production deploy</text>
-      <text x="18" y="284" fill="#111111" font-size="12">[ ] Final smoke checks</text>
-      <rect x="18" y="298" width="176" height="34" rx="6" fill="#ffd60a" stroke="#111111" stroke-width="3"/>
-      <text x="62" y="320" fill="#111111" font-size="12" font-weight="900">Run Handoff</text>
-      <rect x="208" y="298" width="106" height="34" rx="6" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-      <text x="235" y="320" fill="#111111" font-size="12" font-weight="900">Export v</text>
+    <g transform="translate(652 -26)">
+      <rect x="0" y="0" width="316" height="312" rx="12" fill="#17251d" stroke="#34d399" stroke-width="2"/>
+      <text x="20" y="40" fill="#6ee7b7" font-size="10" letter-spacing="1.6" font-weight="800">PHASE 03 . RUNNING</text>
+      <text x="20" y="76" fill="#f4f4f5" font-size="22" font-weight="760">Auth and packaging</text>
+      <rect x="20" y="94" width="78" height="26" rx="13" fill="#34d399"/>
+      <text x="43" y="112" fill="#08110d" font-size="11" font-weight="800">active</text>
+      <text x="20" y="148" fill="#71717a" font-size="11" letter-spacing="1.3" font-weight="800">AGENT</text>
+      <rect x="20" y="162" width="214" height="34" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="36" y="184" fill="#f4f4f5" font-size="13" font-weight="760">Claude Code</text>
+      <text x="20" y="226" fill="#a1a1aa" font-size="13">[x] Dark theme auth fix</text>
+      <text x="20" y="250" fill="#f4f4f5" font-size="13" font-weight="760">[ ] Package marketplace VSIX</text>
+      <rect x="20" y="276" width="128" height="36" rx="6" fill="#090a0a" stroke="#fb923c"/>
+      <text x="54" y="299" fill="#fed7aa" font-size="13" font-weight="760">Terminal</text>
+      <rect x="160" y="276" width="136" height="36" rx="6" fill="#34d399"/>
+      <text x="190" y="299" fill="#08110d" font-size="13" font-weight="800">Mark done</text>
     </g>
 
-    <line x1="972" y1="118" x2="1018" y2="118" stroke="#111111" stroke-width="4" marker-end="url(#arrow)"/>
+    <line x1="988" y1="130" x2="1034" y2="130" stroke="#3f3f46" stroke-width="4" marker-end="url(#arrow)"/>
 
-    <g transform="translate(1036 0)">
-      <rect x="0" y="0" width="244" height="236" rx="10" fill="#ffffff" stroke="#111111" stroke-width="4"/>
-      <text x="16" y="28" fill="#005caf" font-size="10" letter-spacing="1.5" font-weight="900">PHASE 04 . PENDING</text>
-      <text x="16" y="58" fill="#111111" font-size="20" font-weight="900">Release notes</text>
-      <text x="16" y="84" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">OBJECTIVE</text>
-      <text x="16" y="102" fill="#4b463f" font-size="12">Summarize the fix and</text>
-      <text x="16" y="118" fill="#4b463f" font-size="12">capture follow-up checks.</text>
-      <text x="16" y="144" fill="#4b463f" font-size="11" letter-spacing="1.2" font-weight="900">AGENT</text>
-      <rect x="16" y="152" width="196" height="32" rx="6" fill="#f7f4ea" stroke="#111111" stroke-width="3"/>
-      <text x="30" y="173" fill="#111111" font-size="12" font-weight="900">OpenAI Codex</text>
-      <text x="193" y="173" fill="#111111" font-size="12" font-weight="900">v</text>
-      <text x="16" y="204" fill="#111111" font-size="12">[ ] Notes</text>
-      <text x="16" y="222" fill="#111111" font-size="12">[ ] Handoff summary</text>
-      <text x="16" y="246" fill="#4b463f" font-size="12">0 / 2 complete</text>
+    <g transform="translate(1054 0)">
+      <rect x="0" y="0" width="240" height="260" rx="10" fill="#111414" stroke="#27272a"/>
+      <text x="18" y="34" fill="#fb923c" font-size="10" letter-spacing="1.6" font-weight="800">PHASE 04 . PENDING</text>
+      <text x="18" y="68" fill="#f4f4f5" font-size="20" font-weight="760">Production review</text>
+      <text x="18" y="98" fill="#71717a" font-size="11" letter-spacing="1.3" font-weight="800">AGENT</text>
+      <rect x="18" y="112" width="180" height="34" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="34" y="134" fill="#d4d4d8" font-size="13" font-weight="760">OpenAI Codex</text>
+      <text x="18" y="174" fill="#d4d4d8" font-size="13">[ ] Smoke production</text>
+      <text x="18" y="198" fill="#d4d4d8" font-size="13">[ ] Record notes</text>
+      <text x="18" y="230" fill="#a1a1aa" font-size="13">0 / 2 complete</text>
     </g>
   </g>
 
-  <text x="700" y="590" fill="#4b463f" font-size="14" font-weight="800" text-anchor="middle">Pipeline makes sequencing obvious while keeping one Agent selector, one Run Handoff action, and secondary exports.</text>
+  <rect x="376" y="558" width="648" height="34" rx="17" fill="#090a0a" stroke="#27272a"/>
+  <text x="700" y="580" fill="#a1a1aa" font-size="14" font-weight="700" text-anchor="middle">Autopilot only advances when enabled. Manual mode leaves the next phase pending.</text>
 </svg>

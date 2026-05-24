@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { ClerkDevelopmentModeSuppressor } from "@/components/clerk-development-mode-suppressor";
+
 export const clerkTapeAppearance = {
   variables: {
     borderRadius: "6px",
@@ -58,7 +60,8 @@ export function DryLakeAuthShell({
   body: string;
 }) {
   return (
-    <main className="tape-page min-h-screen px-6 py-12 md:px-10">
+    <main className="tape-page min-h-screen px-6 py-12 md:px-10" data-drylake-auth-shell>
+      <ClerkDevelopmentModeSuppressor />
       <div className="mx-auto grid min-h-[calc(100vh-6rem)] w-full max-w-6xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
         <section className="space-y-8">
           <Link className="inline-flex items-center gap-3" href="/">
