@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake - Visual AI Agent - Autonomous Software Engineer",
   "description": "Faster and save tokens with Free Autonomous AI Software Engineer. Better than Claude Code because planning like Traycer optimizes Agentic AI coding assistant with multi-agent architecture. Features specialized sub-agents for Planning, Execution, and Verification. Understands your entire codebase, not just selected code.",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
