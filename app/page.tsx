@@ -152,7 +152,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
         <div className="absolute inset-0 bg-[#090a0a]" />
         <div className="absolute inset-x-0 bottom-0 top-20 opacity-70">
           <Image
-            src="/marketplace/extension/media/readme-kanban.png"
+            src="/marketplace/extension/media/readme-kanban-v2.png"
             alt="DryLake kanban planning interface"
             fill
             priority
@@ -224,7 +224,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2">
           <div className="relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
             <Image
-              src="/marketplace/extension/media/readme-pipeline.png"
+              src="/marketplace/extension/media/readme-pipeline-v2.png"
               alt="DryLake pipeline view"
               width={1280}
               height={800}

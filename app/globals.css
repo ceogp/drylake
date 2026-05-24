@@ -97,6 +97,86 @@ code {
   color: #71717a;
 }
 
+[data-drylake-auth-shell] .cl-rootBox,
+[data-drylake-auth-shell] .cl-card,
+[data-drylake-auth-shell] .cl-cardBox,
+[data-drylake-auth-shell] .cl-main,
+[data-drylake-auth-shell] .cl-form,
+[data-drylake-auth-shell] .cl-footer {
+  color: #f4f4f5 !important;
+}
+
+[data-drylake-auth-shell] .cl-rootBox *,
+[data-drylake-auth-shell] .cl-card *,
+[data-drylake-auth-shell] .cl-cardBox * {
+  color: inherit;
+}
+
+[data-drylake-auth-shell] .cl-headerTitle,
+[data-drylake-auth-shell] .cl-formHeaderTitle,
+[data-drylake-auth-shell] .cl-formFieldLabel,
+[data-drylake-auth-shell] .cl-socialButtonsBlockButtonText,
+[data-drylake-auth-shell] .cl-socialButtonsBlockButton span,
+[data-drylake-auth-shell] .cl-footerActionText,
+[data-drylake-auth-shell] .cl-dividerText {
+  color: #ffffff !important;
+}
+
+[data-drylake-auth-shell] .cl-headerSubtitle,
+[data-drylake-auth-shell] .cl-formHeaderSubtitle,
+[data-drylake-auth-shell] .cl-formFieldHintText,
+[data-drylake-auth-shell] .cl-identityPreviewText,
+[data-drylake-auth-shell] .cl-internal-wkkub3,
+[data-drylake-auth-shell] p,
+[data-drylake-auth-shell] label {
+  color: #e4e4e7 !important;
+}
+
+[data-drylake-auth-shell] .cl-formFieldInput,
+[data-drylake-auth-shell] input {
+  background-color: #090a0a !important;
+  border-color: #52525b !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+[data-drylake-auth-shell] .cl-formFieldInput::placeholder,
+[data-drylake-auth-shell] input::placeholder {
+  color: #a1a1aa !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #a1a1aa !important;
+}
+
+[data-drylake-auth-shell] .cl-socialButtonsBlockButton {
+  background-color: #090a0a !important;
+  border-color: #52525b !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+[data-drylake-auth-shell] .cl-socialButtonsBlockButton:hover {
+  border-color: #fb923c !important;
+  color: #ffedd5 !important;
+}
+
+[data-drylake-auth-shell] .cl-formButtonPrimary {
+  background-color: #047857 !important;
+  border: 1px solid #34d399 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+[data-drylake-auth-shell] .cl-formButtonPrimary *,
+[data-drylake-auth-shell] .cl-formButtonPrimary:hover * {
+  color: #ffffff !important;
+}
+
+[data-drylake-auth-shell] .cl-footerActionLink,
+[data-drylake-auth-shell] .cl-formFieldAction,
+[data-drylake-auth-shell] a {
+  color: #6ee7b7 !important;
+}
+
 .tape-page [class*="bg-white"],
 .tape-page [class*="bg-[#f7f4ea]"],
 .tape-page [class*="bg-stone-50"],

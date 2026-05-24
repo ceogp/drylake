@@ -12,9 +12,9 @@ export const clerkTapeAppearance = {
     colorInputBackground: "#090a0a",
     colorInputText: "#f4f4f5",
     colorPrimary: "#34d399",
-    colorText: "#f4f4f5",
+    colorText: "#ffffff",
     colorTextOnPrimaryBackground: "#090a0a",
-    colorTextSecondary: "#a1a1aa",
+    colorTextSecondary: "#e4e4e7",
     fontFamily: "var(--font-heading), system-ui, sans-serif",
     fontFamilyButtons: "var(--font-mono), ui-monospace, monospace",
   },
@@ -22,29 +22,30 @@ export const clerkTapeAppearance = {
     card: "border border-zinc-800 bg-[#111414] shadow-none rounded-[8px]",
     cardBox: "shadow-none",
     dividerLine: "bg-zinc-800",
-    dividerText: "text-zinc-500",
+    dividerText: "text-zinc-200",
     footer: "bg-[#111414]",
-    footerAction: "text-zinc-400",
-    footerActionText: "text-zinc-400",
+    footerAction: "text-zinc-100",
+    footerActionText: "text-zinc-100",
     footerActionLink: "font-semibold text-emerald-300 hover:text-emerald-200",
     formFieldAction: "text-emerald-300 hover:text-emerald-200",
     formFieldErrorText: "text-red-300",
     formFieldHintText: "text-zinc-500",
-    formButtonPrimary: "border border-emerald-400 bg-emerald-400 text-zinc-950 font-semibold tracking-[0.08em] shadow-none hover:bg-emerald-300 hover:text-zinc-950",
+    formButtonPrimary: "border border-emerald-400 bg-emerald-600 text-white font-semibold tracking-[0.08em] shadow-none hover:bg-emerald-500 hover:text-white",
     formFieldInput: "border border-zinc-700 bg-[#090a0a] text-zinc-100 focus:ring-0 focus:border-emerald-400",
     formFieldInputShowPasswordButton: "text-zinc-400 hover:text-zinc-100",
-    formFieldLabel: "font-mono text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400",
+    formFieldLabel: "font-mono text-xs font-semibold uppercase tracking-[0.14em] text-zinc-100",
+    formHeaderSubtitle: "text-zinc-100",
     formHeaderTitle: "text-zinc-50",
     formResendCodeLink: "text-emerald-300 hover:text-emerald-200",
-    headerSubtitle: "text-zinc-400",
+    headerSubtitle: "text-zinc-100",
     headerTitle: "font-semibold text-zinc-50",
     identityPreviewEditButton: "text-emerald-300 hover:text-emerald-200",
     identityPreviewText: "text-zinc-200",
     logoBox: "hidden",
     otpCodeFieldInput: "border border-zinc-700 bg-[#090a0a] text-zinc-100",
     rootBox: "text-zinc-100",
-    socialButtonsBlockButton: "border border-zinc-700 bg-zinc-950 text-zinc-100 font-semibold shadow-none hover:border-orange-400 hover:text-orange-200",
-    socialButtonsBlockButtonText: "text-zinc-100",
+    socialButtonsBlockButton: "border border-zinc-700 bg-zinc-950 text-white font-semibold shadow-none hover:border-orange-400 hover:text-orange-100",
+    socialButtonsBlockButtonText: "text-white",
   },
 } as const;
 
@@ -79,10 +80,10 @@ export function DryLakeAuthShell({
           </Link>
           <div className="space-y-5">
             <p className="tape-eyebrow">{eyebrow}</p>
-            <h1 className="max-w-xl font-[family-name:var(--font-heading)] text-4xl font-black leading-tight text-stone-950 sm:text-5xl">
+            <h1 className="max-w-xl font-[family-name:var(--font-heading)] text-4xl font-black leading-tight text-zinc-50 sm:text-5xl">
               {title}
             </h1>
-            <p className="max-w-lg text-lg leading-8 text-stone-700">{body}</p>
+            <p className="max-w-lg text-lg leading-8 text-zinc-300">{body}</p>
           </div>
           <div className="grid max-w-xl gap-3 sm:grid-cols-3">
             {[

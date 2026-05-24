@@ -8,7 +8,9 @@ const mediaDir = join(__dirname, "..", "media");
 
 const targets = [
   { svg: "readme-kanban.svg", png: "readme-kanban.png", width: 1400 },
+  { svg: "readme-kanban.svg", png: "readme-kanban-v2.png", width: 1400 },
   { svg: "readme-pipeline.svg", png: "readme-pipeline.png", width: 1400 },
+  { svg: "readme-pipeline.svg", png: "readme-pipeline-v2.png", width: 1400 },
 ];
 
 for (const t of targets) {

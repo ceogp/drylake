@@ -4,11 +4,11 @@
 
 Backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.com/startups/). DryLake infrastructure runs on [AWS Cloud](https://aws.amazon.com/) with [GitLab](https://gitlab.com/) CI/CD.
 
-![DryLake Control Room kanban](https://drylake.xupracorp.com/marketplace/extension/media/readme-kanban.png)
+![DryLake Control Room kanban](https://drylake.xupracorp.com/marketplace/extension/media/readme-kanban-v2.png)
 
 Each phase card has one **Agent** dropdown. Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Cursor CLI · GitHub Copilot Chat** from the planner, then press **Run Handoff**. Export utilities are kept in the secondary menu for Markdown, copy, `.sh`, and `.bat`.
 
-![DryLake pipeline view](https://drylake.xupracorp.com/marketplace/extension/media/readme-pipeline.png)
+![DryLake pipeline view](https://drylake.xupracorp.com/marketplace/extension/media/readme-pipeline-v2.png)
 
 ## What It Does
 
