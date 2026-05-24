@@ -64,15 +64,23 @@ describe("sidebar reshape", () => {
 
     expect(html).toContain('<details class="disclosure"><summary><span>Detected Agent Files</span>');
     expect(html).toContain('<details class="disclosure"><summary><span>Advanced</span>');
+    expect(html).toContain('<details class="disclosure nested"><summary><span>Imported skills &amp; agents</span>');
     expect(html).not.toContain('<details class="disclosure" open');
+    expect(html).not.toContain('<details class="disclosure nested" open');
   });
 
-  it("shows Build Session controls and demotes legacy actions into Advanced", () => {
+  it("shows Control Room as the first Build Session action and demotes legacy actions into Advanced", () => {
     const html = sidebarHtml();
+    const renderBuildSession = html.slice(html.indexOf("function renderBuildSession"), html.indexOf("function formatPlatform"));
+    const noSessionBranch = renderBuildSession.slice(renderBuildSession.indexOf("No active Build Session"), renderBuildSession.indexOf("const sessionName"));
 
     expect(html).toContain("No active Build Session");
     expect(html).toContain('data-action="startBuildSession"');
     expect(html).toContain('data-action="openControlRoom"');
+    expect(noSessionBranch.indexOf('data-action="openControlRoom"')).toBeGreaterThan(-1);
+    expect(noSessionBranch.indexOf('data-action="openControlRoom"')).toBeLessThan(
+      noSessionBranch.indexOf('data-action="startBuildSession"'),
+    );
     expect(html).toContain("activePhaseTokenEstimate");
     expect(html).toContain("runbookTokenEstimate");
     expect(html).not.toContain('data-action="exportHandoffPrompt"');

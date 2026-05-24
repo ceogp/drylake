@@ -500,6 +500,10 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       background: var(--xupra-panel);
     }
 
+    details.disclosure.nested {
+      background: var(--xupra-panel-2);
+    }
+
     details.disclosure > summary {
       display: flex;
       align-items: center;
@@ -963,7 +967,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       let html = '<div class="section"><div class="section-header"><span class="section-label">BUILD SESSION</span></div>';
 
       if (!runbook.path && !runbook.sessionName) {
-        html += '<div class="session-card"><div class="session-name">No active Build Session</div><div class="session-meta">Paste a ticket, bug, or feature request to create a guided coding plan.</div><button class="big-action primary" data-action="startBuildSession">Start Build Session</button></div></div>';
+        html += '<div class="session-card"><div class="session-name">No active Build Session</div><div class="session-meta">Open the Control Room to paste a ticket, bug, or feature request and create a guided coding plan.</div><button class="big-action primary" data-action="openControlRoom">Open Control Room</button><button class="big-action" data-action="startBuildSession">Start Build Session</button></div></div>';
         return html;
       }
 
@@ -1087,7 +1091,10 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
 
     function renderImportedWorkspace(state) {
       const workspace = state.importedWorkspace;
-      let html = '<div class="section"><div class="section-header"><span class="section-label">Imported skills &amp; agents</span></div>';
+      const workspaceCount = workspace
+        ? (workspace.subagents || []).length + (workspace.skillRules || []).length + (workspace.files || []).length
+        : 0;
+      let html = '<details class="disclosure nested"><summary><span>Imported skills &amp; agents</span><span class="section-count">' + workspaceCount + '</span></summary><div class="disclosure-body">';
 
       if (!workspace) {
         if (!state.selection || !state.selection.versionId) {
@@ -1095,7 +1102,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         } else {
           html += '<div class="empty-state">No imported workspace is loaded for the selected version yet. Run an import or refresh after the import job completes.</div>';
         }
-        return html + '</div>';
+        return html + '</div></details>';
       }
 
       const skills = (workspace.skillRules || []).filter(function(rule) {
@@ -1111,7 +1118,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
 
       if ((workspace.subagents || []).length === 0 && skills.length === 0 && rules.length === 0 && promptFragments.length === 0 && (workspace.files || []).length === 0) {
         html += '<div class="empty-state">The selected version has no imported agents, skills, rules, or raw files yet.</div>';
-        return html + '</div>';
+        return html + '</div></details>';
       }
 
       html += renderImportedEntries(workspace.subagents || [], {
@@ -1162,7 +1169,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         actionType: 'openRawFile',
       });
 
-      return html + '</div>';
+      return html + '</div></details>';
     }
 
     function renderActions(state) {
