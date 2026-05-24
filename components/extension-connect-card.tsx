@@ -59,7 +59,7 @@ export function ExtensionConnectCard() {
   };
 
   return (
-    <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+    <section className="tape-panel p-7">
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
         Manual Fallback
       </p>
@@ -73,7 +73,7 @@ export function ExtensionConnectCard() {
 
       <div className="mt-6 flex flex-wrap gap-3">
         <button
-          className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-70"
+          className="tape-button px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
           disabled={isPending}
           onClick={generateToken}
           type="button"
@@ -81,7 +81,7 @@ export function ExtensionConnectCard() {
           {isPending ? "Generating..." : "Generate Token"}
         </button>
         <button
-          className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+          className="tape-button bg-white px-5 py-3 text-sm text-black disabled:cursor-not-allowed disabled:opacity-60"
           disabled={!token}
           onClick={copyToken}
           type="button"
@@ -91,15 +91,15 @@ export function ExtensionConnectCard() {
       </div>
 
       {error ? (
-        <div className="mt-5 rounded-[1.35rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-5 rounded-lg border border-red-500/30 bg-red-950/30 px-4 py-3 text-sm text-red-200">
           {error}
         </div>
       ) : null}
 
-      <div className="mt-5 rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4">
+      <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-950/70 p-4">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Extension token</p>
         <textarea
-          className="mt-3 min-h-40 w-full rounded-[1.25rem] border border-stone-200 bg-white px-4 py-3 font-mono text-xs leading-6 text-stone-800"
+          className="mt-3 min-h-40 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 font-mono text-xs leading-6 text-zinc-200"
           readOnly
           value={token}
         />

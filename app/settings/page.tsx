@@ -12,9 +12,9 @@ function DetailCard({
   value: string;
 }) {
   return (
-    <div className="tape-card bg-[#f7f4ea] p-4">
+    <div className="tape-card border border-zinc-800 bg-zinc-950/70 p-4">
       <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</p>
-      <p className="mt-3 text-sm leading-7 text-stone-800">{value}</p>
+      <p className="mt-3 text-sm leading-7 text-zinc-300">{value}</p>
     </div>
   );
 }
@@ -47,7 +47,7 @@ export default async function SettingsPage() {
             </Link>
             {isPlatformAdmin && adminInternalOrigin ? (
               <a
-                className="tape-button bg-[#ffd60a] px-5 py-3 text-sm text-black"
+                className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300"
                 href={`${adminInternalOrigin}/admin`}
               >
                 Open Internal Admin
@@ -85,10 +85,10 @@ export default async function SettingsPage() {
                 <span
                   className={`rounded-full px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] ${
                     appContext.organization.tier === "pro"
-                      ? "border border-green-300 bg-green-50 text-green-700"
+                      ? "border border-emerald-400/50 bg-emerald-400/10 text-emerald-200"
                       : appContext.organization.tier === "enterprise"
-                        ? "border border-purple-300 bg-purple-50 text-purple-700"
-                      : "border border-stone-300 bg-stone-100 text-stone-600"
+                        ? "border border-orange-400/50 bg-orange-400/10 text-orange-200"
+                      : "border border-zinc-700 bg-zinc-950 text-zinc-400"
                   }`}
                 >
                   {appContext.organization.tier === "pro"
@@ -99,7 +99,7 @@ export default async function SettingsPage() {
                 </span>
                 {appContext.organization.tier === "free" ? (
                   <Link
-                    className="tape-button bg-[#ffd60a] px-5 py-2 text-sm text-black"
+                    className="tape-button bg-emerald-400 px-5 py-2 text-sm text-zinc-950 hover:bg-emerald-300"
                     href="/billing"
                   >
                     Upgrade to Pro
@@ -109,11 +109,11 @@ export default async function SettingsPage() {
               <p>Status: {appContext.organization.status}</p>
               <p>Memberships: {appContext.memberships.length}</p>
             </div>
-            <div className="tape-card mt-6 bg-[#f7f4ea] p-4">
+            <div className="tape-card mt-6 border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Available Organizations</p>
               <div className="mt-3 space-y-3 text-sm leading-7 text-stone-700">
                 {appContext.memberships.map((membership) => (
-                  <div key={membership.organizationId} className="flex items-center justify-between gap-4 border-[3px] border-black bg-white px-4 py-3">
+                  <div key={membership.organizationId} className="flex items-center justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3">
                     <span>{membership.organization.name}</span>
                     <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
                       {membership.role}
@@ -136,13 +136,13 @@ export default async function SettingsPage() {
               credential and integration setup stay out of the normal onboarding path.
             </p>
             <div className="mt-5 grid gap-3 text-sm">
-              <Link className="border-[3px] border-black bg-white px-4 py-3 text-stone-800 transition hover:bg-[#ffd60a]" href="/app">
+              <Link className="rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-zinc-200 transition hover:border-emerald-400/50 hover:bg-emerald-400/10" href="/app">
                 Open Dashboard
               </Link>
-              <Link className="border-[3px] border-black bg-white px-4 py-3 text-stone-800 transition hover:bg-[#ffd60a]" href="/extensions/connect">
+              <Link className="rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-zinc-200 transition hover:border-emerald-400/50 hover:bg-emerald-400/10" href="/extensions/connect">
                 Install or reconnect extension
               </Link>
-              <Link className="border-[3px] border-black bg-white px-4 py-3 text-stone-800 transition hover:bg-[#ffd60a]" href="/billing">
+              <Link className="rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-zinc-200 transition hover:border-emerald-400/50 hover:bg-emerald-400/10" href="/billing">
                 Billing and plan
               </Link>
             </div>

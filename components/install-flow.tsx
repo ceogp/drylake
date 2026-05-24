@@ -337,14 +337,14 @@ export function InstallFlow({ versionId }: { versionId: string }) {
         <StepBadge label="Install" state={readyForDestination ? "active" : "pending"} />
       </div>
 
-      <p className="tape-card bg-[#f7f4ea] px-4 py-3 text-sm leading-6 text-stone-700">{message}</p>
+      <p className="tape-card border border-zinc-800 bg-[#111414] px-4 py-3 text-sm leading-6 text-zinc-300">{message}</p>
 
       {isLoadingStatus ? (
         <section className="tape-panel bg-white p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Install</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Loading install flow</h1>
           <div className="mt-5 h-2 overflow-hidden rounded-full bg-stone-100">
-            <div className="h-full w-1/2 rounded-full bg-[#005caf]" />
+            <div className="h-full w-1/2 rounded-full bg-emerald-400" />
           </div>
         </section>
       ) : null}
@@ -357,7 +357,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
             The install flow needs source files from your workspace before Kimi can canonicalize them.
           </p>
           <Link
-            className="tape-button mt-6 inline-flex bg-[#ffd60a] px-5 py-3 text-sm text-black"
+            className="tape-button mt-6 inline-flex bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300"
             href="/upload"
           >
             Import Files
@@ -366,7 +366,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       ) : null}
 
       {status && !status.isPro && upgradeDismissed ? (
-        <section className="tape-panel bg-[#ffd60a] p-6">
+        <section className="tape-panel border border-orange-400/30 bg-orange-400/10 p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-orange-700">Pro Required</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Canonicalization and install are locked</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-700">
@@ -391,7 +391,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
             Kimi AI will analyze your source files and convert them into a portable canonical format.
           </p>
           <button
-            className="tape-button mt-6 bg-[#ffd60a] px-5 py-3 text-sm text-black disabled:opacity-60"
+            className="tape-button mt-6 bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300 disabled:opacity-60"
             onClick={() => void runCanonicalization()}
             type="button"
           >
@@ -408,14 +408,14 @@ export function InstallFlow({ versionId }: { versionId: string }) {
             Analyzing {status.sourceFileCount} source files. This usually takes under 30 seconds.
           </p>
           <div className="mt-5 h-2 overflow-hidden rounded-full bg-stone-100">
-            <div className="h-full w-2/3 rounded-full bg-[#005caf]" />
+            <div className="h-full w-2/3 rounded-full bg-emerald-400" />
           </div>
           <p className="mt-3 text-xs text-stone-500">Building portable agents, skills, and rules.</p>
         </section>
       ) : null}
 
       {status?.isPro && blockingCanonicalizationFailed && !isCanonicalizing ? (
-        <section className="tape-panel bg-red-50 p-6">
+        <section className="tape-panel border border-red-500/30 bg-red-950/30 p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-red-700">Canonicalization Failed</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Kimi could not complete this run</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-700">
@@ -432,7 +432,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       ) : null}
 
       {showCanonicalizationRetryWarning && status ? (
-        <section className="tape-panel bg-amber-50 p-5">
+        <section className="tape-panel border border-orange-400/30 bg-orange-400/10 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-700">Canonicalization Warning</p>
@@ -453,13 +453,13 @@ export function InstallFlow({ versionId }: { versionId: string }) {
       ) : null}
 
       {needsReview && status?.canonicalizationResult ? (
-        <section className="tape-panel bg-amber-50 p-6">
+        <section className="tape-panel border border-orange-400/30 bg-orange-400/10 p-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-700">Review Required</p>
           <h1 className="mt-3 text-2xl font-semibold text-stone-950">Canonicalization needs confirmation</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-700">
             Kimi returned a low-confidence result. Review the summary before continuing.
           </p>
-          <div className="tape-card mt-5 bg-white p-4">
+          <div className="tape-card mt-5 border border-zinc-800 bg-[#111414] p-4">
             <p className="font-medium text-amber-900">
               Overall confidence: {formatConfidence(status.canonicalizationResult.confidence)}
             </p>
@@ -474,7 +474,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
             <button
-              className="tape-button bg-[#ffd60a] px-5 py-3 text-sm text-black"
+              className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300"
               onClick={() => {
                 setReviewAccepted(true);
                 setCanonicalizationJustRan(false);
@@ -515,8 +515,8 @@ export function InstallFlow({ versionId }: { versionId: string }) {
                 key={item.id}
                 className={`rounded-lg border p-4 text-left transition ${
                   destination === item.id
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-stone-200 bg-white hover:border-orange-300"
+                    ? "border-emerald-400 bg-emerald-400/10"
+                    : "border-zinc-800 bg-zinc-950/70 hover:border-orange-400/60"
                 }`}
                 onClick={() => setDestination(item.id)}
                 type="button"
@@ -528,7 +528,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
           </div>
 
           {destination === "other" ? (
-            <div className="mt-5 rounded-lg border border-stone-200 bg-stone-50 p-4">
+            <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="font-medium text-stone-950">Choose output format</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {targetFormats.map((format) => (
@@ -549,7 +549,7 @@ export function InstallFlow({ versionId }: { versionId: string }) {
             </div>
           ) : null}
 
-          <div className="mt-6 rounded-lg border border-stone-200 bg-stone-50 p-5">
+          <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-950/70 p-5">
             <p className="font-medium text-stone-950">
               Ready to install into {destination === "other" ? "a custom folder" : destinations.find((item) => item.id === destination)?.name}.
             </p>
@@ -608,7 +608,7 @@ function StepBadge({ label, state }: { label: string; state: "done" | "active" |
         state === "done"
           ? "border-emerald-200 bg-emerald-50 text-emerald-700"
           : state === "active"
-            ? "border-orange-300 bg-orange-50 text-orange-800"
+            ? "border-orange-400/50 bg-orange-400/10 text-orange-200"
             : "border-stone-200 bg-white text-stone-500"
       }`}
     >
@@ -623,7 +623,7 @@ function FallbackPanel({
   downloadHref: string;
 }) {
   return (
-    <div className="mt-5 rounded-lg border border-dashed border-stone-300 bg-stone-50 p-5">
+    <div className="mt-5 rounded-lg border border-dashed border-zinc-700 bg-zinc-950/70 p-5">
       <p className="font-medium text-stone-950">Open VS Code or Cursor to install</p>
       <p className="mt-2 text-sm leading-6 text-stone-700">
         Open VS Code or Cursor with the Xupra extension installed and signed in, then return here to install.

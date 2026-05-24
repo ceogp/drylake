@@ -169,7 +169,7 @@ export default async function ExtensionConnectPage({
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           {requestId ? !context ? (
-            <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+            <section className="tape-panel p-7">
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
                 Sign In To Approve
               </p>
@@ -186,7 +186,7 @@ export default async function ExtensionConnectPage({
               </p>
             </section>
           ) : !connectRequest ? (
-            <section className="rounded-[2rem] border border-red-200 bg-red-50 p-7 shadow-sm">
+            <section className="tape-panel border border-red-500/30 bg-red-950/30 p-7">
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-red-700">
                 Request Missing
               </p>
@@ -198,7 +198,7 @@ export default async function ExtensionConnectPage({
               </p>
             </section>
           ) : requestOwnedByDifferentSession ? (
-            <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-7 shadow-sm">
+            <section className="tape-panel border border-orange-400/30 bg-orange-400/10 p-7">
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-amber-700">
                 Switch Account
               </p>
@@ -211,13 +211,13 @@ export default async function ExtensionConnectPage({
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                  className="tape-button bg-white px-5 py-3 text-sm text-black"
                   href={workspaceHref}
                 >
                   Open Dashboard
                 </Link>
                 <Link
-                  className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+                  className="tape-button bg-white px-5 py-3 text-sm text-black"
                   href={manualFallbackPath}
                 >
                   Manual Fallback
@@ -242,7 +242,7 @@ export default async function ExtensionConnectPage({
               workspaceHref={workspaceHref}
             />
           ) : callback && !manualMode ? (
-            <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+            <section className="tape-panel p-7">
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
                 Sign In To Continue
               </p>
@@ -259,7 +259,7 @@ export default async function ExtensionConnectPage({
               </p>
             </section>
           ) : !context ? (
-            <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+            <section className="tape-panel p-7">
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
                 Sign In Required
               </p>
@@ -281,7 +281,7 @@ export default async function ExtensionConnectPage({
             <ExtensionConnectCard />
           )}
 
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+          <article className="tape-panel p-7">
             {context ? (
               <ConnectedWorkspaceCard
                 organizationName={context.organization.name}
@@ -297,7 +297,7 @@ export default async function ExtensionConnectPage({
               {steps.map((step, index) => (
                 <div
                   key={step}
-                  className="rounded-[1.35rem] border border-stone-200 bg-stone-50 px-5 py-4 text-sm leading-7 text-stone-700"
+                  className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-5 py-4 text-sm leading-7 text-zinc-300"
                 >
                   <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">
                     Step {index + 1}
@@ -307,20 +307,20 @@ export default async function ExtensionConnectPage({
               ))}
             </div>
 
-            <div className="mt-6 rounded-[1.5rem] border border-dashed border-stone-300 bg-white p-4 text-sm leading-7 text-stone-700">
+            <div className="mt-6 rounded-lg border border-dashed border-zinc-700 bg-zinc-950/70 p-4 text-sm leading-7 text-zinc-300">
               Upload, import, and compatibility checks are available on free. Compatibility only
               checks whether a target is ready. Upgrade later from <span className="font-mono text-xs">/billing</span>{" "}
               when you want export preview, credential vault, or deployment workflow.
             </div>
 
-            <div className="mt-4 rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
+            <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/70 p-4 text-sm leading-7 text-zinc-300">
               If your repo does not keep skills, rules, or agent files in the default directories,
               add patterns in extension settings under{" "}
               <span className="font-mono text-xs">xupra.additionalScanPatterns</span>.
             </div>
 
             {!requestId && (!callback || manualMode) ? (
-              <div className="mt-4 rounded-[1.5rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
+              <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/70 p-4 text-sm leading-7 text-zinc-300">
                 This screen is the fallback path. The normal customer flow starts inside the
                 extension and the editor completes auth once browser approval is granted.
               </div>

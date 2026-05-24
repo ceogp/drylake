@@ -31,6 +31,7 @@ type RunnerAgentResult = {
   status: RunnerAgentStatus;
   startedAt: string | null;
   finishedAt: string | null;
+  reviewedAt: string | null;
   command: string | null;
   installError: string | null;
   message: string;
@@ -57,6 +58,7 @@ type RunnerMessage = {
   prompt?: unknown;
   agents?: unknown;
   agent?: unknown;
+  status?: unknown;
   assignments?: unknown;
 };
 
@@ -254,24 +256,35 @@ function renderRun(run: RunnerRun) {
     <div class="run-actions"><span class="status-badge ${agent.status}">${escapeHtml(agent.status)}</span><button class="link-button" data-open-agent="${escapeHtml(agent.id)}">View terminal</button></div>
     <p><strong>${escapeHtml(agent.assignmentSummary)}</strong></p>
     <p>${escapeHtml(agent.message)}</p>
+    ${renderReviewActions(agent)}
   </article>`).join("");
 
   return `<section class="runner-progress">
     <div class="section-label">${escapeHtml(run.taskPrompt)}</div>
     ${cards}
-    <footer><span>${run.agents.filter((agent) => agent.status === "running").length} agents running</span><button id="showResults">Review results</button></footer>
+    <footer><span>${run.agents.filter((agent) => agent.status === "running").length} agents running</span><button id="showResults">Review attempts</button></footer>
   </section>`;
+}
+
+function renderReviewActions(agent: RunnerAgentResult) {
+  const completeDisabled = agent.status === "complete" ? " disabled" : "";
+  const failedDisabled = agent.status === "failed" ? " disabled" : "";
+  return `<div class="result-actions">
+    <button class="link-button" data-mark-agent="${escapeHtml(agent.id)}" data-review-status="complete"${completeDisabled}>Mark complete</button>
+    <button class="link-button" data-mark-agent="${escapeHtml(agent.id)}" data-review-status="failed"${failedDisabled}>Mark failed</button>
+    <button class="link-button" data-rerun-agent="${escapeHtml(agent.id)}">Rerun</button>
+  </div>`;
 }
 
 function renderResults(run: RunnerRun) {
   const cards = run.agents.map((agent) => `<article class="run-card">
-    <div class="agent-info"><span class="agent-icon">${escapeHtml(agent.label.slice(0, 1))}</span><span><strong>${escapeHtml(agent.label)}</strong><em>${escapeHtml(agent.status)}</em></span></div>
+    <div class="agent-info"><span class="agent-icon">${escapeHtml(agent.label.slice(0, 1))}</span><span><strong>${escapeHtml(agent.label)}</strong><span class="status-badge ${agent.status}">${escapeHtml(agent.status)}</span></span></div>
     <p><strong>${escapeHtml(agent.assignmentSummary)}</strong></p>
     <p>${escapeHtml(agent.message)}</p>
     <div class="result-actions">
       <button class="link-button" data-open-agent="${escapeHtml(agent.id)}">View terminal</button>
-      <button class="link-button" data-rerun-agent="${escapeHtml(agent.id)}">Rerun</button>
     </div>
+    ${renderReviewActions(agent)}
   </article>`).join("");
 
   return `<section class="runner-results">
@@ -361,9 +374,6 @@ export class MultiAgentRunnerProvider {
         this.currentRun = {
           ...this.currentRun,
           status: "results",
-          agents: this.currentRun.agents.map((agent) => agent.status === "running"
-            ? { ...agent, status: "complete", finishedAt: new Date().toISOString() }
-            : agent),
         };
         await this.writeAuditLog(this.currentRun);
         this.refresh();
@@ -378,6 +388,11 @@ export class MultiAgentRunnerProvider {
 
     if (message.command === "rerun") {
       await this.rerunAgent(message.agent);
+      return;
+    }
+
+    if (message.command === "markAgent") {
+      await this.markAgentReview(message.agent, message.status);
       return;
     }
 
@@ -463,6 +478,7 @@ export class MultiAgentRunnerProvider {
         status: "pending",
         startedAt: null,
         finishedAt: null,
+        reviewedAt: null,
         command: null,
         installError: null,
         message: "Awaiting assignment approval.",
@@ -596,6 +612,7 @@ export class MultiAgentRunnerProvider {
         status: "pending",
         startedAt: null,
         finishedAt: null,
+        reviewedAt: null,
         command: null,
         installError: null,
         message: "Queued.",
@@ -625,7 +642,8 @@ export class MultiAgentRunnerProvider {
         assignmentBoundary: assignment.scopeBoundary,
         status: launch.status === "launched" ? "running" as const : "failed" as const,
         startedAt: launch.status === "launched" ? new Date().toISOString() : null,
-        finishedAt: null,
+        finishedAt: launch.status === "launched" ? null : new Date().toISOString(),
+        reviewedAt: null,
         command: launch.command ?? null,
         installError: launch.status === "launched" ? null : launch.message,
         message: launch.message,
@@ -648,6 +666,7 @@ export class MultiAgentRunnerProvider {
         status: "failed",
         startedAt: null,
         finishedAt: new Date().toISOString(),
+        reviewedAt: null,
         command: null,
         installError: result.reason instanceof Error ? result.reason.message : String(result.reason),
         message: result.reason instanceof Error ? result.reason.message : "DryLake could not launch this agent.",
@@ -698,6 +717,42 @@ export class MultiAgentRunnerProvider {
     await this.planAssignments(this.currentRun.taskPrompt, [agent]);
   }
 
+  private async markAgentReview(agentArg: unknown, statusArg: unknown) {
+    const agent = typeof agentArg === "string" && (XU_PHASE_AGENTS as readonly string[]).includes(agentArg)
+      ? (agentArg as XuPhaseAgent)
+      : undefined;
+    const status = statusArg === "complete" || statusArg === "failed" ? statusArg : undefined;
+    if (!agent || !status || !this.currentRun) {
+      return;
+    }
+
+    const run = this.currentRun;
+    const reviewedAt = new Date().toISOString();
+    const agents = run.agents.map((item): RunnerAgentResult => {
+      if (item.id !== agent) {
+        return item;
+      }
+
+      return {
+        ...item,
+        status: status as RunnerAgentStatus,
+        finishedAt: reviewedAt,
+        reviewedAt,
+        installError: status === "complete" ? null : item.installError ?? "Marked failed after user review.",
+        message: `Marked ${item.label} ${status} after user review.`,
+      };
+    });
+    const allReviewed = agents.every((item) => item.status === "complete" || item.status === "failed");
+
+    this.currentRun = {
+      ...run,
+      status: allReviewed ? "results" : run.status,
+      agents,
+    };
+    await this.writeAuditLog(this.currentRun);
+    this.refresh();
+  }
+
   private renderHtml() {
     const run = this.currentRun;
     const body = !run || run.status === "idle"
@@ -723,38 +778,41 @@ export class MultiAgentRunnerProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 16px; color: var(--vscode-foreground); background: var(--vscode-sideBar-background); font-family: var(--vscode-font-family); font-size: 12px; }
-    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    h1 { margin: 0; color: var(--vscode-foreground); font-size: 16px; }
-    .mode-badge { padding: 2px 8px; border-radius: 3px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
-    textarea { width: 100%; min-height: 96px; margin-bottom: 12px; padding: 9px; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 4px; resize: vertical; }
-    button { padding: 6px 10px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: 0; border-radius: 3px; cursor: pointer; font-weight: 700; }
+    :root { --runner-bg: #090a0a; --runner-panel: #111414; --runner-panel-2: #0d0f0f; --runner-line: #27272a; --runner-text: #f4f4f5; --runner-muted: #a1a1aa; --runner-green: #34d399; --runner-orange: #fb923c; --runner-red: #f87171; }
+    body { margin: 0; padding: 16px; color: var(--runner-text); background: var(--runner-bg); font-family: var(--vscode-font-family); font-size: 12px; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+    h1 { margin: 0; color: var(--runner-text); font-size: 16px; font-weight: 700; }
+    .mode-badge { padding: 2px 8px; border: 1px solid rgba(52, 211, 153, 0.45); border-radius: 3px; background: rgba(52, 211, 153, 0.12); color: #a7f3d0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+    textarea { width: 100%; min-height: 96px; margin-bottom: 12px; padding: 9px; color: var(--runner-text); background: var(--runner-bg); border: 1px solid #3f3f46; border-radius: 4px; resize: vertical; }
+    button { padding: 6px 10px; color: #090a0a; background: var(--runner-green); border: 1px solid var(--runner-green); border-radius: 4px; cursor: pointer; font-weight: 700; }
+    button:hover { background: #6ee7b7; border-color: #6ee7b7; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .section-label { margin: 10px 0 8px; color: var(--vscode-descriptionForeground); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+    .section-label { margin: 10px 0 8px; color: var(--runner-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
     .agent-list { display: flex; flex-direction: column; gap: 7px; }
-    .agent-row, .run-card, .last-run, .assignment-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 5px; background: var(--vscode-editor-background); }
+    .agent-row, .run-card, .last-run, .assignment-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid var(--runner-line); border-radius: 6px; background: var(--runner-panel); }
     .assignment-card, .run-card { display: block; margin-bottom: 8px; }
     .agent-row.disabled { opacity: 0.58; }
     .agent-info { display: flex; align-items: center; gap: 9px; min-width: 0; }
-    .agent-info strong { display: block; color: var(--vscode-foreground); font-size: 12px; }
-    .agent-info em, .last-run em { display: block; color: var(--vscode-descriptionForeground); font-size: 10px; font-style: normal; }
-    .agent-icon { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-weight: 800; flex: 0 0 auto; }
-    footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--vscode-panel-border); color: var(--vscode-descriptionForeground); }
+    .agent-info strong { display: block; color: var(--runner-text); font-size: 12px; }
+    .agent-info em, .last-run em { display: block; color: var(--runner-muted); font-size: 10px; font-style: normal; }
+    .agent-icon { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--runner-line); border-radius: 4px; background: var(--runner-panel-2); color: #a7f3d0; font-weight: 800; flex: 0 0 auto; }
+    footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--runner-line); color: var(--runner-muted); }
     .footer-actions { display: inline-flex; align-items: center; gap: 8px; }
     .run-card > .agent-info, .run-actions, .result-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .run-card p { margin: 8px 0 0; color: var(--vscode-descriptionForeground); line-height: 1.4; }
-    .field-label { display: block; margin-top: 10px; color: var(--vscode-descriptionForeground); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+    .run-card p { margin: 8px 0 0; color: var(--runner-muted); line-height: 1.4; }
+    .field-label { display: block; margin-top: 10px; color: var(--runner-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
     .assignment-summary { margin-top: 6px; min-height: 76px; }
-    .boundary { display: grid; gap: 4px; margin-top: 4px; color: var(--vscode-descriptionForeground); }
-    .boundary strong { color: var(--vscode-foreground); font-weight: 700; }
-    .warning { margin: 8px 0; padding: 8px; border: 1px solid var(--vscode-inputValidation-warningBorder); background: var(--vscode-inputValidation-warningBackground); color: var(--vscode-inputValidation-warningForeground); border-radius: 4px; }
-    .note { margin: 8px 0; color: var(--vscode-descriptionForeground); }
+    .boundary { display: grid; gap: 4px; margin-top: 4px; color: var(--runner-muted); }
+    .boundary strong { color: var(--runner-text); font-weight: 700; }
+    .warning { margin: 8px 0; padding: 8px; border: 1px solid rgba(251, 146, 60, 0.45); background: rgba(251, 146, 60, 0.12); color: #fed7aa; border-radius: 4px; }
+    .note { margin: 8px 0; color: var(--runner-muted); }
     .status-badge { padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 800; }
-    .status-badge.running { background: #1a3a5c; color: #6fb0ff; }
-    .status-badge.complete { background: #1b3f2a; color: #6ee08c; }
-    .status-badge.failed { background: #4a1f1f; color: #ff8a8a; }
-    .status-badge.pending { background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
-    .link-button { color: var(--vscode-textLink-foreground); background: transparent; padding: 2px 4px; text-decoration: underline; }
+    .status-badge.running { background: rgba(251, 146, 60, 0.12); color: #fdba74; }
+    .status-badge.complete { background: rgba(52, 211, 153, 0.12); color: #6ee7b7; }
+    .status-badge.failed { background: rgba(248, 113, 113, 0.14); color: #fca5a5; }
+    .status-badge.pending { background: var(--runner-panel-2); color: var(--runner-muted); }
+    .link-button { color: var(--runner-orange); background: transparent; border-color: transparent; padding: 2px 4px; text-decoration: underline; text-underline-offset: 3px; }
+    .link-button:hover { color: #fed7aa; background: transparent; border-color: transparent; }
   </style>
 </head>
 <body>
@@ -805,6 +863,11 @@ export class MultiAgentRunnerProvider {
       const open = event.target.closest("[data-open-agent]");
       if (open) {
         vscode.postMessage({ command: "openPrompt", agent: open.dataset.openAgent });
+        return;
+      }
+      const mark = event.target.closest("[data-mark-agent]");
+      if (mark) {
+        vscode.postMessage({ command: "markAgent", agent: mark.dataset.markAgent, status: mark.dataset.reviewStatus });
         return;
       }
       const rerun = event.target.closest("[data-rerun-agent]");

@@ -7,7 +7,7 @@ function SubmitButton() {
 
   return (
     <button
-      className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-900 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-medium text-zinc-100 transition hover:border-orange-400 hover:text-orange-200 disabled:cursor-not-allowed disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
@@ -38,7 +38,7 @@ export function OrganizationSwitcher(props: OrganizationSwitcherProps) {
         Active organization
       </label>
       <select
-        className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-800"
+        className="rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-medium text-zinc-200"
         defaultValue={props.activeOrganizationId}
         id="active-organization"
         name="organizationId"

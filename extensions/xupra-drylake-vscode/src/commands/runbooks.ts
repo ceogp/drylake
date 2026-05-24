@@ -539,7 +539,7 @@ export async function openSessionsCommand(deps: RunbookCommandDeps) {
 
   const bytes = await vscode.workspace.fs.readFile(picked.session.uri);
   const document = await vscode.workspace.openTextDocument({
-    language: "xu",
+    language: "yaml",
     content: new TextDecoder("utf-8").decode(bytes),
   });
   await vscode.window.showTextDocument(document, { preview: false });
@@ -1185,10 +1185,10 @@ export async function toggleStepCommand(
       (step) => step.status === "complete" || step.status === "approved",
     );
 
-  let didAutoAdvance = false;
+  let didCompletePhase = false;
   let phases = phasesAfterStepUpdate;
   if (allStepsComplete && phaseWithUpdatedSteps.status !== "complete") {
-    didAutoAdvance = true;
+    didCompletePhase = true;
     const completedPhaseIndex = phases.findIndex((phase) => phase.id === phaseId);
     phases = phases.map((phase, index) => {
       if (index === completedPhaseIndex) {
@@ -1197,13 +1197,15 @@ export async function toggleStepCommand(
       return phase;
     });
 
-    const nextPendingIndex = phases.findIndex(
-      (phase, index) => index > completedPhaseIndex && phase.status !== "complete",
-    );
-    if (nextPendingIndex !== -1) {
-      phases = phases.map((phase, index) =>
-        index === nextPendingIndex ? { ...phase, status: "active" } : phase,
+    if (current.runbook.handoff.autopilot) {
+      const nextPendingIndex = phases.findIndex(
+        (phase, index) => index > completedPhaseIndex && phase.status !== "complete",
       );
+      if (nextPendingIndex !== -1) {
+        phases = phases.map((phase, index) =>
+          index === nextPendingIndex ? { ...phase, status: "active" } : phase,
+        );
+      }
     }
   }
 
@@ -1216,10 +1218,10 @@ export async function toggleStepCommand(
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
 
-  if (didAutoAdvance) {
-    const nextActive = updated.phases.find((phase) => phase.status === "active");
-    if (nextActive) {
-      if (updated.handoff.autopilot) {
+  if (didCompletePhase) {
+    if (updated.handoff.autopilot) {
+      const nextActive = updated.phases.find((phase) => phase.status === "active");
+      if (nextActive) {
         if (!explicitPhaseAgent(nextActive.agent)) {
           void vscode.window.showWarningMessage(
             `${phaseWithUpdatedSteps.title} complete. Autopilot is paused until you select an agent for ${nextActive.title}.`,
@@ -1233,8 +1235,11 @@ export async function toggleStepCommand(
         await handoffPhaseCommand(deps, nextActive.id);
         return;
       }
+    }
 
-      void vscode.window.showInformationMessage(`${phaseWithUpdatedSteps.title} complete. ${nextActive.title} is now active.`);
+    const nextPending = updated.phases.find((phase) => phase.status === "pending");
+    if (nextPending) {
+      void vscode.window.showInformationMessage(`${phaseWithUpdatedSteps.title} complete. Use Run Next Phase to continue.`);
     } else {
       void vscode.window.showInformationMessage(`${phaseWithUpdatedSteps.title} complete. All phases done.`);
     }

@@ -10,7 +10,7 @@ export function ConnectedWorkspaceCard({
   workspaceHref: string;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4">
+    <div className="rounded-lg border border-emerald-400/40 bg-emerald-400/10 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-700">Connected</p>

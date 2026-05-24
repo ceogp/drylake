@@ -49,29 +49,6 @@ function sidebarHtml() {
   return (provider as unknown as { _getHtml: () => string })._getHtml();
 }
 
-function buildSessionState(overrides: Partial<SidebarState> = {}): SidebarState {
-  return {
-    connected: true,
-    userEmail: "builder@example.com",
-    orgName: "Xupra",
-    orgTier: "free",
-    detectedFiles: [],
-    importedWorkspace: null,
-    selection: {},
-    runbook: {
-      sessionName: "checkout-flow",
-      path: "drylake.xu",
-      status: "in-progress",
-      activePhaseId: "03-implementation",
-      activePhaseTitle: "Implement checkout",
-      activePhaseAgent: "copilot",
-      providerStatus: "User IDE AI",
-    },
-    isLoading: false,
-    ...overrides,
-  };
-}
-
 describe("sidebar reshape", () => {
   it("renders Build Session before account chrome", () => {
     const html = sidebarHtml();

@@ -114,6 +114,7 @@ export class MultiAgentRunStore {
         status: "pending",
         startedAt: null,
         finishedAt: null,
+        reviewedAt: null,
         command: null,
         installError: null,
         terminalName: null,

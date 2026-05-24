@@ -1,7 +1,7 @@
 {
   "name": "drylake",
-  "displayName": "DryLake — Visual Planning for AI Coding Agents",
-  "description": "Visual kanban and pipeline planner for assigning coding phases to Claude Code, OpenAI Codex, Gemini CLI, Cursor CLI, and GitHub Copilot Chat.",
+  "displayName": "DryLake - Visual AI Agent - Autonomous Software Engineer",
+  "description": "Faster and save tokens with Free Autonomous AI Software Engineer. Better than Claude Code because planning like Traycer optimizes Agentic AI coding assistant with multi-agent architecture. Features specialized sub-agents for Planning, Execution, and Verification. Understands your entire codebase, not just selected code.",
   "version": "0.4.2",
   "private": false,
   "publisher": "xupracorp",
@@ -16,57 +16,112 @@
     "vscode": "^1.100.0"
   },
   "categories": [
-    "Programming Languages",
-    "Snippets",
-    "Machine Learning",
     "AI",
-    "Chat"
+    "Chat",
+    "Machine Learning",
+    "Programming Languages",
+    "Education",
+    "Other"
   ],
   "keywords": [
     "ai",
+    "agent orchestration",
+    "agentic ai",
+    "ai agent",
+    "ai chat",
+    "ai code completion",
+    "ai coding assistant",
     "autocomplete",
-    "code-assistant",
-    "chat",
-    "chatgpt",
-    "codex",
-    "copilot",
-    "co-pilot",
-    "github-copilot",
-    "openai",
-    "anthropic",
-    "claude",
-    "claude-code",
-    "gemini",
-    "gemini-cli",
+    "automated coding",
+    "autonomous",
+    "cline",
+    "code analysis",
+    "code assistant",
+    "code completion",
+    "code explanation",
+    "code generation",
+    "code review",
+    "code understanding",
+    "codeium",
+    "coding assistant",
+    "context aware",
+    "context window",
+    "csharp",
     "cursor",
+    "debugging",
+    "deepseek",
+    "deepseek coder",
+    "developer tools",
+    "docstring",
+    "documentation",
+    "explain code",
+    "find bugs",
+    "free ai",
+    "free copilot",
+    "free llm",
+    "gemini",
+    "github copilot",
+    "golang",
+    "implementation plan",
+    "intelligent coding",
     "intellisense",
-    "snippets",
-    "refactor",
-    "refactoring",
-    "planning",
-    "kanban",
-    "pipeline",
-    "workflow",
-    "visual-builder",
-    "visual-planning",
-    "build-session",
-    "ticket-to-code",
-    "code-review",
-    "prompt-engineering",
-    "prompts",
+    "java",
     "javascript",
-    "typescript",
+    "jsdoc",
+    "keybindings",
+    "legacy code",
+    "llama",
+    "multi agent",
+    "nodejs",
+    "open source ai",
+    "openai",
+    "pair programmer",
+    "pair programming",
+    "performance optimization",
+    "pipeline",
+    "planner",
+    "planning",
+    "productivity",
+    "programming",
     "python",
     "react",
+    "refactor",
+    "refactoring",
+    "refactoring tool",
     "rust",
-    "go",
-    "vscode-ai",
-    "xupra",
-    "drylake"
+    "security check",
+    "task management",
+    "test automation",
+    "test generation",
+    "token counter",
+    "token compression",
+    "token reduction",
+    "Traycer",
+    "workspace aware",
+    "YC",
+    "anthropic",
+    "bug fix",
+    "bug fixing",
+    "chat",
+    "chatgpt",
+    "claude",
+    "continue",
+    "copilot",
+    "copilot alternative",
+    "copilot free",
+    "cursor alternative",
+    "devin",
+    "code summary",
+    "code transform",
+    "performance",
+    "qa",
+    "security",
+    "style check",
+    "unit testing"
   ],
   "galleryBanner": {
-    "color": "#f6ebdc",
-    "theme": "light"
+    "color": "#090a0a",
+    "theme": "dark"
   },
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -77,19 +132,10 @@
     "configuration": {
       "title": "DryLake",
       "properties": {
-        "drylake.environment": {
-          "type": "string",
-          "enum": [
-            "development",
-            "production"
-          ],
-          "default": "development",
-          "description": "Legacy compatibility setting for older DryLake builds. Xupra AI now targets the configured backend URL directly."
-        },
         "drylake.apiBaseUrl": {
           "type": "string",
           "default": "",
-          "description": "Optional API base URL override for Xupra AI runbook generation. Leave empty to use the default DryLake backend."
+          "description": "Optional API base URL override for DryLake AI planning. Leave empty to use the default DryLake backend."
         },
         "drylake.aiProvider": {
           "type": "string",
@@ -97,25 +143,15 @@
             "xupra-pro-ai"
           ],
           "enumItemLabels": [
-            "Xupra AI"
+            "DryLake AI Planning"
           ],
           "default": "xupra-pro-ai",
-          "description": "Provider for DryLake Planning Chat and runbook generation. Planning requires Xupra AI access. Free users can scan and preview their workspace without AI compute."
+          "description": "Hosted AI planning used to create and revise DryLake build plans. Sign in to use planning chat; workspace scanning and previews still work without hosted AI."
         },
         "xupra.baseUrl": {
           "type": "string",
           "default": "https://drylake.xupracorp.com",
           "description": "Base URL for the Xupra DryLake backend."
-        },
-        "xupra.devEmail": {
-          "type": "string",
-          "default": "owner@xupra.local",
-          "description": "Development email used before real auth is connected."
-        },
-        "xupra.devDisplayName": {
-          "type": "string",
-          "default": "Xupra Owner",
-          "description": "Development display name used before real auth is connected."
         },
         "xupra.autoScanOnOpen": {
           "type": "boolean",
@@ -161,12 +197,21 @@
             "cursor",
             "copilot",
             "gemini",
-            "junie",
-            "warp",
+            "vscode",
             "generic"
           ],
-          "default": "claude_code",
-          "description": "Default target platform for compatibility and export actions."
+          "enumItemLabels": [
+            "OpenAI Codex",
+            "Claude Code",
+            "Claude Agents",
+            "Cursor",
+            "GitHub Copilot Chat",
+            "Gemini CLI",
+            "VS Code",
+            "Generic Markdown"
+          ],
+          "default": "vscode",
+          "description": "Default format for exported handoff prompts and agent configuration files."
         },
         "xupra.pullGeneratedFilesAfterExport": {
           "type": "boolean",
@@ -190,19 +235,6 @@
         }
       }
     },
-    "languages": [
-      {
-        "id": "xu",
-        "aliases": [
-          "Xupra Execution Unit",
-          "xu"
-        ],
-        "extensions": [
-          ".xu"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -275,11 +307,11 @@
       },
       {
         "command": "drylake.generateDraftRunbook",
-        "title": "DryLake: Generate Draft XU Runbook"
+        "title": "DryLake: Generate Draft Build Plan"
       },
       {
         "command": "drylake.validateXuRunbook",
-        "title": "DryLake: Validate XU Runbook"
+        "title": "DryLake: Validate Build Plan"
       },
       {
         "command": "drylake.approvePurpose",
@@ -556,7 +588,7 @@
     "check:cursor": "node scripts/check-cursor-compatibility.mjs",
     "prepackage": "npm run build",
     "package:vsix": "npx @vscode/vsce package --allow-star-activation --allow-missing-repository --baseContentUrl https://drylake.xupracorp.com/marketplace/extension/ --baseImagesUrl https://drylake.xupracorp.com/marketplace/extension/",
-    "package:development": "node scripts/package-development-extension.mjs",
+    "package:local": "node scripts/package-local-extension.mjs",
     "install:vsix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-vsix.ps1",
     "reinstall:vsix": "npm run package:vsix && npm run install:vsix",
     "uninstall:vscode": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-vscode-extension.ps1"

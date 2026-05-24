@@ -68,28 +68,33 @@ export default async function RootLayout({
 
   const shell = marketingHostRequest ? (
     <>
-      <div className="sticky top-0 z-50 border-b-[4px] border-black bg-[#f7f4ea]">
+      <div className="sticky top-0 z-50 border-b border-zinc-800 bg-[#090a0a]/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <a className="flex items-center gap-3" href={xupraHomepage}>
             <Image
               alt="DryLake logo"
-              className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
+              className="h-10 w-10 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
               height={44}
-              src="/drylake-logo.svg"
+              src="/blackwhite.webp"
               width={44}
             />
-            <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
-              DryLake
+            <div className="min-w-0">
+              <div className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-zinc-100">
+                DryLake
+              </div>
+              <div className="hidden text-xs text-zinc-500 sm:block">
+                Save tokens and time using AI Agents.
+              </div>
             </div>
           </a>
-          <nav className="hidden items-center gap-3 text-sm font-black uppercase text-black md:flex">
-            <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/about">
+          <nav className="hidden items-center gap-3 text-sm font-semibold text-zinc-300 md:flex">
+            <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/about">
               About
             </Link>
-            <a className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href={dryLakeOrigin}>
+            <a className="rounded border border-emerald-400 bg-emerald-400 px-3 py-2 text-zinc-950 transition hover:bg-emerald-300" href={dryLakeOrigin}>
               DryLake
             </a>
-            <a className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href={`${dryLakeOrigin}/pricing`}>
+            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/pricing`}>
               Pricing
             </a>
           </nav>
@@ -99,22 +104,27 @@ export default async function RootLayout({
     </>
   ) : adminInternalHostRequest ? (
     <>
-      <div className="sticky top-0 z-50 border-b-[4px] border-black bg-[#f7f4ea]">
+      <div className="sticky top-0 z-50 border-b border-zinc-800 bg-[#090a0a]/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <Link className="flex items-center gap-3" href="/admin">
             <Image
               alt="DryLake logo"
-              className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
+              className="h-10 w-10 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
               height={44}
-              src="/drylake-logo.svg"
+              src="/blackwhite.webp"
               width={44}
             />
-            <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
-              Xupra Internal Admin
+            <div className="min-w-0">
+              <div className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-zinc-100">
+                Xupra Internal Admin
+              </div>
+              <div className="hidden text-xs text-zinc-500 sm:block">
+                DryLake control plane
+              </div>
             </div>
           </Link>
           <a
-            className="rounded-[4px] border-[3px] border-black bg-white px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-[#ffd60a]"
+            className="rounded border border-emerald-400 bg-emerald-400 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
             href={dryLakeOrigin}
           >
             Open Customer App
@@ -125,29 +135,34 @@ export default async function RootLayout({
     </>
   ) : (
     <>
-      <div className="sticky top-0 z-50 border-b-[4px] border-black bg-[#f7f4ea]">
+      <div className="sticky top-0 z-50 border-b border-zinc-800 bg-[#090a0a]/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <div className="flex items-center gap-4">
             <a className="flex items-center gap-3" href={xupraHomepage}>
               <Image
                 alt="DryLake logo"
-                className="h-11 w-11 rounded-[4px] border-[3px] border-black bg-white"
+                className="h-10 w-10 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
                 height={44}
-                src="/drylake-logo.svg"
+                src="/blackwhite.webp"
                 width={44}
               />
-              <div className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
-                DryLake
+              <div className="min-w-0">
+                <div className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-zinc-100">
+                  DryLake
+                </div>
+                <div className="hidden text-xs text-zinc-500 lg:block">
+                  Save tokens and time using AI Agents.
+                </div>
               </div>
             </a>
-            <nav className="hidden items-center gap-3 text-sm font-black uppercase text-black md:flex">
-              <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/upload">
+            <nav className="hidden items-center gap-3 text-sm font-semibold text-zinc-300 md:flex">
+              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/upload">
                 Import
               </Link>
-              <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/settings">
+              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/settings">
                 Settings
               </Link>
-              <Link className="border-[3px] border-black bg-white px-3 py-2 transition hover:bg-[#ffd60a]" href="/billing">
+              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/billing">
                 Billing
               </Link>
             </nav>
@@ -167,7 +182,7 @@ export default async function RootLayout({
             {useClerkUi ? (
               <HeaderAuthControls />
             ) : (
-              <div className="rounded-[4px] border-[3px] border-black bg-white px-4 py-2 font-mono text-[11px] font-black uppercase tracking-[0.14em] text-black">
+              <div className="rounded border border-orange-400/40 bg-orange-400/10 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-200">
                 Dev Auth
               </div>
             )}

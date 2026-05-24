@@ -29,6 +29,7 @@ export type AgentRunEntry = {
   status: MultiAgentRunStatus;
   startedAt: string | null;
   finishedAt: string | null;
+  reviewedAt: string | null;
   command: string | null;
   installError: string | null;
   terminalName: string | null;

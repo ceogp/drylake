@@ -63,10 +63,10 @@ export function HeaderAuthControls() {
         {isExtensionConnectPage && hasExtensionCallback ? null : (
           <>
             <SignInButton mode="modal" {...signInRedirectProps}>
-              <button className="border-[3px] border-black bg-white px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.12em] text-black transition hover:bg-[#ffd60a]">Sign In</button>
+              <button className="rounded border border-zinc-700 bg-zinc-950 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 transition hover:border-orange-400 hover:text-orange-200">Sign In</button>
             </SignInButton>
             <SignUpButton mode="modal" {...signUpRedirectProps}>
-              <button className="border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.12em] text-black transition hover:bg-[#36b979]">Sign Up</button>
+              <button className="rounded border border-emerald-400 bg-emerald-400 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-emerald-300">Sign Up</button>
             </SignUpButton>
           </>
         )}

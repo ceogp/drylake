@@ -33,9 +33,9 @@ export async function AppHome() {
             <div className="tape-card flex items-center gap-4 bg-white px-4 py-3">
               <Image
                 alt="DryLake logo"
-                className="h-12 w-12 rounded-[4px] border-[3px] border-black bg-white"
+                className="h-12 w-12 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
                 height={48}
-                src="/drylake-logo.svg"
+                src="/blackwhite.webp"
                 width={48}
               />
               <div>
@@ -49,7 +49,7 @@ export async function AppHome() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
-                className="tape-button bg-[#ffd60a] px-5 py-3 text-sm text-black"
+                className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300"
                 href={importWorkspacePath}
               >
                 Import Skills & Agents
@@ -76,13 +76,12 @@ export async function AppHome() {
           </div>
           <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr]">
             <div className="space-y-5">
-              <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950 sm:text-6xl">
-                Your workspace for the extension-led workflow.
+              <h1 className="max-w-4xl font-[family-name:var(--font-heading)] text-5xl font-semibold text-stone-950 sm:text-6xl">
+                Save tokens and time using AI Agents.
               </h1>
               <p className="max-w-3xl text-lg leading-8 text-stone-700">
-                Start by importing skills and agents from your repo into the workspace. After the
-                import is visible, use compatibility checks, export preview, deployment, or the
-                editor extension as needed.
+                Start by importing skills and agents from your repo into the workspace. Then use the
+                extension control room to plan, assign, run, and validate coding work.
               </p>
             </div>
             <div className="tape-panel bg-white p-6">
@@ -93,10 +92,10 @@ export async function AppHome() {
                   <span
                     className={`rounded-full px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] ${
                       workspace.organization.tier === "pro"
-                        ? "border border-green-300 bg-green-50 text-green-700"
+                        ? "border border-emerald-400/50 bg-emerald-400/10 text-emerald-200"
                         : workspace.organization.tier === "enterprise"
-                          ? "border border-purple-300 bg-purple-50 text-purple-700"
-                        : "border border-stone-300 bg-stone-100 text-stone-600"
+                          ? "border border-orange-400/50 bg-orange-400/10 text-orange-200"
+                        : "border border-zinc-700 bg-zinc-950 text-zinc-400"
                     }`}
                   >
                     {workspace.organization.tier === "pro"
@@ -130,7 +129,7 @@ export async function AppHome() {
               here so the canonical package has real source files before any extension workflow.
               </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Link className="tape-button bg-[#ffd60a] px-4 py-2 text-sm text-black" href={importWorkspacePath}>
+              <Link className="tape-button bg-emerald-400 px-4 py-2 text-sm text-zinc-950 hover:bg-emerald-300" href={importWorkspacePath}>
                 Import Skills & Agents
               </Link>
               <Link className="tape-button bg-white px-4 py-2 text-sm text-black" href="/install">
@@ -151,7 +150,7 @@ export async function AppHome() {
             {workspace.organization.tier === "free" ? (
               <div className="mt-5">
                 <Link
-                  className="tape-button bg-[#ffd60a] px-5 py-2 text-sm text-black"
+                  className="tape-button bg-emerald-400 px-5 py-2 text-sm text-zinc-950 hover:bg-emerald-300"
                   href="/billing"
                 >
                   Upgrade to Pro
@@ -230,7 +229,7 @@ export async function AppHome() {
                   {project.packages.map((agentPackage) => (
                     <Link
                       key={agentPackage.id}
-                      className="border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs uppercase tracking-[0.14em] text-black"
+                      className="rounded-full border border-emerald-400/50 bg-emerald-400/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.14em] text-emerald-200"
                       href={`/packages/${agentPackage.id}`}
                     >
                       {agentPackage.name}
@@ -252,13 +251,13 @@ export async function AppHome() {
               <input name="organizationId" type="hidden" value={workspace.organization.id} />
               <label className="grid gap-2 text-sm font-medium text-stone-900">
                 Project name
-                <input className="border-[3px] border-black px-4 py-3 text-sm" name="name" placeholder="Customer Support Agents" required />
+                <input className="rounded-lg border border-zinc-800 px-4 py-3 text-sm" name="name" placeholder="Customer Support Agents" required />
               </label>
               <label className="grid gap-2 text-sm font-medium text-stone-900">
                 Description
-                <textarea className="min-h-28 border-[3px] border-black px-4 py-3 text-sm" name="description" placeholder="What this project is for" />
+                <textarea className="min-h-28 rounded-lg border border-zinc-800 px-4 py-3 text-sm" name="description" placeholder="What this project is for" />
               </label>
-              <button className="tape-button mt-2 bg-[#ffd60a] px-5 py-3 text-black" type="submit">
+              <button className="tape-button mt-2 bg-emerald-400 px-5 py-3 text-zinc-950 hover:bg-emerald-300" type="submit">
                 Create Project
               </button>
             </form>

@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f4ea;
-  --foreground: #111111;
+  --background: #090a0a;
+  --foreground: #f4f4f5;
 }
 
 @theme inline {
@@ -31,24 +31,28 @@ code {
 }
 
 .tape-page {
-  background: #f7f4ea;
-  color: #111111;
+  background: #090a0a;
+  color: #f4f4f5;
 }
 
 .tape-panel {
-  border: 5px solid #111111;
+  background: #111414;
+  border: 1px solid #27272a;
   border-radius: 8px;
-  box-shadow: 10px 10px 0 #111111;
+  box-shadow: none;
+  color: #f4f4f5;
 }
 
 .tape-card {
-  border: 4px solid #111111;
-  border-radius: 6px;
-  box-shadow: 5px 5px 0 #111111;
+  background: #111414;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  box-shadow: none;
+  color: #f4f4f5;
 }
 
 .tape-eyebrow {
-  color: #005caf;
+  color: #6ee7b7;
   font-family: var(--font-mono), monospace;
   font-size: 0.75rem;
   font-weight: 700;
@@ -60,15 +64,128 @@ code {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 4px solid #111111;
+  border: 1px solid #34d399;
   border-radius: 4px;
-  box-shadow: 5px 5px 0 #111111;
-  font-weight: 900;
-  text-transform: uppercase;
-  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  box-shadow: none;
+  color: #090a0a;
+  background: #34d399;
+  font-weight: 800;
+  text-transform: none;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
 }
 
 .tape-button:hover {
-  box-shadow: 7px 7px 0 #111111;
-  transform: translateY(-2px);
+  background: #6ee7b7;
+  border-color: #6ee7b7;
+}
+
+.tape-page a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.tape-page input,
+.tape-page select,
+.tape-page textarea {
+  background: #090a0a;
+  border-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+.tape-page input::placeholder,
+.tape-page textarea::placeholder {
+  color: #71717a;
+}
+
+.tape-page [class*="bg-white"],
+.tape-page [class*="bg-[#f7f4ea]"],
+.tape-page [class*="bg-stone-50"],
+.tape-page [class*="bg-stone-100"],
+.tape-page [class*="bg-amber-50"],
+.tape-page [class*="bg-orange-50"],
+.tape-page [class*="bg-red-50"],
+.tape-page [class*="bg-green-50"],
+.tape-page [class*="bg-purple-50"] {
+  background-color: #111414 !important;
+}
+
+.tape-page [class*="bg-[#ffd60a]"] {
+  background-color: #17251d !important;
+}
+
+.tape-page [class*="border-black"],
+.tape-page [class*="border-stone"],
+.tape-page [class*="border-amber"],
+.tape-page [class*="border-orange"],
+.tape-page [class*="border-red"],
+.tape-page [class*="border-green"],
+.tape-page [class*="border-purple"] {
+  border-color: #27272a !important;
+}
+
+.tape-page [class*="text-stone-950"],
+.tape-page [class*="text-stone-900"],
+.tape-page [class*="text-black"] {
+  color: #f4f4f5 !important;
+}
+
+.tape-page [class*="text-stone-800"],
+.tape-page [class*="text-stone-700"],
+.tape-page [class*="text-stone-600"] {
+  color: #d4d4d8 !important;
+}
+
+.tape-page [class*="text-stone-500"],
+.tape-page [class*="text-stone-400"] {
+  color: #a1a1aa !important;
+}
+
+.tape-page [class*="text-orange-700"],
+.tape-page [class*="text-amber-700"] {
+  color: #fdba74 !important;
+}
+
+.tape-page [class*="text-emerald-700"],
+.tape-page [class*="text-green-700"] {
+  color: #6ee7b7 !important;
+}
+
+.tape-page [class*="shadow-"] {
+  box-shadow: none !important;
+}
+
+.tape-page [class*="rounded-[2rem]"],
+.tape-page [class*="rounded-[1.75rem]"],
+.tape-page [class*="rounded-[1.5rem]"],
+.tape-page [class*="rounded-[1.35rem]"],
+.tape-page [class*="rounded-2xl"] {
+  border-radius: 8px !important;
+}
+
+.tape-page .tape-button {
+  background-color: #34d399 !important;
+  border-color: #34d399 !important;
+  color: #090a0a !important;
+}
+
+.tape-page .tape-button:hover {
+  background-color: #6ee7b7 !important;
+  border-color: #6ee7b7 !important;
+}
+
+.tape-page .tape-button.bg-white {
+  background-color: #090a0a !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+.tape-page .tape-button.bg-white:hover {
+  border-color: #fb923c !important;
+  color: #fed7aa !important;
+}
+
+.tape-page [class*="hover:bg-[#ffd60a]"]:hover,
+.tape-page [class*="hover:bg-stone-100"]:hover,
+.tape-page [class*="hover:bg-[#36b979]"]:hover {
+  background-color: #17251d !important;
 }

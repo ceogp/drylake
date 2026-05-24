@@ -5,27 +5,27 @@ import type { ReactNode } from "react";
 export const clerkTapeAppearance = {
   variables: {
     borderRadius: "6px",
-    colorBackground: "#ffffff",
-    colorDanger: "#e84a5f",
-    colorInputBackground: "#f7f4ea",
-    colorInputText: "#111111",
-    colorPrimary: "#005caf",
-    colorText: "#111111",
-    colorTextSecondary: "#4b463f",
+    colorBackground: "#111414",
+    colorDanger: "#f87171",
+    colorInputBackground: "#090a0a",
+    colorInputText: "#f4f4f5",
+    colorPrimary: "#34d399",
+    colorText: "#f4f4f5",
+    colorTextSecondary: "#a1a1aa",
     fontFamily: "var(--font-heading), system-ui, sans-serif",
     fontFamilyButtons: "var(--font-mono), ui-monospace, monospace",
   },
   elements: {
-    card: "border-[5px] border-black shadow-[10px_10px_0_#111111] rounded-[8px]",
+    card: "border border-zinc-800 bg-[#111414] shadow-none rounded-[8px]",
     cardBox: "shadow-none",
-    footer: "bg-white",
-    footerActionLink: "font-black text-[#005caf] hover:text-black",
-    formButtonPrimary: "border-[4px] border-black bg-[#ffd60a] text-black font-black uppercase tracking-[0.12em] shadow-[5px_5px_0_#111111] hover:bg-[#36b979] hover:text-black",
-    formFieldInput: "border-[3px] border-black bg-[#f7f4ea] text-black focus:ring-0 focus:shadow-[4px_4px_0_#111111]",
-    formFieldLabel: "font-mono text-xs font-black uppercase tracking-[0.14em] text-stone-700",
-    headerSubtitle: "text-stone-600",
-    headerTitle: "font-black text-stone-950",
-    socialButtonsBlockButton: "border-[3px] border-black bg-white text-black font-black shadow-[4px_4px_0_#111111] hover:bg-[#f7f4ea]",
+    footer: "bg-[#111414]",
+    footerActionLink: "font-semibold text-emerald-300 hover:text-emerald-200",
+    formButtonPrimary: "border border-emerald-400 bg-emerald-400 text-zinc-950 font-semibold tracking-[0.08em] shadow-none hover:bg-emerald-300 hover:text-zinc-950",
+    formFieldInput: "border border-zinc-700 bg-[#090a0a] text-zinc-100 focus:ring-0 focus:border-emerald-400",
+    formFieldLabel: "font-mono text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400",
+    headerSubtitle: "text-zinc-400",
+    headerTitle: "font-semibold text-zinc-50",
+    socialButtonsBlockButton: "border border-zinc-700 bg-zinc-950 text-zinc-100 font-semibold shadow-none hover:border-orange-400 hover:text-orange-200",
   },
 } as const;
 
@@ -47,13 +47,13 @@ export function DryLakeAuthShell({
           <Link className="inline-flex items-center gap-3" href="/">
             <Image
               alt="DryLake logo"
-              className="h-14 w-14 rounded-[4px] border-[4px] border-black bg-white"
+              className="h-12 w-12 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
               height={56}
-              src="/drylake-logo.svg"
+              src="/blackwhite.webp"
               width={56}
               priority
             />
-            <span className="rounded-[4px] border-[3px] border-black bg-[#ffd60a] px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-black">
+            <span className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-zinc-100">
               DryLake
             </span>
           </Link>
@@ -66,11 +66,11 @@ export function DryLakeAuthShell({
           </div>
           <div className="grid max-w-xl gap-3 sm:grid-cols-3">
             {[
-              ["Kanban", "#ffd60a"],
-              ["Pipeline", "#36b979"],
-              ["Agents", "#ffffff"],
+              ["Kanban", "#34d399"],
+              ["Pipeline", "#fb923c"],
+              ["Agents", "#18181b"],
             ].map(([label, color]) => (
-              <div key={label} className="border-[4px] border-black px-4 py-3 font-mono text-xs font-black uppercase tracking-[0.14em] text-black" style={{ backgroundColor: color }}>
+              <div key={label} className="rounded border border-zinc-800 px-4 py-3 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-zinc-100" style={{ backgroundColor: color }}>
                 {label}
               </div>
             ))}

@@ -196,7 +196,7 @@ describe("runbook commands", () => {
         findRunbookUri: vi.fn(async () => null),
         getDefaultRunbookUri: vi.fn(() => runbookUri),
         createSession: vi.fn(async (session) => ({ id: "session-1", createdAt: "2026-05-16T00:00:00.000Z", ...session })),
-        writeRunbook: vi.fn(async (_uri: unknown, _runbook: ApplicationBuildRunbook) => undefined),
+        writeRunbook: vi.fn(async () => undefined),
       },
       controlRoom: {
         createOrShow: vi.fn(async () => undefined),
@@ -258,7 +258,7 @@ describe("runbook commands", () => {
         findRunbookUri: vi.fn(async () => null),
         getDefaultRunbookUri: vi.fn(() => runbookUri),
         createSession: vi.fn(async (session) => ({ id: "session-1", createdAt: "2026-05-16T00:00:00.000Z", ...session })),
-        writeRunbook: vi.fn(async (_uri: unknown, _runbook: ApplicationBuildRunbook) => undefined),
+        writeRunbook: vi.fn(async () => undefined),
       },
       controlRoom: {
         createOrShow: vi.fn(async () => undefined),
@@ -316,7 +316,7 @@ describe("runbook commands", () => {
       },
       sessionStore: {
         readRunbook: vi.fn(async () => ({ uri, runbook })),
-        writeRunbook: vi.fn(async (_uri: unknown, _runbook: ApplicationBuildRunbook) => undefined),
+        writeRunbook: vi.fn(async () => undefined),
         writePendingPlanChange: vi.fn(async () => undefined),
         clearPendingPlanChange: vi.fn(async () => undefined),
       },
@@ -418,7 +418,9 @@ describe("runbook commands", () => {
       status: "pending" as const,
     };
     const uri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
-    const writeRunbook = vi.fn(async (_uri: unknown, _runbook: ApplicationBuildRunbook) => undefined);
+    const writeRunbook = vi.fn(async (...args: [unknown, ApplicationBuildRunbook]) => {
+      void args;
+    });
     const deps = {
       apiClient: {},
       stateStore: {},
@@ -636,6 +638,22 @@ describe("runbook commands", () => {
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });
 
+  it("does not activate the next phase when completing steps without autopilot", async () => {
+    const runbook = reorderRunbook();
+    runbook.handoff.autopilot = false;
+    runbook.phases[0].status = "active";
+    runbook.phases[1].status = "pending";
+    const { deps } = reorderDeps(runbook);
+
+    await toggleStepCommand(deps as never, "P-01", "P-01-step-01", "complete");
+
+    const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(written.phases[0].status).toBe("complete");
+    expect(written.phases[1].status).toBe("pending");
+    expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
+    expect(mocks.showInformationMessage).toHaveBeenCalledWith("Phase 1 complete. Use Run Next Phase to continue.");
+  });
+
   it("autopilot launches the next selected phase after completion", async () => {
     const runbook = reorderRunbook();
     runbook.handoff.autopilot = true;
@@ -651,8 +669,8 @@ describe("runbook commands", () => {
       },
       sessionStore: {
         readRunbook: vi.fn(async () => ({ uri, runbook: currentRunbook })),
-        writeRunbook: vi.fn(async (_uri: unknown, nextRunbook: ApplicationBuildRunbook) => {
-          currentRunbook = nextRunbook;
+        writeRunbook: vi.fn(async (...args: [unknown, ApplicationBuildRunbook]) => {
+          currentRunbook = args[1];
         }),
       },
       controlRoom: {

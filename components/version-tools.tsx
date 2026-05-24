@@ -579,19 +579,19 @@ export function VersionTools({
         />
 
         <div className="mt-5 grid gap-3 md:grid-cols-4">
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-4">
             <p className="font-mono text-xs uppercase text-stone-500">Raw Files</p>
             <p className="mt-2 text-2xl font-semibold text-stone-950">{currentSummary.rawFiles}</p>
           </div>
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-4">
             <p className="font-mono text-xs uppercase text-stone-500">Uploaded Items</p>
             <p className="mt-2 text-2xl font-semibold text-stone-950">{currentSummary.importedItems}</p>
           </div>
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-4">
             <p className="font-mono text-xs uppercase text-stone-500">Canonical Items</p>
             <p className="mt-2 text-2xl font-semibold text-stone-950">{currentSummary.canonicalItems}</p>
           </div>
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-4">
             <p className="font-mono text-xs uppercase text-stone-500">Last Import</p>
             <p className="mt-2 text-sm font-semibold text-stone-950">{formatTimestamp(currentSummary.lastImportAt)}</p>
           </div>
@@ -690,7 +690,7 @@ export function VersionTools({
                   </article>
                 ))}
                 {sourceFiles.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-stone-700">
+                  <div className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/70 p-5 text-sm text-zinc-300">
                     No source files are loaded yet. Import a folder or selected files to begin.
                   </div>
                 ) : null}
@@ -747,7 +747,7 @@ export function VersionTools({
                   </button>
                 ))}
                 {importedItems.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-stone-700">
+                  <div className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/70 p-5 text-sm text-zinc-300">
                     No imported items have been parsed yet. Import source files first.
                   </div>
                 ) : null}
@@ -780,7 +780,7 @@ export function VersionTools({
                 </article>
               ))}
               {historyEvents.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-stone-700">
+                <div className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/70 p-5 text-sm text-zinc-300">
                   Upload, canonicalization, target generation, and install events will appear here.
                 </div>
               ) : null}
@@ -805,7 +805,7 @@ function PreviewPanel({
 
   if (!file) {
     return (
-      <aside className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-stone-700">
+      <aside className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/70 p-5 text-sm text-zinc-300">
         Select a source file to preview it.
       </aside>
     );
@@ -850,7 +850,7 @@ function PreviewPanel({
 function ImportedItemPreview({ item }: { item: VersionToolsProps["importedItems"][number] | null }) {
   if (!item) {
     return (
-      <aside className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-stone-700">
+      <aside className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/70 p-5 text-sm text-zinc-300">
         Select an imported item to preview it.
       </aside>
     );

@@ -143,7 +143,7 @@ export default async function BillingPage({
                   const value = Boolean(entitlements[key]);
 
                   return (
-                  <div key={key} className="border-[3px] border-black bg-[#f7f4ea] px-4 py-3 text-sm text-stone-700">
+                  <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
                     <div className="flex items-center justify-between gap-3">
                       <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
                       <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
@@ -186,7 +186,7 @@ export default async function BillingPage({
               <form action={createCheckoutAction}>
                 <input name="organizationId" type="hidden" value={organizationId} />
                 <input name="plan" type="hidden" value="pro" />
-                  <button className="tape-button bg-[#ffd60a] px-5 py-3 text-sm text-black" type="submit">
+                  <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
                   Upgrade To Pro ($10/mo)
                 </button>
               </form>
@@ -213,7 +213,7 @@ export default async function BillingPage({
                 const value = Boolean(entitlements[key]);
 
                 return (
-                <div key={key} className="border-[3px] border-black bg-[#f7f4ea] px-4 py-3 text-sm text-stone-700">
+                <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
                     <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
@@ -240,13 +240,13 @@ export default async function BillingPage({
             </article>
           )}
 
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="tape-panel p-6">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Tier Model</p>
             <div className="mt-4 grid gap-3">
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
                 Free: scan workspace, import existing runbooks, view + copy + download phase prompts, hand off to your installed coding agents.
               </div>
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
                 Pro ($10/month): Xupra AI Planning Chat and runbook generation. The kanban updates as you talk.
               </div>
             </div>

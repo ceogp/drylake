@@ -362,18 +362,30 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       box-sizing: border-box;
     }
 
+    :root {
+      --xupra-bg: #090a0a;
+      --xupra-panel: #111414;
+      --xupra-panel-2: #0d0f0f;
+      --xupra-line: #27272a;
+      --xupra-text: #f4f4f5;
+      --xupra-muted: #a1a1aa;
+      --xupra-green: #34d399;
+      --xupra-orange: #fb923c;
+      --xupra-red: #f87171;
+    }
+
     body {
       margin: 0;
       padding: 0;
-      color: var(--vscode-foreground);
-      background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+      color: var(--xupra-text);
+      background: var(--xupra-bg);
       font-family: var(--vscode-font-family);
       font-size: var(--vscode-font-size);
     }
 
     button {
       font: inherit;
-      color: var(--vscode-foreground);
+      color: var(--xupra-text);
     }
 
     button:disabled {
@@ -393,9 +405,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       align-items: center;
       gap: 10px;
       padding: 10px;
-      border: 1px solid var(--vscode-panel-border);
+      border: 1px solid var(--xupra-line);
       border-radius: 6px;
-      background: var(--vscode-editor-background);
+      background: var(--xupra-panel);
     }
 
     .avatar {
@@ -405,8 +417,8 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       height: 30px;
       flex: 0 0 30px;
       border-radius: 50%;
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
+      color: #090a0a;
+      background: var(--xupra-green);
       font-weight: 700;
       text-transform: uppercase;
       overflow: hidden;
@@ -438,7 +450,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     .account-org {
       margin-top: 2px;
       overflow: hidden;
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 0.92em;
@@ -447,28 +459,28 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     .plan-badge {
       flex: 0 0 auto;
       padding: 2px 7px;
-      border: 1px solid var(--vscode-panel-border);
+      border: 1px solid var(--xupra-line);
       border-radius: 999px;
-      color: var(--vscode-foreground);
-      background: var(--vscode-editor-background);
+      color: var(--xupra-text);
+      background: var(--xupra-panel-2);
       font-size: 0.85em;
       text-transform: uppercase;
       cursor: pointer;
     }
 
     .plan-badge.pro {
-      color: var(--vscode-badge-foreground);
-      background: var(--vscode-badge-background);
-      border-color: var(--vscode-badge-background);
+      color: #a7f3d0;
+      background: rgba(52, 211, 153, 0.12);
+      border-color: rgba(52, 211, 153, 0.45);
     }
 
     .upgrade-btn {
       width: 100%;
       margin-top: 8px;
       padding: 6px 9px;
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border: 0;
+      color: #090a0a;
+      background: var(--xupra-green);
+      border: 1px solid var(--xupra-green);
       border-radius: 4px;
       cursor: pointer;
     }
@@ -481,9 +493,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     details.disclosure {
-      border: 1px solid var(--vscode-panel-border);
+      border: 1px solid var(--xupra-line);
       border-radius: 6px;
-      background: var(--vscode-editor-background);
+      background: var(--xupra-panel);
     }
 
     details.disclosure > summary {
@@ -492,7 +504,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       justify-content: space-between;
       gap: 8px;
       padding: 8px 10px;
-      color: var(--vscode-foreground);
+      color: var(--xupra-text);
       cursor: pointer;
       list-style: none;
       font-weight: 650;
@@ -507,7 +519,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       flex-direction: column;
       gap: 8px;
       padding: 0 10px 10px;
-      border-top: 1px solid var(--vscode-panel-border);
+      border-top: 1px solid var(--xupra-line);
     }
 
     .section-header {
@@ -523,7 +535,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .section-count {
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       font-size: 0.9em;
     }
 
@@ -534,16 +546,16 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       gap: 8px;
       min-width: 0;
       padding: 6px 8px;
-      border: 1px solid var(--vscode-panel-border);
+      border: 1px solid var(--xupra-line);
       border-radius: 5px;
-      background: var(--vscode-editor-background);
+      background: var(--xupra-panel);
     }
 
     .file-button {
       width: 100%;
       text-align: left;
       cursor: pointer;
-      color: var(--vscode-foreground);
+      color: var(--xupra-text);
       font: inherit;
     }
 
@@ -556,7 +568,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       background: transparent;
       border: 1px solid transparent;
       border-radius: 4px;
@@ -566,18 +578,18 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .item-trash:hover {
-      color: var(--vscode-errorForeground, var(--vscode-foreground));
-      background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
-      border-color: var(--vscode-panel-border);
+      color: var(--xupra-red);
+      background: rgba(248, 113, 113, 0.12);
+      border-color: rgba(248, 113, 113, 0.4);
     }
 
     .item-optimize {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #ffffff;
-      background: #E85420;
-      border: 1px solid #C24315;
+      color: #090a0a;
+      background: var(--xupra-orange);
+      border: 1px solid var(--xupra-orange);
       border-radius: 4px;
       font-size: 11px;
       font-weight: 600;
@@ -590,9 +602,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .item-optimize:hover {
-      background: #FF6A36;
-      border-color: #E85420;
-      color: #ffffff;
+      background: #fed7aa;
+      border-color: #fed7aa;
+      color: #090a0a;
     }
 
     .item-optimize .optimize-mark {
@@ -614,8 +626,8 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       flex: 0 0 auto;
       padding: 1px 5px;
       border-radius: 999px;
-      color: var(--vscode-badge-foreground);
-      background: var(--vscode-badge-background);
+      color: #a7f3d0;
+      background: rgba(52, 211, 153, 0.12);
       font-size: 0.8em;
     }
 
@@ -624,7 +636,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .file-group-header {
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       font-size: 0.82em;
       letter-spacing: 0.04em;
       margin-top: 8px;
@@ -650,14 +662,14 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     .item-meta {
       min-width: 0;
       overflow: hidden;
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 0.82em;
     }
 
     .selection-hint {
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       line-height: 1.4;
     }
 
@@ -670,17 +682,28 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       flex: 1;
       min-width: 0;
       padding: 6px 8px;
-      color: var(--vscode-foreground);
-      background: transparent;
-      border: 1px solid var(--vscode-panel-border);
+      color: var(--xupra-text);
+      background: var(--xupra-bg);
+      border: 1px solid #3f3f46;
       border-radius: 4px;
       cursor: pointer;
     }
 
     .action-btn.primary {
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border-color: var(--vscode-button-background);
+      color: #090a0a;
+      background: var(--xupra-green);
+      border-color: var(--xupra-green);
+    }
+
+    .action-btn:hover {
+      border-color: var(--xupra-orange);
+      color: #fed7aa;
+    }
+
+    .action-btn.primary:hover {
+      color: #090a0a;
+      background: #6ee7b7;
+      border-color: #6ee7b7;
     }
 
     .group-item {
@@ -689,9 +712,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       justify-content: space-between;
       gap: 8px;
       padding: 7px 8px;
-      border: 1px solid var(--vscode-panel-border);
+      border: 1px solid var(--xupra-line);
       border-radius: 5px;
-      background: var(--vscode-editor-background);
+      background: var(--xupra-panel);
     }
 
     .group-label {
@@ -705,7 +728,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .group-count {
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
     }
 
     .session-card {
@@ -713,9 +736,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       flex-direction: column;
       gap: 8px;
       padding: 10px;
-      border: 1px solid var(--vscode-panel-border);
+      border: 1px solid var(--xupra-line);
       border-radius: 6px;
-      background: var(--vscode-editor-background);
+      background: var(--xupra-panel);
     }
 
     .session-name {
@@ -726,7 +749,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .session-meta, .phase-row {
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       font-size: 0.88em;
       line-height: 1.35;
     }
@@ -736,11 +759,11 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       justify-content: space-between;
       gap: 8px;
       padding-top: 7px;
-      border-top: 1px solid var(--vscode-panel-border);
+      border-top: 1px solid var(--xupra-line);
     }
 
     .phase-agent {
-      color: var(--vscode-button-background);
+      color: var(--xupra-green);
       white-space: nowrap;
     }
 
@@ -754,27 +777,38 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       width: 100%;
       min-height: 34px;
       padding: 8px 10px;
-      color: var(--vscode-foreground);
-      background: var(--vscode-editor-background);
-      border: 1px solid var(--vscode-panel-border);
+      color: var(--xupra-text);
+      background: var(--xupra-panel);
+      border: 1px solid var(--xupra-line);
       border-radius: 5px;
       cursor: pointer;
       text-align: left;
     }
 
     .big-action.primary {
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border-color: var(--vscode-button-background);
+      color: #090a0a;
+      background: var(--xupra-green);
+      border-color: var(--xupra-green);
     }
 
     .big-action.locked {
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
+    }
+
+    .big-action:hover {
+      border-color: var(--xupra-orange);
+      color: #fed7aa;
+    }
+
+    .big-action.primary:hover {
+      color: #090a0a;
+      background: #6ee7b7;
+      border-color: #6ee7b7;
     }
 
     .lock-icon {
       float: right;
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
     }
 
     .connect-cta {
@@ -784,9 +818,9 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       justify-content: center;
       gap: 12px;
       padding: 18px 12px;
-      border: 1px solid var(--vscode-panel-border);
+      border: 1px solid var(--xupra-line);
       border-radius: 6px;
-      background: var(--vscode-editor-background);
+      background: var(--xupra-panel);
       text-align: center;
     }
 
@@ -796,17 +830,17 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .connect-subtitle {
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       line-height: 1.4;
     }
 
     .empty-state {
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       line-height: 1.4;
     }
 
     .more-line {
-      color: var(--vscode-descriptionForeground);
+      color: var(--xupra-muted);
       font-size: 0.9em;
     }
   </style>

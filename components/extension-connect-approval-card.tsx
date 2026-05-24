@@ -78,7 +78,7 @@ export function ExtensionConnectApprovalCard({
   };
 
   return (
-    <section className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm">
+    <section className="tape-panel p-7">
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
         Browser Approval
       </p>
@@ -95,7 +95,7 @@ export function ExtensionConnectApprovalCard({
 
       <div className="mt-6 flex flex-wrap gap-3">
         <button
-          className="rounded-full bg-orange-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-70"
+          className="tape-button px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
           disabled={isPending || isReady || status === "expired" || status === "denied"}
           onClick={approveConnection}
           type="button"
@@ -104,14 +104,14 @@ export function ExtensionConnectApprovalCard({
         </button>
         {returnUrl ? (
           <a
-            className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+            className="tape-button bg-white px-5 py-3 text-sm text-black"
             href={returnUrl}
           >
             Return To Editor
           </a>
         ) : null}
         <a
-          className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+          className="tape-button bg-white px-5 py-3 text-sm text-black"
           href={workspaceHref}
         >
           Open Dashboard
@@ -125,20 +125,20 @@ export function ExtensionConnectApprovalCard({
       ) : null}
 
       {status === "expired" ? (
-        <div className="mt-5 rounded-[1.35rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-5 rounded-lg border border-red-500/30 bg-red-950/30 px-4 py-3 text-sm text-red-200">
           This editor connection request expired. Start Connect again from the editor.
         </div>
       ) : null}
 
       {status === "denied" ? (
-        <div className="mt-5 rounded-[1.35rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-5 rounded-lg border border-red-500/30 bg-red-950/30 px-4 py-3 text-sm text-red-200">
           This editor connection request was denied. Start again from the editor if you still want
           to connect.
         </div>
       ) : null}
 
       {error ? (
-        <div className="mt-5 rounded-[1.35rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-5 rounded-lg border border-red-500/30 bg-red-950/30 px-4 py-3 text-sm text-red-200">
           {error}
         </div>
       ) : null}

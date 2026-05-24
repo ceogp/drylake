@@ -7,6 +7,7 @@ type RunnerMessage = {
   prompt?: unknown;
   agents?: unknown;
   agent?: unknown;
+  status?: unknown;
   assignments?: unknown;
 };
 
@@ -185,6 +186,57 @@ describe("Multi-Agent Runner webview", () => {
     );
     expect(panel?.webview.html).toContain("Run in Progress");
     expect(panel?.webview.html).toContain("Implement checkout API and tests.");
+    expect(panel?.webview.html).toContain("Mark complete");
+    expect(panel?.webview.html).toContain("Mark failed");
+  });
+
+  it("keeps running agents running until the user marks review status", async () => {
+    const provider = new MultiAgentRunnerProvider(apiClient() as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({
+      command: "run",
+      prompt: "Build checkout",
+      agents: ["codex", "gemini"],
+    });
+    await messageHandler?.({
+      command: "approve",
+      assignments: [
+        { agentId: "codex", subtaskSummary: "Implement checkout API routes." },
+        { agentId: "gemini", subtaskSummary: "Build checkout UI states." },
+      ],
+    });
+
+    await messageHandler?.({ command: "showResults" });
+
+    expect(panel?.webview.html).toContain("Results");
+    expect(panel?.webview.html).toContain('status-badge running">running');
+    expect(panel?.webview.html).not.toContain('status-badge complete">complete');
+
+    await messageHandler?.({ command: "markAgent", agent: "codex", status: "complete" });
+
+    expect(panel?.webview.html).toContain('status-badge complete">complete');
+    expect(panel?.webview.html).toContain('status-badge running">running');
+
+    await messageHandler?.({ command: "markAgent", agent: "gemini", status: "failed" });
+
+    expect(panel?.webview.html).toContain('status-badge failed">failed');
+
+    const runJsonCalls = mocks.writeFile.mock.calls.filter(([uri]) =>
+      typeof uri?.path === "string" && uri.path.endsWith("run.json")
+    );
+    const lastRun = JSON.parse(new TextDecoder().decode(runJsonCalls.at(-1)?.[1] as Uint8Array)) as {
+      agents: Array<{ id: string; status: string; reviewedAt: string | null; message: string }>;
+    };
+    expect(lastRun.agents.find((agent) => agent.id === "codex")).toMatchObject({
+      status: "complete",
+      message: "Marked OpenAI Codex complete after user review.",
+    });
+    expect(lastRun.agents.find((agent) => agent.id === "codex")?.reviewedAt).toEqual(expect.any(String));
+    expect(lastRun.agents.find((agent) => agent.id === "gemini")).toMatchObject({
+      status: "failed",
+      message: "Marked Gemini CLI failed after user review.",
+    });
   });
 
   it("blocks approval when assignment scope boundaries overlap", async () => {
