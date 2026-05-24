@@ -583,9 +583,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.window.registerWebviewViewProvider("xupra.projects", workspaceSidebar, {
     webviewOptions: { retainContextWhenHidden: true }
   }));
-  context.subscriptions.push(vscode.window.registerWebviewViewProvider("drylake.multiAgentRunner", multiAgentRunner, {
-    webviewOptions: { retainContextWhenHidden: true }
-  }));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.jobs", jobsView));
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.help", helpView));
 
@@ -685,6 +682,33 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   };
 
+  const openMultiAgentForPhase = async (phaseId?: string) => {
+    const current = await xuSessionStore.readRunbook();
+    if (!current) {
+      if (phaseId) {
+        void vscode.window.showWarningMessage("Open or generate a DryLake plan before starting a multi-agent handoff.");
+        return;
+      }
+
+      await multiAgentRunner.createOrShow(context);
+      return;
+    }
+
+    const phase = phaseId
+      ? current.runbook.phases.find((item) => item.id === phaseId)
+      : current.runbook.phases.find((item) => item.status === "active") ??
+        current.runbook.phases.find((item) => item.status !== "complete") ??
+        current.runbook.phases[0];
+
+    if (!phase) {
+      void vscode.window.showWarningMessage("Select a DryLake phase before starting a multi-agent handoff.");
+      return;
+    }
+
+    const prompt = renderPhasePrompt(current.runbook, phase, { activeProvider: stateStore.getBuildSession() });
+    await multiAgentRunner.openForPrompt(context, prompt, phase.agent ? [phase.agent] : undefined);
+  };
+
   register("drylake.startBuildSession", async (...args: unknown[]) => {
     await startBuildSessionCommand(runbookDeps, context, args[0], args[1], args[2]);
   });
@@ -694,10 +718,16 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("drylake.openMultiAgentRunner", async () => {
-    await multiAgentRunner.createOrShow(context);
+    await openMultiAgentForPhase();
+  });
+
+  register("drylake.openMultiAgentForPhase", async (...args: unknown[]) => {
+    const phaseId = typeof args[0] === "string" ? args[0] : "";
+    await openMultiAgentForPhase(phaseId);
   });
 
   register("drylake.multiAgentPlanAssignments", async (...args: unknown[]) => {
+    await multiAgentRunner.createOrShow(context);
     await multiAgentRunner.planAssignmentsFromCommand(args[0], args[1]);
   });
 

@@ -160,6 +160,8 @@ describe("Control Room webview", () => {
     expect(html).toContain('data-handoff-action="markdown"');
     expect(html).toContain("Copy prompt");
     expect(html).toContain("Open Markdown");
+    expect(html).toContain("Multi-Agent");
+    expect(html).toContain('data-multi-agent-phase="todo"');
     expect(html).not.toContain("handoff-secondary");
     expect(html).not.toContain("handoff-action-btn");
     expect(html).not.toContain("Run with Codex");
@@ -254,6 +256,15 @@ describe("Control Room webview", () => {
     await messageHandler?.({ command: "drylake.handoffPhase", phaseId: "active", handoffAction: "script-sh" });
 
     expect(executed).toContainEqual({ command: "drylake.handoffPhase", args: ["active", "script-sh"] });
+  });
+
+  it("routes selected phases to the multi-agent handoff command", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({ command: "drylake.openMultiAgentForPhase", phaseId: "active" });
+
+    expect(executed).toContainEqual({ command: "drylake.openMultiAgentForPhase", args: ["active"] });
   });
 
   it("renders pending plan-change overlays and routes approval actions", async () => {

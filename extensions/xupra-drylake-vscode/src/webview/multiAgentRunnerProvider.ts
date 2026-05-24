@@ -70,10 +70,9 @@ type RunnerMessage = {
 type RunnerApiClient = Pick<ApiClient, "planRunnerAssignments">;
 
 const RUNNER_AGENTS: Array<{
-  id: XuPhaseAgent | "blackbox" | "droid";
+  id: XuPhaseAgent;
   label: string;
   provider: string;
-  disabled?: boolean;
 }> = [
   { id: "claude-code", label: "Claude Code", provider: "Anthropic" },
   { id: "codex", label: "OpenAI Codex", provider: "OpenAI" },
@@ -81,8 +80,6 @@ const RUNNER_AGENTS: Array<{
   { id: "hermes", label: "Hermes Agent", provider: "Hermes" },
   { id: "cursor", label: "Cursor CLI", provider: "Cursor" },
   { id: "copilot", label: "GitHub Copilot Chat", provider: "GitHub" },
-  { id: "blackbox", label: "Blackbox", provider: "Blackbox", disabled: true },
-  { id: "droid", label: "Droid", provider: "Droid", disabled: true },
 ];
 
 function workspaceRoot() {
@@ -168,7 +165,7 @@ function detectBoundaryConflict(assignments: RunnerAssignment[]) {
 
 function runnerPromptContent(run: RunnerRun, assignment: RunnerAssignment, handoffProfile?: HandoffProfileSelection) {
   return [
-    `# DryLake Multi-Agent Runner: ${assignment.agentLabel}`,
+    `# DryLake Multi-Agent Handoff: ${assignment.agentLabel}`,
     "",
     "You are one participant in a DryLake multi-agent run.",
     "Work only inside your assigned scope boundary. Do not modify files or behavior assigned to another agent.",
@@ -238,24 +235,25 @@ function runDirectory(root: vscode.Uri, runId: string) {
   return vscode.Uri.joinPath(root, ".drylake", "runs", runId);
 }
 
-function renderIdle(run: RunnerRun | null) {
+function renderIdle(run: RunnerRun | null, pendingPrompt: string, pendingAgents: XuPhaseAgent[]) {
   const lastRun = run
     ? `<section class="last-run"><span>Last run</span><strong>${escapeHtml(run.taskPrompt)}</strong><em>${escapeHtml(run.status)}</em></section>`
     : "";
+  const checkedAgents = new Set(pendingAgents.length > 0 ? pendingAgents : ["codex"]);
+  const tokenLabel = formatEstimatedTokens(estimateTokens(pendingPrompt, "runner-task"));
 
   return `<section class="runner-idle">
-    <label class="section-label" for="runnerPrompt">Task prompt</label>
-    <textarea id="runnerPrompt" rows="5" placeholder="Describe the implementation task to split across selected agents."></textarea>
-    <div class="token-meter"><span>Task prompt</span><strong id="taskTokenEstimate">~0 tokens</strong></div>
+    <label class="section-label" for="runnerPrompt">Phase / task prompt</label>
+    <textarea id="runnerPrompt" rows="5" placeholder="Select a phase from DryLake Control Room, or describe a task to split across agents.">${escapeHtml(pendingPrompt)}</textarea>
+    <div class="token-meter"><span>Phase / task prompt</span><strong id="taskTokenEstimate">${escapeHtml(tokenLabel)}</strong></div>
     <div class="section-label">Agents</div>
     <div class="agent-list">
       ${RUNNER_AGENTS.map((agent) => {
-        const disabled = agent.disabled ? " disabled" : "";
-        const checked = agent.id === "codex" ? " checked" : "";
-        const title = agent.disabled ? "Coming soon" : phaseAgentHint(agent.id as XuPhaseAgent);
-        return `<label class="agent-row${agent.disabled ? " disabled" : ""}" title="${escapeHtml(title)}">
+        const checked = checkedAgents.has(agent.id) ? " checked" : "";
+        const title = phaseAgentHint(agent.id);
+        return `<label class="agent-row" title="${escapeHtml(title)}">
           <span class="agent-info"><span class="agent-icon">${escapeHtml(agent.label.slice(0, 1))}</span><span><strong>${escapeHtml(agent.label)}</strong><em>${escapeHtml(agent.provider)}</em></span></span>
-          <span class="agent-control">${agent.disabled ? "Coming soon" : `<input type="checkbox" value="${agent.id}"${checked}${disabled} />`}</span>
+          <span class="agent-control"><input type="checkbox" value="${agent.id}"${checked} /></span>
         </label>`;
       }).join("")}
     </div>
@@ -345,6 +343,8 @@ export class MultiAgentRunnerProvider {
   private panel?: vscode.WebviewPanel;
   private currentWebview?: vscode.Webview;
   private currentRun: RunnerRun | null = null;
+  private pendingTaskPrompt = "";
+  private pendingAgents: XuPhaseAgent[] = ["codex"];
 
   constructor(private readonly apiClient?: RunnerApiClient) {}
 
@@ -357,7 +357,7 @@ export class MultiAgentRunnerProvider {
 
     this.panel = vscode.window.createWebviewPanel(
       "drylake.multiAgentRunner",
-      "DryLake Multi-Agent Runner",
+      "DryLake Multi-Agent Handoff",
       vscode.ViewColumn.One,
       { enableScripts: true, retainContextWhenHidden: true },
     );
@@ -372,6 +372,21 @@ export class MultiAgentRunnerProvider {
 
     this.panel.webview.onDidReceiveMessage((message: RunnerMessage) => this.handleMessage(message));
 
+    this.refresh();
+  }
+
+  async openForPrompt(context: vscode.ExtensionContext, promptArg: unknown, agentsArg?: unknown) {
+    const prompt = typeof promptArg === "string" ? promptArg.trim() : "";
+    if (!prompt) {
+      void vscode.window.showWarningMessage("Select a DryLake phase before starting a multi-agent handoff.");
+      return;
+    }
+
+    const agents = parseAgents(agentsArg);
+    this.pendingTaskPrompt = prompt;
+    this.pendingAgents = agents.length > 0 ? agents : ["codex"];
+    this.currentRun = null;
+    await this.createOrShow(context);
     this.refresh();
   }
 
@@ -519,6 +534,8 @@ export class MultiAgentRunnerProvider {
       void vscode.window.showWarningMessage("Enter a task and select at least one agent.");
       return;
     }
+    this.pendingTaskPrompt = task;
+    this.pendingAgents = agents;
 
     if (!this.apiClient) {
       void vscode.window.showWarningMessage("DryLake runner assignment planning requires the Xupra backend client.");
@@ -562,6 +579,7 @@ export class MultiAgentRunnerProvider {
             : agent;
         });
         this.currentRun = run;
+        this.pendingTaskPrompt = "";
         await this.store().writeAssignmentPlan(this.assignmentPlan(run));
         await this.writeAuditLog(run);
       },
@@ -806,7 +824,7 @@ export class MultiAgentRunnerProvider {
   private renderHtml() {
     const run = this.currentRun;
     const body = !run || run.status === "idle"
-      ? renderIdle(run)
+      ? renderIdle(run, this.pendingTaskPrompt, this.pendingAgents)
       : run.status === "assignment-review"
         ? renderAssignmentReview(run)
         : run.status === "results"
@@ -870,7 +888,7 @@ export class MultiAgentRunnerProvider {
 <body>
   <main>
     <div class="panel-header">
-      <h1>Multi-Agent Runner</h1>
+      <h1>Multi-Agent Handoff</h1>
       <span class="mode-badge">${escapeHtml(mode)}</span>
     </div>
     ${body}

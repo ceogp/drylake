@@ -192,6 +192,7 @@ function renderPhaseCard(
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
       <button type="button" class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" data-handoff-action="run" title="${escapeHtml(primaryTitle)}"${disabled}>${escapeHtml(primaryLabel)}</button>
+      <button type="button" class="secondary multi-agent-btn" data-multi-agent-phase="${escapeHtml(phase.id)}" title="Split this phase across multiple selected agents.">Multi-Agent</button>
       <details class="handoff-menu">
         <summary>Export</summary>
         <div class="handoff-menu-items">${secondaryButtons}</div>
@@ -444,6 +445,11 @@ export class ControlRoomProvider {
 
       if (message.command === "drylake.handoffPhase") {
         await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0], message.handoffAction ?? message.args?.[1]);
+        return;
+      }
+
+      if (message.command === "drylake.openMultiAgentForPhase") {
+        await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0]);
         return;
       }
 
@@ -771,6 +777,15 @@ export class ControlRoomProvider {
             ? "drylake.approvePlanChange"
             : "drylake.rejectPlanChange",
           phaseId: planChangeBtn.dataset.phaseId
+        });
+        return;
+      }
+
+      const multiAgentBtn = event.target.closest("[data-multi-agent-phase]");
+      if (multiAgentBtn) {
+        vscode.postMessage({
+          command: "drylake.openMultiAgentForPhase",
+          phaseId: multiAgentBtn.dataset.multiAgentPhase
         });
         return;
       }

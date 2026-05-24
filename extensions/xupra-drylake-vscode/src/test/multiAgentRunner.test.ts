@@ -134,22 +134,33 @@ beforeEach(() => {
 });
 
 describe("Multi-Agent Runner webview", () => {
-  it("renders verified agents as selectable and unverified agents as coming soon", async () => {
+  it("renders supported agents as selectable without placeholder agents", async () => {
     const provider = new MultiAgentRunnerProvider(apiClient() as never);
     await provider.createOrShow(context() as never);
 
     const html = panel?.webview.html ?? "";
 
-    expect(html).toContain("Multi-Agent Runner");
+    expect(html).toContain("Multi-Agent Handoff");
     expect(html).toContain('value="claude-code"');
     expect(html).toContain('value="codex"');
     expect(html).toContain('value="gemini"');
     expect(html).toContain('value="hermes"');
     expect(html).toContain("Hermes Agent");
-    expect(html).toContain("Task prompt");
-    expect(html).toContain("Blackbox");
-    expect(html).toContain("Droid");
-    expect(html).toContain("Coming soon");
+    expect(html).toContain("Phase / task prompt");
+    expect(html).not.toContain("Blackbox");
+    expect(html).not.toContain("Droid");
+    expect(html).not.toContain("Coming soon");
+  });
+
+  it("opens from a selected phase with the phase prompt prefilled", async () => {
+    const provider = new MultiAgentRunnerProvider(apiClient() as never);
+    await provider.openForPrompt(context() as never, "Execute P-01 from DryLake.", ["hermes"]);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain("Execute P-01 from DryLake.");
+    expect(html).toContain('value="hermes" checked');
+    expect(html).toContain("Phase / task prompt");
   });
 
   it("plans assignments before opening terminals and launches only after approval", async () => {
