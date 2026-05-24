@@ -4,17 +4,24 @@
 
 Backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.com/startups/). DryLake infrastructure runs on [AWS Cloud](https://aws.amazon.com/) with [GitLab](https://gitlab.com/) CI/CD.
 
+## Open Source
+
+DryLake has a public open-source mirror on GitHub:
+
+[github.com/gmkdigitalmedia/drylake](https://github.com/gmkdigitalmedia/drylake)
+
 ![DryLake Control Room kanban](https://drylake.xupracorp.com/marketplace/extension/media/readme-kanban-v2.png)
 
-Each phase card has one **Agent** dropdown. Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Cursor CLI · GitHub Copilot Chat** from the planner, then press **Run Handoff**. Export utilities are kept in the secondary menu for Markdown, copy, `.sh`, and `.bat`.
+Each phase card has one **Agent** dropdown. Assign phases to **Claude Code · OpenAI Codex · Gemini CLI · Hermes Agent · Cursor CLI · GitHub Copilot Chat** from the planner, then press **Run Handoff**. Export utilities are kept in the secondary menu for Markdown, copy, `.sh`, and `.bat`.
 
 ![DryLake pipeline view](https://drylake.xupracorp.com/marketplace/extension/media/readme-pipeline-v2.png)
 
 ## What It Does
 
 - **Plans your work as a kanban.** Pending → Active → Validating → Done. Drag phases to reorder them.
-- **One visible agent selector per phase.** Pick Claude Code for design, Cursor CLI for repo work, Codex for docs, Gemini CLI for a second pass, or GitHub Copilot Chat for an IDE chat handoff.
+- **One visible agent selector per phase.** Pick Claude Code for design, Cursor CLI for repo work, Codex for docs, Gemini CLI or Hermes Agent for a second pass, or GitHub Copilot Chat for an IDE chat handoff.
 - **One primary handoff action.** Use **Run Handoff** to launch the selected agent. Markdown, copy, `.sh`, and `.bat` exports are secondary utilities.
+- **Estimated token counter.** See approximate prompt tokens before handoff in the sidebar, Control Room, and Multi-Agent Runner.
 - **Auto-advance.** Tick all steps in a phase, DryLake completes it and activates the next one.
 - **Planning chat.** Tell DryLake to add a step or change scope; the kanban updates live.
 
@@ -34,11 +41,12 @@ Pick a different agent per phase — or stick with one for the whole session. Se
 1. **Claude Code** (Anthropic)
 2. **OpenAI Codex**
 3. **Gemini CLI**
-4. **Cursor CLI**
-5. **GitHub Copilot Chat**
+4. **Hermes Agent CLI**
+5. **Cursor CLI**
+6. **GitHub Copilot Chat**
 
 
-Direct CLI handoff requires the matching command to already be installed and available on `PATH`: `claude`, `codex`, `gemini`, or `cursor-agent`. If a direct command is missing, DryLake saves the phase handoff, copies the prompt, and opens the Markdown file instead of pretending the launch worked.
+Direct CLI handoff requires the matching command to already be installed and available on `PATH`: `claude`, `codex`, `gemini`, `hermes`, or `cursor-agent`. If a direct command is missing, DryLake saves the phase handoff, copies the prompt, and opens the Markdown file instead of pretending the launch worked.
 
 ## Security And Infrastructure
 
@@ -50,6 +58,8 @@ Direct CLI handoff requires the matching command to already be installed and ava
 ## Support
 
 - Homepage: <https://drylake.xupracorp.com/>
+- Open source: <https://github.com/gmkdigitalmedia/drylake>
+- Discord: <https://discord.gg/WQdapuVn>
 - Support: support@xupracorp.com
 
 ## Non-affiliation

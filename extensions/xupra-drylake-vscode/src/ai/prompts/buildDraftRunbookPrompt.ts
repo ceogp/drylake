@@ -27,7 +27,7 @@ export function buildDraftRunbookPrompt(input: GenerateDraftRunbookInput) {
     "provisioning.safety.executeAutomatically: false",
     PHASE_COUNT_INSTRUCTION,
     "each phase must include id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
-    "phase.agent optional enum: claude-code, codex, gemini, cursor, copilot",
+    "phase.agent optional enum: claude-code, codex, gemini, hermes, cursor, copilot",
     "",
     `Mode: ${input.mode}`,
     "",

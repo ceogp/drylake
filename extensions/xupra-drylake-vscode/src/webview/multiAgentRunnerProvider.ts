@@ -4,12 +4,16 @@ import {
   launchAgentTask,
   phaseAgentHint,
   phaseAgentLabel,
+  showAgentLaunchFallbackActions,
 } from "../agents/phaseAgentLauncher";
+import { pickHandoffProfile, renderHandoffProfilePrompt } from "../agents/handoffProfiles";
+import type { HandoffProfileSelection } from "../agents/handoffProfiles";
 import type { ApiClient } from "../services/apiClient";
 import type { MultiAgentAssignmentPlan } from "../types/multiAgentRun";
 import { MultiAgentRunStore } from "../xu/multiAgentRunStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { XuPhaseAgent } from "../xu/types";
+import { estimateTokens, formatEstimatedTokens } from "../utils/tokenEstimate";
 
 type RunnerStatus = "idle" | "assignment-review" | "running" | "results";
 type RunnerAgentStatus = "pending" | "running" | "complete" | "failed";
@@ -37,6 +41,7 @@ type RunnerAgentResult = {
   message: string;
   promptFile?: string;
   terminalName?: string;
+  handoffProfile?: Pick<HandoffProfileSelection, "kind" | "label" | "logicalPath" | "sourcePlatform"> | null;
 };
 
 type RunnerRun = {
@@ -73,6 +78,7 @@ const RUNNER_AGENTS: Array<{
   { id: "claude-code", label: "Claude Code", provider: "Anthropic" },
   { id: "codex", label: "OpenAI Codex", provider: "OpenAI" },
   { id: "gemini", label: "Gemini CLI", provider: "Google" },
+  { id: "hermes", label: "Hermes Agent", provider: "Hermes" },
   { id: "cursor", label: "Cursor CLI", provider: "Cursor" },
   { id: "copilot", label: "GitHub Copilot Chat", provider: "GitHub" },
   { id: "blackbox", label: "Blackbox", provider: "Blackbox", disabled: true },
@@ -160,6 +166,44 @@ function detectBoundaryConflict(assignments: RunnerAssignment[]) {
   return null;
 }
 
+function runnerPromptContent(run: RunnerRun, assignment: RunnerAssignment, handoffProfile?: HandoffProfileSelection) {
+  return [
+    `# DryLake Multi-Agent Runner: ${assignment.agentLabel}`,
+    "",
+    "You are one participant in a DryLake multi-agent run.",
+    "Work only inside your assigned scope boundary. Do not modify files or behavior assigned to another agent.",
+    "",
+    renderHandoffProfilePrompt(handoffProfile),
+    "## Top-level task",
+    "",
+    run.taskPrompt,
+    "",
+    "## Your assignment",
+    "",
+    assignment.subtaskSummary,
+    "",
+    "## Scope boundary",
+    "",
+    assignment.scopeBoundary,
+    "",
+    "Report what you changed, what you verified, and any blockers.",
+    "",
+  ].join("\n");
+}
+
+function renderTokenMeter(label: string, content: string, scope: Parameters<typeof estimateTokens>[1]) {
+  return `<div class="token-meter"><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatEstimatedTokens(estimateTokens(content, scope)))}</strong></div>`;
+}
+
+function runnerAgentTokenMeter(run: RunnerRun, agent: RunnerAgentResult) {
+  const assignment = run.assignments.find((item) => item.agentId === agent.id);
+  if (!assignment) {
+    return "";
+  }
+
+  return renderTokenMeter("Prompt", runnerPromptContent(run, assignment), "runner-assignment");
+}
+
 function parseEditedAssignments(value: unknown, current: RunnerAssignment[]) {
   const byAgent = new Map(current.map((assignment) => [assignment.agentId, assignment]));
   const rows = Array.isArray(value) ? value : [];
@@ -202,6 +246,7 @@ function renderIdle(run: RunnerRun | null) {
   return `<section class="runner-idle">
     <label class="section-label" for="runnerPrompt">Task prompt</label>
     <textarea id="runnerPrompt" rows="5" placeholder="Describe the implementation task to split across selected agents."></textarea>
+    <div class="token-meter"><span>Task prompt</span><strong id="taskTokenEstimate">~0 tokens</strong></div>
     <div class="section-label">Agents</div>
     <div class="agent-list">
       ${RUNNER_AGENTS.map((agent) => {
@@ -229,6 +274,7 @@ function renderAssignmentReview(run: RunnerRun) {
   const tier = run.modelTier === "nano" ? `<div class="note">Planned with gpt-5.4-nano.</div>` : "";
   const cards = run.assignments.map((assignment) => `<article class="assignment-card" data-assignment-agent="${escapeHtml(assignment.agentId)}">
     <div class="agent-info"><span class="agent-icon">${escapeHtml(assignment.agentLabel.slice(0, 1))}</span><span><strong>${escapeHtml(assignment.agentLabel)}</strong><em>${escapeHtml(assignment.scopeBoundary)}</em></span></div>
+    ${renderTokenMeter("Handoff prompt", runnerPromptContent(run, assignment), "runner-assignment")}
     <label class="field-label">Subtask summary
       <textarea class="assignment-summary" rows="4" data-assignment-summary="${escapeHtml(assignment.agentId)}">${escapeHtml(assignment.subtaskSummary)}</textarea>
     </label>
@@ -254,6 +300,7 @@ function renderRun(run: RunnerRun) {
   const cards = run.agents.map((agent) => `<article class="run-card">
     <div class="agent-info"><span class="agent-icon">${escapeHtml(agent.label.slice(0, 1))}</span><span><strong>${escapeHtml(agent.label)}</strong><em>${escapeHtml(agent.terminalName ?? "No terminal")}</em></span></div>
     <div class="run-actions"><span class="status-badge ${agent.status}">${escapeHtml(agent.status)}</span><button class="link-button" data-open-agent="${escapeHtml(agent.id)}">View terminal</button></div>
+    ${runnerAgentTokenMeter(run, agent)}
     <p><strong>${escapeHtml(agent.assignmentSummary)}</strong></p>
     <p>${escapeHtml(agent.message)}</p>
     ${renderReviewActions(agent)}
@@ -279,6 +326,7 @@ function renderReviewActions(agent: RunnerAgentResult) {
 function renderResults(run: RunnerRun) {
   const cards = run.agents.map((agent) => `<article class="run-card">
     <div class="agent-info"><span class="agent-icon">${escapeHtml(agent.label.slice(0, 1))}</span><span><strong>${escapeHtml(agent.label)}</strong><span class="status-badge ${agent.status}">${escapeHtml(agent.status)}</span></span></div>
+    ${runnerAgentTokenMeter(run, agent)}
     <p><strong>${escapeHtml(agent.assignmentSummary)}</strong></p>
     <p>${escapeHtml(agent.message)}</p>
     <div class="result-actions">
@@ -434,30 +482,6 @@ export class MultiAgentRunnerProvider {
     };
   }
 
-  private promptContent(run: RunnerRun, assignment: RunnerAssignment) {
-    return [
-      `# DryLake Multi-Agent Runner: ${assignment.agentLabel}`,
-      "",
-      "You are one participant in a DryLake multi-agent run.",
-      "Work only inside your assigned scope boundary. Do not modify files or behavior assigned to another agent.",
-      "",
-      "## Top-level task",
-      "",
-      run.taskPrompt,
-      "",
-      "## Your assignment",
-      "",
-      assignment.subtaskSummary,
-      "",
-      "## Scope boundary",
-      "",
-      assignment.scopeBoundary,
-      "",
-      "Report what you changed, what you verified, and any blockers.",
-      "",
-    ].join("\n");
-  }
-
   private buildRun(task: string, agents: XuPhaseAgent[], modelTier: RunnerModelTier | null = null): RunnerRun {
     const id = `${timestampId()}-${slugify(task)}`;
     const createdAt = new Date().toISOString();
@@ -482,6 +506,7 @@ export class MultiAgentRunnerProvider {
         command: null,
         installError: null,
         message: "Awaiting assignment approval.",
+        handoffProfile: null,
       })),
       modelTier,
       conflictWarning: null,
@@ -623,55 +648,71 @@ export class MultiAgentRunnerProvider {
     await this.writeAuditLog(runningRun);
     this.refresh();
 
-    const results = await Promise.allSettled(runningRun.assignments.map(async (assignment) => {
-      const content = this.promptContent(runningRun, assignment);
-      const promptFile = await store.writeAgentPrompt(runningRun.id, assignment.agentId, content);
-      const terminalName = `DryLake: ${assignment.agentLabel} — ${taskSlug}`;
-      const launch = await launchAgentTask({
-        agent: assignment.agentId,
-        prompt: content,
-        promptFile,
-        workspaceUri: root,
-        terminalName,
-      });
+    const agentResults: RunnerAgentResult[] = [];
+    for (const assignment of runningRun.assignments) {
+      let handoffProfile: HandoffProfileSelection | undefined;
 
-      return {
-        id: assignment.agentId,
-        label: assignment.agentLabel,
-        assignmentSummary: assignment.subtaskSummary,
-        assignmentBoundary: assignment.scopeBoundary,
-        status: launch.status === "launched" ? "running" as const : "failed" as const,
-        startedAt: launch.status === "launched" ? new Date().toISOString() : null,
-        finishedAt: launch.status === "launched" ? null : new Date().toISOString(),
-        reviewedAt: null,
-        command: launch.command ?? null,
-        installError: launch.status === "launched" ? null : launch.message,
-        message: launch.message,
-        promptFile: promptFile.toString(),
-        terminalName,
-      };
-    }));
+      try {
+        handoffProfile = await pickHandoffProfile(assignment.agentId);
+        const content = runnerPromptContent(runningRun, assignment, handoffProfile);
+        const promptFile = await store.writeAgentPrompt(runningRun.id, assignment.agentId, content);
+        const terminalName = `DryLake: ${assignment.agentLabel} — ${taskSlug}`;
+        const launch = await launchAgentTask({
+          agent: assignment.agentId,
+          prompt: content,
+          promptFile,
+          workspaceUri: root,
+          terminalName,
+        });
 
-    const agentResults = results.map((result, index): RunnerAgentResult => {
-      if (result.status === "fulfilled") {
-        return result.value;
+        agentResults.push({
+          id: assignment.agentId,
+          label: assignment.agentLabel,
+          assignmentSummary: assignment.subtaskSummary,
+          assignmentBoundary: assignment.scopeBoundary,
+          status: launch.status === "launched" ? "running" : "failed",
+          startedAt: launch.status === "launched" ? new Date().toISOString() : null,
+          finishedAt: launch.status === "launched" ? null : new Date().toISOString(),
+          reviewedAt: null,
+          command: launch.command ?? null,
+          installError: launch.status === "launched" ? null : launch.message,
+          message: launch.message,
+          promptFile: promptFile.toString(),
+          terminalName,
+          handoffProfile: handoffProfile
+            ? {
+                kind: handoffProfile.kind,
+                label: handoffProfile.label,
+                logicalPath: handoffProfile.logicalPath,
+                sourcePlatform: handoffProfile.sourcePlatform,
+              }
+            : null,
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        agentResults.push({
+          id: assignment.agentId,
+          label: assignment.agentLabel,
+          assignmentSummary: assignment.subtaskSummary,
+          assignmentBoundary: assignment.scopeBoundary,
+          status: "failed",
+          startedAt: null,
+          finishedAt: new Date().toISOString(),
+          reviewedAt: null,
+          command: null,
+          installError: detail,
+          message: detail || "DryLake could not launch this agent.",
+          handoffProfile: handoffProfile
+            ? {
+                kind: handoffProfile.kind,
+                label: handoffProfile.label,
+                logicalPath: handoffProfile.logicalPath,
+                sourcePlatform: handoffProfile.sourcePlatform,
+              }
+            : null,
+        });
       }
-
-      const assignment = runningRun.assignments[index];
-      return {
-        id: assignment.agentId,
-        label: assignment.agentLabel,
-        assignmentSummary: assignment.subtaskSummary,
-        assignmentBoundary: assignment.scopeBoundary,
-        status: "failed",
-        startedAt: null,
-        finishedAt: new Date().toISOString(),
-        reviewedAt: null,
-        command: null,
-        installError: result.reason instanceof Error ? result.reason.message : String(result.reason),
-        message: result.reason instanceof Error ? result.reason.message : "DryLake could not launch this agent.",
-      };
-    });
+    }
 
     this.currentRun = {
       ...runningRun,
@@ -682,7 +723,16 @@ export class MultiAgentRunnerProvider {
 
     for (const result of agentResults) {
       if (result.installError) {
-        void vscode.window.showWarningMessage(result.installError);
+        void showAgentLaunchFallbackActions({
+          result: {
+            status: "failed",
+            message: result.installError,
+            agentLabel: result.label,
+            reason: result.installError,
+            promptFile: result.promptFile ? vscode.Uri.parse(result.promptFile) : undefined,
+          },
+          promptFile: result.promptFile ? vscode.Uri.parse(result.promptFile) : undefined,
+        });
       }
     }
   }
@@ -804,6 +854,8 @@ export class MultiAgentRunnerProvider {
     .assignment-summary { margin-top: 6px; min-height: 76px; }
     .boundary { display: grid; gap: 4px; margin-top: 4px; color: var(--runner-muted); }
     .boundary strong { color: var(--runner-text); font-weight: 700; }
+    .token-meter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 10px; padding: 6px 8px; border: 1px solid var(--runner-line); border-radius: 4px; background: var(--runner-bg); color: var(--runner-muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+    .token-meter strong { color: #a7f3d0; font-weight: 900; white-space: nowrap; text-transform: none; letter-spacing: 0; }
     .warning { margin: 8px 0; padding: 8px; border: 1px solid rgba(251, 146, 60, 0.45); background: rgba(251, 146, 60, 0.12); color: #fed7aa; border-radius: 4px; }
     .note { margin: 8px 0; color: var(--runner-muted); }
     .status-badge { padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 800; }
@@ -828,6 +880,18 @@ export class MultiAgentRunnerProvider {
     function selectedAgents() {
       return Array.from(document.querySelectorAll(".agent-row input[type='checkbox']:checked")).map((item) => item.value);
     }
+    function formatTokenEstimate(tokens) {
+      if (tokens >= 1000000) {
+        return "~" + (tokens / 1000000).toFixed(1).replace(/\\.0$/, "") + "m tokens";
+      }
+      if (tokens >= 1000) {
+        return "~" + (tokens / 1000).toFixed(1).replace(/\\.0$/, "") + "k tokens";
+      }
+      return "~" + tokens + " tokens";
+    }
+    function estimatedTokens(text) {
+      return text.length === 0 ? 0 : Math.max(1, Math.ceil(text.length / 4));
+    }
     function editedAssignments() {
       return Array.from(document.querySelectorAll("[data-assignment-summary]")).map((item) => ({
         agentId: item.dataset.assignmentSummary,
@@ -841,8 +905,13 @@ export class MultiAgentRunnerProvider {
         target.textContent = count === 1 ? "1 agent selected" : count + " agents selected";
       }
       const run = document.getElementById("runAgents");
+      const tokenTarget = document.getElementById("taskTokenEstimate");
+      const prompt = document.getElementById("runnerPrompt")?.value || "";
+      if (tokenTarget) {
+        tokenTarget.textContent = formatTokenEstimate(estimatedTokens(prompt));
+      }
       if (run) {
-        run.disabled = count === 0 || !(document.getElementById("runnerPrompt")?.value || "").trim();
+        run.disabled = count === 0 || !prompt.trim();
       }
     }
     document.addEventListener("input", updateSelectedCount);

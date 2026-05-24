@@ -1,26 +1,28 @@
 {
   "name": "drylake",
-  "displayName": "DryLake - Visual AI Agent - Autonomous Software Engineer",
-  "description": "Faster and save tokens with Free Autonomous AI Software Engineer. Better than Claude Code because planning like Traycer optimizes Agentic AI coding assistant with multi-agent architecture. Features specialized sub-agents for Planning, Execution, and Verification. Understands your entire codebase, not just selected code.",
-  "version": "0.4.6",
+  "displayName": "DryLake - Visual Planning for AI Agents - Open source Kanban & Pipeline planner",
+  "description": "Code faster and save tokens with Visual Pipeline Planning.  Use Open source tools like Hermes Agent. Improve your Claude Code with planning like Traycer. Optimize your Agentic AI coding assistants.  Multi-agents. Features specialized agents for Planning, Execution, and Verification.",
+  "version": "0.5.0",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
   "preview": false,
   "icon": "media/icon.png",
   "homepage": "https://drylake.xupracorp.com/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gmkdigitalmedia/drylake.git"
+  },
   "bugs": {
     "url": "https://drylake.xupracorp.com/about"
   },
+  "qna": "https://discord.gg/WQdapuVn",
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
     "AI",
     "Chat",
-    "Machine Learning",
-    "Programming Languages",
-    "Education",
     "Other"
   ],
   "keywords": [
@@ -142,13 +144,133 @@
         "drylake.aiProvider": {
           "type": "string",
           "enum": [
-            "xupra-pro-ai"
+            "xupra-pro-ai",
+            "databricks-api",
+            "claude-api",
+            "openai-api",
+            "hermes-agent"
           ],
           "enumItemLabels": [
-            "DryLake AI Planning"
+            "DryLake AI Planning",
+            "Databricks API",
+            "Claude API",
+            "OpenAI API",
+            "Hermes Agent CLI"
           ],
           "default": "xupra-pro-ai",
-          "description": "Hosted AI planning used to create and revise DryLake build plans. Sign in to use planning chat; workspace scanning and previews still work without hosted AI."
+          "description": "Planning provider used to create and revise DryLake build plans. Direct API providers prompt once, test the connection, and store accepted keys in VS Code SecretStorage; DryLake AI remains the default."
+        },
+        "drylake.directApi.timeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 15,
+          "maximum": 900,
+          "description": "Maximum time DryLake waits for direct API planning providers."
+        },
+        "drylake.openai.apiKeyEnvVar": {
+          "type": "string",
+          "default": "OPENAI_API_KEY",
+          "description": "Optional environment variable fallback for the OpenAI API key. Most users can enter the key when DryLake prompts and stores it in VS Code SecretStorage."
+        },
+        "drylake.openai.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "OpenAI-compatible base URL used by the OpenAI API planning provider."
+        },
+        "drylake.openai.model": {
+          "type": "string",
+          "default": "gpt-5",
+          "description": "OpenAI model used for DryLake planning."
+        },
+        "drylake.openai.maxOutputTokens": {
+          "type": "number",
+          "default": 8000,
+          "minimum": 512,
+          "maximum": 32000,
+          "description": "Maximum output tokens requested from the OpenAI API planning provider."
+        },
+        "drylake.claude.apiKeyEnvVar": {
+          "type": "string",
+          "default": "ANTHROPIC_API_KEY",
+          "description": "Optional environment variable fallback for the Anthropic API key. Most users can enter the key when DryLake prompts and stores it in VS Code SecretStorage."
+        },
+        "drylake.claude.baseUrl": {
+          "type": "string",
+          "default": "https://api.anthropic.com/v1",
+          "description": "Anthropic API base URL used by the Claude planning provider."
+        },
+        "drylake.claude.model": {
+          "type": "string",
+          "default": "claude-sonnet-4-20250514",
+          "description": "Claude model used for DryLake planning."
+        },
+        "drylake.claude.maxOutputTokens": {
+          "type": "number",
+          "default": 8000,
+          "minimum": 512,
+          "maximum": 32000,
+          "description": "Maximum output tokens requested from the Claude API planning provider."
+        },
+        "drylake.databricks.tokenEnvVar": {
+          "type": "string",
+          "default": "DATABRICKS_TOKEN",
+          "description": "Optional environment variable fallback for the Databricks token. Most users can enter the token when DryLake prompts and stores it in VS Code SecretStorage."
+        },
+        "drylake.databricks.workspaceUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Databricks workspace URL, for example https://example.cloud.databricks.com."
+        },
+        "drylake.databricks.endpointName": {
+          "type": "string",
+          "default": "",
+          "description": "Databricks Model Serving endpoint name used for DryLake planning."
+        },
+        "drylake.databricks.maxOutputTokens": {
+          "type": "number",
+          "default": 8000,
+          "minimum": 512,
+          "maximum": 32000,
+          "description": "Maximum output tokens requested from the Databricks planning endpoint."
+        },
+        "drylake.agents.claude-code.command": {
+          "type": "string",
+          "default": "claude",
+          "description": "Command or full executable path DryLake uses to launch Claude Code handoffs."
+        },
+        "drylake.agents.codex.command": {
+          "type": "string",
+          "default": "codex",
+          "description": "Command or full executable path DryLake uses to launch OpenAI Codex handoffs."
+        },
+        "drylake.agents.gemini.command": {
+          "type": "string",
+          "default": "gemini",
+          "description": "Command or full executable path DryLake uses to launch Gemini CLI handoffs."
+        },
+        "drylake.agents.hermes.command": {
+          "type": "string",
+          "default": "hermes",
+          "description": "Command or full executable path DryLake uses to launch Hermes Agent handoffs."
+        },
+        "drylake.hermes.planningTimeoutSeconds": {
+          "type": "number",
+          "default": 300,
+          "minimum": 15,
+          "maximum": 900,
+          "description": "Maximum time DryLake waits for Hermes Agent CLI planning requests."
+        },
+        "drylake.hermes.maxOutputBytes": {
+          "type": "number",
+          "default": 1500000,
+          "minimum": 100000,
+          "maximum": 10000000,
+          "description": "Maximum Hermes Agent CLI planning output DryLake will read before failing the request."
+        },
+        "drylake.agents.cursor.command": {
+          "type": "string",
+          "default": "cursor-agent",
+          "description": "Command or full executable path DryLake uses to launch Cursor CLI handoffs."
         },
         "xupra.baseUrl": {
           "type": "string",
@@ -358,6 +480,10 @@
       {
         "command": "drylake.handoffPhase",
         "title": "DryLake: Hand Off Phase"
+      },
+      {
+        "command": "drylake.checkAgentSetup",
+        "title": "DryLake: Check Agent Setup"
       },
       {
         "command": "drylake.approvePlanChange",

@@ -17,6 +17,7 @@ type TestMessage = {
   status?: unknown;
   text?: unknown;
   mode?: unknown;
+  planningProvider?: unknown;
 };
 
 let messageHandler: ((message: TestMessage) => Promise<void>) | undefined;
@@ -303,6 +304,8 @@ describe("Control Room webview", () => {
     }
 
     expect(html).toContain("Gemini CLI");
+    expect(html).toContain("Hermes Agent");
+    expect(html).toContain("Prompt");
     expect(html).not.toContain("Blackbox");
     expect(html).not.toContain("Droid");
     expect(html).not.toContain("Continue.dev");
@@ -350,7 +353,32 @@ describe("Control Room webview", () => {
 
     expect(executed).toContainEqual({
       command: "drylake.startBuildSession",
-      args: ["phases", "Break this task into steps."],
+      args: ["phases", "Break this task into steps.", "xupra-pro-ai"],
+    });
+  });
+
+  it("renders planning provider dropdown and routes the selected provider with first chat message", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => null } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+    expect(html).toContain('id="planningProviderSelect"');
+    expect(html).toContain('option value="xupra-pro-ai"');
+    expect(html).toContain('option value="databricks-api"');
+    expect(html).toContain('option value="claude-api"');
+    expect(html).toContain('option value="openai-api"');
+    expect(html).toContain('option value="hermes-agent"');
+
+    await messageHandler?.({
+      command: "drylake.startBuildSession",
+      mode: "build-app",
+      text: "Build the API.",
+      planningProvider: "openai-api",
+    });
+
+    expect(executed).toContainEqual({
+      command: "drylake.startBuildSession",
+      args: ["build-app", "Build the API.", "openai-api"],
     });
   });
 

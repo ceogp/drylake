@@ -1,7 +1,22 @@
 import type { ApplicationBuildRunbook, XuMode } from "../xu/types";
 
-export type DryLakeProviderId = "xupra-pro-ai" | "user-ide-ai" | "external-ai-prompt";
+export type DryLakeProviderId =
+  | "xupra-pro-ai"
+  | "databricks-api"
+  | "claude-api"
+  | "openai-api"
+  | "hermes-agent"
+  | "user-ide-ai"
+  | "external-ai-prompt";
 export type RunbookModelTier = "nano" | "foundation";
+export type DryLakeProviderLabel =
+  | "Xupra AI"
+  | "Databricks API"
+  | "Claude API"
+  | "OpenAI API"
+  | "Hermes Agent CLI"
+  | "User IDE AI"
+  | "External AI Prompt";
 
 export type DryLakeAiAvailability = {
   available: boolean;
@@ -48,8 +63,9 @@ export type ClarifyIntentResult = {
 
 export interface DryLakeAiProvider {
   id: DryLakeProviderId;
-  label: "Xupra AI" | "User IDE AI" | "External AI Prompt";
+  label: DryLakeProviderLabel;
   isAvailable(): Promise<DryLakeAiAvailability>;
+  validateConnection?(): Promise<DryLakeAiAvailability>;
   generateDraftRunbook(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;
   refinePurpose(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;
   refineArchitecture(input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult>;

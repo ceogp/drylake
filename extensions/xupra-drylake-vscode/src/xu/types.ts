@@ -4,6 +4,7 @@ export const XU_PHASE_AGENTS = [
   "claude-code",
   "codex",
   "gemini",
+  "hermes",
   "cursor",
   "copilot",
 ] as const;
@@ -126,7 +127,21 @@ export type BuildSessionState = {
   prompt: string;
   createdAt: string;
   runbookPath: string;
-  providerId: "xupra-pro-ai" | "user-ide-ai" | "external-ai-prompt";
-  providerLabel: "Xupra AI" | "User IDE AI" | "External AI Prompt";
+  providerId:
+    | "xupra-pro-ai"
+    | "databricks-api"
+    | "claude-api"
+    | "openai-api"
+    | "hermes-agent"
+    | "user-ide-ai"
+    | "external-ai-prompt";
+  providerLabel:
+    | "Xupra AI"
+    | "Databricks API"
+    | "Claude API"
+    | "OpenAI API"
+    | "Hermes Agent CLI"
+    | "User IDE AI"
+    | "External AI Prompt";
 };
 

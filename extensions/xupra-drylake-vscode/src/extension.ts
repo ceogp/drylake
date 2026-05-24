@@ -57,7 +57,11 @@ import { createStatusBar } from "./views/statusBar";
 import { WorkspaceSidebarProvider } from "./views/workspaceSidebarProvider";
 import { ControlRoomProvider } from "./webview/controlRoomProvider";
 import { MultiAgentRunnerProvider } from "./webview/multiAgentRunnerProvider";
+import { openPhaseAgentSetupReport } from "./agents/phaseAgentLauncher";
+import { renderPhasePrompt } from "./generators/renderPhasePrompt";
+import { renderRunbookMd } from "./generators/renderRunbookMd";
 import { getLogger } from "./utils/logging";
+import { estimateTokens, formatEstimatedTokens } from "./utils/tokenEstimate";
 import { XuSessionStore } from "./xu/sessionStore";
 
 const DEFAULT_BASE_URL = "https://drylake.xupracorp.com";
@@ -478,6 +482,8 @@ export async function activate(context: vscode.ExtensionContext) {
     let activePhaseId: string | undefined;
     let activePhaseTitle: string | undefined;
     let activePhaseAgent: string | undefined;
+    let activePhaseTokenEstimate: string | undefined;
+    let runbookTokenEstimate: string | undefined;
     let approvalStatus = "No runbook";
     try {
       const currentRunbook = await xuSessionStore.readRunbook();
@@ -489,6 +495,17 @@ export async function activate(context: vscode.ExtensionContext) {
         activePhaseId = activeSummary?.phaseId;
         activePhaseTitle = activeSummary?.phaseTitle;
         activePhaseAgent = activeSummary?.agent ?? currentRunbook.runbook.handoff.defaultAgent;
+        const activePhase = activePhaseId
+          ? currentRunbook.runbook.phases.find((phase) => phase.id === activePhaseId)
+          : undefined;
+        if (activePhase) {
+          activePhaseTokenEstimate = formatEstimatedTokens(
+            estimateTokens(renderPhasePrompt(currentRunbook.runbook, activePhase), "phase"),
+          );
+        }
+        runbookTokenEstimate = formatEstimatedTokens(
+          estimateTokens(renderRunbookMd(currentRunbook.runbook), "workspace"),
+        );
         currentPhase = activePhaseTitle;
         approvalStatus = [
           currentRunbook.runbook.confirmation.userApprovedIntent ? "Purpose approved" : "Purpose pending",
@@ -520,6 +537,8 @@ export async function activate(context: vscode.ExtensionContext) {
         activePhaseId,
         activePhaseTitle,
         activePhaseAgent,
+        activePhaseTokenEstimate,
+        runbookTokenEstimate,
         approvalStatus,
         providerStatus: currentSession?.providerLabel ?? "Xupra AI",
         generatedFiles: [
@@ -667,7 +686,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   register("drylake.startBuildSession", async (...args: unknown[]) => {
-    await startBuildSessionCommand(runbookDeps, context, args[0], args[1]);
+    await startBuildSessionCommand(runbookDeps, context, args[0], args[1], args[2]);
   });
 
   register("drylake.openControlRoom", async () => {
@@ -744,6 +763,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.handoffPhase", async (...args: unknown[]) => {
     await handoffPhaseCommand(runbookDeps, args[0], args[1]);
+  });
+
+  register("drylake.checkAgentSetup", async () => {
+    await openPhaseAgentSetupReport();
   });
 
   register("drylake.approvePlanChange", async (...args: unknown[]) => {

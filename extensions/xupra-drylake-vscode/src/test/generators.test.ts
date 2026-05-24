@@ -75,6 +75,7 @@ describe("runbook generators", () => {
       "claude-code": "You are running as Claude Code.",
       codex: "You are running as OpenAI Codex.",
       gemini: "You are running as Gemini CLI.",
+      hermes: "You are running as Hermes Agent CLI.",
       cursor: "You are running as Cursor CLI.",
       copilot: "You are running as GitHub Copilot Chat.",
     };
@@ -85,6 +86,26 @@ describe("runbook generators", () => {
 
       expect(renderPhasePrompt(value, value.phases[0])).toContain(expectedPreambles[agent]);
     }
+  });
+
+  it("renders selected handoff skill context in phase prompts", () => {
+    const value = runbook();
+    value.phases[0].agent = "claude-code";
+
+    const prompt = renderPhasePrompt(value, value.phases[0], {
+      handoffProfile: {
+        kind: "skill",
+        label: "implementation-plan",
+        logicalPath: ".claude/skills/implementation-plan/SKILL.md",
+        sourcePlatform: "claude",
+        content: "Use the implementation planning skill before editing.",
+      },
+    });
+
+    expect(prompt).toContain("## Requested Skill / Agent Profile");
+    expect(prompt).toContain("Use this Claude skill for this handoff.");
+    expect(prompt).toContain(".claude/skills/implementation-plan/SKILL.md");
+    expect(prompt).toContain("Use the implementation planning skill before editing.");
   });
 
   it("uses active build-session provider for no-agent phase prompts", () => {

@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   PHASE_AGENT_LAUNCHERS,
   PHASE_HANDOFF_ACTIONS,
+  diagnosePhaseAgentSetup,
   launchPhaseAgent,
   phaseAgentHandoffOptions,
+  renderPhaseAgentSetupReport,
 } from "../agents/phaseAgentLauncher";
 import { XU_PHASE_AGENTS } from "../xu/types";
 
@@ -16,6 +18,7 @@ const mocks = vi.hoisted(() => ({
     sendText: vi.fn(),
   },
   executeCommand: vi.fn(),
+  configValues: new Map<string, unknown>(),
 }));
 
 vi.mock("node:child_process", () => ({
@@ -30,6 +33,11 @@ vi.mock("vscode", () => ({
     }),
   },
   workspace: {
+    getConfiguration: vi.fn(() => ({
+      get<T>(key: string, defaultValue?: T) {
+        return mocks.configValues.has(key) ? mocks.configValues.get(key) as T : defaultValue as T;
+      },
+    })),
     fs: {
       createDirectory: vi.fn(),
       writeFile: vi.fn(),
@@ -52,6 +60,7 @@ beforeEach(() => {
   mocks.terminal.show.mockReset();
   mocks.terminal.sendText.mockReset();
   mocks.executeCommand.mockReset();
+  mocks.configValues.clear();
   mocks.createTerminal.mockReturnValue(mocks.terminal);
 });
 
@@ -80,7 +89,7 @@ describe("phase agent launchers", () => {
   });
 
   it("does not include unverified phase agent launchers", () => {
-    expect(XU_PHASE_AGENTS).toEqual(["claude-code", "codex", "gemini", "cursor", "copilot"]);
+    expect(XU_PHASE_AGENTS).toEqual(["claude-code", "codex", "gemini", "hermes", "cursor", "copilot"]);
 
     for (const agent of FUTURE_PHASE_AGENTS) {
       expect(XU_PHASE_AGENTS).not.toContain(agent as never);
@@ -93,6 +102,7 @@ describe("phase agent launchers", () => {
     expect(PHASE_AGENT_LAUNCHERS["codex"].kind).toBe("terminal");
     expect(PHASE_AGENT_LAUNCHERS.cursor.kind).toBe("terminal");
     expect(PHASE_AGENT_LAUNCHERS.gemini.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.hermes.kind).toBe("terminal");
     expect(PHASE_AGENT_LAUNCHERS.copilot.kind).toBe("vscode-command");
 
     if (
@@ -100,6 +110,7 @@ describe("phase agent launchers", () => {
       PHASE_AGENT_LAUNCHERS.codex.kind !== "terminal" ||
       PHASE_AGENT_LAUNCHERS.cursor.kind !== "terminal" ||
       PHASE_AGENT_LAUNCHERS.gemini.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.hermes.kind !== "terminal" ||
       PHASE_AGENT_LAUNCHERS.copilot.kind !== "vscode-command"
     ) {
       throw new Error("Unexpected launcher kind");
@@ -116,6 +127,10 @@ describe("phase agent launchers", () => {
     expect(PHASE_AGENT_LAUNCHERS.gemini.terminalCommand("/tmp/prompt.md")).toContain("gemini -p");
     expect(PHASE_AGENT_LAUNCHERS.gemini.shellScriptCommand('"$PROMPT_FILE"')).toBe('gemini -p "$(cat "$PROMPT_FILE")"');
     expect(PHASE_AGENT_LAUNCHERS.gemini.batchScriptCommand()).toContain("gemini -p $prompt");
+    expect(PHASE_AGENT_LAUNCHERS.hermes.executable).toBe("hermes");
+    expect(PHASE_AGENT_LAUNCHERS.hermes.terminalCommand("/tmp/prompt.md")).toContain("hermes chat -q");
+    expect(PHASE_AGENT_LAUNCHERS.hermes.shellScriptCommand('"$PROMPT_FILE"')).toBe('hermes chat -q "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS.hermes.batchScriptCommand()).toContain("hermes chat -q $prompt");
     expect(PHASE_AGENT_LAUNCHERS.copilot.commandId).toBe("workbench.action.chat.open");
   });
 
@@ -209,8 +224,11 @@ describe("phase agent launchers", () => {
     });
 
     expect(result.status).toBe("not-installed");
+    expect(result.reasonCode).toBe("not-found");
     expect(result.promptFile).toBe(promptFile);
-    expect(result.message).toContain("OpenAI Codex is not installed");
+    expect(result.message).toContain("Could not launch OpenAI Codex");
+    expect(result.reason).toContain("codex");
+    expect(result.searchedPath).toBeDefined();
     expect(mocks.createTerminal).not.toHaveBeenCalled();
   });
 
@@ -227,8 +245,59 @@ describe("phase agent launchers", () => {
 
     expect(result.status).toBe("not-installed");
     expect(result.promptFile).toBe(promptFile);
-    expect(result.message).toContain("Gemini CLI is not installed");
-    expect(result.message).toContain("Install Gemini CLI");
+    expect(result.message).toContain("Could not launch Gemini CLI");
+    expect(result.reason).toContain("gemini");
     expect(mocks.createTerminal).not.toHaveBeenCalled();
+  });
+
+  it("returns install guidance when Hermes Agent CLI is missing", async () => {
+    mocks.execFile.mockImplementation((_file, _args, callback) => callback(new Error("missing executable")));
+    const promptFile = { fsPath: "/repo/.drylake/handoffs/P-01-hermes.md", path: "/repo/.drylake/handoffs/P-01-hermes.md" };
+
+    const result = await launchPhaseAgent({
+      agent: "hermes",
+      prompt: "Implement phase one.",
+      promptFile: promptFile as never,
+      workspaceUri: { fsPath: "/repo", path: "/repo" } as never,
+    });
+
+    expect(result.status).toBe("not-installed");
+    expect(result.promptFile).toBe(promptFile);
+    expect(result.message).toContain("Could not launch Hermes Agent");
+    expect(result.reason).toContain("hermes");
+    expect(mocks.createTerminal).not.toHaveBeenCalled();
+  });
+
+  it("reports a bad configured command path separately from PATH lookup misses", async () => {
+    mocks.configValues.set("agents.codex.command", "/missing/codex");
+    const promptFile = { fsPath: "/repo/.drylake/handoffs/P-01-codex.md", path: "/repo/.drylake/handoffs/P-01-codex.md" };
+
+    const result = await launchPhaseAgent({
+      agent: "codex",
+      prompt: "Implement phase one.",
+      promptFile: promptFile as never,
+      workspaceUri: { fsPath: "/repo", path: "/repo" } as never,
+    });
+
+    expect(result.status).toBe("not-installed");
+    expect(result.reasonCode).toBe("bad-configured-path");
+    expect(result.executable).toBe("/missing/codex");
+    expect(result.reason).toContain("Configured OpenAI Codex command");
+    expect(mocks.execFile).not.toHaveBeenCalledWith("which", ["codex"], expect.any(Function));
+    expect(mocks.createTerminal).not.toHaveBeenCalled();
+  });
+
+  it("renders an agent setup report with command, path, and markdown fallback state", async () => {
+    mocks.execFile.mockImplementation((_file, _args, callback) => callback(new Error("missing executable")));
+
+    const diagnostic = await diagnosePhaseAgentSetup("codex");
+    const report = renderPhaseAgentSetupReport([diagnostic]);
+
+    expect(diagnostic.status).toBe("not-found");
+    expect(report).toContain("DryLake Agent Setup");
+    expect(report).toContain("OpenAI Codex");
+    expect(report).toContain("Command: `codex`");
+    expect(report).toContain("Fallback: Markdown handoff available");
+    expect(report).toContain("Searched PATH:");
   });
 });

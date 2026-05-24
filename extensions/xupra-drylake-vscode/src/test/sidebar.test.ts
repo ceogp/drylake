@@ -73,6 +73,8 @@ describe("sidebar reshape", () => {
     expect(html).toContain("No active Build Session");
     expect(html).toContain('data-action="startBuildSession"');
     expect(html).toContain('data-action="openControlRoom"');
+    expect(html).toContain("activePhaseTokenEstimate");
+    expect(html).toContain("runbookTokenEstimate");
     expect(html).not.toContain('data-action="exportHandoffPrompt"');
     expect(html).not.toContain("Run Next Phase");
     expect(html).toContain('<details class="disclosure"><summary><span>Advanced</span>');

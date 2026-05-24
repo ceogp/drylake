@@ -23,9 +23,12 @@ const mocks = vi.hoisted(() => ({
   showTextDocument: vi.fn(),
   showInformationMessage: vi.fn(),
   showWarningMessage: vi.fn(),
+  showQuickPick: vi.fn(),
+  showInputBox: vi.fn(),
   writeClipboard: vi.fn(),
   executeCommand: vi.fn(),
   launchPhaseAgent: vi.fn(),
+  showAgentLaunchFallbackActions: vi.fn(),
   writePhaseHandoffFile: vi.fn(),
   writePhaseHandoffScript: vi.fn(),
   resolveDryLakeAiProvider: vi.fn(),
@@ -35,10 +38,14 @@ const mocks = vi.hoisted(() => ({
   providerRefinePurpose: vi.fn(),
   providerRefineArchitecture: vi.fn(),
   providerGeneratePhasePlan: vi.fn(),
+  scanWorkspaceFiles: vi.fn(),
 }));
+
+const configurationValues = new Map<string, unknown>();
 
 vi.mock("vscode", () => ({
   ProgressLocation: { Notification: 15 },
+  ConfigurationTarget: { Global: 1 },
   Uri: {
     parse: vi.fn(() => mocks.billingUri),
   },
@@ -52,6 +59,8 @@ vi.mock("vscode", () => ({
     showTextDocument: mocks.showTextDocument,
     showInformationMessage: mocks.showInformationMessage,
     showWarningMessage: mocks.showWarningMessage,
+    showQuickPick: mocks.showQuickPick,
+    showInputBox: mocks.showInputBox,
     withProgress: vi.fn(async (_options, task) => task()),
   },
   workspace: {
@@ -60,12 +69,20 @@ vi.mock("vscode", () => ({
     openTextDocument: mocks.openTextDocument,
     getConfiguration: vi.fn((section: string) => ({
       get<T>(key: string, defaultValue?: T) {
+        const scoped = `${section}.${key}`;
+        if (configurationValues.has(scoped)) {
+          return configurationValues.get(scoped) as T;
+        }
+
         if (section === "drylake" && key === "aiProvider") {
           return "xupra-pro-ai" as T;
         }
 
         return defaultValue as T;
       },
+      update: vi.fn(async (key: string, value: unknown) => {
+        configurationValues.set(`${section}.${key}`, value);
+      }),
     })),
   },
   commands: {
@@ -75,7 +92,7 @@ vi.mock("vscode", () => ({
 
 vi.mock("../services/workspaceScanner", () => ({
   getWorkspaceDisplayName: vi.fn(() => "Test Workspace"),
-  scanWorkspaceFiles: vi.fn(async () => []),
+  scanWorkspaceFiles: mocks.scanWorkspaceFiles,
 }));
 
 vi.mock("../ai/providerResolver", () => ({
@@ -84,6 +101,7 @@ vi.mock("../ai/providerResolver", () => ({
 
 vi.mock("../agents/phaseAgentLauncher", () => ({
   launchPhaseAgent: mocks.launchPhaseAgent,
+  showAgentLaunchFallbackActions: mocks.showAgentLaunchFallbackActions,
   phaseHandoffActionFromArg: (arg: unknown) => (
     typeof arg === "string" && ["run", "script-sh", "script-bat", "copy", "markdown"].includes(arg)
       ? arg
@@ -99,9 +117,12 @@ beforeEach(() => {
   mocks.showTextDocument.mockReset();
   mocks.showInformationMessage.mockReset();
   mocks.showWarningMessage.mockReset();
+  mocks.showQuickPick.mockReset();
+  mocks.showInputBox.mockReset();
   mocks.writeClipboard.mockReset();
   mocks.executeCommand.mockReset();
   mocks.launchPhaseAgent.mockReset();
+  mocks.showAgentLaunchFallbackActions.mockReset();
   mocks.writePhaseHandoffFile.mockReset();
   mocks.writePhaseHandoffScript.mockReset();
   mocks.resolveDryLakeAiProvider.mockReset();
@@ -111,14 +132,20 @@ beforeEach(() => {
   mocks.providerRefinePurpose.mockReset();
   mocks.providerRefineArchitecture.mockReset();
   mocks.providerGeneratePhasePlan.mockReset();
+  mocks.scanWorkspaceFiles.mockReset();
+  configurationValues.clear();
   mocks.showWarningMessage.mockResolvedValue("Upgrade to Pro");
+  mocks.showQuickPick.mockImplementation(async (items) => (Array.isArray(items) ? items[0] : undefined));
+  mocks.showInputBox.mockResolvedValue(undefined);
   mocks.openTextDocument.mockImplementation(async (document) => document);
   mocks.writePhaseHandoffFile.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-codex.md", path: "/repo/.drylake/handoffs/P-01-codex.md" });
   mocks.writePhaseHandoffScript.mockResolvedValue({ fsPath: "C:/repo/.drylake/handoffs/P-01-codex.sh", path: "/repo/.drylake/handoffs/P-01-codex.sh" });
   mocks.launchPhaseAgent.mockResolvedValue({ status: "launched", message: "Started OpenAI Codex for this phase." });
+  mocks.showAgentLaunchFallbackActions.mockResolvedValue(undefined);
   mocks.providerIsAvailable.mockResolvedValue({ available: false, reason: "Xupra AI requires a Pro plan." });
   mocks.providerGenerateDraftRunbook.mockResolvedValue({ message: "Failed to generate DryLake runbook draft (500)." });
   mocks.providerPlanningChat.mockResolvedValue({ error: "Failed to run DryLake Planning Chat (500)." });
+  mocks.scanWorkspaceFiles.mockResolvedValue([]);
   mocks.resolveDryLakeAiProvider.mockResolvedValue({
     provider: {
       id: "xupra-pro-ai",
@@ -228,6 +255,124 @@ describe("runbook commands", () => {
     expect(mocks.providerGenerateDraftRunbook).toHaveBeenCalledWith(expect.not.objectContaining({
       currentRunbook: expect.anything(),
     }));
+  });
+
+  it("uses an explicit planning provider from the Control Room without forcing DryLake sign-in", async () => {
+    const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
+    const generatedRunbook = createStarterXu({ prompt: "Build checkout", mode: "build-app" });
+    const deps = {
+      apiClient: {},
+      stateStore: {
+        getConnection: vi.fn(() => ({})),
+        getAccessToken: vi.fn(async () => undefined),
+        getPlanningProviderSecret: vi.fn(async () => undefined),
+        setPlanningProviderSecret: vi.fn(async () => undefined),
+        clearPlanningProviderSecret: vi.fn(async () => undefined),
+        setBuildSession: vi.fn(async () => undefined),
+        setPlanningProvider: vi.fn(async () => undefined),
+        setLastModelTier: vi.fn(async () => undefined),
+        setPlanningLoading: vi.fn(async () => undefined),
+        clearChatHistory: vi.fn(async () => undefined),
+        appendChatMessage: vi.fn(async (message: { role: string; text: string }) => ({
+          id: "msg-1",
+          ts: 0,
+          ...message,
+        })),
+        getChatHistory: vi.fn(() => ({ messages: [] })),
+      },
+      sessionStore: {
+        findRunbookUri: vi.fn(async () => null),
+        getDefaultRunbookUri: vi.fn(() => runbookUri),
+        createSession: vi.fn(async (session) => ({ id: "session-1", createdAt: "2026-05-16T00:00:00.000Z", ...session })),
+        writeRunbook: vi.fn(async () => undefined),
+      },
+      controlRoom: {
+        createOrShow: vi.fn(async () => undefined),
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+    const validateConnection = vi.fn(async () => ({ available: true }));
+    mocks.showInputBox.mockResolvedValueOnce("sk-test-openai");
+    mocks.resolveDryLakeAiProvider.mockResolvedValue({
+      provider: {
+        id: "openai-api",
+        label: "OpenAI API",
+        isAvailable: mocks.providerIsAvailable,
+        validateConnection,
+        generateDraftRunbook: mocks.providerGenerateDraftRunbook,
+        planningChat: mocks.providerPlanningChat,
+        refinePurpose: mocks.providerRefinePurpose,
+        refineArchitecture: mocks.providerRefineArchitecture,
+        generatePhasePlan: mocks.providerGeneratePhasePlan,
+      },
+    });
+    mocks.providerIsAvailable.mockResolvedValueOnce({ available: true });
+    mocks.providerGenerateDraftRunbook.mockResolvedValueOnce({ runbook: generatedRunbook });
+
+    await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout", "openai-api");
+
+    expect(mocks.showWarningMessage).not.toHaveBeenCalledWith(
+      "Connect your DryLake account before starting a Build Session.",
+      "Connect DryLake",
+    );
+    const configurationArg = mocks.resolveDryLakeAiProvider.mock.calls[0][0].configuration;
+    expect(configurationArg.get("aiProvider")).toBe("openai-api");
+    expect(deps.stateStore.setPlanningProviderSecret).toHaveBeenCalledWith("openai-api", "sk-test-openai");
+    expect(validateConnection).toHaveBeenCalledOnce();
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledWith(runbookUri, generatedRunbook);
+  });
+
+  it("rejects a direct planning provider key when the live connection test fails", async () => {
+    const deps = {
+      apiClient: {},
+      stateStore: {
+        getConnection: vi.fn(() => ({})),
+        getAccessToken: vi.fn(async () => undefined),
+        getPlanningProviderSecret: vi.fn(async () => undefined),
+        setPlanningProviderSecret: vi.fn(async () => undefined),
+        clearPlanningProviderSecret: vi.fn(async () => undefined),
+        setPlanningProvider: vi.fn(async () => undefined),
+      },
+      sessionStore: {
+        findRunbookUri: vi.fn(),
+        getDefaultRunbookUri: vi.fn(),
+        createSession: vi.fn(),
+        writeRunbook: vi.fn(),
+      },
+      controlRoom: {
+        createOrShow: vi.fn(async () => undefined),
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+    const validateConnection = vi.fn(async () => ({
+      available: false,
+      reason: "401 unauthorized",
+    }));
+    mocks.showInputBox.mockResolvedValueOnce("bad-openai-key");
+    mocks.resolveDryLakeAiProvider.mockResolvedValue({
+      provider: {
+        id: "openai-api",
+        label: "OpenAI API",
+        isAvailable: mocks.providerIsAvailable,
+        validateConnection,
+        generateDraftRunbook: mocks.providerGenerateDraftRunbook,
+        planningChat: mocks.providerPlanningChat,
+        refinePurpose: mocks.providerRefinePurpose,
+        refineArchitecture: mocks.providerRefineArchitecture,
+        generatePhasePlan: mocks.providerGeneratePhasePlan,
+      },
+    });
+
+    await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout", "openai-api");
+
+    expect(deps.stateStore.setPlanningProviderSecret).toHaveBeenCalledWith("openai-api", "bad-openai-key");
+    expect(validateConnection).toHaveBeenCalledOnce();
+    expect(deps.stateStore.clearPlanningProviderSecret).toHaveBeenCalledWith("openai-api");
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith("OpenAI API connection failed: 401 unauthorized");
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
+    expect(mocks.providerGenerateDraftRunbook).not.toHaveBeenCalled();
   });
 
   it("leaves first-message no-plan failures in chat without creating a local prompt-derived draft", async () => {
@@ -726,6 +871,42 @@ describe("runbook commands", () => {
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });
 
+  it("offers Codex skills before launch and injects the selected skill into the handoff prompt", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps } = reorderDeps(runbook);
+    mocks.scanWorkspaceFiles.mockResolvedValueOnce([
+      {
+        logicalPath: ".codex/skills/token-reduction/SKILL.md",
+        category: "skill",
+        content: "Use token reduction before editing files.",
+      },
+    ]);
+    mocks.showQuickPick.mockImplementationOnce(async (items) => items[1]);
+
+    await handoffPhaseCommand(deps as never, "P-01");
+
+    expect(mocks.showQuickPick).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "No skill/profile" }),
+        expect.objectContaining({
+          label: "token-reduction",
+          detail: ".codex/skills/token-reduction/SKILL.md",
+        }),
+      ]),
+      expect.objectContaining({ title: "Select Skill / Agent Profile" }),
+    );
+    expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining("## Requested Skill / Agent Profile"),
+    }));
+    expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining("Use token reduction before editing files."),
+    }));
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining(".codex/skills/token-reduction/SKILL.md"),
+    }));
+  });
+
   it("marks the phase active after a successful handoff launch", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";
@@ -862,11 +1043,14 @@ describe("runbook commands", () => {
     await handoffPhaseCommand(deps as never, "P-01");
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "cursor" }));
-    expect(mocks.openTextDocument).toHaveBeenCalledWith({
-      fsPath: "C:/repo/.drylake/handoffs/P-01-codex.md",
-      path: "/repo/.drylake/handoffs/P-01-codex.md",
-    });
-    expect(mocks.showTextDocument).toHaveBeenCalled();
+    expect(mocks.showAgentLaunchFallbackActions).toHaveBeenCalledWith(expect.objectContaining({
+      result: expect.objectContaining({ status: "fallback" }),
+      promptContent: expect.stringContaining("You are running as Cursor CLI."),
+      promptFile: {
+        fsPath: "C:/repo/.drylake/handoffs/P-01-codex.md",
+        path: "/repo/.drylake/handoffs/P-01-codex.md",
+      },
+    }));
     expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
     expectNoPhaseStatusUpdateCommand();
   });
@@ -885,6 +1069,10 @@ describe("runbook commands", () => {
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
     expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
+    expect(mocks.showAgentLaunchFallbackActions).toHaveBeenCalledWith(expect.objectContaining({
+      result: expect.objectContaining({ status: "not-installed" }),
+      promptContent: expect.stringContaining("You are running as OpenAI Codex."),
+    }));
     expect(runbook.phases.map((phase) => ({ id: phase.id, status: phase.status }))).toEqual(originalPhaseStatuses);
     expectNoPhaseStatusUpdateCommand();
   });

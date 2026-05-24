@@ -30,6 +30,8 @@ export type SidebarState = {
     activePhaseId?: string;
     activePhaseTitle?: string;
     activePhaseAgent?: string;
+    activePhaseTokenEstimate?: string;
+    runbookTokenEstimate?: string;
     approvalStatus?: string;
     providerStatus?: string;
     generatedFiles?: string[];
@@ -748,7 +750,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       font-weight: 700;
     }
 
-    .session-meta, .phase-row {
+    .session-meta, .phase-row, .token-row {
       color: var(--xupra-muted);
       font-size: 0.88em;
       line-height: 1.35;
@@ -763,6 +765,26 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .phase-agent {
+      color: var(--xupra-green);
+      white-space: nowrap;
+    }
+
+    .token-row {
+      display: grid;
+      gap: 4px;
+      padding: 7px;
+      border: 1px solid var(--xupra-line);
+      border-radius: 4px;
+      background: var(--xupra-bg);
+    }
+
+    .token-row span {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .token-row strong {
       color: var(--xupra-green);
       white-space: nowrap;
     }
@@ -952,6 +974,16 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       html += '<div class="session-name" title="' + escapeHtml(sessionName) + '">' + escapeHtml(sessionName) + '</div>';
       html += '<div class="session-meta">' + escapeHtml(status) + ' · ' + escapeHtml(runbook.path || 'drylake.xu') + ' · ' + escapeHtml(runbook.providerStatus || 'Xupra AI') + '</div>';
       html += '<div class="phase-row"><span>Active phase: ' + escapeHtml(phaseLabel) + '</span><span class="phase-agent">' + escapeHtml(runbook.activePhaseAgent || 'session default') + '</span></div>';
+      if (runbook.activePhaseTokenEstimate || runbook.runbookTokenEstimate) {
+        html += '<div class="token-row">';
+        if (runbook.activePhaseTokenEstimate) {
+          html += '<span>Phase prompt <strong>' + escapeHtml(runbook.activePhaseTokenEstimate) + '</strong></span>';
+        }
+        if (runbook.runbookTokenEstimate) {
+          html += '<span>Runbook <strong>' + escapeHtml(runbook.runbookTokenEstimate) + '</strong></span>';
+        }
+        html += '</div>';
+      }
       html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button></div>';
       html += '<button class="big-action" data-action="startBuildSession">Start New Session</button>';
       html += '</div></div>';

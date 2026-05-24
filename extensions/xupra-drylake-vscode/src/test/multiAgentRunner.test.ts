@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   showInformationMessage: vi.fn(),
   withProgress: vi.fn(),
   planRunnerAssignments: vi.fn(),
+  showAgentLaunchFallbackActions: vi.fn(),
+  pickHandoffProfile: vi.fn(),
 }));
 
 let panel: { webview: { html: string; onDidReceiveMessage: ReturnType<typeof vi.fn> } } | undefined;
@@ -30,6 +32,12 @@ let messageHandler: ((message: RunnerMessage) => Promise<void>) | undefined;
 vi.mock("../agents/phaseAgentLauncher", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../agents/phaseAgentLauncher")>()),
   launchAgentTask: mocks.launchAgentTask,
+  showAgentLaunchFallbackActions: mocks.showAgentLaunchFallbackActions,
+}));
+
+vi.mock("../agents/handoffProfiles", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../agents/handoffProfiles")>()),
+  pickHandoffProfile: mocks.pickHandoffProfile,
 }));
 
 vi.mock("vscode", () => ({
@@ -89,6 +97,8 @@ beforeEach(() => {
   mocks.showInformationMessage.mockReset();
   mocks.withProgress.mockReset();
   mocks.planRunnerAssignments.mockReset();
+  mocks.showAgentLaunchFallbackActions.mockReset();
+  mocks.pickHandoffProfile.mockReset();
   mocks.createWebviewPanel.mockImplementation(() => {
     panel = {
       onDidDispose: vi.fn(),
@@ -119,6 +129,8 @@ beforeEach(() => {
       },
     ],
   });
+  mocks.showAgentLaunchFallbackActions.mockResolvedValue(undefined);
+  mocks.pickHandoffProfile.mockResolvedValue(undefined);
 });
 
 describe("Multi-Agent Runner webview", () => {
@@ -132,6 +144,9 @@ describe("Multi-Agent Runner webview", () => {
     expect(html).toContain('value="claude-code"');
     expect(html).toContain('value="codex"');
     expect(html).toContain('value="gemini"');
+    expect(html).toContain('value="hermes"');
+    expect(html).toContain("Hermes Agent");
+    expect(html).toContain("Task prompt");
     expect(html).toContain("Blackbox");
     expect(html).toContain("Droid");
     expect(html).toContain("Coming soon");
@@ -157,6 +172,7 @@ describe("Multi-Agent Runner webview", () => {
     expect(mocks.launchAgentTask).not.toHaveBeenCalled();
     expect(panel?.webview.html).toContain("Assignment Review");
     expect(panel?.webview.html).toContain("Implement checkout API routes.");
+    expect(panel?.webview.html).toContain("Handoff prompt");
     expect(panel?.webview.html).toContain("Approve & Launch");
     expect(mocks.writeFile).toHaveBeenCalledWith(
       expect.objectContaining({ path: expect.stringContaining("assignment-plan.json") }),
@@ -186,8 +202,51 @@ describe("Multi-Agent Runner webview", () => {
     );
     expect(panel?.webview.html).toContain("Run in Progress");
     expect(panel?.webview.html).toContain("Implement checkout API and tests.");
+    expect(panel?.webview.html).toContain("Prompt");
     expect(panel?.webview.html).toContain("Mark complete");
     expect(panel?.webview.html).toContain("Mark failed");
+  });
+
+  it("plans and launches Hermes assignments when selected", async () => {
+    mocks.planRunnerAssignments.mockResolvedValueOnce({
+      modelTier: "foundation",
+      assignments: [
+        {
+          agentId: "hermes",
+          subtaskSummary: "Run local model verification.",
+          scopeBoundary: "src/hermes/**",
+        },
+      ],
+    });
+    const provider = new MultiAgentRunnerProvider(apiClient() as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({
+      command: "run",
+      prompt: "Verify local agent support",
+      agents: ["hermes"],
+    });
+
+    expect(mocks.planRunnerAssignments).toHaveBeenCalledWith({
+      taskPrompt: "Verify local agent support",
+      agents: [
+        { agentId: "hermes", label: "Hermes Agent" },
+      ],
+    });
+    expect(panel?.webview.html).toContain("Hermes Agent");
+    expect(panel?.webview.html).toContain("Handoff prompt");
+
+    await messageHandler?.({
+      command: "approve",
+      assignments: [
+        { agentId: "hermes", subtaskSummary: "Run local model verification." },
+      ],
+    });
+
+    expect(mocks.launchAgentTask).toHaveBeenCalledWith(expect.objectContaining({
+      agent: "hermes",
+      terminalName: "DryLake: Hermes Agent — verify-local-agent-support",
+    }));
   });
 
   it("keeps running agents running until the user marks review status", async () => {
@@ -338,5 +397,11 @@ describe("Multi-Agent Runner webview", () => {
     expect(panel?.webview.html).toContain("running");
     expect(panel?.webview.html).toContain("failed");
     expect(panel?.webview.html).toContain("Gemini CLI is not installed.");
+    expect(mocks.showAgentLaunchFallbackActions).toHaveBeenCalledWith(expect.objectContaining({
+      result: expect.objectContaining({
+        agentLabel: "Gemini CLI",
+        reason: "Gemini CLI is not installed.",
+      }),
+    }));
   });
 });

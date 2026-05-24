@@ -9,9 +9,11 @@ import { renderPhasePrompt } from "../generators/renderPhasePrompt";
 import {
   launchPhaseAgent,
   phaseHandoffActionFromArg,
+  showAgentLaunchFallbackActions,
   writePhaseHandoffFile,
   writePhaseHandoffScript,
 } from "../agents/phaseAgentLauncher";
+import { pickHandoffProfile } from "../agents/handoffProfiles";
 import { applyApproval } from "../xu/approvalState";
 import { createLocalDraftXu } from "../xu/createLocalDraftXu";
 import {
@@ -24,6 +26,7 @@ import { renderXu } from "../xu/renderXu";
 import { validateXu } from "../xu/validateXu";
 import { XuSessionStore } from "../xu/sessionStore";
 import type { DryLakeAiProvider } from "../ai/DryLakeAiProvider";
+import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
 import type { ApiClient } from "../services/apiClient";
 import type { StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
@@ -61,6 +64,67 @@ const MODE_CHOICES: Array<vscode.QuickPickItem & { mode: XuMode }> = [
     mode: "review",
   },
 ];
+
+const PLANNING_PROVIDER_CHOICES: Array<vscode.QuickPickItem & { providerId: DryLakeProviderId }> = [
+  {
+    label: "DryLake AI Planning",
+    description: "Xupra hosted",
+    detail: "Default hosted planner for chat-first DryLake build sessions.",
+    providerId: "xupra-pro-ai",
+  },
+  {
+    label: "Databricks API",
+    description: "BYO endpoint",
+    detail: "Uses your Databricks Model Serving endpoint and DATABRICKS_TOKEN.",
+    providerId: "databricks-api",
+  },
+  {
+    label: "Claude API",
+    description: "BYO Anthropic key",
+    detail: "Uses Anthropic Messages API with ANTHROPIC_API_KEY.",
+    providerId: "claude-api",
+  },
+  {
+    label: "OpenAI API",
+    description: "BYO OpenAI key",
+    detail: "Uses OpenAI Responses API with OPENAI_API_KEY.",
+    providerId: "openai-api",
+  },
+  {
+    label: "Hermes Agent CLI",
+    description: "Local/BYO model",
+    detail: "Uses the local Hermes Agent CLI and its configured provider stack.",
+    providerId: "hermes-agent",
+  },
+];
+
+type DirectPlanningProviderId = Extract<DryLakeProviderId, "databricks-api" | "claude-api" | "openai-api">;
+
+const DIRECT_PROVIDER_SETUP: Record<DirectPlanningProviderId, {
+  label: string;
+  secretLabel: string;
+  envSettingKey: string;
+  defaultEnvVar: string;
+}> = {
+  "databricks-api": {
+    label: "Databricks API",
+    secretLabel: "Databricks token",
+    envSettingKey: "databricks.tokenEnvVar",
+    defaultEnvVar: "DATABRICKS_TOKEN",
+  },
+  "claude-api": {
+    label: "Claude API",
+    secretLabel: "Anthropic API key",
+    envSettingKey: "claude.apiKeyEnvVar",
+    defaultEnvVar: "ANTHROPIC_API_KEY",
+  },
+  "openai-api": {
+    label: "OpenAI API",
+    secretLabel: "OpenAI API key",
+    envSettingKey: "openai.apiKeyEnvVar",
+    defaultEnvVar: "OPENAI_API_KEY",
+  },
+};
 
 function workspaceRoot() {
   const root = vscode.workspace.workspaceFolders?.[0]?.uri;
@@ -111,6 +175,157 @@ function modeFromArg(arg: unknown): XuMode | undefined {
   return MODE_CHOICES.some((item) => item.mode === normalized) ? (normalized as XuMode) : undefined;
 }
 
+function planningProviderFromArg(arg: unknown): DryLakeProviderId | undefined {
+  if (typeof arg !== "string") {
+    return undefined;
+  }
+
+  const normalized = arg.trim();
+  return PLANNING_PROVIDER_CHOICES.some((item) => item.providerId === normalized)
+    ? (normalized as DryLakeProviderId)
+    : undefined;
+}
+
+function isDirectPlanningProvider(providerId: DryLakeProviderId | undefined): providerId is DirectPlanningProviderId {
+  return providerId === "databricks-api" || providerId === "claude-api" || providerId === "openai-api";
+}
+
+function configurationString(configuration: vscode.WorkspaceConfiguration, key: string, fallback = "") {
+  const value = configuration.get<string>(key, fallback);
+  return typeof value === "string" ? value.trim() : fallback;
+}
+
+async function promptForSetting(params: {
+  configuration: vscode.WorkspaceConfiguration;
+  key: string;
+  title: string;
+  prompt: string;
+  placeHolder?: string;
+  validate?: (value: string) => string | undefined;
+}): Promise<boolean> {
+  if (configurationString(params.configuration, params.key)) {
+    return true;
+  }
+
+  const value = await vscode.window.showInputBox({
+    title: params.title,
+    prompt: params.prompt,
+    placeHolder: params.placeHolder,
+    ignoreFocusOut: true,
+    validateInput: (input) => params.validate?.(input.trim()),
+  });
+
+  if (!value?.trim()) {
+    return false;
+  }
+
+  await params.configuration.update(params.key, value.trim(), vscode.ConfigurationTarget.Global);
+  return true;
+}
+
+async function ensureDirectPlanningProviderConfigured(
+  deps: RunbookCommandDeps,
+  providerId: DirectPlanningProviderId,
+): Promise<{ enteredSecret: boolean } | undefined> {
+  const configuration = vscode.workspace.getConfiguration("drylake");
+  const setup = DIRECT_PROVIDER_SETUP[providerId];
+
+  if (providerId === "databricks-api") {
+    const workspaceConfigured = await promptForSetting({
+      configuration,
+      key: "databricks.workspaceUrl",
+      title: "Connect Databricks API",
+      prompt: "Enter your Databricks workspace URL.",
+      placeHolder: "https://example.cloud.databricks.com",
+      validate: (value) => {
+        if (!/^https:\/\/[^/]+/i.test(value)) {
+          return "Enter a full https:// Databricks workspace URL.";
+        }
+        return undefined;
+      },
+    });
+    if (!workspaceConfigured) {
+      return undefined;
+    }
+
+    const endpointConfigured = await promptForSetting({
+      configuration,
+      key: "databricks.endpointName",
+      title: "Connect Databricks API",
+      prompt: "Enter the Databricks Model Serving endpoint name DryLake should use.",
+      placeHolder: "drylake-planner",
+      validate: (value) => value ? undefined : "Endpoint name is required.",
+    });
+    if (!endpointConfigured) {
+      return undefined;
+    }
+  }
+
+  const envVar = configurationString(configuration, setup.envSettingKey, setup.defaultEnvVar);
+  const hasEnvKey = Boolean(process.env[envVar]?.trim());
+  const hasStoredKey = Boolean(await deps.stateStore.getPlanningProviderSecret(providerId));
+  if (hasEnvKey || hasStoredKey) {
+    return { enteredSecret: false };
+  }
+
+  const secret = await vscode.window.showInputBox({
+    title: `Connect ${setup.label}`,
+    prompt: `Paste your ${setup.secretLabel}. DryLake will test it now and only save it if the test succeeds.`,
+    password: true,
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : `${setup.secretLabel} is required.`,
+  });
+
+  if (!secret?.trim()) {
+    return undefined;
+  }
+
+  await deps.stateStore.setPlanningProviderSecret(providerId, secret.trim());
+  return { enteredSecret: true };
+}
+
+function configurationWithPlanningProvider(
+  configuration: vscode.WorkspaceConfiguration,
+  providerId?: DryLakeProviderId,
+): vscode.WorkspaceConfiguration {
+  if (!providerId) {
+    return configuration;
+  }
+
+  return {
+    ...configuration,
+    get<T>(key: string, defaultValue?: T) {
+      if (key === "aiProvider") {
+        return providerId as T;
+      }
+
+      return configuration.get(key, defaultValue);
+    },
+  };
+}
+
+async function pickPlanningProvider(arg?: unknown): Promise<DryLakeProviderId | undefined> {
+  const fromArg = planningProviderFromArg(arg);
+  if (fromArg) {
+    return fromArg;
+  }
+
+  const configured = String(vscode.workspace.getConfiguration("drylake").get("aiProvider", "xupra-pro-ai"));
+  const picked = await vscode.window.showQuickPick(
+    PLANNING_PROVIDER_CHOICES.map((item) => ({
+      ...item,
+      picked: item.providerId === configured,
+    })),
+    {
+      title: "Select Planning Provider",
+      placeHolder: "Choose how DryLake should generate this plan.",
+      ignoreFocusOut: true,
+    },
+  );
+
+  return picked?.providerId;
+}
+
 async function requireConnectedBuildSession(deps: RunbookCommandDeps) {
   if (deps.stateStore.getConnection().userEmail) {
     return true;
@@ -143,12 +358,17 @@ async function pickMode(arg?: unknown): Promise<XuMode | undefined> {
   return picked?.mode;
 }
 
-async function resolveProvider(stateStore: StateStore): Promise<DryLakeAiProvider> {
+async function resolveProvider(
+  stateStore: StateStore,
+  providerOverride?: DryLakeProviderId,
+): Promise<DryLakeAiProvider> {
+  const configuration = vscode.workspace.getConfiguration("drylake");
   const resolution = await resolveDryLakeAiProvider({
-    configuration: vscode.workspace.getConfiguration("drylake"),
+    configuration: configurationWithPlanningProvider(configuration, providerOverride),
     backendConfiguration: vscode.workspace.getConfiguration("xupra"),
     readConnection: () => stateStore.getConnection(),
     readAccessToken: () => stateStore.getAccessToken(),
+    readPlanningSecret: (providerId) => stateStore.getPlanningProviderSecret(providerId),
   });
 
   await stateStore.setPlanningProvider({
@@ -158,6 +378,48 @@ async function resolveProvider(stateStore: StateStore): Promise<DryLakeAiProvide
   });
 
   return resolution.provider;
+}
+
+async function preparePlanningProvider(
+  deps: RunbookCommandDeps,
+  providerId: DryLakeProviderId,
+): Promise<DryLakeAiProvider | undefined> {
+  const setup = isDirectPlanningProvider(providerId)
+    ? await ensureDirectPlanningProviderConfigured(deps, providerId)
+    : { enteredSecret: false };
+
+  if (!setup) {
+    return undefined;
+  }
+
+  const provider = await resolveProvider(deps.stateStore, providerId);
+  if (!isDirectPlanningProvider(providerId) || typeof provider.validateConnection !== "function") {
+    return provider;
+  }
+
+  const validation = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Testing ${provider.label} connection...`,
+      cancellable: false,
+    },
+    async () => provider.validateConnection!(),
+  );
+
+  if (!validation.available) {
+    if (setup.enteredSecret) {
+      await deps.stateStore.clearPlanningProviderSecret(providerId);
+    }
+
+    void vscode.window.showWarningMessage(
+      validation.reason
+        ? `${provider.label} connection failed: ${validation.reason}`
+        : `${provider.label} connection failed.`,
+    );
+    return undefined;
+  }
+
+  return provider;
 }
 
 async function persistModelTier(stateStore: StateStore, modelTier: unknown): Promise<void> {
@@ -293,8 +555,18 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
   await deps.controlRoom.refresh();
 
   try {
-    const provider = await resolveProvider(deps.stateStore);
     const current = await deps.sessionStore.readRunbook();
+    const providerId = current ? deps.stateStore.getBuildSession()?.providerId : await pickPlanningProvider();
+    if (!current && !providerId) {
+      return;
+    }
+
+    const provider = current
+      ? await resolveProvider(deps.stateStore, providerId)
+      : await preparePlanningProvider(deps, providerId!);
+    if (!provider) {
+      return;
+    }
 
     if (!current) {
       const mode = deps.stateStore.getBuildSession()?.mode ?? "build-app";
@@ -656,6 +928,7 @@ export async function startBuildSessionCommand(
   context: vscode.ExtensionContext,
   modeArg?: unknown,
   promptArg?: unknown,
+  providerArg?: unknown,
 ) {
   if (!(typeof promptArg === "string" && promptArg.trim())) {
     await deps.controlRoom.createOrShow(context);
@@ -673,13 +946,21 @@ export async function startBuildSessionCommand(
     return;
   }
 
-  if (!(await requireConnectedBuildSession(deps))) {
+  const providerId = await pickPlanningProvider(providerArg);
+  if (!providerId) {
+    return;
+  }
+
+  if (providerId === "xupra-pro-ai" && !(await requireConnectedBuildSession(deps))) {
     return;
   }
 
   await deps.controlRoom.createOrShow(context);
 
-  const provider = await resolveProvider(deps.stateStore);
+  const provider = await preparePlanningProvider(deps, providerId);
+  if (!provider) {
+    return;
+  }
   await deps.stateStore.setPlanningLoading(true);
   await deps.controlRoom.refresh();
 
@@ -749,7 +1030,15 @@ export async function generateDraftRunbookCommand(deps: RunbookCommandDeps) {
     return;
   }
 
-  const provider = await resolveProvider(deps.stateStore);
+  const providerId = await pickPlanningProvider();
+  if (!providerId) {
+    return;
+  }
+
+  const provider = await preparePlanningProvider(deps, providerId);
+  if (!provider) {
+    return;
+  }
   const ensured = await deps.sessionStore.ensureRunbook({ prompt: prompt.trim(), mode });
   await applyAiDraft({
     deps,
@@ -963,7 +1252,8 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
 
   const buildSession = deps.stateStore.getBuildSession();
   const promptPhase = { ...phase, agent };
-  const content = renderPhasePrompt(current.runbook, promptPhase, { activeProvider: buildSession });
+  const handoffProfile = handoffAction === "run" ? await pickHandoffProfile(agent) : undefined;
+  const content = renderPhasePrompt(current.runbook, promptPhase, { activeProvider: buildSession, handoffProfile });
   const workspaceUri = workspaceRoot();
   const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
 
@@ -1005,16 +1295,19 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
       await deps.sessionStore.writeRunbook(current.uri, updated);
     }
 
-    if (launchResult.status !== "launched") {
-      await vscode.env.clipboard.writeText(content);
-      const document = await vscode.workspace.openTextDocument(promptFile);
-      await vscode.window.showTextDocument(document, { preview: false });
-    }
-
     warning = launchResult.status === "not-installed" || launchResult.status === "failed";
     message = launchResult.status === "launched"
       ? launchResult.message
       : `${launchResult.message} Prompt copied to clipboard.`;
+
+    if (launchResult.status !== "launched") {
+      await showAgentLaunchFallbackActions({
+        result: launchResult,
+        promptContent: content,
+        promptFile,
+      });
+      message = "";
+    }
   }
 
   await deps.controlRoom.refresh();
@@ -1022,7 +1315,9 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
   const notify = warning
     ? vscode.window.showWarningMessage
     : vscode.window.showInformationMessage;
-  void notify(message);
+  if (message) {
+    void notify(message);
+  }
 }
 
 export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown, agentArg?: unknown) {

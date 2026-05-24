@@ -1,17 +1,20 @@
 import * as childProcess from "node:child_process";
+import { constants as fsConstants } from "node:fs";
+import * as fs from "node:fs/promises";
 import { promisify } from "node:util";
 import * as vscode from "vscode";
 
-import type { XuPhase, XuPhaseAgent } from "../xu/types";
+import { XU_PHASE_AGENTS, type XuPhase, type XuPhaseAgent } from "../xu/types";
 
 const execFile = promisify(childProcess.execFile);
 
 type TerminalAgent = {
   kind: "terminal";
   executable: string;
-  terminalCommand: (promptFilePath: string) => string;
-  shellScriptCommand: (promptFileRef: string) => string;
-  batchScriptCommand: () => string;
+  commandSetting: string;
+  terminalCommand: (promptFilePath: string, executableCommand?: string) => string;
+  shellScriptCommand: (promptFileRef: string, executableCommand?: string) => string;
+  batchScriptCommand: (executableCommand?: string) => string;
 };
 
 type VsCodeAgent = {
@@ -32,6 +35,33 @@ export type PhaseAgentLaunchResult = {
   message: string;
   promptFile?: vscode.Uri;
   command?: string;
+  agentLabel?: string;
+  executable?: string;
+  resolvedCommand?: string;
+  searchedPath?: string;
+  reason?: string;
+  reasonCode?: AgentLaunchFailureReason;
+};
+
+export type AgentLaunchFailureReason =
+  | "not-found"
+  | "bad-configured-path"
+  | "not-executable"
+  | "extension-missing"
+  | "launch-error"
+  | "unsupported-agent";
+
+export type PhaseAgentSetupDiagnostic = {
+  agent: XuPhaseAgent;
+  label: string;
+  kind: PhaseAgentLauncher["kind"];
+  status: "found" | "not-found";
+  command: string;
+  resolvedCommand?: string;
+  searchedPath?: string;
+  reason?: string;
+  help: string;
+  fallbackAvailable: true;
 };
 
 export const PHASE_HANDOFF_ACTIONS = ["run", "script-sh", "script-bat", "copy", "markdown"] as const;
@@ -69,20 +99,48 @@ function fromPromptFile(command: string, promptFilePath: string) {
   return `${command} "$(cat ${path})"`;
 }
 
-function shellPipeCommand(command: string) {
-  return (promptFileRef: string) => `cat ${promptFileRef} | ${command}`;
+function commandNeedsQuoting(command: string) {
+  return /\s/.test(command) || command.includes("/") || command.includes("\\") || /^[A-Za-z]:/.test(command);
 }
 
-function shellPromptArgCommand(command: string) {
-  return (promptFileRef: string) => `${command} "$(cat ${promptFileRef})"`;
+function shellExecutable(command: string) {
+  return commandNeedsQuoting(command) ? quoteShell(command) : command;
 }
 
-function batchPipeCommand(command: string) {
-  return () => `powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-Content -Raw $env:PROMPT_FILE | ${command}"`;
+function powerShellExecutable(command: string) {
+  return commandNeedsQuoting(command) ? `& ${quotePowerShell(command)}` : command;
 }
 
-function batchPromptArgCommand(command: string) {
-  return () => `powershell -NoProfile -ExecutionPolicy Bypass -Command "$prompt = Get-Content -Raw $env:PROMPT_FILE; ${command} $prompt"`;
+function shellCommand(executableCommand: string, args = "") {
+  return [shellExecutable(executableCommand), args].filter(Boolean).join(" ");
+}
+
+function powerShellCommand(executableCommand: string, args = "") {
+  return [powerShellExecutable(executableCommand), args].filter(Boolean).join(" ");
+}
+
+function crossShellCommand(executableCommand: string, args = "") {
+  return isWindows() ? powerShellCommand(executableCommand, args) : shellCommand(executableCommand, args);
+}
+
+function shellPipeCommand(executable: string, args = "") {
+  return (promptFileRef: string, executableCommand = executable) =>
+    `cat ${promptFileRef} | ${shellCommand(executableCommand, args)}`;
+}
+
+function shellPromptArgCommand(executable: string, args = "") {
+  return (promptFileRef: string, executableCommand = executable) =>
+    `${shellCommand(executableCommand, args)} "$(cat ${promptFileRef})"`;
+}
+
+function batchPipeCommand(executable: string, args = "") {
+  return (executableCommand = executable) =>
+    `powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-Content -Raw $env:PROMPT_FILE | ${powerShellCommand(executableCommand, args)}"`;
+}
+
+function batchPromptArgCommand(executable: string, args = "") {
+  return (executableCommand = executable) =>
+    `powershell -NoProfile -ExecutionPolicy Bypass -Command "$prompt = Get-Content -Raw $env:PROMPT_FILE; ${powerShellCommand(executableCommand, args)} $prompt"`;
 }
 
 export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
@@ -91,42 +149,61 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     label: "Claude Code",
     kind: "terminal",
     executable: "claude",
+    commandSetting: "agents.claude-code.command",
     help: "Install Claude Code CLI and make the `claude` command available on PATH.",
-    terminalCommand: (promptFilePath) => (isWindows()
-      ? `Get-Content -Raw ${quotePath(promptFilePath)} | claude -p`
-      : `cat ${quotePath(promptFilePath)} | claude -p`),
-    shellScriptCommand: shellPipeCommand("claude -p"),
-    batchScriptCommand: batchPipeCommand("claude -p"),
+    terminalCommand: (promptFilePath, executableCommand = "claude") => (isWindows()
+      ? `Get-Content -Raw ${quotePath(promptFilePath)} | ${powerShellCommand(executableCommand, "-p")}`
+      : `cat ${quotePath(promptFilePath)} | ${shellCommand(executableCommand, "-p")}`),
+    shellScriptCommand: shellPipeCommand("claude", "-p"),
+    batchScriptCommand: batchPipeCommand("claude", "-p"),
   },
   codex: {
     id: "codex",
     label: "OpenAI Codex",
     kind: "terminal",
     executable: "codex",
+    commandSetting: "agents.codex.command",
     help: "Install Codex CLI and make the `codex` command available on PATH.",
-    terminalCommand: (promptFilePath) => fromPromptFile("codex exec", promptFilePath),
-    shellScriptCommand: shellPromptArgCommand("codex exec"),
-    batchScriptCommand: batchPromptArgCommand("codex exec"),
+    terminalCommand: (promptFilePath, executableCommand = "codex") =>
+      fromPromptFile(crossShellCommand(executableCommand, "exec"), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("codex", "exec"),
+    batchScriptCommand: batchPromptArgCommand("codex", "exec"),
   },
   gemini: {
     id: "gemini",
     label: "Gemini CLI",
     kind: "terminal",
     executable: "gemini",
+    commandSetting: "agents.gemini.command",
     help: "Install Gemini CLI and make the `gemini` command available on PATH.",
-    terminalCommand: (promptFilePath) => fromPromptFile("gemini -p", promptFilePath),
-    shellScriptCommand: shellPromptArgCommand("gemini -p"),
-    batchScriptCommand: batchPromptArgCommand("gemini -p"),
+    terminalCommand: (promptFilePath, executableCommand = "gemini") =>
+      fromPromptFile(crossShellCommand(executableCommand, "-p"), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("gemini", "-p"),
+    batchScriptCommand: batchPromptArgCommand("gemini", "-p"),
+  },
+  hermes: {
+    id: "hermes",
+    label: "Hermes Agent",
+    kind: "terminal",
+    executable: "hermes",
+    commandSetting: "agents.hermes.command",
+    help: "Install Hermes Agent CLI, configure its model/provider, and make the `hermes` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "hermes") =>
+      fromPromptFile(crossShellCommand(executableCommand, "chat -q"), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("hermes", "chat -q"),
+    batchScriptCommand: batchPromptArgCommand("hermes", "chat -q"),
   },
   cursor: {
     id: "cursor",
     label: "Cursor CLI",
     kind: "terminal",
     executable: "cursor-agent",
+    commandSetting: "agents.cursor.command",
     help: "Install Cursor CLI and make the `cursor-agent` command available on PATH.",
-    terminalCommand: (promptFilePath) => fromPromptFile("cursor-agent -p", promptFilePath),
-    shellScriptCommand: shellPromptArgCommand("cursor-agent -p"),
-    batchScriptCommand: batchPromptArgCommand("cursor-agent -p"),
+    terminalCommand: (promptFilePath, executableCommand = "cursor-agent") =>
+      fromPromptFile(crossShellCommand(executableCommand, "-p"), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("cursor-agent", "-p"),
+    batchScriptCommand: batchPromptArgCommand("cursor-agent", "-p"),
   },
   copilot: {
     id: "copilot",
@@ -222,25 +299,33 @@ function promptScriptName(promptFile: vscode.Uri, shell: "sh" | "bat") {
   return promptFileName(promptFile).replace(/\.md$/i, `.${shell}`);
 }
 
+function configuredTerminalCommand(launcher: Extract<PhaseAgentLauncher, TerminalAgent>) {
+  const configured = vscode.workspace.getConfiguration("drylake").get<string>(launcher.commandSetting, launcher.executable);
+  const trimmed = typeof configured === "string" ? configured.trim() : "";
+  return trimmed || launcher.executable;
+}
+
 function renderShellScript(launcher: Extract<PhaseAgentLauncher, TerminalAgent>, promptFile: vscode.Uri) {
   const fileName = promptFileName(promptFile);
+  const executableCommand = configuredTerminalCommand(launcher);
   return [
     "#!/usr/bin/env bash",
     "set -euo pipefail",
     "HANDOFF_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"",
     `PROMPT_FILE="$HANDOFF_DIR/${fileName}"`,
-    launcher.shellScriptCommand('"$PROMPT_FILE"'),
+    launcher.shellScriptCommand('"$PROMPT_FILE"', executableCommand),
     "",
   ].join("\n");
 }
 
 function renderBatchScript(launcher: Extract<PhaseAgentLauncher, TerminalAgent>, promptFile: vscode.Uri) {
   const fileName = promptFileName(promptFile);
+  const executableCommand = configuredTerminalCommand(launcher);
   return [
     "@echo off",
     "setlocal",
     `set "PROMPT_FILE=%~dp0${fileName}"`,
-    launcher.batchScriptCommand(),
+    launcher.batchScriptCommand(executableCommand),
     "",
   ].join("\r\n");
 }
@@ -267,17 +352,153 @@ export async function writePhaseHandoffScript(params: {
   return uri;
 }
 
-async function executableExists(executable: string) {
+function pathLikeCommand(command: string) {
+  return command.includes("/") || command.includes("\\") || /^[A-Za-z]:[\\/]/.test(command);
+}
+
+function searchedPath() {
+  return process.env.PATH ?? process.env.Path ?? "";
+}
+
+function execStdout(result: unknown) {
+  if (typeof result === "string" || Buffer.isBuffer(result)) {
+    return String(result);
+  }
+
+  if (result && typeof result === "object" && "stdout" in result) {
+    return String((result as { stdout?: unknown }).stdout ?? "");
+  }
+
+  return "";
+}
+
+async function diagnoseTerminalLauncher(launcher: Extract<PhaseAgentLauncher, TerminalAgent>): Promise<PhaseAgentSetupDiagnostic> {
+  const command = configuredTerminalCommand(launcher);
+  const fallbackBase = {
+    agent: launcher.id,
+    label: launcher.label,
+    kind: launcher.kind,
+    command,
+    help: launcher.help,
+    fallbackAvailable: true as const,
+  };
+
+  if (pathLikeCommand(command)) {
+    try {
+      await fs.access(command, isWindows() ? fsConstants.F_OK : fsConstants.X_OK);
+      return {
+        ...fallbackBase,
+        status: "found",
+        resolvedCommand: command,
+        searchedPath: searchedPath(),
+      };
+    } catch {
+      return {
+        ...fallbackBase,
+        status: "not-found",
+        searchedPath: searchedPath(),
+        reason: `Configured ${launcher.label} command does not exist or is not executable: ${command}`,
+      };
+    }
+  }
+
   try {
-    await execFile(isWindows() ? "where" : "which", [executable]);
-    return true;
+    const result = await execFile(isWindows() ? "where" : "which", [command]);
+    const stdout = execStdout(result);
+    return {
+      ...fallbackBase,
+      status: "found",
+      resolvedCommand: stdout.split(/\r?\n/).find(Boolean)?.trim() || command,
+      searchedPath: searchedPath(),
+    };
   } catch {
-    return false;
+    return {
+      ...fallbackBase,
+      status: "not-found",
+      searchedPath: searchedPath(),
+      reason: `The command \`${command}\` was not found in VS Code's PATH.`,
+    };
   }
 }
 
 function hasExtension(extensionIds: string[]) {
   return extensionIds.some((id) => Boolean(vscode.extensions.getExtension(id)));
+}
+
+export async function diagnosePhaseAgentSetup(agent: XuPhaseAgent): Promise<PhaseAgentSetupDiagnostic> {
+  const launcher = PHASE_AGENT_LAUNCHERS[agent];
+  if (launcher.kind === "terminal") {
+    return diagnoseTerminalLauncher(launcher);
+  }
+
+  const found = hasExtension(launcher.extensionIds);
+  return {
+    agent,
+    label: launcher.label,
+    kind: launcher.kind,
+    status: found ? "found" : "not-found",
+    command: launcher.commandId,
+    reason: found ? undefined : `${launcher.label} extension is not installed or enabled in VS Code.`,
+    help: launcher.help,
+    fallbackAvailable: true,
+  };
+}
+
+export async function diagnosePhaseAgentSetups() {
+  return Promise.all(XU_PHASE_AGENTS.map((agent) => diagnosePhaseAgentSetup(agent)));
+}
+
+export function renderPhaseAgentSetupReport(diagnostics: PhaseAgentSetupDiagnostic[]) {
+  return [
+    "# DryLake Agent Setup",
+    "",
+    ...diagnostics.flatMap((diagnostic) => [
+      `## ${diagnostic.label}`,
+      "",
+      `- Status: ${diagnostic.status === "found" ? "Found" : "Not found"}`,
+      `- Command: \`${diagnostic.command}\``,
+      diagnostic.resolvedCommand ? `- Resolved command: \`${diagnostic.resolvedCommand}\`` : undefined,
+      diagnostic.searchedPath ? `- Searched PATH: \`${diagnostic.searchedPath}\`` : undefined,
+      diagnostic.reason ? `- Reason: ${diagnostic.reason}` : undefined,
+      "- Fallback: Markdown handoff available",
+      `- Setup: ${diagnostic.help}`,
+      "",
+    ].filter((line): line is string => typeof line === "string")),
+  ].join("\n");
+}
+
+export async function openPhaseAgentSetupReport() {
+  const diagnostics = await diagnosePhaseAgentSetups();
+  const document = await vscode.workspace.openTextDocument({
+    language: "markdown",
+    content: renderPhaseAgentSetupReport(diagnostics),
+  });
+  await vscode.window.showTextDocument(document, { preview: false });
+}
+
+function missingTerminalLaunchResult(params: {
+  launcher: Extract<PhaseAgentLauncher, TerminalAgent>;
+  diagnostic: PhaseAgentSetupDiagnostic;
+  promptFile: vscode.Uri;
+}): PhaseAgentLaunchResult {
+  const configuredPathMissing = pathLikeCommand(params.diagnostic.command);
+  const reasonCode: AgentLaunchFailureReason = configuredPathMissing ? "bad-configured-path" : "not-found";
+  const reason = params.diagnostic.reason ??
+    (configuredPathMissing
+      ? `Configured ${params.launcher.label} command does not exist: ${params.diagnostic.command}`
+      : `The command \`${params.diagnostic.command}\` was not found in VS Code's PATH.`);
+
+  return {
+    status: "not-installed",
+    message: `Could not launch ${params.launcher.label}. ${reason}`,
+    promptFile: params.promptFile,
+    agentLabel: params.launcher.label,
+    executable: params.diagnostic.command,
+    resolvedCommand: params.diagnostic.resolvedCommand,
+    searchedPath: params.diagnostic.searchedPath,
+    reason,
+    reasonCode,
+  };
 }
 
 async function launchTerminalAgent(params: {
@@ -286,29 +507,46 @@ async function launchTerminalAgent(params: {
   workspaceUri: vscode.Uri;
   terminalName?: string;
 }) {
-  const available = await executableExists(params.launcher.executable);
-  if (!available) {
-    return {
-      status: "not-installed" as const,
-      message: `${params.launcher.label} is not installed or is not on PATH. ${params.launcher.help}`,
-      promptFile: params.promptFile,
-    };
+  const diagnostic = await diagnoseTerminalLauncher(params.launcher);
+  if (diagnostic.status !== "found") {
+    return missingTerminalLaunchResult({ launcher: params.launcher, diagnostic, promptFile: params.promptFile });
   }
 
-  const command = params.launcher.terminalCommand(params.promptFile.fsPath);
-  const terminal = vscode.window.createTerminal({
-    name: params.terminalName ?? `DryLake: ${params.launcher.label}`,
-    cwd: params.workspaceUri.fsPath,
-    ...(isWindows() ? { shellPath: "powershell.exe" } : {}),
-  });
-  terminal.show(true);
-  terminal.sendText(command, true);
+  const executableCommand = diagnostic.resolvedCommand ?? diagnostic.command;
+  const command = params.launcher.terminalCommand(params.promptFile.fsPath, executableCommand);
+  try {
+    const terminal = vscode.window.createTerminal({
+      name: params.terminalName ?? `DryLake: ${params.launcher.label}`,
+      cwd: params.workspaceUri.fsPath,
+      ...(isWindows() ? { shellPath: "powershell.exe" } : {}),
+    });
+    terminal.show(true);
+    terminal.sendText(command, true);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      status: "failed" as const,
+      message: `Could not launch ${params.launcher.label}. VS Code could not create the terminal: ${detail}`,
+      promptFile: params.promptFile,
+      command,
+      agentLabel: params.launcher.label,
+      executable: diagnostic.command,
+      resolvedCommand: diagnostic.resolvedCommand,
+      searchedPath: diagnostic.searchedPath,
+      reason: `VS Code could not create the terminal: ${detail}`,
+      reasonCode: "launch-error" as const,
+    };
+  }
 
   return {
     status: "launched" as const,
     message: `Started ${params.launcher.label} for this phase.`,
     promptFile: params.promptFile,
     command,
+    agentLabel: params.launcher.label,
+    executable: diagnostic.command,
+    resolvedCommand: diagnostic.resolvedCommand,
+    searchedPath: diagnostic.searchedPath,
   };
 }
 
@@ -320,8 +558,12 @@ async function launchVsCodeAgent(params: {
   if (!hasExtension(params.launcher.extensionIds)) {
     return {
       status: "not-installed" as const,
-      message: `${params.launcher.label} is not installed. ${params.launcher.help}`,
+      message: `Could not launch ${params.launcher.label}. ${params.launcher.label} extension is not installed or enabled in VS Code.`,
       promptFile: params.promptFile,
+      agentLabel: params.launcher.label,
+      executable: params.launcher.commandId,
+      reason: `${params.launcher.label} extension is not installed or enabled in VS Code.`,
+      reasonCode: "extension-missing" as const,
     };
   }
 
@@ -331,14 +573,84 @@ async function launchVsCodeAgent(params: {
       status: "launched" as const,
       message: `Opened ${params.launcher.label} with the phase prompt.`,
       promptFile: params.promptFile,
+      agentLabel: params.launcher.label,
+      executable: params.launcher.commandId,
     };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
       status: "failed" as const,
-      message: `DryLake could not open ${params.launcher.label}: ${detail}`,
+      message: `Could not launch ${params.launcher.label}. VS Code command failed: ${detail}`,
       promptFile: params.promptFile,
+      agentLabel: params.launcher.label,
+      executable: params.launcher.commandId,
+      reason: `VS Code command failed: ${detail}`,
+      reasonCode: "launch-error" as const,
     };
+  }
+}
+
+export function formatAgentLaunchFallbackMessage(result: PhaseAgentLaunchResult) {
+  const agentLabel = result.agentLabel ?? "the selected agent";
+  const reason = result.reason ?? result.message;
+  return [
+    `Could not launch ${agentLabel}.`,
+    "",
+    "Reason:",
+    reason,
+    "",
+    "DryLake generated the handoff successfully, but the external CLI could not be started.",
+    "",
+    "Options:",
+    "- Copy the handoff Markdown.",
+    "- Open DryLake agent settings.",
+    "- Retry detection.",
+    "- View setup instructions.",
+  ].join("\n");
+}
+
+export async function showAgentLaunchFallbackActions(params: {
+  result: PhaseAgentLaunchResult;
+  promptContent?: string;
+  promptFile?: vscode.Uri;
+}) {
+  let promptContent = params.promptContent;
+  if (!promptContent && params.promptFile) {
+    try {
+      const bytes = await vscode.workspace.fs.readFile(params.promptFile);
+      promptContent = new TextDecoder("utf-8").decode(bytes);
+    } catch {
+      promptContent = undefined;
+    }
+  }
+
+  if (promptContent) {
+    await vscode.env.clipboard.writeText(promptContent);
+  }
+
+  if (params.promptFile) {
+    const document = await vscode.workspace.openTextDocument(params.promptFile);
+    await vscode.window.showTextDocument(document, { preview: false });
+  }
+
+  const choice = await vscode.window.showWarningMessage(
+    formatAgentLaunchFallbackMessage(params.result),
+    { modal: true },
+    "Copy Handoff Markdown",
+    "Open Agent Settings",
+    "Retry Detection",
+    "View Setup Guide",
+  );
+
+  if (choice === "Copy Handoff Markdown" && promptContent) {
+    await vscode.env.clipboard.writeText(promptContent);
+    void vscode.window.showInformationMessage("Handoff Markdown copied to clipboard.");
+  } else if (choice === "Open Agent Settings") {
+    await vscode.commands.executeCommand("workbench.action.openSettings", "@ext:xupracorp.drylake drylake.agents");
+  } else if (choice === "Retry Detection") {
+    await vscode.commands.executeCommand("drylake.checkAgentSetup");
+  } else if (choice === "View Setup Guide") {
+    await vscode.commands.executeCommand("xupra.openInstallGuide");
   }
 }
 
@@ -354,6 +666,7 @@ export async function launchPhaseAgent(params: {
       status: "fallback",
       message: "DryLake copied the phase prompt and saved a handoff file because this agent is not supported by this build.",
       promptFile: params.promptFile,
+      reasonCode: "unsupported-agent",
     };
   }
 
@@ -377,6 +690,7 @@ export async function launchAgentTask(params: {
       status: "fallback",
       message: "DryLake saved the task prompt because this agent is not supported by this build.",
       promptFile: params.promptFile,
+      reasonCode: "unsupported-agent",
     };
   }
 

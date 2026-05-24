@@ -13,6 +13,7 @@ const KEY = "xupra.selectedContext";
 const CONNECTION_KEY = "xupra.connection";
 const DETECTED_FILES_KEY = "xupra.detectedFiles";
 const ACCESS_TOKEN_KEY = "xupra.extensionAccessToken";
+const PLANNING_SECRET_PREFIX = "drylake.planningSecret.";
 const LAST_IMPORT_KEY = "xupra.lastImport";
 const AWAITING_PLAN_REFRESH_KEY = "xupra.awaitingPlanRefreshUntil";
 const BUILD_SESSION_KEY = "drylake.buildSession";
@@ -204,5 +205,17 @@ export class StateStore {
 
   async clearAccessToken() {
     await this.context.secrets.delete(ACCESS_TOKEN_KEY);
+  }
+
+  async getPlanningProviderSecret(providerId: BuildSessionState["providerId"]) {
+    return this.context.secrets.get(`${PLANNING_SECRET_PREFIX}${providerId}`);
+  }
+
+  async setPlanningProviderSecret(providerId: BuildSessionState["providerId"], value: string) {
+    await this.context.secrets.store(`${PLANNING_SECRET_PREFIX}${providerId}`, value);
+  }
+
+  async clearPlanningProviderSecret(providerId: BuildSessionState["providerId"]) {
+    await this.context.secrets.delete(`${PLANNING_SECRET_PREFIX}${providerId}`);
   }
 }

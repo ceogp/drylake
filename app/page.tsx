@@ -38,6 +38,7 @@ const proofPoints = [
 ];
 
 const trustLinks = [
+  { label: "Open source GitHub", href: "https://github.com/gmkdigitalmedia/drylake" },
   { label: "99VC", href: "https://ninetynine.vc/" },
   { label: "AWS Startups", href: "https://aws.amazon.com/startups/" },
   { label: "AWS Cloud", href: "https://aws.amazon.com/" },
@@ -51,6 +52,8 @@ const securityPoints = [
   ["AWS security controls", "Runtime secrets can use AWS Secrets Manager, and S3 artifacts support AWS KMS encryption."],
   ["GitLab CI/CD", "Production deploys run through GitLab validation, HTTPS checks, audit logs, and environment isolation guards."],
 ];
+
+const discordHref = "https://discord.gg/WQdapuVn";
 
 function StatusPill({ children }: { children: string }) {
   return (
@@ -180,10 +183,16 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
               <ActionLink href={secondaryHref} variant="secondary">
                 View pricing
               </ActionLink>
+              <ActionLink href="https://github.com/gmkdigitalmedia/drylake" variant="secondary">
+                Open source GitHub
+              </ActionLink>
+              <ActionLink href={discordHref} variant="secondary">
+                Join Discord
+              </ActionLink>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.16em] text-zinc-500">
               <span>Backed by</span>
-              {trustLinks.slice(0, 2).map((item) => (
+              {trustLinks.slice(1, 3).map((item) => (
                 <a
                   key={item.label}
                   className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 font-semibold text-zinc-300 transition hover:border-orange-400 hover:text-orange-200"

@@ -30,6 +30,7 @@ const monoFont = JetBrains_Mono({
 });
 
 const xupraHomepage = "https://xupracorp.com";
+const discordHref = "https://discord.gg/WQdapuVn";
 
 export const metadata: Metadata = {
   title: {
@@ -91,6 +92,9 @@ export default async function RootLayout({
             <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/about">
               About
             </Link>
+            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={discordHref} rel="noreferrer" target="_blank">
+              Discord
+            </a>
             <a className="rounded border border-emerald-400 bg-emerald-400 px-3 py-2 text-zinc-950 transition hover:bg-emerald-300" href={dryLakeOrigin}>
               DryLake
             </a>

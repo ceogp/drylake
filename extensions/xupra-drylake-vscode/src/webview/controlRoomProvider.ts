@@ -5,10 +5,13 @@ import {
   phaseAgentHint,
   phaseAgentLabel,
 } from "../agents/phaseAgentLauncher";
+import { renderPhasePrompt } from "../generators/renderPhasePrompt";
 import { describePhaseChange, isPendingPhaseUnresolved } from "../xu/pendingPlanChanges";
 import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
+import { estimateTokens, formatEstimatedTokens } from "../utils/tokenEstimate";
 import type { ChatState, PlanningModelTier, PlanningProviderInfo } from "../services/stateStore";
+import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
 import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../xu/types";
 import type { PendingPlanChangeSet } from "../xu/pendingPlanChanges";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
@@ -20,6 +23,14 @@ const MODE_CARDS: Array<[string, XuMode, string]> = [
   ["Break Into Steps", "phases", "Clarify intent, then split the task into safe coding steps."],
   ["Plan", "plan", "Generate a file-aware plan for a complex repo change."],
   ["Review", "review", "Review existing code and produce a correction plan."],
+];
+
+const PLANNING_PROVIDERS: Array<[DryLakeProviderId, string, string]> = [
+  ["xupra-pro-ai", "Xupra AI", "Hosted planning"],
+  ["databricks-api", "Databricks API", "BYO endpoint"],
+  ["claude-api", "Claude API", "BYO Anthropic key"],
+  ["openai-api", "OpenAI API", "BYO OpenAI key"],
+  ["hermes-agent", "Hermes Agent CLI", "Local/BYO model"],
 ];
 
 const STATUS_LABELS: Record<XuStepStatus, string> = {
@@ -47,6 +58,12 @@ function modeFrom(value: unknown): XuMode {
   return typeof value === "string" && MODE_CARDS.some(([, mode]) => mode === value)
     ? (value as XuMode)
     : "build-app";
+}
+
+function planningProviderFrom(value: unknown): DryLakeProviderId {
+  return typeof value === "string" && PLANNING_PROVIDERS.some(([id]) => id === value)
+    ? (value as DryLakeProviderId)
+    : "xupra-pro-ai";
 }
 
 function autopilotEnabled(runbook: ApplicationBuildRunbook | null) {
@@ -131,6 +148,10 @@ function renderPlanChangeOverlay(
   </div>`;
 }
 
+function renderTokenMeter(label: string, content: string) {
+  return `<div class="token-meter" title="Approximate prompt token estimate."><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatEstimatedTokens(estimateTokens(content)))}</strong></div>`;
+}
+
 function renderPhaseCard(
   phase: XuPhase,
   options: { draggable: boolean; runbook: ApplicationBuildRunbook; pendingPlanChange: PendingPlanChangeSet | null },
@@ -145,6 +166,7 @@ function renderPhaseCard(
   const primaryLabel = primary?.label ?? "Handoff";
   const primaryTitle = primary?.title ?? actionHint;
   const disabled = selectedAgent ? "" : " disabled";
+  const tokenMeter = renderTokenMeter("Prompt", renderPhasePrompt(options.runbook, phase));
   const secondaryButtons = secondary
     .map((option) => {
       const shortLabel = option.action === "script-sh"
@@ -165,6 +187,7 @@ function renderPhaseCard(
     <h3 class="phase-title">${escapeHtml(phase.title)}</h3>
     <span class="badge ${statusClass(phase.status)}">${escapeHtml(STATUS_LABELS[phase.status])}</span>
     <p class="objective" title="${escapeHtml(phase.objective)}">${escapeHtml(phase.objective || "No objective recorded.")}</p>
+    ${tokenMeter}
     ${renderAgentSelect(phase)}
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
@@ -274,6 +297,7 @@ type WebviewMessage = {
   status?: unknown;
   text?: unknown;
   mode?: unknown;
+  planningProvider?: unknown;
 };
 
 type PlanningProviderReader = () => PlanningProviderInfo | null;
@@ -289,17 +313,38 @@ function formatChatTime(ts: number) {
   }
 }
 
-function renderChatPanel(state: ChatState, planningProviderLabel: string, hasPlan: boolean, collapsed: boolean) {
+function renderChatPanel(
+  state: ChatState,
+  planningProvider: PlanningProviderInfo | null,
+  hasPlan: boolean,
+  collapsed: boolean,
+) {
+  const activeProviderId = planningProvider?.id ?? "xupra-pro-ai";
+  const activeProviderLabel = planningProvider?.label ?? "Planning AI";
   const modeChips = MODE_CARDS.map(([title, mode], index) => {
     return `<button type="button" class="mode-chip${index === 0 ? " active" : ""}" data-mode="${mode}" aria-pressed="${index === 0 ? "true" : "false"}">${escapeHtml(title)}</button>`;
   }).join("");
+  const providerOptions = PLANNING_PROVIDERS.map(([id, label, description]) => {
+    const selected = id === activeProviderId ? " selected" : "";
+    return `<option value="${escapeHtml(id)}"${selected}>${escapeHtml(label)} - ${escapeHtml(description)}</option>`;
+  }).join("");
+  const providerLocked = hasPlan ? " disabled" : "";
+  const providerTitle = hasPlan
+    ? "This plan keeps the planning provider selected when the session started."
+    : "Choose the planning provider before sending the first message.";
+  const providerSelector = `<label class="planning-provider-label" title="${escapeHtml(providerTitle)}">
+    <span>Planning Agent</span>
+    <select id="planningProviderSelect" class="planning-provider-select"${providerLocked} aria-label="Planning provider">
+      ${providerOptions}
+    </select>
+  </label>`;
   const messages = state.messages.length
     ? state.messages
         .map((message) => {
           const roleClass =
             message.role === "user" ? "user" : message.role === "system" ? "system" : "ai";
           const senderLabel =
-            message.role === "user" ? "You" : message.role === "system" ? "DryLake" : planningProviderLabel;
+            message.role === "user" ? "You" : message.role === "system" ? "DryLake" : activeProviderLabel;
           return `<div class="chat-message ${roleClass}">
             <div class="chat-meta"><span class="chat-sender">${escapeHtml(senderLabel)}</span><span class="chat-time">${escapeHtml(formatChatTime(message.ts))}</span></div>
             <div class="chat-body">${escapeHtml(message.text).replace(/\n/g, "<br />")}</div>
@@ -318,6 +363,7 @@ function renderChatPanel(state: ChatState, planningProviderLabel: string, hasPla
     </div>
     ${collapsed ? "" : `<div class="chat-messages" id="chatMessages">${messages}</div>
       <div class="mode-row">${modeChips}</div>
+      ${providerSelector}
       <form class="chat-form" id="chatForm">
         <textarea id="chatInput" rows="2" placeholder="${hasPlan ? "Tell the planning AI what to refine." : "e.g. Build a Stripe checkout flow with webhook handling"}"></textarea>
         <div class="chat-form-row">
@@ -416,6 +462,7 @@ export class ControlRoomProvider {
           message.command,
           modeFrom(message.mode ?? message.args?.[0]),
           message.text ?? message.args?.[1],
+          planningProviderFrom(message.planningProvider ?? message.args?.[2]),
         );
         return;
       }
@@ -478,9 +525,8 @@ export class ControlRoomProvider {
     const view = this.currentView();
     const planningProvider = this.readPlanningProvider();
     const chatState = this.readChatState();
-    const planningProviderLabel = planningProvider?.label ?? "Planning AI";
     const banner = renderPlanningModelBanner(this.readLastModelTier());
-    const chatPanel = renderChatPanel(chatState, planningProviderLabel, Boolean(runbook), this.chatCollapsed());
+    const chatPanel = renderChatPanel(chatState, planningProvider, Boolean(runbook), this.chatCollapsed());
     const body = this.readPlanningLoading()
       ? renderKanbanLoadingState()
       : runbook ? (view === "kanban" ? renderKanban(runbook, pendingPlanChange) : renderPipeline(runbook, pendingPlanChange)) : renderKanbanEmptyState();
@@ -528,6 +574,8 @@ export class ControlRoomProvider {
     .badge.active { border-color: rgba(251, 146, 60, 0.6); background: var(--drylake-orange-soft); color: #fed7aa; }
     .badge.approved, .badge.complete { border-color: rgba(52, 211, 153, 0.55); background: var(--drylake-green-soft); color: #a7f3d0; }
     .objective { min-height: 32px; margin-bottom: 8px; font-size: 11px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .token-meter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; padding: 4px 6px; border: 1px solid var(--drylake-line); border-radius: 4px; background: var(--drylake-bg); color: var(--drylake-muted); font-size: 10px; font-weight: 800; }
+    .token-meter strong { color: #a7f3d0; font-weight: 900; white-space: nowrap; }
     .agent-label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
     .agent-select { width: 100%; margin-top: 4px; padding: 4px 6px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 11px; }
     .step-count { margin-top: 8px; font-size: 10px; }
@@ -553,6 +601,9 @@ export class ControlRoomProvider {
     .mode-row { display: flex; flex-wrap: wrap; gap: 6px; }
     .mode-chip { padding: 4px 8px; border: 1px solid #3f3f46; border-radius: 999px; color: var(--drylake-text); background: var(--drylake-bg); font-size: 10px; box-shadow: none; }
     .mode-chip.active { border-color: var(--drylake-green); background: var(--drylake-green-soft); color: #a7f3d0; }
+    .planning-provider-label { display: grid; grid-template-columns: minmax(0, 120px) minmax(0, 1fr); align-items: center; gap: 8px; color: var(--drylake-muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+    .planning-provider-select { width: 100%; min-width: 0; padding: 6px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; text-transform: none; letter-spacing: 0; }
+    .planning-provider-select:disabled { opacity: 0.72; cursor: not-allowed; }
     .nano-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; margin: 0 0 14px; border: 1px solid rgba(251, 146, 60, 0.45); border-radius: 6px; background: var(--drylake-orange-soft); font-size: 12px; }
     .nano-banner-text, .plan-change-eyebrow { color: #fed7aa; }
     .nano-banner-cta { padding: 4px 10px; font-size: 11px; white-space: nowrap; }
@@ -630,6 +681,8 @@ export class ControlRoomProvider {
 
     const chatForm = document.getElementById("chatForm");
     const chatInput = document.getElementById("chatInput");
+    const planningProviderSelect = document.getElementById("planningProviderSelect");
+    let selectedProvider = planningProviderSelect?.value || "xupra-pro-ai";
     function sendChat() {
       if (!chatInput) {
         return;
@@ -642,7 +695,8 @@ export class ControlRoomProvider {
       vscode.postMessage({
         command: hasPlan ? "drylake.chatSendMessage" : "drylake.startBuildSession",
         text: text,
-        mode: selectedMode
+        mode: selectedMode,
+        planningProvider: selectedProvider
       });
       chatInput.value = "";
     }
@@ -732,6 +786,13 @@ export class ControlRoomProvider {
     });
 
     document.addEventListener("change", (event) => {
+      const providerSelect = event.target.closest("#planningProviderSelect");
+      if (providerSelect) {
+        selectedProvider = providerSelect.value || "xupra-pro-ai";
+        document.getElementById("chatInput")?.focus();
+        return;
+      }
+
       const select = event.target.closest("[data-phase-agent]");
       if (select) {
         vscode.postMessage({
