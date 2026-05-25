@@ -28,16 +28,56 @@ You can override the default with `--secret-id` or set a different prefix with `
 
 ## Local Setup On A New Laptop
 
-Install Node, clone the repo, install dependencies, then authenticate to AWS using SSO or normal AWS credentials.
+Install Node 22 or newer, clone the repo, then run the bootstrap script.
 
 ```powershell
-npm ci
+git clone https://gitlab.com/gmkdigitalmedia1/drylake.git
+cd drylake
+.\bootstrap.ps1
+```
+
+The bootstrap script:
+
+- runs `npm ci` if dependencies are missing.
+- pulls the development `.env` bundle from AWS Secrets Manager when `.env` is missing.
+- validates `.env` when it already exists.
+- starts local Postgres with Docker Compose when the database URL points at localhost and Docker is available.
+- runs Prisma generate, migrations, and seed.
+
+If the machine does not have AWS credentials yet, the script stops with the exact missing login step. The one-time AWS setup is:
+
+```powershell
 aws configure sso
 aws sso login --profile xupra
 $env:AWS_PROFILE = "xupra"
-$env:AWS_REGION = "ap-northeast-1"
-npm run secrets:pull -- --env development --file .env --force
-npm run secrets:check -- --env development --file .env
+```
+
+If AWS CLI is not installed or is broken, the Node AWS SDK still works with a valid `~/.aws/config` and `~/.aws/credentials`.
+
+To force-refresh `.env` from AWS:
+
+```powershell
+.\bootstrap.ps1 --refresh-env
+```
+
+To run validation during bootstrap:
+
+```powershell
+.\bootstrap.ps1 --validate
+```
+
+If the local Docker database was already created with different credentials:
+
+```powershell
+.\bootstrap.ps1 --reset-db
+```
+
+This deletes only the local Docker Postgres volume.
+
+To start the dev server after setup:
+
+```powershell
+.\bootstrap.ps1 --start
 ```
 
 Use the actual AWS profile and region for the account.

@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "bootstrap": "node scripts/bootstrap-dev.mjs",
+    "setup": "node scripts/bootstrap-dev.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

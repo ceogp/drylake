@@ -3,11 +3,11 @@ services:
     image: postgres:16
     container_name: xupra-drylake-db
     environment:
-      POSTGRES_DB: xupra_drylake
-      POSTGRES_USER: xupra_app
-      POSTGRES_PASSWORD: xupra_local
+      POSTGRES_DB: ${POSTGRES_DB:-xupra_drylake}
+      POSTGRES_USER: ${POSTGRES_USER:-xupra_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-xupra_local}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - xupra_pgdata:/var/lib/postgresql/data
     restart: unless-stopped
