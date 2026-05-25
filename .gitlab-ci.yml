@@ -94,6 +94,9 @@ validate:
       - stuck_or_timeout_failure
       - script_failure
   image: node:22-bookworm
+  id_tokens:
+    GITLAB_AWS_OIDC_TOKEN:
+      aud: https://gitlab.com
   before_script:
     - |
       missing_tools=""
@@ -109,6 +112,13 @@ validate:
         apt-get install -y openssh-client git
       else
         echo "Deploy tools already available in CI image."
+      fi
+    - |
+      if [ -n "${AWS_ROLE_ARN:-}" ] && [ -n "${GITLAB_AWS_OIDC_TOKEN:-}" ]; then
+        export AWS_WEB_IDENTITY_TOKEN_FILE="$CI_PROJECT_DIR/.aws-web-identity-token"
+        printf '%s' "$GITLAB_AWS_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
+        chmod 600 "$AWS_WEB_IDENTITY_TOKEN_FILE"
+        echo "Configured GitLab OIDC web identity for AWS deploy secrets."
       fi
     - eval "$(ssh-agent -s)"
     - mkdir -p ~/.ssh
@@ -179,10 +189,19 @@ validate:
     - ': "${DEPLOY_HOST:?DEPLOY_HOST is required}"'
     - ': "${DEPLOY_SSH_USER:?DEPLOY_SSH_USER is required}"'
     - ': "${DEPLOY_SSH_PRIVATE_KEY:?DEPLOY_SSH_PRIVATE_KEY is required}"'
-    - ': "${DEPLOY_ENV_FILE:?DEPLOY_ENV_FILE is required}"'
+    - |
+      if [ -z "${DEPLOY_ENV_FILE:-}" ] && [ -z "${DEPLOY_ENV_SECRET_ID:-}" ]; then
+        echo "DEPLOY_ENV_FILE or DEPLOY_ENV_SECRET_ID is required." >&2
+        exit 1
+      fi
     - git archive --format=tar HEAD -o release.tar
     - |
-      if [ -f "$DEPLOY_ENV_FILE" ]; then
+      if [ -n "${DEPLOY_ENV_SECRET_ID:-}" ]; then
+        if [ ! -d node_modules/@aws-sdk/client-secrets-manager ]; then
+          npm ci --omit=dev --prefer-offline --no-audit --fund=false
+        fi
+        node scripts/aws/env-secrets.mjs print --secret-id "$DEPLOY_ENV_SECRET_ID" > deploy.env
+      elif [ -f "$DEPLOY_ENV_FILE" ]; then
         cp "$DEPLOY_ENV_FILE" deploy.env
       else
         printf "%s" "$DEPLOY_ENV_FILE" > deploy.env
@@ -291,6 +310,7 @@ validate:
         return {
           name: prefix.toLowerCase(),
           deployHost: normalize(process.env[`${prefix}_HOST`]),
+          envSecretId: normalize(process.env[`${prefix}_ENV_SECRET_ID`]),
           appBaseUrl: appOrigin(process.env[`${prefix}_URL`] || envFile.APP_BASE_URL),
           database: databaseFingerprint(envFile.DATABASE_URL),
           s3Bucket: normalize(envFile.AWS_S3_BUCKET),
@@ -301,6 +321,7 @@ validate:
       const current = {
         name: currentName,
         deployHost: normalize(process.env.DEPLOY_HOST),
+        envSecretId: normalize(process.env.DEPLOY_ENV_SECRET_ID),
         appBaseUrl: appOrigin(process.env.DEPLOY_URL || currentEnvFile.APP_BASE_URL),
         database: databaseFingerprint(currentEnvFile.DATABASE_URL),
         s3Bucket: normalize(currentEnvFile.AWS_S3_BUCKET),
@@ -321,7 +342,7 @@ validate:
 
       const configured = prefixes
         .map(collect)
-        .filter((item) => item.deployHost || item.appBaseUrl || item.database || item.s3Bucket);
+        .filter((item) => item.deployHost || item.envSecretId || item.appBaseUrl || item.database || item.s3Bucket);
 
       if (!configured.some((item) => item.name === current.name)) {
         configured.push(current);
@@ -329,6 +350,7 @@ validate:
 
       const fields = [
         ["deployHost", "DEPLOY_HOST"],
+        ["envSecretId", "ENV_SECRET_ID"],
         ["appBaseUrl", "APP_BASE_URL"],
         ["database", "DATABASE_URL host/database"],
         ["s3Bucket", "AWS_S3_BUCKET"],
@@ -428,6 +450,7 @@ deploy_development:
     DEPLOY_SSH_USER: $DEVELOPMENT_SSH_USER
     DEPLOY_SSH_PRIVATE_KEY: $DEVELOPMENT_SSH_PRIVATE_KEY
     DEPLOY_ENV_FILE: $DEVELOPMENT_ENV_FILE
+    DEPLOY_ENV_SECRET_ID: $DEVELOPMENT_ENV_SECRET_ID
     DEPLOY_URL: $DEVELOPMENT_URL
   environment:
     name: development
@@ -435,7 +458,7 @@ deploy_development:
   rules:
     - if: '$DEPLOY_FREEZE == "true"'
       when: never
-    - if: '$CI_COMMIT_BRANCH == "development" && $CI_COMMIT_REF_PROTECTED == "true" && $DEVELOPMENT_HOST && $DEVELOPMENT_SSH_USER && $DEVELOPMENT_SSH_PRIVATE_KEY && $DEVELOPMENT_ENV_FILE'
+    - if: '$CI_COMMIT_BRANCH == "development" && $CI_COMMIT_REF_PROTECTED == "true" && $DEVELOPMENT_HOST && $DEVELOPMENT_SSH_USER && $DEVELOPMENT_SSH_PRIVATE_KEY && ($DEVELOPMENT_ENV_FILE || $DEVELOPMENT_ENV_SECRET_ID)'
       when: manual
 
 verify_development:
@@ -447,7 +470,7 @@ verify_development:
   rules:
     - if: '$DEPLOY_FREEZE == "true"'
       when: never
-    - if: '$CI_COMMIT_BRANCH == "development" && $CI_COMMIT_REF_PROTECTED == "true" && $DEVELOPMENT_HOST && $DEVELOPMENT_SSH_USER && $DEVELOPMENT_SSH_PRIVATE_KEY && $DEVELOPMENT_ENV_FILE && $DEVELOPMENT_URL'
+    - if: '$CI_COMMIT_BRANCH == "development" && $CI_COMMIT_REF_PROTECTED == "true" && $DEVELOPMENT_HOST && $DEVELOPMENT_SSH_USER && $DEVELOPMENT_SSH_PRIVATE_KEY && ($DEVELOPMENT_ENV_FILE || $DEVELOPMENT_ENV_SECRET_ID) && $DEVELOPMENT_URL'
       when: on_success
 
 deploy_staging:
@@ -457,6 +480,7 @@ deploy_staging:
     DEPLOY_SSH_USER: $STAGING_SSH_USER
     DEPLOY_SSH_PRIVATE_KEY: $STAGING_SSH_PRIVATE_KEY
     DEPLOY_ENV_FILE: $STAGING_ENV_FILE
+    DEPLOY_ENV_SECRET_ID: $STAGING_ENV_SECRET_ID
     DEPLOY_URL: $STAGING_URL
     REQUIRE_HTTPS_URL: "true"
   environment:
@@ -465,7 +489,7 @@ deploy_staging:
   rules:
     - if: '$DEPLOY_FREEZE == "true"'
       when: never
-    - if: '$CI_COMMIT_BRANCH == "staging" && $CI_COMMIT_REF_PROTECTED == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE'
+    - if: '$CI_COMMIT_BRANCH == "staging" && $CI_COMMIT_REF_PROTECTED == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && ($STAGING_ENV_FILE || $STAGING_ENV_SECRET_ID)'
       when: manual
 
 verify_staging:
@@ -477,7 +501,7 @@ verify_staging:
   rules:
     - if: '$DEPLOY_FREEZE == "true"'
       when: never
-    - if: '$CI_COMMIT_BRANCH == "staging" && $CI_COMMIT_REF_PROTECTED == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && $STAGING_ENV_FILE && $STAGING_URL'
+    - if: '$CI_COMMIT_BRANCH == "staging" && $CI_COMMIT_REF_PROTECTED == "true" && $STAGING_HOST && $STAGING_SSH_USER && $STAGING_SSH_PRIVATE_KEY && ($STAGING_ENV_FILE || $STAGING_ENV_SECRET_ID) && $STAGING_URL'
       when: on_success
 
 deploy_production:
@@ -487,6 +511,7 @@ deploy_production:
     DEPLOY_SSH_USER: $PRODUCTION_SSH_USER
     DEPLOY_SSH_PRIVATE_KEY: $PRODUCTION_SSH_PRIVATE_KEY
     DEPLOY_ENV_FILE: $PRODUCTION_ENV_FILE
+    DEPLOY_ENV_SECRET_ID: $PRODUCTION_ENV_SECRET_ID
     DEPLOY_URL: $PRODUCTION_URL
   environment:
     name: production
