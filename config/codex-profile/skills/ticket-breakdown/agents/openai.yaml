@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ticket Breakdown"
+  short_description: "Create concise implementation ticket breakdowns"
+  default_prompt: "Use $ticket-breakdown to turn these specs into implementation tickets."

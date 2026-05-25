@@ -1,0 +1,4 @@
+interface:
+  display_name: "PM Flows"
+  short_description: "Design product flows through dialogue"
+  default_prompt: "Use $pm-flows to define the product-level user flows for this feature."

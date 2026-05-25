@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tech Plan"
+  short_description: "Create collaborative technical plans"
+  default_prompt: "Use $tech-plan to create the technical plan for this feature."

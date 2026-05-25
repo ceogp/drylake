@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tech Planner"
+  short_description: "Collaborative technical architecture planning"
+  default_prompt: "Use $tech-planner to align on a technical plan before implementation."

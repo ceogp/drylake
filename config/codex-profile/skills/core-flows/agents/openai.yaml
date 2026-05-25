@@ -1,0 +1,4 @@
+interface:
+  display_name: "Core Flows"
+  short_description: "Define product-level user journeys"
+  default_prompt: "Use $core-flows to define the core user flows for this feature."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Validation"
+  short_description: "Stress-test technical architecture plans"
+  default_prompt: "Use $architecture-validation to validate this Tech Plan before ticket breakdown."

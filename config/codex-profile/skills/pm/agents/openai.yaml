@@ -1,0 +1,4 @@
+interface:
+  display_name: "PM"
+  short_description: "Refine product experience through dialogue"
+  default_prompt: "Use $pm to refine the product experience and user-flow decisions."

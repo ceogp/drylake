@@ -1,0 +1,4 @@
+interface:
+  display_name: "Revise Requirements"
+  short_description: "Propagate requirement changes through specs"
+  default_prompt: "Use $revise-requirements to update specs after a requirement change."

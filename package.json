@@ -16,6 +16,7 @@
     "validate:local": "tsx scripts/validate-local.ts",
     "worker:once": "tsx scripts/run-worker.ts",
     "worker:smoke": "tsx scripts/smoke-worker.ts",
+    "machine:apply": "node scripts/machine-profile/apply.mjs",
     "secrets:push": "node scripts/aws/env-secrets.mjs push",
     "secrets:pull": "node scripts/aws/env-secrets.mjs pull",
     "secrets:check": "node scripts/aws/env-secrets.mjs check",

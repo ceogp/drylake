@@ -1,0 +1,4 @@
+interface:
+  display_name: "Epic Brief"
+  short_description: "Define the product problem and scope"
+  default_prompt: "Use $epic-brief to define the Epic Brief for this feature."

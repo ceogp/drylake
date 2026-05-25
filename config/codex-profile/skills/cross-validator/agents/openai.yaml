@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cross Validator"
+  short_description: "Validate specs and tickets across boundaries"
+  default_prompt: "Use $cross-validator to validate whether these specs and tickets are consistent."

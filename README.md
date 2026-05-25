@@ -12,6 +12,8 @@ On a new machine:
 .\bootstrap.ps1
 ```
 
+This restores the development env bundle, VS Code profile, Codex profile, global CLI tools, local Postgres, and Prisma setup. See [docs/secrets-handoff.md](docs/secrets-handoff.md) for details.
+
 Then run the development server:
 
 ```bash

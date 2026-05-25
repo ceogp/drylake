@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implementation Validation"
+  short_description: "Validate implementation against specs"
+  default_prompt: "Use $implementation-validation to check whether the built work matches the plan."

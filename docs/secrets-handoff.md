@@ -39,6 +39,7 @@ cd drylake
 The bootstrap script:
 
 - runs `npm ci` if dependencies are missing.
+- applies the checked-in machine profile for VS Code, Codex, and global npm CLI tools.
 - pulls the development `.env` bundle from AWS Secrets Manager when `.env` is missing.
 - validates `.env` when it already exists.
 - starts local Postgres with Docker Compose when the database URL points at localhost and Docker is available.
@@ -59,6 +60,20 @@ To force-refresh `.env` from AWS:
 ```powershell
 .\bootstrap.ps1 --refresh-env
 ```
+
+To skip VS Code/Codex/global tool setup:
+
+```powershell
+.\bootstrap.ps1 --skip-machine-profile
+```
+
+The machine profile restores:
+
+- VS Code `settings.json`, `keybindings.json`, and extension list.
+- Codex `config.toml`, `AGENTS.md`, agents, rules, and custom Traycer workflow skills.
+- Global npm CLIs from `config/machine-profile/npm-global.txt`, including Codex and Claude Code.
+
+It does not restore Codex `auth.json`, logs, history, sessions, SQLite state, or other local secrets. Run `codex login`, `claude login`, GitHub login, and other provider logins on the new laptop as needed.
 
 To run validation during bootstrap:
 

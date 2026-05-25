@@ -1,0 +1,15 @@
+model = "gpt-5.5"
+model_reasoning_effort = "xhigh"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+service_tier = "default"
+plan_mode_reasoning_effort = "xhigh"
+
+[windows]
+sandbox = "unelevated"
+
+[notice.model_migrations]
+"gpt-5.3-codex" = "gpt-5.4"
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4

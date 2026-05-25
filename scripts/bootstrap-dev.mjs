@@ -14,6 +14,10 @@ function usage() {
     "Options:",
     "  --refresh-env      Pull the env bundle even when .env already exists.",
     "  --skip-install     Do not run npm ci when node_modules is missing.",
+    "  --skip-machine-profile  Do not apply VS Code, Codex, and global CLI profile.",
+    "  --skip-vscode      Do not apply the VS Code profile.",
+    "  --skip-codex       Do not apply the Codex profile.",
+    "  --skip-global-tools  Do not install global npm CLI tools.",
     "  --skip-db          Do not start or wait for local Postgres.",
     "  --skip-prisma      Do not run Prisma generate/migrate/seed.",
     "  --reset-db         Recreate the local Docker Postgres volume.",
@@ -177,6 +181,23 @@ function installDependencies(flags) {
 
   step("Installing dependencies");
   run("npm", ["ci"]);
+}
+
+function applyMachineProfile(flags) {
+  if (flags["skip-machine-profile"] === "true") {
+    console.log("Skipping machine profile.");
+    return;
+  }
+
+  step("Applying VS Code, Codex, and CLI profile");
+  const args = ["scripts/machine-profile/apply.mjs"];
+  for (const flag of ["skip-vscode", "skip-codex", "skip-global-tools"]) {
+    if (flags[flag] === "true") {
+      args.push(`--${flag}`);
+    }
+  }
+
+  run("node", args);
 }
 
 function syncEnv(flags) {
@@ -402,6 +423,7 @@ async function main() {
 
   step("Bootstrapping DryLake development environment");
   installDependencies(flags);
+  applyMachineProfile(flags);
   const synced = syncEnv(flags);
   normalizeLocalDatabaseEnv(synced.file);
   await setupDatabase(flags);

@@ -1,0 +1,111 @@
+{
+  "workbench.colorTheme": "Monokai",
+  "terminal.integrated.commandsToSkipShell": [
+    "\"terminal.integrated.shell.windows\": \"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\","
+  ],
+  "git.openRepositoryInParentFolders": "always",
+  "geminicodeassist.project": "",
+  "workbench.settings.showAISearchToggle": true,
+  "scm.alwaysShowActions": true,
+  "scm.alwaysShowRepositories": true,
+  "github.copilot.chat.scopeSelection": true,
+  "github.copilot.chat.codesearch.enabled": true,
+  "github.copilot.chat.agent.thinkingTool": true,
+  "explorer.confirmDelete": false,
+  "docker.extension.enableComposeLanguageServer": false,
+  "editor.fontSize": 10,
+  "editor.formatOnPaste": true,
+  "workbench.settings.applyToAllProfiles": [
+    "editor.fontSize"
+  ],
+  "settingsSync.ignoredSettings": [
+    "-window.zoomLevel"
+  ],
+  "terminal.integrated.mouseWheelZoom": true,
+  "editor.mouseWheelZoom": true,
+  "terminal.integrated.defaultProfile.windows": "PowerShell 7",
+  "accessibility.verbosity.terminal": false,
+  "python.createEnvironment.trigger": "off",
+  "terminal.integrated.allowedLinkSchemes": [
+    "file",
+    "http",
+    "https",
+    "mailto",
+    "vscode",
+    "vscode-insiders",
+    "docker-desktop"
+  ],
+  "amazonQ.suppressPrompts": {
+    "amazonQChatDisclaimer": true,
+    "codeWhispererConnectionExpired": true
+  },
+  "terminal.integrated.profiles.windows": {
+    "PowerShell 7": {
+      "path": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+    },
+    "PowerShell": {
+      "path": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    },
+    "Command Prompt": {
+      "path": [
+        "${env:windir}\\Sysnative\\cmd.exe",
+        "${env:windir}\\System32\\cmd.exe"
+      ],
+      "args": [],
+      "icon": "terminal-cmd"
+    },
+    "Git Bash": {
+      "source": "Git Bash",
+      "icon": "terminal-git-bash"
+    },
+    "Ubuntu (WSL)": {
+      "path": "C:\\WINDOWS\\System32\\wsl.exe",
+      "args": [
+        "-d",
+        "Ubuntu"
+      ]
+    }
+  },
+  "traycer.agentMode": "Multi Agent",
+  "traycer.enableAutoAnalysis": false,
+  "traycer.additionalAgents": [
+    "Codex Extension",
+    "Codex Extension"
+  ],
+  "window.newWindowProfile": "Default",
+  "gitlens.ai.model": "vscode",
+  "gitlens.ai.vscode.model": "copilot:gpt-4.1",
+  "amazonQ.showCodeWithReferences": false,
+  "claudeCode.preferredLocation": "panel",
+  "terminal.integrated.enableMultiLinePasteWarning": "never",
+  "zenMode.fullScreen": false,
+  "window.newWindowDimensions": "maximized",
+  "workbench.statusBar.visible": false,
+  "chat.agent.maxRequests": 100,
+  "traycer.alwaysAllowPayToRun": true,
+  "claudeCode.allowDangerouslySkipPermissions": true,
+  "chat.tools.terminal.autoApprove": {
+    "ssh": true
+  },
+  "chat.tools.terminal.ignoreDefaultAutoApproveRules": true,
+  "traycer.outputLevel": "trace",
+  "vs-kubernetes": {
+    "vscode-kubernetes.minikube-path-windows": "C:\\Users\\gp\\.vs-kubernetes\\tools\\minikube\\windows-amd64\\minikube.exe"
+  },
+  "chat.viewSessions.orientation": "stacked",
+  "chat.checkpoints.showFileChanges": true,
+  "workbench.startupEditor": "none",
+  "xupra.baseUrl": "https://drylake.xupracorp.com",
+  "xupra.autoScanOnOpen": true,
+  "xupra.pullGeneratedFilesAfterExport": true,
+  "chat.tools.urls.autoApprove": {
+    "https://code.visualstudio.com": true,
+    "https://github.com/microsoft/vscode/wiki/*": true,
+    "https://marketplace.visualstudio.com": {
+      "approveRequest": false,
+      "approveResponse": true
+    }
+  },
+  "terminal.integrated.fontSize": 11,
+  "settingsSync.ignoredExtensions": []
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute"
+  short_description: "Orchestrate ticket execution and validation"
+  default_prompt: "Use $execute to implement tickets in dependency order and validate drift."

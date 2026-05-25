@@ -1,0 +1,4 @@
+interface:
+  display_name: "Traycer"
+  short_description: "Orchestrate the full spec-to-execution workflow"
+  default_prompt: "Use $traycer to run the full planning, validation, ticketing, execution, and reconciliation workflow."

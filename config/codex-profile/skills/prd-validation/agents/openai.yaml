@@ -1,0 +1,4 @@
+interface:
+  display_name: "PRD Validation"
+  short_description: "Validate product requirements and flows"
+  default_prompt: "Use $prd-validation to validate the Epic Brief and Core Flows."

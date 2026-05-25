@@ -1,0 +1,7 @@
+@anthropic-ai/claude-code
+@openai/codex
+@railway/cli
+eas-cli
+md-to-pdf
+nemoclaw
+openclaw
