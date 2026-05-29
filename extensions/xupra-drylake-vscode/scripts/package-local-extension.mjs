@@ -97,6 +97,8 @@ async function writePackageJson() {
     main: "./dist/extension.js",
     activationEvents: transformJson(sourcePackage.activationEvents),
     contributes: transformJson(sourcePackage.contributes),
+    dependencies: {},
+    devDependencies: {},
     scripts: {},
   };
 

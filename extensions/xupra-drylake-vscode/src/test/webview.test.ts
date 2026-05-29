@@ -172,6 +172,30 @@ describe("Control Room webview", () => {
     expect(html).toContain("Planning Chat");
   });
 
+  it("renders generated task-specific card previews", async () => {
+    const currentRunbook = runbook();
+    currentRunbook.phases[0] = {
+      ...currentRunbook.phases[0],
+      objective: "Wire Clerk sign-in to a marketplace onboarding flow.",
+      steps: [
+        {
+          id: "todo-step-1",
+          text: "Add Clerk session checks before marketplace card generation.",
+          status: "pending",
+        },
+      ],
+      acceptance: ["Marketplace cards show onboarding status from the authenticated account."],
+    };
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: currentRunbook }) } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain("Generated for this task");
+    expect(html).toContain("Add Clerk session checks before marketplace card generation.");
+    expect(html).toContain("Marketplace cards show onboarding status from the authenticated account.");
+  });
+
   it("does not render a second agent-selection summary panel", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);
@@ -391,6 +415,56 @@ describe("Control Room webview", () => {
       command: "drylake.startBuildSession",
       args: ["build-app", "Build the API.", "openai-api"],
     });
+  });
+
+  it("renders card generation context meter from planning chat", async () => {
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => null } as never,
+      () => ({ id: "xupra-pro-ai", label: "Xupra AI" }),
+      () => ({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            text: [
+              "Build a Clerk authenticated marketplace dashboard for buyers, vendors, and admins.",
+              "Use database tables for listings, orders, conversations, and payouts.",
+              "Add API endpoints for onboarding, search, checkout, webhooks, and admin review.",
+              "Success means each role sees the right cards, incomplete onboarding is blocked, and acceptance criteria can be verified in tests.",
+            ].join(" "),
+            ts: 1,
+          },
+          {
+            id: "msg-2",
+            role: "user",
+            text: "Also include repository-aware tests, clear constraints for free users, and a done state for generated marketplace cards.",
+            ts: 2,
+          },
+        ],
+      }),
+    );
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain('role="meter"');
+    expect(html).toContain("context for Card Generation");
+    expect(html).toContain("Enough to draft cards");
+    expect(html).toContain("DryLake has enough context to generate task-specific cards.");
+  });
+
+  it("marks card generation context complete after cards exist", async () => {
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => ({ runbook: runbook() }) } as never,
+      () => ({ id: "xupra-pro-ai", label: "Xupra AI" }),
+      () => ({ messages: [] }),
+    );
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain("100% context for Card Generation");
+    expect(html).toContain("Cards generated");
   });
 
   it("renders nano planning banner for free users without locking chat", async () => {

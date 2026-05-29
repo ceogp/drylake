@@ -31,6 +31,28 @@ describe("xu runbooks", () => {
     expect(parsed.runbook).toBeFalsy();
   });
 
+  it("rejects prose instead of normalizing it into starter cards", () => {
+    const parsed = parseXu("Here is a plan with a few implementation steps.");
+
+    expect(parsed.validation.ok).toBe(false);
+    expect(parsed.runbook).toBeFalsy();
+    expect(parsed.validation.diagnostics[0].message).toContain("object");
+  });
+
+  it("rejects runbooks without generated phases", () => {
+    const parsed = parseXu([
+      "xu: 1",
+      "kind: ApplicationBuildRunbook",
+      "metadata:",
+      "  name: missing-phases",
+      "  status: draft",
+    ].join("\n"));
+
+    expect(parsed.validation.ok).toBe(false);
+    expect(parsed.runbook).toBeFalsy();
+    expect(parsed.validation.diagnostics[0].path).toBe("phases");
+  });
+
   it("validates required fields", () => {
     const runbook = createStarterXu({ prompt: "Build", mode: "plan" });
     runbook.metadata.status = "approved";

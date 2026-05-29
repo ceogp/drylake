@@ -80,6 +80,28 @@ describe("AI providers", () => {
     expect(parsed.runbook?.intent.purpose).toBe("Build the app.");
   });
 
+  it("does not accept prose as a generated runbook", () => {
+    const parsed = parseAiRunbookResponse("Here are five useful cards for your task.");
+
+    expect(parsed.runbook).toBeNull();
+    expect(parsed.validation.ok).toBe(false);
+  });
+
+  it("does not fill missing AI phases with starter cards", () => {
+    const parsed = parseAiRunbookResponse([
+      "xu: 1",
+      "kind: ApplicationBuildRunbook",
+      "metadata:",
+      "  name: nano-partial",
+      "  owner: xupra",
+      "  status: draft",
+    ].join("\n"));
+
+    expect(parsed.runbook).toBeNull();
+    expect(parsed.validation.ok).toBe(false);
+    expect(parsed.validation.diagnostics[0].path).toBe("phases");
+  });
+
   it("asks AI to determine the phase count from task complexity", () => {
     const input = {
       prompt: "Fix the login button color",

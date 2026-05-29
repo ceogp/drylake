@@ -39,6 +39,189 @@ const RUNBOOK_SYSTEM_PROMPT = [
 const RUNBOOK_PHASE_COUNT_INSTRUCTION =
   "phases: determine the correct number of phases for this specific task. Simple tasks may need 3 phases. Complex tasks may need 8 or more. Do not default to 5. Each phase must be meaningful and non-redundant.";
 
+const stringArraySchema = {
+  type: "array",
+  items: { type: "string" },
+} as const;
+
+const runbookJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "xu",
+    "kind",
+    "metadata",
+    "intent",
+    "confirmation",
+    "architecture",
+    "provisioning",
+    "phases",
+    "checks",
+    "agentTargets",
+    "handoff",
+  ],
+  properties: {
+    xu: { type: "number", enum: [1] },
+    kind: { type: "string", enum: ["ApplicationBuildRunbook"] },
+    metadata: {
+      type: "object",
+      additionalProperties: false,
+      required: ["name", "owner", "status", "mode"],
+      properties: {
+        name: { type: "string" },
+        owner: { type: "string" },
+        status: { type: "string", enum: ["draft"] },
+        mode: { type: "string", enum: ["build-app", "phases", "plan", "review"] },
+      },
+    },
+    intent: {
+      type: "object",
+      additionalProperties: false,
+      required: ["rawPrompt", "purpose", "users", "goals", "nonGoals", "constraints"],
+      properties: {
+        rawPrompt: { type: "string" },
+        purpose: { type: "string" },
+        users: stringArraySchema,
+        goals: stringArraySchema,
+        nonGoals: stringArraySchema,
+        constraints: stringArraySchema,
+      },
+    },
+    confirmation: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "required",
+        "status",
+        "userApprovedIntent",
+        "userApprovedArchitecture",
+        "userApprovedProvisioning",
+      ],
+      properties: {
+        required: { type: "boolean" },
+        status: { type: "string", enum: ["pending"] },
+        userApprovedIntent: { type: "boolean" },
+        userApprovedArchitecture: { type: "boolean" },
+        userApprovedProvisioning: { type: "boolean" },
+      },
+    },
+    architecture: {
+      type: "object",
+      additionalProperties: false,
+      required: ["status", "summary", "decisions", "risks", "assumptions"],
+      properties: {
+        status: { type: "string", enum: ["proposed"] },
+        summary: { type: "string" },
+        decisions: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "choice", "rationale"],
+            properties: {
+              id: { type: "string" },
+              choice: { type: "string" },
+              rationale: { type: "string" },
+            },
+          },
+        },
+        risks: stringArraySchema,
+        assumptions: stringArraySchema,
+      },
+    },
+    provisioning: {
+      type: "object",
+      additionalProperties: false,
+      required: ["status", "commands", "filesToCreate", "environmentVariables", "externalServices", "safety"],
+      properties: {
+        status: { type: "string", enum: ["draft"] },
+        commands: stringArraySchema,
+        filesToCreate: stringArraySchema,
+        environmentVariables: stringArraySchema,
+        externalServices: stringArraySchema,
+        safety: {
+          type: "object",
+          additionalProperties: false,
+          required: ["requiresApprovalBeforeExecution", "executeAutomatically"],
+          properties: {
+            requiresApprovalBeforeExecution: { type: "boolean" },
+            executeAutomatically: { type: "boolean", enum: [false] },
+          },
+        },
+      },
+    },
+    phases: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "title", "agent", "gate", "status", "objective", "inputs", "outputs", "steps", "acceptance"],
+        properties: {
+          id: { type: "string" },
+          title: { type: "string" },
+          agent: { type: ["string", "null"], enum: ["claude-code", "codex", "gemini", "hermes", "cursor", "copilot", null] },
+          gate: { type: "string" },
+          status: { type: "string", enum: ["pending", "active", "approved", "needs-revision", "complete"] },
+          objective: { type: "string" },
+          inputs: stringArraySchema,
+          outputs: stringArraySchema,
+          steps: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["id", "text", "status"],
+              properties: {
+                id: { type: "string" },
+                text: { type: "string" },
+                status: { type: "string", enum: ["pending", "active", "approved", "needs-revision", "complete"] },
+              },
+            },
+          },
+          acceptance: stringArraySchema,
+        },
+      },
+    },
+    checks: {
+      type: "object",
+      additionalProperties: false,
+      required: ["install", "dev", "build", "test", "lint"],
+      properties: {
+        install: { type: "string" },
+        dev: { type: "string" },
+        build: { type: "string" },
+        test: { type: "string" },
+        lint: { type: "string" },
+      },
+    },
+    agentTargets: {
+      type: "object",
+      additionalProperties: false,
+      required: ["agentsMd", "claudeMd", "copilotInstructions", "cursorRules", "codexSkill", "openclawSkill"],
+      properties: {
+        agentsMd: { type: "boolean" },
+        claudeMd: { type: "boolean" },
+        copilotInstructions: { type: "boolean" },
+        cursorRules: { type: "boolean" },
+        codexSkill: { type: "boolean" },
+        openclawSkill: { type: "boolean" },
+      },
+    },
+    handoff: {
+      type: "object",
+      additionalProperties: false,
+      required: ["defaultAgent", "autopilot", "instructions"],
+      properties: {
+        defaultAgent: { type: "string" },
+        autopilot: { type: "boolean" },
+        instructions: stringArraySchema,
+      },
+    },
+  },
+} satisfies Record<string, unknown>;
+
 function runbookContractLines() {
   return [
     "Required YAML contract:",
@@ -136,9 +319,19 @@ async function generateRunbookYaml(params: {
     userPrompt: params.prompt,
     taskLabel: params.taskLabel,
     model: params.model,
+    textFormat: {
+      type: "json_schema",
+      name: "drylake_runbook",
+      schema: runbookJsonSchema,
+      strict: true,
+    },
   });
 
-  return { content };
+  try {
+    return { content: dump(JSON.parse(content), { sortKeys: false, noRefs: true, lineWidth: 120 }) };
+  } catch {
+    return { content };
+  }
 }
 
 export async function buildRunbookDraftPrompt(input: RunbookGenerationInput, options: RunbookGenerationOptions = {}) {

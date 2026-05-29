@@ -6,6 +6,12 @@ type GenerateTextParams = {
   userPrompt: string;
   taskLabel: string;
   model?: string;
+  textFormat?: {
+    type: "json_schema";
+    name: string;
+    schema: Record<string, unknown>;
+    strict?: boolean;
+  };
 };
 
 const XUPRA_AI_IDENTITY_PROMPT = [
@@ -73,6 +79,7 @@ async function generateWithOpenAi(params: GenerateTextParams) {
           ],
         },
       ],
+      ...(params.textFormat ? { text: { format: params.textFormat } } : {}),
     }),
   });
 

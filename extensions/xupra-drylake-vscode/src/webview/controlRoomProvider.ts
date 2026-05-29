@@ -124,6 +124,21 @@ function renderPhaseSteps(phase: XuPhase) {
   </div>`;
 }
 
+function renderPhaseTaskFit(phase: XuPhase) {
+  const firstStep = phase.steps.find((step) => step.text.trim().length > 0)?.text;
+  const firstAcceptance = phase.acceptance.find((item) => item.trim().length > 0);
+
+  if (!firstStep && !firstAcceptance) {
+    return "";
+  }
+
+  return `<div class="task-fit-preview" aria-label="Generated task-specific card preview">
+    <div class="task-fit-label">Generated for this task</div>
+    ${firstStep ? `<div class="task-fit-row"><span>Next</span><p title="${escapeHtml(firstStep)}">${escapeHtml(firstStep)}</p></div>` : ""}
+    ${firstAcceptance ? `<div class="task-fit-row"><span>Done</span><p title="${escapeHtml(firstAcceptance)}">${escapeHtml(firstAcceptance)}</p></div>` : ""}
+  </div>`;
+}
+
 function renderPlanChangeOverlay(
   phase: XuPhase,
   runbook: ApplicationBuildRunbook,
@@ -180,6 +195,7 @@ function renderPhaseCard(
     <h3 class="phase-title">${escapeHtml(phase.title)}</h3>
     <span class="badge ${statusClass(phase.status)}">${escapeHtml(STATUS_LABELS[phase.status])}</span>
     <p class="objective" title="${escapeHtml(phase.objective)}">${escapeHtml(phase.objective || "No objective recorded.")}</p>
+    ${renderPhaseTaskFit(phase)}
     ${renderAgentSelect(phase)}
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
@@ -306,12 +322,75 @@ function formatChatTime(ts: number) {
   }
 }
 
+function estimateCardGenerationContext(state: ChatState, hasPlan: boolean) {
+  if (hasPlan) {
+    return {
+      score: 100,
+      label: "Cards generated",
+      detail: "Review the task-specific cards below or ask for refinements.",
+    };
+  }
+
+  const userMessages = state.messages.filter((message) => message.role === "user");
+  const userText = userMessages.map((message) => message.text).join("\n").trim();
+
+  if (!userText) {
+    return {
+      score: 0,
+      label: "Need task details",
+      detail: "Describe what you want to build so DryLake can generate cards.",
+    };
+  }
+
+  let score = 18;
+  score += Math.min(34, Math.floor(userText.length / 14));
+  score += Math.min(18, Math.max(0, userMessages.length - 1) * 9);
+
+  const signals = [
+    /\b(user|customer|admin|member|role|account)\b/i,
+    /\b(auth|login|payment|database|api|webhook|deployment|ui|clerk|stripe)\b/i,
+    /\b(goal|success|acceptance|constraint|requirement|done)\b/i,
+    /\b(file|repo|component|endpoint|schema|model|table)\b/i,
+  ];
+  score += signals.reduce((total, pattern) => total + (pattern.test(userText) ? 8 : 0), 0);
+
+  const latestMessage = state.messages[state.messages.length - 1];
+  const aiNeedsMoreInfo = latestMessage?.role === "ai" && latestMessage.text.includes("?");
+  if (aiNeedsMoreInfo) {
+    score = Math.min(score, 68);
+  }
+
+  const clampedScore = Math.max(5, Math.min(95, score));
+  if (clampedScore < 45) {
+    return {
+      score: clampedScore,
+      label: "Need more detail",
+      detail: "Answer the planning questions to improve generated cards.",
+    };
+  }
+
+  if (clampedScore < 75) {
+    return {
+      score: clampedScore,
+      label: "Getting close",
+      detail: "Add missing users, data, constraints, or success criteria for better cards.",
+    };
+  }
+
+  return {
+    score: clampedScore,
+    label: "Enough to draft cards",
+    detail: "DryLake has enough context to generate task-specific cards.",
+  };
+}
+
 function renderChatPanel(
   state: ChatState,
   planningProvider: PlanningProviderInfo | null,
   hasPlan: boolean,
   collapsed: boolean,
 ) {
+  const cardContext = estimateCardGenerationContext(state, hasPlan);
   const activeProviderId = planningProvider?.id ?? "xupra-pro-ai";
   const activeProviderLabel = planningProvider?.label ?? "Planning AI";
   const modeChips = MODE_CARDS.map(([title, mode], index) => {
@@ -354,7 +433,15 @@ function renderChatPanel(
         <button type="button" class="collapse-btn secondary" data-command="drylake.toggleChatCollapsed">${collapsed ? "Expand" : "Collapse"}</button>
       </div>
     </div>
-    ${collapsed ? "" : `<div class="chat-messages" id="chatMessages">${messages}</div>
+    ${collapsed ? "" : `<div class="context-meter" role="meter" aria-label="Context for card generation" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${cardContext.score}">
+        <div class="context-meter-row">
+          <span class="context-meter-label">${cardContext.score}% context for Card Generation</span>
+          <span class="context-meter-status">${escapeHtml(cardContext.label)}</span>
+        </div>
+        <div class="context-meter-track"><span class="context-meter-fill" style="width: ${cardContext.score}%"></span></div>
+        <div class="context-meter-detail">${escapeHtml(cardContext.detail)}</div>
+      </div>
+      <div class="chat-messages" id="chatMessages">${messages}</div>
       <div class="mode-row">${modeChips}</div>
       ${providerSelector}
       <form class="chat-form" id="chatForm">
@@ -572,6 +659,11 @@ export class ControlRoomProvider {
     .badge.active { border-color: rgba(251, 146, 60, 0.6); background: var(--drylake-orange-soft); color: #fed7aa; }
     .badge.approved, .badge.complete { border-color: rgba(52, 211, 153, 0.55); background: var(--drylake-green-soft); color: #a7f3d0; }
     .objective { height: 34px; min-height: 34px; margin-bottom: 8px; font-size: 11px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .task-fit-preview { display: grid; gap: 5px; margin: 0 0 8px; padding: 7px; border: 1px solid rgba(52, 211, 153, 0.28); border-radius: 5px; background: rgba(52, 211, 153, 0.06); }
+    .task-fit-label { color: #a7f3d0; font-size: 9px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
+    .task-fit-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 6px; align-items: start; }
+    .task-fit-row span { color: var(--drylake-green); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; }
+    .task-fit-row p { color: var(--drylake-text); font-size: 11px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .agent-label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
     .agent-select { width: 100%; margin-top: 4px; padding: 4px 6px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 11px; }
     .step-count { margin-top: 8px; font-size: 10px; }
@@ -631,6 +723,13 @@ export class ControlRoomProvider {
     .chat-header { display: flex; align-items: center; justify-content: space-between; }
     .chat-controls { display: flex; gap: 6px; }
     .chat-clear, .collapse-btn { padding: 4px 8px; font-size: 11px; box-shadow: none; }
+    .context-meter { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
+    .context-meter-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .context-meter-label { color: var(--drylake-text); font-size: 12px; font-weight: 900; }
+    .context-meter-status { color: var(--drylake-green); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+    .context-meter-track { width: 100%; height: 7px; overflow: hidden; border-radius: 999px; background: #18181b; }
+    .context-meter-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--drylake-orange), var(--drylake-green)); }
+    .context-meter-detail { color: var(--drylake-muted); font-size: 11px; line-height: 1.35; }
     .chat-messages { display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
     .chat-message { padding: 8px 10px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
     .chat-message.user { border-color: rgba(251, 146, 60, 0.6); }
