@@ -24,7 +24,7 @@ const MODE_CARDS: Array<[string, XuMode, string]> = [
 ];
 
 const PLANNING_PROVIDERS: Array<[DryLakeProviderId, string, string]> = [
-  ["xupra-pro-ai", "Xupra AI", "Hosted planning"],
+  ["xupra-pro-ai", "Xupra AI Pro", "Foundation planning"],
   ["databricks-api", "Databricks API", "BYO endpoint"],
   ["claude-api", "Claude API", "BYO Anthropic key"],
   ["openai-api", "OpenAI API", "BYO OpenAI key"],
@@ -384,32 +384,78 @@ function estimateCardGenerationContext(state: ChatState, hasPlan: boolean) {
   };
 }
 
+function planningProviderLabel(
+  id: DryLakeProviderId,
+  label: string,
+  description: string,
+  modelTier: PlanningModelTier | null,
+) {
+  if (id !== "xupra-pro-ai") {
+    return `${label} - ${description}`;
+  }
+
+  if (modelTier === "nano") {
+    return "GPT-5.4 Nano - Free card planning";
+  }
+
+  return "Xupra AI Pro - Foundation planning";
+}
+
+function renderPlannerSetup(
+  planningProvider: PlanningProviderInfo | null,
+  hasPlan: boolean,
+  modelTier: PlanningModelTier | null,
+) {
+  const activeProviderId = planningProvider?.id ?? "xupra-pro-ai";
+  const providerOptions = PLANNING_PROVIDERS.map(([id, label, description]) => {
+    const selected = id === activeProviderId ? " selected" : "";
+    return `<option value="${escapeHtml(id)}"${selected}>${escapeHtml(planningProviderLabel(id, label, description, modelTier))}</option>`;
+  }).join("");
+  const providerLocked = hasPlan ? " disabled" : "";
+  const providerTitle = hasPlan
+    ? "This plan keeps the AI provider selected when the session started."
+    : "Choose what powers card generation before sending the first message.";
+  const providerStatus = hasPlan
+    ? "Locked for this plan"
+    : modelTier === "nano"
+      ? "Free users use GPT-5.4 Nano, or they can bring their own API key."
+      : "Choose the provider that will generate the first cards.";
+  const modeChips = hasPlan
+    ? ""
+    : `<div class="mode-row" aria-label="Plan type">${MODE_CARDS.map(([title, mode], index) => {
+        return `<button type="button" class="mode-chip${index === 0 ? " active" : ""}" data-mode="${mode}" aria-pressed="${index === 0 ? "true" : "false"}">${escapeHtml(title)}</button>`;
+      }).join("")}</div>`;
+
+  return `<section class="planner-setup" aria-label="Card generation setup">
+    <div class="planner-setup-header">
+      <div>
+        <div class="planner-setup-eyebrow">Card Generation</div>
+        <div class="planner-setup-title">Choose the AI provider before chat starts.</div>
+      </div>
+      <div class="planner-setup-status">${escapeHtml(providerStatus)}</div>
+    </div>
+    ${modeChips}
+    <label class="planning-provider-label" title="${escapeHtml(providerTitle)}">
+      <span>AI Provider</span>
+      <select id="planningProviderSelect" class="planning-provider-select"${providerLocked} aria-label="AI provider">
+        ${providerOptions}
+      </select>
+    </label>
+  </section>`;
+}
+
 function renderChatPanel(
   state: ChatState,
   planningProvider: PlanningProviderInfo | null,
   hasPlan: boolean,
   collapsed: boolean,
+  modelTier: PlanningModelTier | null,
 ) {
   const cardContext = estimateCardGenerationContext(state, hasPlan);
-  const activeProviderId = planningProvider?.id ?? "xupra-pro-ai";
-  const activeProviderLabel = planningProvider?.label ?? "Planning AI";
-  const modeChips = MODE_CARDS.map(([title, mode], index) => {
-    return `<button type="button" class="mode-chip${index === 0 ? " active" : ""}" data-mode="${mode}" aria-pressed="${index === 0 ? "true" : "false"}">${escapeHtml(title)}</button>`;
-  }).join("");
-  const providerOptions = PLANNING_PROVIDERS.map(([id, label, description]) => {
-    const selected = id === activeProviderId ? " selected" : "";
-    return `<option value="${escapeHtml(id)}"${selected}>${escapeHtml(label)} - ${escapeHtml(description)}</option>`;
-  }).join("");
-  const providerLocked = hasPlan ? " disabled" : "";
-  const providerTitle = hasPlan
-    ? "This plan keeps the planning provider selected when the session started."
-    : "Choose the planning provider before sending the first message.";
-  const providerSelector = `<label class="planning-provider-label" title="${escapeHtml(providerTitle)}">
-    <span>Planning Agent</span>
-    <select id="planningProviderSelect" class="planning-provider-select"${providerLocked} aria-label="Planning provider">
-      ${providerOptions}
-    </select>
-  </label>`;
+  const activeProviderLabel = modelTier === "nano" && planningProvider?.id === "xupra-pro-ai"
+    ? "GPT-5.4 Nano"
+    : planningProvider?.label ?? "Planning AI";
+  const plannerSetup = renderPlannerSetup(planningProvider, hasPlan, modelTier);
   const messages = state.messages.length
     ? state.messages
         .map((message) => {
@@ -425,9 +471,10 @@ function renderChatPanel(
         .join("")
     : `<div class="chat-empty">Describe what you want to build. The AI will generate a phased plan and populate the kanban below.</div>`;
 
-  return `<section class="chat-panel${collapsed ? " collapsed" : ""}" aria-label="Planning chat" data-has-plan="${hasPlan ? "true" : "false"}">
+  return `${collapsed ? "" : plannerSetup}
+  <section class="chat-panel${collapsed ? " collapsed" : ""}" aria-label="Build plan chat" data-has-plan="${hasPlan ? "true" : "false"}">
     <div class="chat-header">
-      <span class="chat-eyebrow">Planning Chat</span>
+      <span class="chat-eyebrow">Build Plan Chat</span>
       <div class="chat-controls">
         <button type="button" class="chat-clear secondary" data-command="drylake.clearChat">Clear</button>
         <button type="button" class="collapse-btn secondary" data-command="drylake.toggleChatCollapsed">${collapsed ? "Expand" : "Collapse"}</button>
@@ -442,10 +489,8 @@ function renderChatPanel(
         <div class="context-meter-detail">${escapeHtml(cardContext.detail)}</div>
       </div>
       <div class="chat-messages" id="chatMessages">${messages}</div>
-      <div class="mode-row">${modeChips}</div>
-      ${providerSelector}
       <form class="chat-form" id="chatForm">
-        <textarea id="chatInput" rows="2" placeholder="${hasPlan ? "Tell the planning AI what to refine." : "e.g. Build a Stripe checkout flow with webhook handling"}"></textarea>
+        <textarea id="chatInput" rows="2" placeholder="${hasPlan ? "Ask DryLake to update these cards..." : "Describe what you want to build..."}"></textarea>
         <div class="chat-form-row">
           <span class="chat-hint muted">Enter to send</span>
           <button type="submit">Send</button>
@@ -610,8 +655,9 @@ export class ControlRoomProvider {
     const view = this.currentView();
     const planningProvider = this.readPlanningProvider();
     const chatState = this.readChatState();
-    const banner = renderPlanningModelBanner(this.readLastModelTier());
-    const chatPanel = renderChatPanel(chatState, planningProvider, Boolean(runbook), this.chatCollapsed());
+    const modelTier = this.readLastModelTier();
+    const banner = renderPlanningModelBanner(modelTier);
+    const chatPanel = renderChatPanel(chatState, planningProvider, Boolean(runbook), this.chatCollapsed(), modelTier);
     const body = this.readPlanningLoading()
       ? renderKanbanLoadingState()
       : runbook ? (view === "kanban" ? renderKanban(runbook, pendingPlanChange) : renderPipeline(runbook, pendingPlanChange)) : renderKanbanEmptyState();
@@ -686,6 +732,11 @@ export class ControlRoomProvider {
     @keyframes pulse { from { background-position: 200% 0; } to { background-position: -200% 0; } }
     .prompt-panel { margin-top: 14px; display: grid; gap: 12px; }
     textarea { width: 100%; min-height: 170px; resize: vertical; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; padding: 12px; line-height: 1.45; }
+    .planner-setup { display: grid; gap: 10px; padding: 12px 14px; margin: 0 0 10px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
+    .planner-setup-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .planner-setup-eyebrow { color: var(--drylake-green); font-size: 10px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+    .planner-setup-title { margin-top: 2px; color: var(--drylake-text); font-size: 12px; font-weight: 800; }
+    .planner-setup-status { max-width: 380px; color: var(--drylake-muted); font-size: 11px; line-height: 1.35; text-align: right; }
     .mode-row { display: flex; flex-wrap: wrap; gap: 6px; }
     .mode-chip { padding: 4px 8px; border: 1px solid #3f3f46; border-radius: 999px; color: var(--drylake-text); background: var(--drylake-bg); font-size: 10px; box-shadow: none; }
     .mode-chip.active { border-color: var(--drylake-green); background: var(--drylake-green-soft); color: #a7f3d0; }
@@ -740,7 +791,7 @@ export class ControlRoomProvider {
     .chat-form textarea { min-height: 56px; }
     .chat-form-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
     .chat-hint { font-size: 11px; }
-    @media (max-width: 860px) { header, .nano-banner { align-items: flex-start; flex-direction: column; } .kanban { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) { header, .nano-banner, .planner-setup-header { align-items: flex-start; flex-direction: column; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>

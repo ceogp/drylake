@@ -164,10 +164,11 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     executable: "codex",
     commandSetting: "agents.codex.command",
     help: "Install Codex CLI and make the `codex` command available on PATH.",
-    terminalCommand: (promptFilePath, executableCommand = "codex") =>
-      fromPromptFile(crossShellCommand(executableCommand, "exec"), promptFilePath),
-    shellScriptCommand: shellPromptArgCommand("codex", "exec"),
-    batchScriptCommand: batchPromptArgCommand("codex", "exec"),
+    terminalCommand: (promptFilePath, executableCommand = "codex") => (isWindows()
+      ? `Get-Content -Raw ${quotePath(promptFilePath)} | ${powerShellCommand(executableCommand, "exec -")}`
+      : `cat ${quotePath(promptFilePath)} | ${shellCommand(executableCommand, "exec -")}`),
+    shellScriptCommand: shellPipeCommand("codex", "exec -"),
+    batchScriptCommand: batchPipeCommand("codex", "exec -"),
   },
   gemini: {
     id: "gemini",

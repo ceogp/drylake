@@ -5,9 +5,9 @@
       <use href="#drylake-x"/>
     </clipPath>
   </defs>
-  <rect x="18" y="18" width="476" height="476" rx="38" fill="#f7f4ea" stroke="#111111" stroke-width="18"/>
-  <use href="#drylake-x" fill="#ffd60a" stroke="#111111" stroke-width="18" stroke-linejoin="round"/>
-  <g clip-path="url(#x-clip)" stroke="#111111" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="18" y="18" width="476" height="476" rx="38" fill="#090a0a" stroke="#27272a" stroke-width="18"/>
+  <use href="#drylake-x" fill="#f7f4ea" stroke="#090a0a" stroke-width="18" stroke-linejoin="round"/>
+  <g clip-path="url(#x-clip)" stroke="#090a0a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M151 90L164 132L146 172L178 214L166 258"/>
     <path d="M204 86L218 124L206 160L232 198L220 242"/>
     <path d="M300 86L286 126L306 164L282 205L294 246"/>

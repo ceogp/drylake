@@ -118,8 +118,8 @@ describe("phase agent launchers", () => {
 
     expect(PHASE_AGENT_LAUNCHERS["claude-code"].terminalCommand("/tmp/prompt.md")).toContain("claude -p");
     expect(PHASE_AGENT_LAUNCHERS.codex.terminalCommand("/tmp/prompt.md")).toContain("codex exec");
-    expect(PHASE_AGENT_LAUNCHERS.codex.shellScriptCommand('"$PROMPT_FILE"')).toBe('codex exec "$(cat "$PROMPT_FILE")"');
-    expect(PHASE_AGENT_LAUNCHERS.codex.batchScriptCommand()).toContain("codex exec $prompt");
+    expect(PHASE_AGENT_LAUNCHERS.codex.shellScriptCommand('"$PROMPT_FILE"')).toBe('cat "$PROMPT_FILE" | codex exec -');
+    expect(PHASE_AGENT_LAUNCHERS.codex.batchScriptCommand()).toContain("Get-Content -Raw $env:PROMPT_FILE | codex exec -");
     expect(PHASE_AGENT_LAUNCHERS.cursor.executable).toBe("cursor-agent");
     expect(PHASE_AGENT_LAUNCHERS.cursor.terminalCommand("/tmp/prompt.md")).toContain("cursor-agent -p");
     expect(PHASE_AGENT_LAUNCHERS.cursor.shellScriptCommand('"$PROMPT_FILE"')).toBe('cursor-agent -p "$(cat "$PROMPT_FILE")"');
@@ -174,6 +174,10 @@ describe("phase agent launchers", () => {
       );
       expect(mocks.terminal.sendText).toHaveBeenCalledWith(
         expect.stringContaining("codex exec"),
+        true,
+      );
+      expect(mocks.terminal.sendText).toHaveBeenCalledWith(
+        expect.stringContaining("exec -"),
         true,
       );
     } finally {

@@ -169,7 +169,9 @@ describe("Control Room webview", () => {
     expect(html).toContain('data-handoff-action="run"');
     expect(html).not.toContain("handoff-action-select");
     expect(html).toContain("Require Approval Between Phases");
-    expect(html).toContain("Planning Chat");
+    expect(html).toContain("Build Plan Chat");
+    expect(html).toContain("AI Provider");
+    expect(html).toContain("Ask DryLake to update these cards...");
   });
 
   it("renders generated task-specific card previews", async () => {
@@ -398,6 +400,8 @@ describe("Control Room webview", () => {
 
     const html = panel?.webview.html ?? "";
     expect(html).toContain('id="planningProviderSelect"');
+    expect(html.indexOf('id="planningProviderSelect"')).toBeLessThan(html.indexOf("Build Plan Chat"));
+    expect(html.indexOf("Build Plan Chat")).toBeLessThan(html.indexOf('id="chatInput"'));
     expect(html).toContain('option value="xupra-pro-ai"');
     expect(html).toContain('option value="databricks-api"');
     expect(html).toContain('option value="claude-api"');
@@ -480,6 +484,8 @@ describe("Control Room webview", () => {
 
     expect(html).toContain("gpt-5.4-nano");
     expect(html).toContain("GPT 5.5 + Claude Opus 4.6");
+    expect(html).toContain("GPT-5.4 Nano - Free card planning");
+    expect(html).toContain("Free users use GPT-5.4 Nano, or they can bring their own API key.");
     expect(html).toContain("xupra.openBilling");
     expect(html).toContain('id="chatInput"');
     expect(html).not.toContain("chat-locked");
