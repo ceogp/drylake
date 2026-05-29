@@ -1,5 +1,8 @@
 .vscode/**
 .vsix-inspect/**
+.development-extension/**
+development-vsix/**
+*.vsix
 src/**
 tsconfig.json
 esbuild.mjs
