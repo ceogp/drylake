@@ -861,7 +861,7 @@ export async function openSessionsCommand(deps: RunbookCommandDeps) {
       session,
     })),
     {
-      placeHolder: "Open an archived DryLake session read-only.",
+      placeHolder: "Switch the Control Room to an archived DryLake plan.",
       ignoreFocusOut: true,
     },
   );
@@ -870,12 +870,16 @@ export async function openSessionsCommand(deps: RunbookCommandDeps) {
     return;
   }
 
-  const bytes = await vscode.workspace.fs.readFile(picked.session.uri);
-  const document = await vscode.workspace.openTextDocument({
-    language: "yaml",
-    content: new TextDecoder("utf-8").decode(bytes),
-  });
-  await vscode.window.showTextDocument(document, { preview: false });
+  try {
+    await deps.sessionStore.restoreArchivedSession(picked.session.id);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    void vscode.window.showWarningMessage(`DryLake could not switch to the archived plan: ${detail}`);
+    return;
+  }
+
+  await clearCurrentPlanningState(deps);
+  void vscode.window.showInformationMessage(`DryLake switched to archived plan: ${picked.session.name}.`);
 }
 
 async function applyAiDraft(params: {

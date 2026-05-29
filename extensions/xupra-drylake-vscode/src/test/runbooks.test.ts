@@ -5,6 +5,7 @@ import {
   chatSendMessageCommand,
   handoffPhaseCommand,
   newSessionCommand,
+  openSessionsCommand,
   rejectPlanChangeCommand,
   reorderPhaseCommand,
   runNextPhaseCommand,
@@ -696,6 +697,53 @@ describe("runbook commands", () => {
     expect(deps.sessionStore.deleteCurrentPlan).toHaveBeenCalledOnce();
     expect(deps.stateStore.clearBuildSession).toHaveBeenCalledOnce();
     expect(deps.sessionStore.clearPendingPlanChanges).toHaveBeenCalledOnce();
+  });
+
+  it("switches the Control Room to a selected archived session", async () => {
+    const archivedRunbook = createStarterXu({ prompt: "Archived checkout", mode: "build-app" });
+    const deps = {
+      apiClient: {},
+      stateStore: {
+        clearBuildSession: vi.fn(async () => undefined),
+        clearChatHistory: vi.fn(async () => undefined),
+        setPlanningLoading: vi.fn(async () => undefined),
+      },
+      sessionStore: {
+        listArchivedSessions: vi.fn(async () => [
+          {
+            id: "archive-1",
+            name: "Archived checkout",
+            uri: { path: "/repo/.drylake/sessions/archive-1/drylake.xu" },
+            archivedAt: "2026-05-29T00:00:00.000Z",
+          },
+        ]),
+        restoreArchivedSession: vi.fn(async () => ({
+          uri: { path: "/repo/drylake.xu" },
+          runbook: archivedRunbook,
+        })),
+        clearPendingPlanChanges: vi.fn(async () => undefined),
+      },
+      controlRoom: {
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+
+    await openSessionsCommand(deps as never);
+
+    expect(mocks.showQuickPick).toHaveBeenCalledWith(
+      [expect.objectContaining({ label: "Archived checkout" })],
+      expect.objectContaining({ placeHolder: "Switch the Control Room to an archived DryLake plan." }),
+    );
+    expect(deps.sessionStore.restoreArchivedSession).toHaveBeenCalledWith("archive-1");
+    expect(deps.stateStore.clearBuildSession).toHaveBeenCalledOnce();
+    expect(deps.stateStore.clearChatHistory).toHaveBeenCalledOnce();
+    expect(deps.stateStore.setPlanningLoading).toHaveBeenCalledWith(false);
+    expect(deps.sessionStore.clearPendingPlanChanges).toHaveBeenCalledOnce();
+    expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
+    expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+    expect(mocks.openTextDocument).not.toHaveBeenCalled();
+    expect(mocks.showTextDocument).not.toHaveBeenCalled();
   });
 
   function reorderRunbook(): ApplicationBuildRunbook {

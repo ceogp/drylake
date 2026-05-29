@@ -263,4 +263,27 @@ export class XuSessionStore {
 
     return sessions.sort((left, right) => right.id.localeCompare(left.id));
   }
+
+  async restoreArchivedSession(sessionId: string) {
+    const safeId = sessionId.trim();
+    if (!safeId || safeId.includes("/") || safeId.includes("\\") || safeId.includes("..")) {
+      throw new Error("Invalid archived session id.");
+    }
+
+    const archivedRunbookUri = vscode.Uri.joinPath(workspaceRoot(), ".drylake", "sessions", safeId, "drylake.xu");
+    const parsed = parseXu(await readUtf8(archivedRunbookUri));
+    if (!parsed.runbook) {
+      throw new Error(parsed.validation.diagnostics.map((item) => item.message).join("\n"));
+    }
+
+    const current = await this.readRunbook();
+    if (current) {
+      await this.archiveCurrentRunbook();
+    }
+
+    const uri = this.getDefaultRunbookUri();
+    await this.writeRunbook(uri, parsed.runbook);
+    await this.clearPendingPlanChanges();
+    return { uri, runbook: parsed.runbook };
+  }
 }
