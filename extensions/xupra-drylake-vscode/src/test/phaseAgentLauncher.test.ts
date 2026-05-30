@@ -116,7 +116,26 @@ describe("phase agent launchers", () => {
       throw new Error("Unexpected launcher kind");
     }
 
-    expect(PHASE_AGENT_LAUNCHERS["claude-code"].terminalCommand("/tmp/prompt.md")).toContain("--dangerously-skip-permissions");
+    const claudeCommand = PHASE_AGENT_LAUNCHERS["claude-code"].terminalCommand("/tmp/prompt.md", "claude", "/repo");
+    expect(claudeCommand).toContain("claude --dangerously-skip-permissions");
+    expect(claudeCommand).toContain("Read and execute the DryLake handoff file at:");
+    expect(claudeCommand).toContain("/tmp/prompt.md");
+    expect(claudeCommand).toContain("--add-dir ");
+    expect(claudeCommand).toContain("/repo");
+    expect(claudeCommand.indexOf("Read and execute the DryLake handoff file at:")).toBeLessThan(
+      claudeCommand.indexOf("--add-dir "),
+    );
+    expect(claudeCommand).not.toContain("Get-Content -Raw");
+    expect(claudeCommand).not.toContain("$(cat ");
+    expect(PHASE_AGENT_LAUNCHERS["claude-code"].shellScriptCommand('"$PROMPT_FILE"')).toContain(
+      "claude --dangerously-skip-permissions",
+    );
+    expect(PHASE_AGENT_LAUNCHERS["claude-code"].shellScriptCommand('"$PROMPT_FILE"')).toContain("$PROMPT_FILE");
+    expect(PHASE_AGENT_LAUNCHERS["claude-code"].shellScriptCommand('"$PROMPT_FILE"')).not.toContain("$(cat ");
+    expect(PHASE_AGENT_LAUNCHERS["claude-code"].batchScriptCommand()).toContain(
+      '"claude" --dangerously-skip-permissions',
+    );
+    expect(PHASE_AGENT_LAUNCHERS["claude-code"].batchScriptCommand()).toContain("%PROMPT_FILE%");
     const codexCommand = PHASE_AGENT_LAUNCHERS.codex.terminalCommand("/tmp/prompt.md", "codex", "/repo");
     expect(codexCommand).toContain("codex --yolo");
     expect(codexCommand).not.toContain("--dangerously-bypass-approvals-and-sandbox");
@@ -208,6 +227,47 @@ describe("phase agent launchers", () => {
       expect(mocks.terminal.sendText.mock.calls[0][0]).not.toContain("cmd.exe /d /s /c");
       expect(mocks.terminal.sendText.mock.calls[0][0]).not.toContain(" exec ");
       expect(mocks.terminal.sendText.mock.calls[0][0]).not.toContain("type ");
+    } finally {
+      platform.mockRestore();
+    }
+  });
+
+  it("keeps the Claude prompt before the variadic add-dir option on Windows direct launches", async () => {
+    const platform = vi.spyOn(process, "platform", "get").mockReturnValue("win32");
+    mocks.execFile.mockImplementation((_file, _args, callback) =>
+      callback(null, "C:\\Users\\ibm\\AppData\\Roaming\\npm\\claude\r\nC:\\Users\\ibm\\AppData\\Roaming\\npm\\claude.cmd\r\n", ""));
+
+    try {
+      const result = await launchPhaseAgent({
+        agent: "claude-code",
+        prompt: "Implement phase one.",
+        promptFile: { fsPath: "C:\\repo\\.drylake\\handoffs\\P-01-claude.md", path: "/repo/.drylake/handoffs/P-01-claude.md" } as never,
+        workspaceUri: { fsPath: "C:\\repo", path: "/repo" } as never,
+      });
+
+      expect(result.status).toBe("launched");
+      expect(mocks.execFile).toHaveBeenCalledWith("where", ["claude"], expect.any(Function));
+      expect(mocks.terminal.sendText).toHaveBeenCalledWith(
+        expect.stringContaining("claude.cmd"),
+        true,
+      );
+      expect(mocks.terminal.sendText).toHaveBeenCalledWith(
+        expect.stringContaining("--dangerously-skip-permissions"),
+        true,
+      );
+      expect(mocks.terminal.sendText).toHaveBeenCalledWith(
+        expect.stringContaining("Read and execute the DryLake handoff file at: C:\\repo\\.drylake\\handoffs\\P-01-claude.md"),
+        true,
+      );
+      expect(mocks.terminal.sendText).toHaveBeenCalledWith(
+        expect.stringContaining("--add-dir 'C:\\repo'"),
+        true,
+      );
+
+      const command = mocks.terminal.sendText.mock.calls[0][0];
+      expect(command.indexOf("Read and execute the DryLake handoff file at:")).toBeLessThan(command.indexOf("--add-dir "));
+      expect(command).not.toContain("Get-Content -Raw");
+      expect(command).not.toContain("$(cat ");
     } finally {
       platform.mockRestore();
     }

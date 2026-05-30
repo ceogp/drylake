@@ -140,7 +140,7 @@ function quoteShellDouble(value: string) {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/`/g, "\\`")}"`;
 }
 
-function codexHandoffPrompt(promptFilePath: string) {
+function handoffFilePrompt(promptFilePath: string) {
   return [
     "Read and execute the DryLake handoff file at:",
     promptFilePath,
@@ -158,14 +158,20 @@ function codexInteractiveArgs(params: {
   return [
     "--yolo",
     params.workspacePath ? `-C ${params.quoteWorkspace(params.workspacePath)}` : "",
-    params.quoteArg(codexHandoffPrompt(params.promptFilePath)),
+    params.quoteArg(handoffFilePrompt(params.promptFilePath)),
   ].filter(Boolean).join(" ");
 }
 
-function claudeRunArgs(workspacePath?: string) {
+function claudeInteractiveArgs(params: {
+  promptFilePath: string;
+  workspacePath?: string;
+  quoteArg: (value: string) => string;
+  quoteWorkspace: (value: string) => string;
+}) {
   return [
     "--dangerously-skip-permissions",
-    workspacePath ? `--add-dir ${isWindows() ? quotePowerShellSingle(workspacePath) : quoteShell(workspacePath)}` : "",
+    params.quoteArg(handoffFilePrompt(params.promptFilePath)),
+    params.workspacePath ? `--add-dir ${params.quoteWorkspace(params.workspacePath)}` : "",
   ].filter(Boolean).join(" ");
 }
 
@@ -183,9 +189,31 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     commandSetting: "agents.claude-code.command",
     help: "Install Claude Code CLI and make the `claude` command available on PATH.",
     terminalCommand: (promptFilePath, executableCommand = "claude", workspacePath) =>
-      fromPromptFile(crossShellCommand(executableCommand, claudeRunArgs(workspacePath)), promptFilePath),
-    shellScriptCommand: shellPromptArgCommand("claude", "--dangerously-skip-permissions"),
-    batchScriptCommand: batchPromptArgCommand("claude", "--dangerously-skip-permissions"),
+      isWindows()
+        ? powerShellCommand(executableCommand, claudeInteractiveArgs({
+          promptFilePath,
+          workspacePath,
+          quoteArg: quotePowerShellSingle,
+          quoteWorkspace: quotePowerShellSingle,
+        }))
+        : shellCommand(executableCommand, claudeInteractiveArgs({
+          promptFilePath,
+          workspacePath,
+          quoteArg: quoteShell,
+          quoteWorkspace: quoteShell,
+        })),
+    shellScriptCommand: (_promptFileRef, executableCommand = "claude") =>
+      shellCommand(executableCommand, claudeInteractiveArgs({
+        promptFilePath: "$PROMPT_FILE",
+        quoteArg: quoteShellDouble,
+        quoteWorkspace: quoteShell,
+      })),
+    batchScriptCommand: (executableCommand = "claude") =>
+      [quoteCmd(executableCommand), claudeInteractiveArgs({
+        promptFilePath: "%PROMPT_FILE%",
+        quoteArg: quoteCmd,
+        quoteWorkspace: quoteCmd,
+      })].join(" "),
   },
   codex: {
     id: "codex",
