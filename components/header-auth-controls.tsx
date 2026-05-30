@@ -66,7 +66,7 @@ export function HeaderAuthControls() {
               <button className="rounded border border-zinc-700 bg-zinc-950 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 transition hover:border-orange-400 hover:text-orange-200">Sign In</button>
             </SignInButton>
             <SignUpButton mode="modal" {...signUpRedirectProps}>
-              <button className="rounded border border-emerald-400 bg-emerald-400 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-emerald-300">Sign Up</button>
+              <button className="rounded border border-emerald-400 bg-emerald-400 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-emerald-300">Register to try</button>
             </SignUpButton>
           </>
         )}

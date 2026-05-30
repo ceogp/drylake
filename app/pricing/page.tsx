@@ -78,7 +78,7 @@ export default function PricingPage() {
               ))}
             </ul>
             <div className="mt-6">
-              <SignUpLink variant="secondary">Sign Up Free</SignUpLink>
+              <SignUpLink variant="secondary">Register to try</SignUpLink>
             </div>
           </article>
 
@@ -99,7 +99,7 @@ export default function PricingPage() {
               ))}
             </ul>
             <div className="mt-6 flex flex-wrap gap-3">
-              <SignUpLink redirectPath="/billing">Start Pro</SignUpLink>
+              <SignUpLink redirectPath="/billing">Upgrade to Pro</SignUpLink>
               <Link className="inline-flex rounded border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-orange-400 hover:text-orange-200" href="/billing">
                 Manage Billing
               </Link>

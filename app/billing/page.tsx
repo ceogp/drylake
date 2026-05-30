@@ -14,7 +14,7 @@ const BILLING_SUBTITLE =
   "Use the free plan for local Build Sessions, or upgrade to Pro to unlock Xupra-hosted AI plan generation.";
 
 const ENTITLEMENT_ITEMS: Array<{ key: EntitlementKey; label: string }> = [
-  { key: "xupra_pro_ai", label: "Xupra Pro AI" },
+  { key: "xupra_pro_ai", label: "Hosted Xupra AI" },
   { key: "session_cloud_sync", label: "Session Cloud Sync" },
   { key: "pr_summary_generation", label: "PR Summary Generation" },
 ];

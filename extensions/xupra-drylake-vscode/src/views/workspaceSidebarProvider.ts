@@ -1210,10 +1210,10 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     function renderDisconnected(state) {
-      const loading = state && state.isLoading ? "Loading workspace..." : "Connect Xupra for Pro AI. Local plans work without an account.";
+      const loading = state && state.isLoading ? "Loading workspace..." : "Connect DryLake. Local plans work without an account.";
       let html = '<div class="panel">';
       html += renderBuildSession(state || {});
-      html += '<div class="section"><div class="section-header"><span class="section-label">XUPRA ACCOUNT</span></div><div class="connect-cta"><div class="connect-title">Signed out</div><div class="connect-subtitle">' + escapeHtml(loading) + '</div><button class="action-btn" data-action="connect">Connect Xupra for Pro AI</button></div></div>';
+      html += '<div class="section"><div class="section-header"><span class="section-label">XUPRA ACCOUNT</span></div><div class="connect-cta"><div class="connect-title">Signed out</div><div class="connect-subtitle">' + escapeHtml(loading) + '</div><button class="action-btn" data-action="connect">Register to try</button></div></div>';
       html += renderDetectedFiles(state || {});
       html += renderActions(state || {});
       html += '</div>';

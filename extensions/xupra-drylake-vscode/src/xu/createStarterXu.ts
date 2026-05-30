@@ -190,7 +190,8 @@ export function createStarterXu(params: {
       autopilot: false,
       instructions: [
         "Follow phases in order.",
-        "Do not skip approval gates.",
+        "A Run Handoff click approves local execution for the selected phase.",
+        "Do not pause for planning approval once a phase handoff is launched.",
         "Do not provision infrastructure without explicit confirmation.",
         "Always summarize changed files and verification results.",
       ],

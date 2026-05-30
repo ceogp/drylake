@@ -119,6 +119,7 @@ export class MultiAgentRunStore {
         installError: null,
         terminalName: null,
         promptFile: null,
+        handoffProfile: assignment.handoffProfile ?? null,
       })),
     };
   }

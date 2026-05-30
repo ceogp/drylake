@@ -1,6 +1,14 @@
 import { createStarterXu } from "./createStarterXu";
 import { XU_PHASE_AGENTS } from "./types";
-import type { ApplicationBuildRunbook, XuMode, XuPhase, XuPhaseAgent, XuStep, XuStepStatus } from "./types";
+import type {
+  ApplicationBuildRunbook,
+  XuHandoffProfileRef,
+  XuMode,
+  XuPhase,
+  XuPhaseAgent,
+  XuStep,
+  XuStepStatus,
+} from "./types";
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -68,6 +76,30 @@ function asPhaseAgent(value: unknown): XuPhaseAgent | undefined {
     : undefined;
 }
 
+function asHandoffProfileRef(value: unknown): XuHandoffProfileRef | undefined {
+  const profile = asRecord(value);
+  const kind = profile.kind;
+  const sourcePlatform = profile.sourcePlatform;
+  const label = asString(profile.label).trim();
+  const logicalPath = asString(profile.logicalPath).trim().replace(/\\/g, "/");
+
+  if (
+    (kind !== "skill" && kind !== "agent" && kind !== "instruction") ||
+    (sourcePlatform !== "codex" && sourcePlatform !== "claude" && sourcePlatform !== "copilot") ||
+    !label ||
+    !logicalPath
+  ) {
+    return undefined;
+  }
+
+  return {
+    kind,
+    label,
+    logicalPath,
+    sourcePlatform,
+  };
+}
+
 function normalizePhase(value: unknown, index: number): XuPhase {
   const phase = asRecord(value);
   const id = asString(phase.id, `phase-${String(index + 1).padStart(2, "0")}`);
@@ -76,6 +108,7 @@ function normalizePhase(value: unknown, index: number): XuPhase {
     id,
     title: asString(phase.title, id),
     agent: asPhaseAgent(phase.agent),
+    handoffProfile: asHandoffProfileRef(phase.handoffProfile),
     gate: asString(phase.gate, "phase-review"),
     status:
       phase.status === "active" ||

@@ -81,7 +81,7 @@ export default async function CredentialsPage() {
             </h2>
             <div className="mt-5 space-y-3 text-sm leading-7 text-zinc-400">
               <p>Current tier: {subscription?.tier ?? "free"}</p>
-              <p>Xupra Pro AI included: {entitlements.xupra_pro_ai ? "yes" : "no"}</p>
+              <p>Hosted Xupra AI included: {entitlements.xupra_pro_ai ? "yes" : "no"}</p>
               <p>
                 This page no longer asks for secrets during onboarding. Credential entry should come
                 later, after import is proven and a specific deploy or integration target needs it.

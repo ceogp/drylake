@@ -5,6 +5,8 @@ import {
   phaseAgentHint,
   phaseAgentLabel,
 } from "../agents/phaseAgentLauncher";
+import { collectHandoffProfiles } from "../agents/handoffProfiles";
+import type { HandoffProfileSelection } from "../agents/handoffProfiles";
 import { describePhaseChange, isPendingPhaseUnresolved } from "../xu/pendingPlanChanges";
 import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
@@ -15,6 +17,7 @@ import type { PendingPlanChangeSet } from "../xu/pendingPlanChanges";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
 const CONTROL_ROOM_CHAT_COLLAPSED_KEY = "drylake.controlRoomChatCollapsed";
 type ControlRoomView = "pipeline" | "kanban";
+type HandoffProfilesByAgent = Partial<Record<(typeof XU_PHASE_AGENTS)[number], HandoffProfileSelection[]>>;
 
 const MODE_CARDS: Array<[string, XuMode, string]> = [
   ["Build", "build-app", "Turn an app idea into purpose, architecture, steps, and a ship plan."],
@@ -24,7 +27,7 @@ const MODE_CARDS: Array<[string, XuMode, string]> = [
 ];
 
 const PLANNING_PROVIDERS: Array<[DryLakeProviderId, string, string]> = [
-  ["xupra-pro-ai", "Xupra AI Pro", "Foundation planning"],
+  ["xupra-pro-ai", "Xupra AI", "Hosted planning"],
   ["databricks-api", "Databricks API", "BYO endpoint"],
   ["claude-api", "Claude API", "BYO Anthropic key"],
   ["openai-api", "OpenAI API", "BYO OpenAI key"],
@@ -97,6 +100,24 @@ function renderAgentSelect(phase: XuPhase) {
   </select></label>`;
 }
 
+function renderHandoffProfileSelect(phase: XuPhase, profilesByAgent: HandoffProfilesByAgent) {
+  const selectedAgent = phase.agent;
+  const profiles = selectedAgent ? profilesByAgent[selectedAgent] ?? [] : [];
+  const currentPath = phase.handoffProfile?.logicalPath ?? "";
+  const disabled = selectedAgent ? "" : " disabled";
+  const title = selectedAgent
+    ? "Optional: add the selected agent's skill or instruction profile to this handoff."
+    : "Select an agent before selecting a skill.";
+
+  return `<label class="profile-label">Skill<select class="profile-select" data-phase-profile="${escapeHtml(phase.id)}" aria-label="Skill or profile for ${escapeHtml(phase.title)}" title="${escapeHtml(title)}"${disabled}>
+    <option value=""${currentPath ? "" : " selected"}>No skill/profile</option>
+    ${profiles.map((profile) => {
+      const isSelected = profile.logicalPath === currentPath ? " selected" : "";
+      return `<option value="${escapeHtml(profile.logicalPath)}"${isSelected}>${escapeHtml(profile.label)} (${escapeHtml(profile.kind)})</option>`;
+    }).join("")}
+  </select></label>`;
+}
+
 function renderPhaseSteps(phase: XuPhase) {
   if (phase.steps.length === 0) {
     return `<div class="step-count">No steps yet.</div>`;
@@ -163,7 +184,12 @@ function renderPlanChangeOverlay(
 
 function renderPhaseCard(
   phase: XuPhase,
-  options: { draggable: boolean; runbook: ApplicationBuildRunbook; pendingPlanChange: PendingPlanChangeSet | null },
+  options: {
+    draggable: boolean;
+    runbook: ApplicationBuildRunbook;
+    pendingPlanChange: PendingPlanChangeSet | null;
+    profilesByAgent: HandoffProfilesByAgent;
+  },
 ) {
   const draggable = options.draggable ? ' draggable="true"' : "";
   const cardClass = `phase-card ${statusClass(phase.status)}${phase.status === "active" ? " active-phase" : ""}`;
@@ -197,6 +223,7 @@ function renderPhaseCard(
     <p class="objective" title="${escapeHtml(phase.objective)}">${escapeHtml(phase.objective || "No objective recorded.")}</p>
     ${renderPhaseTaskFit(phase)}
     ${renderAgentSelect(phase)}
+    ${renderHandoffProfileSelect(phase, options.profilesByAgent)}
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
       <button type="button" class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" data-handoff-action="run" title="${escapeHtml(primaryTitle)}"${disabled}>${escapeHtml(primaryLabel)}</button>
@@ -224,10 +251,14 @@ function renderExecutionModeToggle(runbook: ApplicationBuildRunbook | null) {
   return `<button class="toggle-btn execution-toggle${enabled ? " active" : ""}" data-command="drylake.toggleAutopilot" title="${escapeHtml(title)}" aria-pressed="${enabled ? "true" : "false"}">${escapeHtml(label)}</button>`;
 }
 
-function renderPipeline(runbook: ApplicationBuildRunbook, pendingPlanChange: PendingPlanChangeSet | null) {
+function renderPipeline(
+  runbook: ApplicationBuildRunbook,
+  pendingPlanChange: PendingPlanChangeSet | null,
+  profilesByAgent: HandoffProfilesByAgent,
+) {
   return `<section class="pipeline" aria-label="DryLake plan pipeline">
     ${runbook.phases.map((phase, index) => {
-      const card = renderPhaseCard(phase, { draggable: true, runbook, pendingPlanChange });
+      const card = renderPhaseCard(phase, { draggable: true, runbook, pendingPlanChange, profilesByAgent });
       return index < runbook.phases.length - 1 ? `${card}<div class="arrow" aria-hidden="true">&rarr;</div>` : card;
     }).join("")}
   </section>`;
@@ -239,25 +270,30 @@ function renderKanbanColumn(
   phases: XuPhase[],
   runbook: ApplicationBuildRunbook,
   pendingPlanChange: PendingPlanChangeSet | null,
+  profilesByAgent: HandoffProfilesByAgent,
 ) {
   return `<section class="kanban-column" data-drop-status="${status}">
     <div class="column-header"><span>${escapeHtml(title)}</span><span class="count">${phases.length}</span></div>
     <div class="column-body">
-      ${phases.map((phase) => renderPhaseCard(phase, { draggable: true, runbook, pendingPlanChange })).join("")}
+      ${phases.map((phase) => renderPhaseCard(phase, { draggable: true, runbook, pendingPlanChange, profilesByAgent })).join("")}
       <div class="drop-zone">Drop phase here</div>
     </div>
   </section>`;
 }
 
-function renderKanban(runbook: ApplicationBuildRunbook, pendingPlanChange: PendingPlanChangeSet | null) {
+function renderKanban(
+  runbook: ApplicationBuildRunbook,
+  pendingPlanChange: PendingPlanChangeSet | null,
+  profilesByAgent: HandoffProfilesByAgent,
+) {
   const pending = runbook.phases.filter((phase) => statusForKanban(phase.status) === "pending");
   const active = runbook.phases.filter((phase) => statusForKanban(phase.status) === "active");
   const complete = runbook.phases.filter((phase) => statusForKanban(phase.status) === "complete");
 
   return `<section class="kanban" aria-label="DryLake plan kanban">
-    ${renderKanbanColumn("To Do", "pending", pending, runbook, pendingPlanChange)}
-    ${renderKanbanColumn("In Progress", "active", active, runbook, pendingPlanChange)}
-    ${renderKanbanColumn("Done", "complete", complete, runbook, pendingPlanChange)}
+    ${renderKanbanColumn("To Do", "pending", pending, runbook, pendingPlanChange, profilesByAgent)}
+    ${renderKanbanColumn("In Progress", "active", active, runbook, pendingPlanChange, profilesByAgent)}
+    ${renderKanbanColumn("Done", "complete", complete, runbook, pendingPlanChange, profilesByAgent)}
   </section>`;
 }
 
@@ -302,6 +338,7 @@ type WebviewMessage = {
   stepId?: unknown;
   afterPhaseId?: unknown;
   agent?: unknown;
+  profileLogicalPath?: unknown;
   handoffAction?: unknown;
   status?: unknown;
   text?: unknown;
@@ -398,7 +435,7 @@ function planningProviderLabel(
     return "GPT-5.4 Nano - Free card planning";
   }
 
-  return "Xupra AI Pro - Foundation planning";
+  return "Xupra AI - Foundation planning";
 }
 
 function renderPlannerSetup(
@@ -550,6 +587,15 @@ export class ControlRoomProvider {
         return;
       }
 
+      if (message.command === "drylake.updatePhaseHandoffProfile") {
+        await vscode.commands.executeCommand(
+          message.command,
+          message.phaseId ?? message.args?.[0],
+          message.profileLogicalPath ?? message.args?.[1],
+        );
+        return;
+      }
+
       if (message.command === "drylake.updatePhaseStatus") {
         await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0], message.status ?? message.args?.[1]);
         return;
@@ -632,15 +678,35 @@ export class ControlRoomProvider {
 
     let runbook: ApplicationBuildRunbook | null = null;
     let pendingPlanChange: PendingPlanChangeSet | null = null;
+    let profilesByAgent: HandoffProfilesByAgent = {};
     try {
       runbook = (await this.sessionStore.readRunbook())?.runbook ?? null;
       pendingPlanChange = await this.sessionStore.readPendingPlanChange?.() ?? null;
+      profilesByAgent = runbook ? await this.loadHandoffProfiles(runbook) : {};
     } catch {
       runbook = null;
       pendingPlanChange = null;
+      profilesByAgent = {};
     }
 
-    this.panel.webview.html = this.renderHtml(runbook, pendingPlanChange);
+    this.panel.webview.html = this.renderHtml(runbook, pendingPlanChange, profilesByAgent);
+  }
+
+  private async loadHandoffProfiles(runbook: ApplicationBuildRunbook): Promise<HandoffProfilesByAgent> {
+    const agents = [...new Set(runbook.phases.map((phase) => phase.agent).filter((agent): agent is (typeof XU_PHASE_AGENTS)[number] =>
+      Boolean(agent)
+    ))];
+    const entries = await Promise.all(
+      agents.map(async (agent) => {
+        try {
+          return [agent, await collectHandoffProfiles(agent)] as const;
+        } catch {
+          return [agent, []] as const;
+        }
+      }),
+    );
+
+    return Object.fromEntries(entries);
   }
 
   private currentView(): ControlRoomView {
@@ -651,7 +717,11 @@ export class ControlRoomProvider {
     return Boolean(this.context?.workspaceState?.get(CONTROL_ROOM_CHAT_COLLAPSED_KEY));
   }
 
-  private renderHtml(runbook: ApplicationBuildRunbook | null, pendingPlanChange: PendingPlanChangeSet | null) {
+  private renderHtml(
+    runbook: ApplicationBuildRunbook | null,
+    pendingPlanChange: PendingPlanChangeSet | null,
+    profilesByAgent: HandoffProfilesByAgent,
+  ) {
     const view = this.currentView();
     const planningProvider = this.readPlanningProvider();
     const chatState = this.readChatState();
@@ -660,7 +730,11 @@ export class ControlRoomProvider {
     const chatPanel = renderChatPanel(chatState, planningProvider, Boolean(runbook), this.chatCollapsed(), modelTier);
     const body = this.readPlanningLoading()
       ? renderKanbanLoadingState()
-      : runbook ? (view === "kanban" ? renderKanban(runbook, pendingPlanChange) : renderPipeline(runbook, pendingPlanChange)) : renderKanbanEmptyState();
+      : runbook
+        ? (view === "kanban"
+          ? renderKanban(runbook, pendingPlanChange, profilesByAgent)
+          : renderPipeline(runbook, pendingPlanChange, profilesByAgent))
+        : renderKanbanEmptyState();
     const executionToggle = renderExecutionModeToggle(runbook);
     const runNextButton = runbook?.phases.length ? '<button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>' : "";
 
@@ -710,8 +784,10 @@ export class ControlRoomProvider {
     .task-fit-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 6px; align-items: start; }
     .task-fit-row span { color: var(--drylake-green); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; }
     .task-fit-row p { color: var(--drylake-text); font-size: 11px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .agent-label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
-    .agent-select { width: 100%; margin-top: 4px; padding: 4px 6px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 11px; }
+    .agent-label, .profile-label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+    .profile-label { margin-top: 6px; }
+    .agent-select, .profile-select { width: 100%; margin-top: 4px; padding: 4px 6px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 11px; }
+    .profile-select:disabled { opacity: 0.68; cursor: not-allowed; }
     .step-count { margin-top: 8px; font-size: 10px; }
     .kanban { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .kanban-column { min-height: 320px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
@@ -954,6 +1030,16 @@ export class ControlRoomProvider {
           command: "drylake.updatePhaseAgent",
           phaseId: select.dataset.phaseAgent,
           agent: select.value
+        });
+        return;
+      }
+
+      const profileSelect = event.target.closest("[data-phase-profile]");
+      if (profileSelect) {
+        vscode.postMessage({
+          command: "drylake.updatePhaseHandoffProfile",
+          phaseId: profileSelect.dataset.phaseProfile,
+          profileLogicalPath: profileSelect.value || ""
         });
         return;
       }

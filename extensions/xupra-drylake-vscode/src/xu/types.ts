@@ -15,6 +15,17 @@ export type XuRunbookStatus = "draft" | "approved" | "in-progress" | "complete";
 
 export type XuMode = "build-app" | "phases" | "plan" | "review";
 
+export type XuHandoffProfileKind = "skill" | "agent" | "instruction";
+
+export type XuHandoffProfileSourcePlatform = "codex" | "claude" | "copilot";
+
+export type XuHandoffProfileRef = {
+  kind: XuHandoffProfileKind;
+  label: string;
+  logicalPath: string;
+  sourcePlatform: XuHandoffProfileSourcePlatform;
+};
+
 export type XuConfirmation = {
   required: boolean;
   status: "pending" | "approved" | "needs-revision";
@@ -59,6 +70,7 @@ export type XuPhase = {
   id: string;
   title: string;
   agent?: XuPhaseAgent;
+  handoffProfile?: XuHandoffProfileRef;
   gate: string;
   status: XuStepStatus;
   objective: string;

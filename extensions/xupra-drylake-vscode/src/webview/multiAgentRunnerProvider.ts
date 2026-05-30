@@ -6,13 +6,19 @@ import {
   phaseAgentLabel,
   showAgentLaunchFallbackActions,
 } from "../agents/phaseAgentLauncher";
-import { pickHandoffProfile, renderHandoffProfilePrompt } from "../agents/handoffProfiles";
+import {
+  collectHandoffProfiles,
+  handoffProfileMatchesAgent,
+  handoffProfileRef,
+  renderHandoffProfilePrompt,
+  resolveHandoffProfile,
+} from "../agents/handoffProfiles";
 import type { HandoffProfileSelection } from "../agents/handoffProfiles";
 import type { ApiClient } from "../services/apiClient";
 import type { MultiAgentAssignmentPlan } from "../types/multiAgentRun";
 import { MultiAgentRunStore } from "../xu/multiAgentRunStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
-import type { XuPhaseAgent } from "../xu/types";
+import type { XuHandoffProfileRef, XuPhaseAgent } from "../xu/types";
 
 type RunnerStatus = "idle" | "assignment-review" | "running" | "results";
 type RunnerAgentStatus = "pending" | "running" | "complete" | "failed";
@@ -24,6 +30,7 @@ type RunnerAssignment = {
   agentLabel: string;
   subtaskSummary: string;
   scopeBoundary: string;
+  handoffProfile?: XuHandoffProfileRef;
 };
 
 type RunnerAgentResult = {
@@ -56,6 +63,8 @@ type RunnerRun = {
   modelTier: RunnerModelTier | null;
   conflictWarning: string | null;
 };
+
+type HandoffProfilesByAgent = Partial<Record<XuPhaseAgent, HandoffProfileSelection[]>>;
 
 type RunnerMessage = {
   command?: string;
@@ -162,6 +171,37 @@ function detectBoundaryConflict(assignments: RunnerAssignment[]) {
   return null;
 }
 
+function normalizeLogicalPath(value: string) {
+  return value.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+function profileSummary(profile: XuHandoffProfileRef | null | undefined) {
+  if (!profile) {
+    return "";
+  }
+
+  return `<p class="profile-note">Skill: <strong>${escapeHtml(profile.label)}</strong> <span>${escapeHtml(profile.logicalPath)}</span></p>`;
+}
+
+function renderAssignmentProfileSelect(assignment: RunnerAssignment, profilesByAgent: HandoffProfilesByAgent) {
+  const profiles = profilesByAgent[assignment.agentId] ?? [];
+  const selected = normalizeLogicalPath(assignment.handoffProfile?.logicalPath ?? "");
+  const options = profiles.map((profile) => {
+    const value = normalizeLogicalPath(profile.logicalPath);
+    return `<option value="${escapeHtml(value)}"${value === selected ? " selected" : ""}>${escapeHtml(profile.label)} (${escapeHtml(profile.kind)})</option>`;
+  }).join("");
+  const title = profiles.length > 0
+    ? `Select a skill/profile for ${assignment.agentLabel}.`
+    : "No compatible skill/profile files detected for this agent.";
+
+  return `<label class="field-label">Skill
+    <select class="assignment-profile" data-assignment-profile="${escapeHtml(assignment.agentId)}" title="${escapeHtml(title)}">
+      <option value="">No skill/profile</option>
+      ${options}
+    </select>
+  </label>`;
+}
+
 function runnerPromptContent(run: RunnerRun, assignment: RunnerAssignment, handoffProfile?: HandoffProfileSelection) {
   return [
     `# DryLake Multi-Agent Handoff: ${assignment.agentLabel}`,
@@ -187,7 +227,11 @@ function runnerPromptContent(run: RunnerRun, assignment: RunnerAssignment, hando
   ].join("\n");
 }
 
-function parseEditedAssignments(value: unknown, current: RunnerAssignment[]) {
+function parseEditedAssignments(
+  value: unknown,
+  current: RunnerAssignment[],
+  profilesByAgent: HandoffProfilesByAgent,
+) {
   const byAgent = new Map(current.map((assignment) => [assignment.agentId, assignment]));
   const rows = Array.isArray(value) ? value : [];
 
@@ -207,10 +251,27 @@ function parseEditedAssignments(value: unknown, current: RunnerAssignment[]) {
       typeof record.subtaskSummary === "string" && record.subtaskSummary.trim()
         ? record.subtaskSummary.trim()
         : existing.subtaskSummary;
+    const hasProfileSelection = typeof record.handoffProfileLogicalPath === "string";
+    const selectedLogicalPath = hasProfileSelection
+      ? normalizeLogicalPath(String(record.handoffProfileLogicalPath))
+      : "";
+    let handoffProfile = existing.handoffProfile;
+    if (hasProfileSelection) {
+      if (!selectedLogicalPath) {
+        handoffProfile = undefined;
+      } else {
+        const availableProfiles = profilesByAgent[existing.agentId] ?? [];
+        const selectedProfile = availableProfiles.find(
+          (profile) => normalizeLogicalPath(profile.logicalPath) === selectedLogicalPath,
+        );
+        handoffProfile = selectedProfile ? handoffProfileRef(selectedProfile) : undefined;
+      }
+    }
 
     byAgent.set(existing.agentId, {
       ...existing,
       subtaskSummary,
+      handoffProfile,
     });
   }
 
@@ -246,7 +307,7 @@ function renderIdle(run: RunnerRun | null, pendingPrompt: string, pendingAgents:
   </section>`;
 }
 
-function renderAssignmentReview(run: RunnerRun) {
+function renderAssignmentReview(run: RunnerRun, profilesByAgent: HandoffProfilesByAgent) {
   const complete = run.assignments.length === run.agents.length && run.assignments.every((assignment) =>
     assignment.subtaskSummary.trim() && assignment.scopeBoundary.trim()
   );
@@ -259,6 +320,7 @@ function renderAssignmentReview(run: RunnerRun) {
     <label class="field-label">Subtask summary
       <textarea class="assignment-summary" rows="4" data-assignment-summary="${escapeHtml(assignment.agentId)}">${escapeHtml(assignment.subtaskSummary)}</textarea>
     </label>
+    ${renderAssignmentProfileSelect(assignment, profilesByAgent)}
     <div class="boundary"><span>Scope boundary</span><strong>${escapeHtml(assignment.scopeBoundary)}</strong></div>
   </article>`).join("");
 
@@ -282,6 +344,7 @@ function renderRun(run: RunnerRun) {
     <div class="agent-info"><span class="agent-icon">${escapeHtml(agent.label.slice(0, 1))}</span><span><strong>${escapeHtml(agent.label)}</strong><em>${escapeHtml(agent.terminalName ?? "No terminal")}</em></span></div>
     <div class="run-actions"><span class="status-badge ${agent.status}">${escapeHtml(agent.status)}</span><button class="link-button" data-open-agent="${escapeHtml(agent.id)}">View terminal</button></div>
     <p><strong>${escapeHtml(agent.assignmentSummary)}</strong></p>
+    ${profileSummary(agent.handoffProfile)}
     <p>${escapeHtml(agent.message)}</p>
     ${renderReviewActions(agent)}
   </article>`).join("");
@@ -307,6 +370,7 @@ function renderResults(run: RunnerRun) {
   const cards = run.agents.map((agent) => `<article class="run-card">
     <div class="agent-info"><span class="agent-icon">${escapeHtml(agent.label.slice(0, 1))}</span><span><strong>${escapeHtml(agent.label)}</strong><span class="status-badge ${agent.status}">${escapeHtml(agent.status)}</span></span></div>
     <p><strong>${escapeHtml(agent.assignmentSummary)}</strong></p>
+    ${profileSummary(agent.handoffProfile)}
     <p>${escapeHtml(agent.message)}</p>
     <div class="result-actions">
       <button class="link-button" data-open-agent="${escapeHtml(agent.id)}">View terminal</button>
@@ -326,6 +390,7 @@ export class MultiAgentRunnerProvider {
   private currentRun: RunnerRun | null = null;
   private pendingTaskPrompt = "";
   private pendingAgents: XuPhaseAgent[] = ["codex"];
+  private profilesByAgent: HandoffProfilesByAgent = {};
 
   constructor(private readonly apiClient?: RunnerApiClient) {}
 
@@ -367,6 +432,7 @@ export class MultiAgentRunnerProvider {
     this.pendingTaskPrompt = prompt;
     this.pendingAgents = agents.length > 0 ? agents : ["codex"];
     this.currentRun = null;
+    await this.loadHandoffProfiles(this.pendingAgents);
     await this.createOrShow(context);
     this.refresh();
   }
@@ -455,6 +521,21 @@ export class MultiAgentRunnerProvider {
     return new MultiAgentRunStore();
   }
 
+  private async loadHandoffProfiles(agents: XuPhaseAgent[]) {
+    const uniqueAgents = Array.from(new Set(agents));
+    if (uniqueAgents.length === 0) {
+      return;
+    }
+
+    const collected = await Promise.all(
+      uniqueAgents.map(async (agent) => [agent, await collectHandoffProfiles(agent)] as const),
+    );
+
+    for (const [agent, profiles] of collected) {
+      this.profilesByAgent[agent] = profiles;
+    }
+  }
+
   private async writeAuditLog(run: RunnerRun) {
     const uri = vscode.Uri.joinPath(runDirectory(workspaceRoot(), run.id), "run.json");
     await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(workspaceRoot(), ".drylake", "runs", run.id));
@@ -473,6 +554,7 @@ export class MultiAgentRunnerProvider {
         label: assignment.agentLabel,
         assignmentSummary: assignment.subtaskSummary,
         assignmentBoundary: assignment.scopeBoundary,
+        handoffProfile: assignment.handoffProfile ?? null,
       })),
       conflictWarning: run.conflictWarning,
     };
@@ -531,6 +613,8 @@ export class MultiAgentRunnerProvider {
         cancellable: false,
       },
       async () => {
+        await this.loadHandoffProfiles(agents);
+
         const selectedAgents = agents.map((agent) => ({ agentId: agent, label: agentLabel(agent) }));
         const result = await apiClient.planRunnerAssignments({
           taskPrompt: task,
@@ -538,16 +622,32 @@ export class MultiAgentRunnerProvider {
         });
         const run = this.buildRun(task, agents, result.modelTier);
         const labels = new Map(selectedAgents.map((agent) => [agent.agentId, agent.label]));
+        const previousProfiles = new Map(
+          (this.currentRun?.assignments ?? [])
+            .filter((assignment) => assignment.handoffProfile && handoffProfileMatchesAgent(assignment.agentId, assignment.handoffProfile))
+            .map((assignment) => [assignment.agentId, assignment.handoffProfile as XuHandoffProfileRef]),
+        );
         run.assignments = result.assignments
           .filter((assignment): assignment is typeof assignment & { agentId: XuPhaseAgent } =>
             (XU_PHASE_AGENTS as readonly string[]).includes(assignment.agentId)
           )
-          .map((assignment) => ({
-            agentId: assignment.agentId,
-            agentLabel: labels.get(assignment.agentId) ?? phaseAgentLabel(assignment.agentId),
-            subtaskSummary: assignment.subtaskSummary,
-            scopeBoundary: assignment.scopeBoundary,
-          }));
+          .map((assignment) => {
+            const previousProfile = previousProfiles.get(assignment.agentId);
+            const availableProfiles = this.profilesByAgent[assignment.agentId] ?? [];
+            const hasPreviousProfile = previousProfile
+              ? availableProfiles.some(
+                (profile) => normalizeLogicalPath(profile.logicalPath) === normalizeLogicalPath(previousProfile.logicalPath),
+              )
+              : false;
+
+            return {
+              agentId: assignment.agentId,
+              agentLabel: labels.get(assignment.agentId) ?? phaseAgentLabel(assignment.agentId),
+              subtaskSummary: assignment.subtaskSummary,
+              scopeBoundary: assignment.scopeBoundary,
+              handoffProfile: hasPreviousProfile ? previousProfile : undefined,
+            };
+          });
         run.conflictWarning = detectBoundaryConflict(run.assignments);
         run.agents = run.agents.map((agent) => {
           const assignment = run.assignments.find((item) => item.agentId === agent.id);
@@ -556,6 +656,7 @@ export class MultiAgentRunnerProvider {
                 ...agent,
                 assignmentSummary: assignment.subtaskSummary,
                 assignmentBoundary: assignment.scopeBoundary,
+                handoffProfile: assignment.handoffProfile ?? null,
               }
             : agent;
         });
@@ -583,7 +684,7 @@ export class MultiAgentRunnerProvider {
       return;
     }
 
-    const approvedAssignments = parseEditedAssignments(assignmentsArg, this.currentRun.assignments);
+    const approvedAssignments = parseEditedAssignments(assignmentsArg, this.currentRun.assignments, this.profilesByAgent);
     const conflictWarning = detectBoundaryConflict(approvedAssignments);
     if (conflictWarning) {
       this.currentRun = { ...this.currentRun, assignments: approvedAssignments, conflictWarning };
@@ -606,6 +707,7 @@ export class MultiAgentRunnerProvider {
               ...agent,
               assignmentSummary: assignment.subtaskSummary,
               assignmentBoundary: assignment.scopeBoundary,
+              handoffProfile: assignment.handoffProfile ?? null,
               message: "Assignment approved.",
             }
           : agent;
@@ -648,14 +750,17 @@ export class MultiAgentRunnerProvider {
     this.refresh();
 
     const agentResults: RunnerAgentResult[] = [];
+    const missingProfileWarnings: string[] = [];
     for (const assignment of runningRun.assignments) {
-      let handoffProfile: HandoffProfileSelection | undefined;
-
       try {
-        handoffProfile = await pickHandoffProfile(assignment.agentId);
-        const content = runnerPromptContent(runningRun, assignment, handoffProfile);
+        const resolvedProfile = await resolveHandoffProfile(assignment.agentId, assignment.handoffProfile);
+        if (assignment.handoffProfile && !resolvedProfile) {
+          missingProfileWarnings.push(`${assignment.agentLabel}: ${assignment.handoffProfile.logicalPath}`);
+        }
+
+        const content = runnerPromptContent(runningRun, assignment, resolvedProfile);
         const promptFile = await store.writeAgentPrompt(runningRun.id, assignment.agentId, content);
-        const terminalName = `DryLake: ${assignment.agentLabel} — ${taskSlug}`;
+        const terminalName = `DryLake: ${assignment.agentLabel} - ${taskSlug}`;
         const launch = await launchAgentTask({
           agent: assignment.agentId,
           prompt: content,
@@ -663,6 +768,9 @@ export class MultiAgentRunnerProvider {
           workspaceUri: root,
           terminalName,
         });
+        const profileFallbackMessage = assignment.handoffProfile && !resolvedProfile
+          ? ` Selected skill/profile was unavailable (${assignment.handoffProfile.logicalPath}), so launch continued without it.`
+          : "";
 
         agentResults.push({
           id: assignment.agentId,
@@ -675,17 +783,10 @@ export class MultiAgentRunnerProvider {
           reviewedAt: null,
           command: launch.command ?? null,
           installError: launch.status === "launched" ? null : launch.message,
-          message: launch.message,
+          message: `${launch.message}${profileFallbackMessage}`,
           promptFile: promptFile.toString(),
           terminalName,
-          handoffProfile: handoffProfile
-            ? {
-                kind: handoffProfile.kind,
-                label: handoffProfile.label,
-                logicalPath: handoffProfile.logicalPath,
-                sourcePlatform: handoffProfile.sourcePlatform,
-              }
-            : null,
+          handoffProfile: resolvedProfile ? handoffProfileRef(resolvedProfile) : null,
         });
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
@@ -701,16 +802,15 @@ export class MultiAgentRunnerProvider {
           command: null,
           installError: detail,
           message: detail || "DryLake could not launch this agent.",
-          handoffProfile: handoffProfile
-            ? {
-                kind: handoffProfile.kind,
-                label: handoffProfile.label,
-                logicalPath: handoffProfile.logicalPath,
-                sourcePlatform: handoffProfile.sourcePlatform,
-              }
-            : null,
+          handoffProfile: null,
         });
       }
+    }
+
+    if (missingProfileWarnings.length > 0) {
+      void vscode.window.showWarningMessage(
+        `DryLake launched without selected skill/profile for: ${missingProfileWarnings.join(", ")}.`,
+      );
     }
 
     this.currentRun = {
@@ -807,7 +907,7 @@ export class MultiAgentRunnerProvider {
     const body = !run || run.status === "idle"
       ? renderIdle(run, this.pendingTaskPrompt, this.pendingAgents)
       : run.status === "assignment-review"
-        ? renderAssignmentReview(run)
+        ? renderAssignmentReview(run, this.profilesByAgent)
         : run.status === "results"
           ? renderResults(run)
           : renderRun(run);
@@ -851,6 +951,10 @@ export class MultiAgentRunnerProvider {
     .run-card p { margin: 8px 0 0; color: var(--runner-muted); line-height: 1.4; }
     .field-label { display: block; margin-top: 10px; color: var(--runner-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
     .assignment-summary { margin-top: 6px; min-height: 76px; }
+    .assignment-profile { width: 100%; margin-top: 6px; padding: 7px; color: var(--runner-text); background: var(--runner-bg); border: 1px solid #3f3f46; border-radius: 4px; }
+    .profile-note { margin: 6px 0 0; color: var(--runner-muted); }
+    .profile-note strong { color: var(--runner-text); font-weight: 700; }
+    .profile-note span { margin-left: 6px; font-size: 10px; }
     .boundary { display: grid; gap: 4px; margin-top: 4px; color: var(--runner-muted); }
     .boundary strong { color: var(--runner-text); font-weight: 700; }
     .warning { margin: 8px 0; padding: 8px; border: 1px solid rgba(251, 146, 60, 0.45); background: rgba(251, 146, 60, 0.12); color: #fed7aa; border-radius: 4px; }
@@ -878,10 +982,12 @@ export class MultiAgentRunnerProvider {
       return Array.from(document.querySelectorAll(".agent-row input[type='checkbox']:checked")).map((item) => item.value);
     }
     function editedAssignments() {
-      return Array.from(document.querySelectorAll("[data-assignment-summary]")).map((item) => ({
-        agentId: item.dataset.assignmentSummary,
-        subtaskSummary: item.value || "",
-      }));
+      return Array.from(document.querySelectorAll("[data-assignment-agent]")).map((item) => {
+        const agentId = item.dataset.assignmentAgent || "";
+        const summary = item.querySelector("[data-assignment-summary]")?.value || "";
+        const handoffProfileLogicalPath = item.querySelector("[data-assignment-profile]")?.value || "";
+        return { agentId, subtaskSummary: summary, handoffProfileLogicalPath };
+      });
     }
     function updateSelectedCount() {
       const count = selectedAgents().length;

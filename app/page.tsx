@@ -179,7 +179,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
               then keeps validation in your hands before work is marked done.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <ActionLink href={primaryHref}>{marketing ? "Start planning" : "Start build"}</ActionLink>
+              <ActionLink href={primaryHref}>{marketing ? "Register to try" : "Start build"}</ActionLink>
               <ActionLink href={secondaryHref} variant="secondary">
                 View pricing
               </ActionLink>

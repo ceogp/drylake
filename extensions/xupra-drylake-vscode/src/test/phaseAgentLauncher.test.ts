@@ -116,10 +116,28 @@ describe("phase agent launchers", () => {
       throw new Error("Unexpected launcher kind");
     }
 
-    expect(PHASE_AGENT_LAUNCHERS["claude-code"].terminalCommand("/tmp/prompt.md")).toContain("claude -p");
-    expect(PHASE_AGENT_LAUNCHERS.codex.terminalCommand("/tmp/prompt.md")).toContain("codex exec");
-    expect(PHASE_AGENT_LAUNCHERS.codex.shellScriptCommand('"$PROMPT_FILE"')).toBe('cat "$PROMPT_FILE" | codex exec -');
-    expect(PHASE_AGENT_LAUNCHERS.codex.batchScriptCommand()).toContain("Get-Content -Raw $env:PROMPT_FILE | codex exec -");
+    expect(PHASE_AGENT_LAUNCHERS["claude-code"].terminalCommand("/tmp/prompt.md")).toContain("--dangerously-skip-permissions");
+    const codexCommand = PHASE_AGENT_LAUNCHERS.codex.terminalCommand("/tmp/prompt.md", "codex", "/repo");
+    expect(codexCommand).toContain("codex --yolo");
+    expect(codexCommand).not.toContain("--dangerously-bypass-approvals-and-sandbox");
+    expect(codexCommand).toContain("-C ");
+    expect(codexCommand).toContain("/repo");
+    expect(codexCommand).toContain("Read and execute the DryLake handoff file at:");
+    expect(codexCommand).toContain("/tmp/prompt.md");
+    expect(codexCommand).not.toContain(" exec ");
+    expect(codexCommand).not.toContain("type ");
+    expect(PHASE_AGENT_LAUNCHERS.codex.shellScriptCommand('"$PROMPT_FILE"')).toContain(
+      "codex --yolo",
+    );
+    expect(PHASE_AGENT_LAUNCHERS.codex.shellScriptCommand('"$PROMPT_FILE"')).not.toContain("--dangerously-bypass-approvals-and-sandbox");
+    expect(PHASE_AGENT_LAUNCHERS.codex.shellScriptCommand('"$PROMPT_FILE"')).toContain("$PROMPT_FILE");
+    expect(PHASE_AGENT_LAUNCHERS.codex.shellScriptCommand('"$PROMPT_FILE"')).not.toContain("|");
+    expect(PHASE_AGENT_LAUNCHERS.codex.batchScriptCommand()).toContain(
+      '"codex" --yolo',
+    );
+    expect(PHASE_AGENT_LAUNCHERS.codex.batchScriptCommand()).not.toContain("--dangerously-bypass-approvals-and-sandbox");
+    expect(PHASE_AGENT_LAUNCHERS.codex.batchScriptCommand()).toContain("%PROMPT_FILE%");
+    expect(PHASE_AGENT_LAUNCHERS.codex.batchScriptCommand()).not.toContain("|");
     expect(PHASE_AGENT_LAUNCHERS.cursor.executable).toBe("cursor-agent");
     expect(PHASE_AGENT_LAUNCHERS.cursor.terminalCommand("/tmp/prompt.md")).toContain("cursor-agent -p");
     expect(PHASE_AGENT_LAUNCHERS.cursor.shellScriptCommand('"$PROMPT_FILE"')).toBe('cursor-agent -p "$(cat "$PROMPT_FILE")"');
@@ -152,7 +170,8 @@ describe("phase agent launchers", () => {
 
   it("uses a PowerShell terminal for Windows direct launches", async () => {
     const platform = vi.spyOn(process, "platform", "get").mockReturnValue("win32");
-    mocks.execFile.mockImplementation((_file, _args, callback) => callback(null, "", ""));
+    mocks.execFile.mockImplementation((_file, _args, callback) =>
+      callback(null, "C:\\Users\\ibm\\AppData\\Roaming\\npm\\codex\r\nC:\\Users\\ibm\\AppData\\Roaming\\npm\\codex.cmd\r\n", ""));
 
     try {
       const result = await launchPhaseAgent({
@@ -169,17 +188,26 @@ describe("phase agent launchers", () => {
         shellPath: "powershell.exe",
       }));
       expect(mocks.terminal.sendText).toHaveBeenCalledWith(
-        expect.stringContaining("Get-Content -Raw"),
+        expect.stringContaining("codex.cmd"),
         true,
       );
       expect(mocks.terminal.sendText).toHaveBeenCalledWith(
-        expect.stringContaining("codex exec"),
+        expect.stringContaining("--yolo"),
         true,
       );
       expect(mocks.terminal.sendText).toHaveBeenCalledWith(
-        expect.stringContaining("exec -"),
+        expect.stringContaining("-C 'C:\\repo'"),
         true,
       );
+      expect(mocks.terminal.sendText).toHaveBeenCalledWith(
+        expect.stringContaining("Read and execute the DryLake handoff file at: C:\\repo\\.drylake\\handoffs\\P-01-codex.md"),
+        true,
+      );
+      expect(mocks.terminal.sendText.mock.calls[0][0]).not.toContain("Get-Content -Raw");
+      expect(mocks.terminal.sendText.mock.calls[0][0]).not.toContain("--dangerously-bypass-approvals-and-sandbox");
+      expect(mocks.terminal.sendText.mock.calls[0][0]).not.toContain("cmd.exe /d /s /c");
+      expect(mocks.terminal.sendText.mock.calls[0][0]).not.toContain(" exec ");
+      expect(mocks.terminal.sendText.mock.calls[0][0]).not.toContain("type ");
     } finally {
       platform.mockRestore();
     }

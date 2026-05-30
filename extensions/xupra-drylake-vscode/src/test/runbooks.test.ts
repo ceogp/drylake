@@ -13,6 +13,7 @@ import {
   toggleAutopilotCommand,
   toggleStepCommand,
   updatePhaseAgentCommand,
+  updatePhaseHandoffProfileCommand,
 } from "../commands/runbooks";
 import { createStarterXu } from "../xu/createStarterXu";
 import type { ApplicationBuildRunbook } from "../xu/types";
@@ -830,6 +831,24 @@ describe("runbook commands", () => {
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });
 
+  it("clears an incompatible selected skill when changing phase agents", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    runbook.phases[0].handoffProfile = {
+      kind: "skill",
+      label: "token-reduction",
+      logicalPath: ".codex/skills/token-reduction/SKILL.md",
+      sourcePlatform: "codex",
+    };
+    const { deps } = reorderDeps(runbook);
+
+    await updatePhaseAgentCommand(deps as never, "P-01", "gemini");
+
+    const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(written.phases.find((phase) => phase.id === "P-01")?.agent).toBe("gemini");
+    expect(written.phases.find((phase) => phase.id === "P-01")?.handoffProfile).toBeUndefined();
+  });
+
   it("requires an explicit phase agent before launch", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = undefined;
@@ -952,31 +971,33 @@ describe("runbook commands", () => {
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });
 
-  it("offers Codex skills before launch and injects the selected skill into the handoff prompt", async () => {
+  it("persists selected Codex skills on the phase and injects the selected skill into the handoff prompt", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";
     const { deps } = reorderDeps(runbook);
-    mocks.scanWorkspaceFiles.mockResolvedValueOnce([
+    mocks.scanWorkspaceFiles.mockResolvedValue([
       {
         logicalPath: ".codex/skills/token-reduction/SKILL.md",
         category: "skill",
         content: "Use token reduction before editing files.",
       },
     ]);
-    mocks.showQuickPick.mockImplementationOnce(async (items) => items[1]);
+
+    await updatePhaseHandoffProfileCommand(deps as never, "P-01", ".codex/skills/token-reduction/SKILL.md");
+
+    const writtenAfterSelection = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(writtenAfterSelection.phases.find((phase) => phase.id === "P-01")?.handoffProfile).toMatchObject({
+      label: "token-reduction",
+      logicalPath: ".codex/skills/token-reduction/SKILL.md",
+      sourcePlatform: "codex",
+      kind: "skill",
+    });
+    runbook.phases[0].handoffProfile = writtenAfterSelection.phases[0].handoffProfile;
+    deps.sessionStore.writeRunbook.mockClear();
 
     await handoffPhaseCommand(deps as never, "P-01");
 
-    expect(mocks.showQuickPick).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ label: "No skill/profile" }),
-        expect.objectContaining({
-          label: "token-reduction",
-          detail: ".codex/skills/token-reduction/SKILL.md",
-        }),
-      ]),
-      expect.objectContaining({ title: "Select Skill / Agent Profile" }),
-    );
+    expect(mocks.showQuickPick).not.toHaveBeenCalled();
     expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining("## Requested Skill / Agent Profile"),
     }));

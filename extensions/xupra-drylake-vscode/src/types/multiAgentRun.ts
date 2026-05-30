@@ -1,4 +1,4 @@
-import type { XuPhaseAgent } from "../xu/types";
+import type { XuHandoffProfileRef, XuPhaseAgent } from "../xu/types";
 
 export type MultiAgentRunStatus = "pending" | "running" | "complete" | "failed";
 
@@ -9,6 +9,7 @@ export type MultiAgentAssignment = {
   label: string;
   assignmentSummary: string;
   assignmentBoundary: string;
+  handoffProfile?: XuHandoffProfileRef | null;
 };
 
 export type MultiAgentAssignmentPlan = {
@@ -34,6 +35,7 @@ export type AgentRunEntry = {
   installError: string | null;
   terminalName: string | null;
   promptFile: string | null;
+  handoffProfile?: XuHandoffProfileRef | null;
 };
 
 export type MultiAgentRun = {

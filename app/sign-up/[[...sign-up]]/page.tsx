@@ -44,8 +44,8 @@ export default async function SignUpPage({
   return (
     <DryLakeAuthShell
       eyebrow="Create workspace"
-      title="Start planning coding phases visually."
-      body="DryLake gives agent work a board, a pipeline, and a clean handoff for each phase."
+      title="Register to try DryLake."
+      body="Create a workspace, generate phased plans, and run clean handoffs with your local coding agents."
     >
       <SignUp
         appearance={clerkTapeAppearance}

@@ -2,24 +2,20 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 
 import { scanWorkspaceFiles } from "../services/workspaceScanner";
-import type { XuPhaseAgent } from "../xu/types";
+import type { XuHandoffProfileRef, XuPhaseAgent } from "../xu/types";
 
 export type HandoffProfileSelection = {
-  kind: "skill" | "agent";
+  kind: XuHandoffProfileRef["kind"];
   label: string;
   logicalPath: string;
-  sourcePlatform: "codex" | "claude";
+  sourcePlatform: XuHandoffProfileRef["sourcePlatform"];
   content: string;
-};
-
-type HandoffProfileQuickPickItem = vscode.QuickPickItem & {
-  profile?: HandoffProfileSelection;
 };
 
 const MAX_PROFILE_CHARS = 6_000;
 
 export function supportsHandoffProfiles(agent: XuPhaseAgent) {
-  return agent === "codex" || agent === "claude-code";
+  return agent === "codex" || agent === "claude-code" || agent === "copilot";
 }
 
 function normalizeLogicalPath(value: string) {
@@ -57,7 +53,42 @@ function matchesAgent(agent: XuPhaseAgent, logicalPath: string, category: string
     );
   }
 
+  if (agent === "copilot") {
+    return (
+      category === "rule" &&
+      (/^\.github\/copilot-instructions\.md$/i.test(normalized) || /^\.github\/instructions\/.+\.instructions\.md$/i.test(normalized))
+    );
+  }
+
   return false;
+}
+
+function sourcePlatformForAgent(agent: XuPhaseAgent): HandoffProfileSelection["sourcePlatform"] | undefined {
+  if (agent === "claude-code") {
+    return "claude";
+  }
+
+  if (agent === "copilot") {
+    return "copilot";
+  }
+
+  if (agent === "codex") {
+    return "codex";
+  }
+
+  return undefined;
+}
+
+function kindForCategory(category: string): HandoffProfileSelection["kind"] {
+  if (category === "skill") {
+    return "skill";
+  }
+
+  if (category === "rule" || category === "instruction") {
+    return "instruction";
+  }
+
+  return "agent";
 }
 
 export async function collectHandoffProfiles(agent: XuPhaseAgent): Promise<HandoffProfileSelection[]> {
@@ -66,12 +97,15 @@ export async function collectHandoffProfiles(agent: XuPhaseAgent): Promise<Hando
   }
 
   const files = await scanWorkspaceFiles(vscode.workspace.getConfiguration("xupra"));
-  const sourcePlatform = agent === "codex" ? "codex" : "claude";
+  const sourcePlatform = sourcePlatformForAgent(agent);
+  if (!sourcePlatform) {
+    return [];
+  }
 
   return files
     .filter((file) => matchesAgent(agent, file.logicalPath, file.category))
     .map((file): HandoffProfileSelection => ({
-      kind: file.category === "skill" ? "skill" : "agent",
+      kind: kindForCategory(file.category),
       label: profileLabel(file.logicalPath),
       logicalPath: normalizeLogicalPath(file.logicalPath),
       sourcePlatform,
@@ -80,32 +114,34 @@ export async function collectHandoffProfiles(agent: XuPhaseAgent): Promise<Hando
     .sort((left, right) => left.kind.localeCompare(right.kind) || left.label.localeCompare(right.label));
 }
 
-export async function pickHandoffProfile(agent: XuPhaseAgent): Promise<HandoffProfileSelection | undefined> {
-  const profiles = await collectHandoffProfiles(agent);
-  if (profiles.length === 0) {
+export function handoffProfileRef(profile: HandoffProfileSelection): XuHandoffProfileRef {
+  return {
+    kind: profile.kind,
+    label: profile.label,
+    logicalPath: profile.logicalPath,
+    sourcePlatform: profile.sourcePlatform,
+  };
+}
+
+export function handoffProfileMatchesAgent(agent: XuPhaseAgent, profile: XuHandoffProfileRef | undefined) {
+  if (!profile) {
+    return false;
+  }
+
+  const sourcePlatform = sourcePlatformForAgent(agent);
+  return Boolean(sourcePlatform && profile.sourcePlatform === sourcePlatform);
+}
+
+export async function resolveHandoffProfile(
+  agent: XuPhaseAgent,
+  profile: XuHandoffProfileRef | undefined,
+): Promise<HandoffProfileSelection | undefined> {
+  if (!profile || !handoffProfileMatchesAgent(agent, profile)) {
     return undefined;
   }
 
-  const items: HandoffProfileQuickPickItem[] = [
-    {
-      label: "No skill/profile",
-      description: "Run the handoff without extra skill context",
-    },
-    ...profiles.map((profile) => ({
-      label: profile.label,
-      description: `${profile.sourcePlatform} ${profile.kind}`,
-      detail: profile.logicalPath,
-      profile,
-    })),
-  ];
-
-  const picked = await vscode.window.showQuickPick(items, {
-    title: "Select Skill / Agent Profile",
-    placeHolder: "Optional: add a Codex or Claude skill/profile to this handoff",
-    ignoreFocusOut: true,
-  });
-
-  return picked?.profile;
+  const profiles = await collectHandoffProfiles(agent);
+  return profiles.find((candidate) => candidate.logicalPath === normalizeLogicalPath(profile.logicalPath));
 }
 
 export function renderHandoffProfilePrompt(profile: HandoffProfileSelection | undefined) {
@@ -120,7 +156,7 @@ export function renderHandoffProfilePrompt(profile: HandoffProfileSelection | un
   return [
     "## Requested Skill / Agent Profile",
     "",
-    `Use this ${profile.sourcePlatform === "codex" ? "Codex" : "Claude"} ${profile.kind} for this handoff.`,
+    `Use this ${profile.sourcePlatform === "codex" ? "Codex" : profile.sourcePlatform === "claude" ? "Claude" : "GitHub Copilot"} ${profile.kind} for this handoff.`,
     `- Name: ${profile.label}`,
     `- Source: ${profile.logicalPath}`,
     "",

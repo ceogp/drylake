@@ -12,7 +12,7 @@ type TerminalAgent = {
   kind: "terminal";
   executable: string;
   commandSetting: string;
-  terminalCommand: (promptFilePath: string, executableCommand?: string) => string;
+  terminalCommand: (promptFilePath: string, executableCommand?: string, workspacePath?: string) => string;
   shellScriptCommand: (promptFileRef: string, executableCommand?: string) => string;
   batchScriptCommand: (executableCommand?: string) => string;
 };
@@ -86,16 +86,24 @@ function quoteShell(value: string) {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+function quotePowerShellSingle(value: string) {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+function quoteCmd(value: string) {
+  return `"${value.replace(/"/g, "\"\"")}"`;
+}
+
 function quotePath(value: string) {
   return isWindows() ? quotePowerShell(value) : quoteShell(value);
 }
 
 function fromPromptFile(command: string, promptFilePath: string) {
-  const path = quotePath(promptFilePath);
   if (isWindows()) {
-    return `$prompt = Get-Content -Raw ${path}; ${command} $prompt`;
+    return `$prompt = Get-Content -Raw -LiteralPath ${quotePowerShellSingle(promptFilePath)}; ${command} $prompt`;
   }
 
+  const path = quotePath(promptFilePath);
   return `${command} "$(cat ${path})"`;
 }
 
@@ -108,7 +116,7 @@ function shellExecutable(command: string) {
 }
 
 function powerShellExecutable(command: string) {
-  return commandNeedsQuoting(command) ? `& ${quotePowerShell(command)}` : command;
+  return commandNeedsQuoting(command) ? `& ${quotePowerShellSingle(command)}` : command;
 }
 
 function shellCommand(executableCommand: string, args = "") {
@@ -123,19 +131,42 @@ function crossShellCommand(executableCommand: string, args = "") {
   return isWindows() ? powerShellCommand(executableCommand, args) : shellCommand(executableCommand, args);
 }
 
-function shellPipeCommand(executable: string, args = "") {
-  return (promptFileRef: string, executableCommand = executable) =>
-    `cat ${promptFileRef} | ${shellCommand(executableCommand, args)}`;
-}
-
 function shellPromptArgCommand(executable: string, args = "") {
   return (promptFileRef: string, executableCommand = executable) =>
     `${shellCommand(executableCommand, args)} "$(cat ${promptFileRef})"`;
 }
 
-function batchPipeCommand(executable: string, args = "") {
-  return (executableCommand = executable) =>
-    `powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-Content -Raw $env:PROMPT_FILE | ${powerShellCommand(executableCommand, args)}"`;
+function quoteShellDouble(value: string) {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/`/g, "\\`")}"`;
+}
+
+function codexHandoffPrompt(promptFilePath: string) {
+  return [
+    "Read and execute the DryLake handoff file at:",
+    promptFilePath,
+    "Treat the Run Handoff click as approval to execute this phase locally.",
+    "Do not ask for another planning approval; stop only before irreversible external changes, billing-impacting cloud operations, credential creation or rotation, destructive filesystem actions, or provisioning commands unless the file says provisioning is approved.",
+  ].join(" ");
+}
+
+function codexInteractiveArgs(params: {
+  promptFilePath: string;
+  workspacePath?: string;
+  quoteArg: (value: string) => string;
+  quoteWorkspace: (value: string) => string;
+}) {
+  return [
+    "--yolo",
+    params.workspacePath ? `-C ${params.quoteWorkspace(params.workspacePath)}` : "",
+    params.quoteArg(codexHandoffPrompt(params.promptFilePath)),
+  ].filter(Boolean).join(" ");
+}
+
+function claudeRunArgs(workspacePath?: string) {
+  return [
+    "--dangerously-skip-permissions",
+    workspacePath ? `--add-dir ${isWindows() ? quotePowerShellSingle(workspacePath) : quoteShell(workspacePath)}` : "",
+  ].filter(Boolean).join(" ");
 }
 
 function batchPromptArgCommand(executable: string, args = "") {
@@ -151,11 +182,10 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     executable: "claude",
     commandSetting: "agents.claude-code.command",
     help: "Install Claude Code CLI and make the `claude` command available on PATH.",
-    terminalCommand: (promptFilePath, executableCommand = "claude") => (isWindows()
-      ? `Get-Content -Raw ${quotePath(promptFilePath)} | ${powerShellCommand(executableCommand, "-p")}`
-      : `cat ${quotePath(promptFilePath)} | ${shellCommand(executableCommand, "-p")}`),
-    shellScriptCommand: shellPipeCommand("claude", "-p"),
-    batchScriptCommand: batchPipeCommand("claude", "-p"),
+    terminalCommand: (promptFilePath, executableCommand = "claude", workspacePath) =>
+      fromPromptFile(crossShellCommand(executableCommand, claudeRunArgs(workspacePath)), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("claude", "--dangerously-skip-permissions"),
+    batchScriptCommand: batchPromptArgCommand("claude", "--dangerously-skip-permissions"),
   },
   codex: {
     id: "codex",
@@ -164,11 +194,32 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     executable: "codex",
     commandSetting: "agents.codex.command",
     help: "Install Codex CLI and make the `codex` command available on PATH.",
-    terminalCommand: (promptFilePath, executableCommand = "codex") => (isWindows()
-      ? `Get-Content -Raw ${quotePath(promptFilePath)} | ${powerShellCommand(executableCommand, "exec -")}`
-      : `cat ${quotePath(promptFilePath)} | ${shellCommand(executableCommand, "exec -")}`),
-    shellScriptCommand: shellPipeCommand("codex", "exec -"),
-    batchScriptCommand: batchPipeCommand("codex", "exec -"),
+    terminalCommand: (promptFilePath, executableCommand = "codex", workspacePath) =>
+      isWindows()
+        ? powerShellCommand(executableCommand, codexInteractiveArgs({
+          promptFilePath,
+          workspacePath,
+          quoteArg: quotePowerShellSingle,
+          quoteWorkspace: quotePowerShellSingle,
+        }))
+        : shellCommand(executableCommand, codexInteractiveArgs({
+          promptFilePath,
+          workspacePath,
+          quoteArg: quoteShell,
+          quoteWorkspace: quoteShell,
+        })),
+    shellScriptCommand: (_promptFileRef, executableCommand = "codex") =>
+      shellCommand(executableCommand, codexInteractiveArgs({
+        promptFilePath: "$PROMPT_FILE",
+        quoteArg: quoteShellDouble,
+        quoteWorkspace: quoteShell,
+      })),
+    batchScriptCommand: (executableCommand = "codex") =>
+      [quoteCmd(executableCommand), codexInteractiveArgs({
+        promptFilePath: "%PROMPT_FILE%",
+        quoteArg: quoteCmd,
+        quoteWorkspace: quoteCmd,
+      })].join(" "),
   },
   gemini: {
     id: "gemini",
@@ -373,6 +424,36 @@ function execStdout(result: unknown) {
   return "";
 }
 
+function hasWindowsExecutableExtension(command: string) {
+  return /\.(?:cmd|exe|bat|ps1)$/i.test(command);
+}
+
+async function preferredWindowsExecutablePath(command: string) {
+  if (!isWindows() || hasWindowsExecutableExtension(command)) {
+    return command;
+  }
+
+  for (const candidate of [`${command}.cmd`, `${command}.exe`, `${command}.bat`, `${command}.ps1`, command]) {
+    try {
+      await fs.access(candidate, fsConstants.F_OK);
+      return candidate;
+    } catch {
+      // Try the next Windows executable form before falling back to the raw path.
+    }
+  }
+
+  return command;
+}
+
+function preferredLookupResult(stdout: string, command: string) {
+  const matches = stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (!isWindows()) {
+    return matches[0] || command;
+  }
+
+  return matches.find((match) => hasWindowsExecutableExtension(match)) || matches[0] || command;
+}
+
 async function diagnoseTerminalLauncher(launcher: Extract<PhaseAgentLauncher, TerminalAgent>): Promise<PhaseAgentSetupDiagnostic> {
   const command = configuredTerminalCommand(launcher);
   const fallbackBase = {
@@ -385,12 +466,13 @@ async function diagnoseTerminalLauncher(launcher: Extract<PhaseAgentLauncher, Te
   };
 
   if (pathLikeCommand(command)) {
+    const resolvedCommand = await preferredWindowsExecutablePath(command);
     try {
-      await fs.access(command, isWindows() ? fsConstants.F_OK : fsConstants.X_OK);
+      await fs.access(resolvedCommand, isWindows() ? fsConstants.F_OK : fsConstants.X_OK);
       return {
         ...fallbackBase,
         status: "found",
-        resolvedCommand: command,
+        resolvedCommand,
         searchedPath: searchedPath(),
       };
     } catch {
@@ -409,7 +491,7 @@ async function diagnoseTerminalLauncher(launcher: Extract<PhaseAgentLauncher, Te
     return {
       ...fallbackBase,
       status: "found",
-      resolvedCommand: stdout.split(/\r?\n/).find(Boolean)?.trim() || command,
+      resolvedCommand: preferredLookupResult(stdout, command),
       searchedPath: searchedPath(),
     };
   } catch {
@@ -514,7 +596,7 @@ async function launchTerminalAgent(params: {
   }
 
   const executableCommand = diagnostic.resolvedCommand ?? diagnostic.command;
-  const command = params.launcher.terminalCommand(params.promptFile.fsPath, executableCommand);
+  const command = params.launcher.terminalCommand(params.promptFile.fsPath, executableCommand, params.workspaceUri.fsPath);
   try {
     const terminal = vscode.window.createTerminal({
       name: params.terminalName ?? `DryLake: ${params.launcher.label}`,

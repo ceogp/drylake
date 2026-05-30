@@ -30,6 +30,7 @@ import {
   toggleAutopilotCommand,
   toggleStepCommand,
   updatePhaseAgentCommand,
+  updatePhaseHandoffProfileCommand,
   updatePhaseStatusCommand,
   validateXuRunbookCommand,
 } from "./commands/runbooks";
@@ -763,6 +764,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.updatePhaseAgent", async (...args: unknown[]) => {
     await updatePhaseAgentCommand(runbookDeps, args[0], args[1]);
+  });
+
+  register("drylake.updatePhaseHandoffProfile", async (...args: unknown[]) => {
+    await updatePhaseHandoffProfileCommand(runbookDeps, args[0], args[1]);
   });
 
   register("drylake.updatePhaseStatus", async (...args: unknown[]) => {

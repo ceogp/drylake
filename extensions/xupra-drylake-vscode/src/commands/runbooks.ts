@@ -9,11 +9,17 @@ import { renderPhasePrompt } from "../generators/renderPhasePrompt";
 import {
   launchPhaseAgent,
   phaseHandoffActionFromArg,
+  phaseAgentLabel,
   showAgentLaunchFallbackActions,
   writePhaseHandoffFile,
   writePhaseHandoffScript,
 } from "../agents/phaseAgentLauncher";
-import { pickHandoffProfile } from "../agents/handoffProfiles";
+import {
+  collectHandoffProfiles,
+  handoffProfileMatchesAgent,
+  handoffProfileRef,
+  resolveHandoffProfile,
+} from "../agents/handoffProfiles";
 import { applyApproval } from "../xu/approvalState";
 import { createLocalDraftXu } from "../xu/createLocalDraftXu";
 import {
@@ -32,7 +38,14 @@ import type { StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
 import { scanWorkspaceFiles, getWorkspaceDisplayName } from "../services/workspaceScanner";
 import { XU_PHASE_AGENTS } from "../xu/types";
-import type { ApplicationBuildRunbook, BuildSessionState, XuMode, XuPhaseAgent, XuStepStatus } from "../xu/types";
+import type {
+  ApplicationBuildRunbook,
+  BuildSessionState,
+  XuHandoffProfileRef,
+  XuMode,
+  XuPhaseAgent,
+  XuStepStatus,
+} from "../xu/types";
 
 type RunbookCommandDeps = {
   apiClient: ApiClient;
@@ -1317,7 +1330,9 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
 
   const buildSession = deps.stateStore.getBuildSession();
   const promptPhase = { ...phase, agent };
-  const handoffProfile = handoffAction === "run" ? await pickHandoffProfile(agent) : undefined;
+  const handoffProfile = handoffAction === "run"
+    ? await resolveHandoffProfile(agent, phase.handoffProfile)
+    : undefined;
   const content = renderPhasePrompt(current.runbook, promptPhase, { activeProvider: buildSession, handoffProfile });
   const workspaceUri = workspaceRoot();
   const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
@@ -1409,7 +1424,13 @@ export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdA
       }
 
       changed = true;
-      return { ...phase, agent };
+      return {
+        ...phase,
+        agent,
+        handoffProfile: handoffProfileMatchesAgent(agent, phase.handoffProfile)
+          ? phase.handoffProfile
+          : undefined,
+      };
     }),
   };
 
@@ -1417,6 +1438,60 @@ export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdA
     void vscode.window.showWarningMessage(`DryLake could not find phase ${phaseId}.`);
     return;
   }
+
+  await deps.sessionStore.writeRunbook(current.uri, updated);
+  await deps.controlRoom.refresh();
+  await deps.refreshSidebar();
+}
+
+export async function updatePhaseHandoffProfileCommand(
+  deps: RunbookCommandDeps,
+  phaseIdArg?: unknown,
+  logicalPathArg?: unknown,
+) {
+  const phaseId = typeof phaseIdArg === "string" ? phaseIdArg.trim() : "";
+  const logicalPath = typeof logicalPathArg === "string" ? logicalPathArg.trim().replace(/\\/g, "/") : "";
+
+  if (!phaseId) {
+    void vscode.window.showWarningMessage("DryLake could not update the phase skill because the request was invalid.");
+    return;
+  }
+
+  const current = await deps.sessionStore.readRunbook();
+  if (!current) {
+    void vscode.window.showWarningMessage(NO_LOCAL_PLAN_MESSAGE);
+    return;
+  }
+
+  const phase = current.runbook.phases.find((item) => item.id === phaseId);
+  if (!phase) {
+    void vscode.window.showWarningMessage(`DryLake could not find phase ${phaseId}.`);
+    return;
+  }
+
+  const agent = explicitPhaseAgent(phase.agent);
+  if (!agent) {
+    void vscode.window.showWarningMessage(`Select an agent for ${phase.title} before selecting a skill.`);
+    return;
+  }
+
+  let selectedProfile: XuHandoffProfileRef | undefined;
+  if (logicalPath) {
+    const profiles = await collectHandoffProfiles(agent);
+    const match = profiles.find((profile) => profile.logicalPath === logicalPath);
+    if (!match) {
+      void vscode.window.showWarningMessage(`DryLake could not find that ${phase.title} skill/profile for ${phaseAgentLabel(agent)}.`);
+      return;
+    }
+    selectedProfile = handoffProfileRef(match);
+  }
+
+  const updated: ApplicationBuildRunbook = {
+    ...current.runbook,
+    phases: current.runbook.phases.map((item) => (
+      item.id === phaseId ? { ...item, handoffProfile: selectedProfile } : item
+    )),
+  };
 
   await deps.sessionStore.writeRunbook(current.uri, updated);
   await deps.controlRoom.refresh();

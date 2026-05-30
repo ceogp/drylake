@@ -23,7 +23,8 @@ const mocks = vi.hoisted(() => ({
   withProgress: vi.fn(),
   planRunnerAssignments: vi.fn(),
   showAgentLaunchFallbackActions: vi.fn(),
-  pickHandoffProfile: vi.fn(),
+  collectHandoffProfiles: vi.fn(),
+  resolveHandoffProfile: vi.fn(),
 }));
 
 let panel: { webview: { html: string; onDidReceiveMessage: ReturnType<typeof vi.fn> } } | undefined;
@@ -35,9 +36,24 @@ vi.mock("../agents/phaseAgentLauncher", async (importOriginal) => ({
   showAgentLaunchFallbackActions: mocks.showAgentLaunchFallbackActions,
 }));
 
-vi.mock("../agents/handoffProfiles", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../agents/handoffProfiles")>()),
-  pickHandoffProfile: mocks.pickHandoffProfile,
+vi.mock("../agents/handoffProfiles", () => ({
+  collectHandoffProfiles: mocks.collectHandoffProfiles,
+  handoffProfileMatchesAgent: (agent: string, profile: { sourcePlatform?: string } | undefined) => {
+    if (!profile) return false;
+    if (agent === "codex") return profile.sourcePlatform === "codex";
+    if (agent === "claude-code") return profile.sourcePlatform === "claude";
+    if (agent === "copilot") return profile.sourcePlatform === "copilot";
+    return false;
+  },
+  handoffProfileRef: (profile: { kind: string; label: string; logicalPath: string; sourcePlatform: string }) => ({
+    kind: profile.kind,
+    label: profile.label,
+    logicalPath: profile.logicalPath,
+    sourcePlatform: profile.sourcePlatform,
+  }),
+  renderHandoffProfilePrompt: (profile: { content: string } | undefined) =>
+    profile ? `## Requested Skill / Agent Profile\n${profile.content}\n` : "",
+  resolveHandoffProfile: mocks.resolveHandoffProfile,
 }));
 
 vi.mock("vscode", () => ({
@@ -98,7 +114,8 @@ beforeEach(() => {
   mocks.withProgress.mockReset();
   mocks.planRunnerAssignments.mockReset();
   mocks.showAgentLaunchFallbackActions.mockReset();
-  mocks.pickHandoffProfile.mockReset();
+  mocks.collectHandoffProfiles.mockReset();
+  mocks.resolveHandoffProfile.mockReset();
   mocks.createWebviewPanel.mockImplementation(() => {
     panel = {
       onDidDispose: vi.fn(),
@@ -114,6 +131,27 @@ beforeEach(() => {
   });
   mocks.withProgress.mockImplementation(async (_options, task) => task());
   mocks.launchAgentTask.mockResolvedValue({ status: "launched", message: "Started agent.", command: "codex exec" });
+  mocks.collectHandoffProfiles.mockImplementation(async (agent: string) => {
+    if (agent === "codex") {
+      return [
+        {
+          kind: "skill",
+          label: "token-reduction",
+          logicalPath: ".codex/skills/token-reduction/SKILL.md",
+          sourcePlatform: "codex",
+          content: "Use token reduction before editing files.",
+        },
+      ];
+    }
+    return [];
+  });
+  mocks.resolveHandoffProfile.mockImplementation(async (agent: string, profile?: { logicalPath?: string } | null) => {
+    if (!profile?.logicalPath) {
+      return undefined;
+    }
+    const profiles = await mocks.collectHandoffProfiles(agent);
+    return profiles.find((candidate: { logicalPath: string }) => candidate.logicalPath === profile.logicalPath);
+  });
   mocks.planRunnerAssignments.mockResolvedValue({
     modelTier: "foundation",
     assignments: [
@@ -130,7 +168,6 @@ beforeEach(() => {
     ],
   });
   mocks.showAgentLaunchFallbackActions.mockResolvedValue(undefined);
-  mocks.pickHandoffProfile.mockResolvedValue(undefined);
 });
 
 describe("Multi-Agent Runner webview", () => {
@@ -183,6 +220,8 @@ describe("Multi-Agent Runner webview", () => {
     expect(mocks.launchAgentTask).not.toHaveBeenCalled();
     expect(panel?.webview.html).toContain("Assignment Review");
     expect(panel?.webview.html).toContain("Implement checkout API routes.");
+    expect(panel?.webview.html).toContain("token-reduction");
+    expect(panel?.webview.html).toContain("No skill/profile");
     expect(panel?.webview.html).not.toContain("token-meter");
     expect(panel?.webview.html).toContain("Approve & Launch");
     expect(mocks.writeFile).toHaveBeenCalledWith(
@@ -193,26 +232,47 @@ describe("Multi-Agent Runner webview", () => {
     await messageHandler?.({
       command: "approve",
       assignments: [
-        { agentId: "codex", subtaskSummary: "Implement checkout API and tests." },
-        { agentId: "gemini", subtaskSummary: "Build checkout UI states." },
+        {
+          agentId: "codex",
+          subtaskSummary: "Implement checkout API and tests.",
+          handoffProfileLogicalPath: ".codex/skills/token-reduction/SKILL.md",
+        },
+        { agentId: "gemini", subtaskSummary: "Build checkout UI states.", handoffProfileLogicalPath: "" },
       ],
     });
 
     expect(mocks.launchAgentTask).toHaveBeenCalledTimes(2);
     expect(mocks.launchAgentTask).toHaveBeenCalledWith(expect.objectContaining({
       agent: "codex",
-      terminalName: "DryLake: OpenAI Codex — build-checkout",
+      terminalName: "DryLake: OpenAI Codex - build-checkout",
     }));
     expect(mocks.launchAgentTask).toHaveBeenCalledWith(expect.objectContaining({
       agent: "gemini",
-      terminalName: "DryLake: Gemini CLI — build-checkout",
+      terminalName: "DryLake: Gemini CLI - build-checkout",
     }));
     expect(mocks.writeFile).toHaveBeenCalledWith(
       expect.objectContaining({ path: expect.stringContaining("/codex/prompt.md") }),
       expect.any(Uint8Array),
     );
+    const codexPromptCall = mocks.writeFile.mock.calls.find(([uri]) =>
+      typeof uri?.path === "string" && uri.path.endsWith("/codex/prompt.md")
+    );
+    const codexPrompt = new TextDecoder().decode(codexPromptCall?.[1] as Uint8Array);
+    expect(codexPrompt).toContain("## Requested Skill / Agent Profile");
+    expect(codexPrompt).toContain("Use token reduction before editing files.");
+
+    const assignmentPlanCall = mocks.writeFile.mock.calls
+      .filter(([uri]) => typeof uri?.path === "string" && uri.path.endsWith("assignment-plan.json"))
+      .at(-1);
+    const assignmentPlan = JSON.parse(new TextDecoder().decode(assignmentPlanCall?.[1] as Uint8Array)) as {
+      assignments: Array<{ agentId: string; handoffProfile: null | { logicalPath: string } }>;
+    };
+    expect(assignmentPlan.assignments.find((assignment) => assignment.agentId === "codex")?.handoffProfile).toMatchObject({
+      logicalPath: ".codex/skills/token-reduction/SKILL.md",
+    });
     expect(panel?.webview.html).toContain("Run in Progress");
     expect(panel?.webview.html).toContain("Implement checkout API and tests.");
+    expect(panel?.webview.html).toContain("token-reduction");
     expect(panel?.webview.html).not.toContain("token-meter");
     expect(panel?.webview.html).toContain("Mark complete");
     expect(panel?.webview.html).toContain("Mark failed");
@@ -256,7 +316,7 @@ describe("Multi-Agent Runner webview", () => {
 
     expect(mocks.launchAgentTask).toHaveBeenCalledWith(expect.objectContaining({
       agent: "hermes",
-      terminalName: "DryLake: Hermes Agent — verify-local-agent-support",
+      terminalName: "DryLake: Hermes Agent - verify-local-agent-support",
     }));
   });
 
@@ -383,6 +443,45 @@ describe("Multi-Agent Runner webview", () => {
 
     expect(mocks.launchAgentTask).toHaveBeenCalledTimes(2);
     expect(mocks.showWarningMessage).not.toHaveBeenCalledWith(expect.stringContaining("Scope boundaries overlap"));
+  });
+
+  it("warns and continues when a selected handoff profile cannot be resolved at launch time", async () => {
+    mocks.planRunnerAssignments.mockResolvedValueOnce({
+      modelTier: "foundation",
+      assignments: [
+        {
+          agentId: "codex",
+          subtaskSummary: "Implement checkout API routes.",
+          scopeBoundary: "app/api/checkout/**",
+        },
+      ],
+    });
+    mocks.resolveHandoffProfile.mockResolvedValueOnce(undefined);
+
+    const provider = new MultiAgentRunnerProvider(apiClient() as never);
+    await provider.createOrShow(context() as never);
+
+    await messageHandler?.({
+      command: "run",
+      prompt: "Build checkout",
+      agents: ["codex"],
+    });
+    await messageHandler?.({
+      command: "approve",
+      assignments: [
+        {
+          agentId: "codex",
+          subtaskSummary: "Implement checkout API routes.",
+          handoffProfileLogicalPath: ".codex/skills/token-reduction/SKILL.md",
+        },
+      ],
+    });
+
+    expect(mocks.launchAgentTask).toHaveBeenCalledTimes(1);
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+      expect.stringContaining("DryLake launched without selected skill/profile for"),
+    );
+    expect(panel?.webview.html).toContain("Selected skill/profile was unavailable");
   });
 
   it("records missing executables as failed while preserving other agents after approval", async () => {
