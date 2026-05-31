@@ -443,6 +443,39 @@ async function persistModelTier(stateStore: StateStore, modelTier: unknown): Pro
   }
 }
 
+function isHostedPlanningAuthFailure(message: string | undefined) {
+  const normalized = message?.toLowerCase() ?? "";
+  return (
+    normalized.includes("authentication required") ||
+    normalized.includes("invalid or expired") ||
+    normalized.includes("connect a xupra account") ||
+    normalized.includes("sign in to drylake")
+  );
+}
+
+async function clearStaleHostedPlanningConnection(
+  deps: RunbookCommandDeps,
+  provider: DryLakeAiProvider,
+  message: string | undefined,
+) {
+  if (provider.id !== "xupra-pro-ai" || !isHostedPlanningAuthFailure(message)) {
+    return;
+  }
+
+  deps.apiClient.setAccessToken(undefined);
+  await deps.stateStore.clearAccessToken();
+  await deps.stateStore.clearConnection();
+
+  const choice = await vscode.window.showWarningMessage(
+    "Your DryLake extension connection expired. Reconnect to use hosted card generation. A local starter plan was kept visible.",
+    "Reconnect DryLake",
+  );
+
+  if (choice === "Reconnect DryLake") {
+    await vscode.commands.executeCommand("xupra.connect");
+  }
+}
+
 async function buildWorkspaceSummary() {
   const rootName = getWorkspaceDisplayName();
   let detected: string[] = [];
@@ -610,6 +643,7 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
           if (draftResult.providerGenerated) {
             await seedChatWithClarifyingQuestions({ deps, provider, prompt: text, mode });
           } else {
+            await clearStaleHostedPlanningConnection(deps, provider, draftResult.providerMessage);
             await deps.stateStore.appendChatMessage({
               role: "system",
               text: draftResult.providerMessage
@@ -638,6 +672,7 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
 
     const availability = await provider.isAvailable();
     if (!availability.available && provider.id !== "external-ai-prompt") {
+      await clearStaleHostedPlanningConnection(deps, provider, availability.reason);
       await deps.stateStore.appendChatMessage({
         role: "system",
         text: availability.reason
@@ -697,6 +732,7 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
           return;
         }
 
+        await clearStaleHostedPlanningConnection(deps, provider, result.error);
         await deps.stateStore.appendChatMessage({
           role: "system",
           text: `${provider.label} Planning Chat is not working: ${result.error ?? "No response returned."}`,
@@ -1084,6 +1120,7 @@ export async function startBuildSessionCommand(
         if (draftResult.providerGenerated) {
           await seedChatWithClarifyingQuestions({ deps, provider, prompt: cleanedPrompt, mode });
         } else {
+          await clearStaleHostedPlanningConnection(deps, provider, draftResult.providerMessage);
           await deps.stateStore.appendChatMessage({
             role: "system",
             text: draftResult.providerMessage

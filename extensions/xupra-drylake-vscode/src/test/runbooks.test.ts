@@ -452,6 +452,73 @@ describe("runbook commands", () => {
     }));
   });
 
+  it("clears stale hosted planning auth while keeping first-message cards visible", async () => {
+    const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
+    const messages: Array<{ id: string; ts: number; role: "user" | "ai" | "system"; text: string }> = [];
+    const deps = {
+      apiClient: {
+        openWebUrl: vi.fn(() => mocks.billingUri),
+        setAccessToken: vi.fn(),
+      },
+      stateStore: {
+        getConnection: vi.fn(() => ({ userEmail: "pro@example.com" })),
+        getAccessToken: vi.fn(async () => "expired-token"),
+        setAwaitingPlanRefreshUntil: vi.fn(async () => undefined),
+        setBuildSession: vi.fn(async () => undefined),
+        setPlanningProvider: vi.fn(async () => undefined),
+        setLastModelTier: vi.fn(async () => undefined),
+        setPlanningLoading: vi.fn(async () => undefined),
+        clearAccessToken: vi.fn(async () => undefined),
+        clearConnection: vi.fn(async () => undefined),
+        clearChatHistory: vi.fn(async () => undefined),
+        appendChatMessage: vi.fn(async (message: { role: "user" | "ai" | "system"; text: string }) => {
+          const next = { id: `msg-${messages.length + 1}`, ts: messages.length + 1, ...message };
+          messages.push(next);
+          return next;
+        }),
+        getChatHistory: vi.fn(() => ({ messages })),
+      },
+      sessionStore: {
+        findRunbookUri: vi.fn(async () => null),
+        getDefaultRunbookUri: vi.fn(() => runbookUri),
+        createSession: vi.fn(async (session) => ({ id: "session-1", createdAt: "2026-05-16T00:00:00.000Z", ...session })),
+        writeRunbook: vi.fn(async () => undefined),
+      },
+      controlRoom: {
+        createOrShow: vi.fn(async () => undefined),
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+    mocks.showWarningMessage.mockResolvedValueOnce("Reconnect DryLake");
+    mocks.providerIsAvailable.mockResolvedValueOnce({ available: true });
+    mocks.providerGenerateDraftRunbook.mockResolvedValueOnce({
+      message: "The extension token is invalid or expired. Connect the extension again. (401).",
+    });
+
+    await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout");
+
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledWith(
+      runbookUri,
+      expect.objectContaining({
+        intent: expect.objectContaining({ rawPrompt: "Build checkout" }),
+      }),
+    );
+    expect(deps.apiClient.setAccessToken).toHaveBeenCalledWith(undefined);
+    expect(deps.stateStore.clearAccessToken).toHaveBeenCalledOnce();
+    expect(deps.stateStore.clearConnection).toHaveBeenCalledOnce();
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+      "Your DryLake extension connection expired. Reconnect to use hosted card generation. A local starter plan was kept visible.",
+      "Reconnect DryLake",
+    );
+    expect(mocks.executeCommand).toHaveBeenCalledWith("xupra.connect");
+    expect(messages.at(-1)).toEqual(expect.objectContaining({
+      role: "system",
+      text: "Xupra AI could not refine the starter plan: The extension token is invalid or expired. Connect the extension again. (401).",
+    }));
+  });
+
   function chatDeps() {
     const runbook = createStarterXu({ prompt: "Build checkout", mode: "build-app" });
     const uri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
