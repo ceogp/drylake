@@ -1,8 +1,10 @@
-import { env } from "@/lib/env";
 import { getOpenAiApiKey } from "@/lib/security/runtime-secrets";
+import { resolvePlanningModels } from "@/lib/services/planning-models";
 
 export type OpenAiModelHealth = {
+  configuredModel: string;
   model: string;
+  aliasApplied?: boolean;
   configured: boolean;
   ok: boolean;
   status?: number;
@@ -18,6 +20,7 @@ export async function checkOpenAiModelAccess(model: string): Promise<OpenAiModel
 
   if (!normalizedModel) {
     return {
+      configuredModel: normalizedModel,
       model: normalizedModel,
       configured: false,
       ok: false,
@@ -28,6 +31,7 @@ export async function checkOpenAiModelAccess(model: string): Promise<OpenAiModel
   const apiKey = await getOpenAiApiKey().catch(() => "");
   if (!apiKey) {
     return {
+      configuredModel: normalizedModel,
       model: normalizedModel,
       configured: false,
       ok: false,
@@ -44,6 +48,7 @@ export async function checkOpenAiModelAccess(model: string): Promise<OpenAiModel
 
     if (response.ok) {
       return {
+        configuredModel: normalizedModel,
         model: normalizedModel,
         configured: true,
         ok: true,
@@ -52,6 +57,7 @@ export async function checkOpenAiModelAccess(model: string): Promise<OpenAiModel
     }
 
     return {
+      configuredModel: normalizedModel,
       model: normalizedModel,
       configured: true,
       ok: false,
@@ -60,6 +66,7 @@ export async function checkOpenAiModelAccess(model: string): Promise<OpenAiModel
     };
   } catch (error) {
     return {
+      configuredModel: normalizedModel,
       model: normalizedModel,
       configured: true,
       ok: false,
@@ -69,9 +76,20 @@ export async function checkOpenAiModelAccess(model: string): Promise<OpenAiModel
 }
 
 export async function checkPlanningModelAccess() {
+  const models = resolvePlanningModels();
   const [foundation, nano] = await Promise.all([
-    checkOpenAiModelAccess(env.OPENAI_MODEL),
-    checkOpenAiModelAccess(env.OPENAI_FREE_MODEL),
+    checkOpenAiModelAccess(models.foundation.model).then((result) => ({
+      ...result,
+      configuredModel: models.foundation.configuredModel,
+      model: models.foundation.model,
+      aliasApplied: models.foundation.aliasApplied,
+    })),
+    checkOpenAiModelAccess(models.nano.model).then((result) => ({
+      ...result,
+      configuredModel: models.nano.configuredModel,
+      model: models.nano.model,
+      aliasApplied: models.nano.aliasApplied,
+    })),
   ]);
 
   return {

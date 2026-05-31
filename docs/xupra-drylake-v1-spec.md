@@ -1254,7 +1254,7 @@ Use OpenAI on the backend for assisted import conversion.
 
 Current default recommendation:
 
-- model: `gpt-5.4-mini`
+- model: `gpt-5.4`
 - API: Responses API
 - output mode: structured outputs when the canonical extraction contract is known
 

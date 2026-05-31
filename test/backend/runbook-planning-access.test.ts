@@ -28,6 +28,8 @@ vi.mock("@/lib/prisma", () => ({
 import { resolveRunbookPlanningAccess } from "@/lib/services/runbook-planning-access";
 
 beforeEach(() => {
+  mocks.env.OPENAI_MODEL = "gpt-5.4";
+  mocks.env.OPENAI_FREE_MODEL = "gpt-5.4-nano";
   mocks.getEntitlementsForOrganization.mockReset();
   mocks.findOrganization.mockReset();
 
@@ -95,5 +97,23 @@ describe("resolveRunbookPlanningAccess", () => {
       tier: "nano",
       model: "gpt-5.4-nano",
     });
+  });
+
+  it("forces paid model to gpt-5.4 even if OPENAI_MODEL is changed", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mocks.env.OPENAI_MODEL = "gpt-5.4-bad-override";
+    mocks.getEntitlementsForOrganization.mockResolvedValueOnce({
+      subscription: { tier: "pro" },
+      entitlements: { xupra_pro_ai: true },
+    });
+
+    try {
+      await expect(resolveRunbookPlanningAccess("org-pro")).resolves.toEqual({
+        tier: "foundation",
+        model: "gpt-5.4",
+      });
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 });
