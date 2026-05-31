@@ -34,7 +34,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-debug.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -56,5 +55,3 @@ next-env.d.ts
 /.next-dev-*.log
 /.next-start*.log
 /.next-start*.pid
-/.drylake/handoffs/
-/.drylake/sessions/

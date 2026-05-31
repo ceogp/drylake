@@ -3,13 +3,8 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 import { getAuthSetup } from "@/lib/services/auth";
-import { checkPlanningModelAccess } from "@/lib/services/openai-health";
-import { resolvePlanningModels } from "@/lib/services/planning-models";
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const includeDeepChecks = url.searchParams.get("deep") === "1";
-  const planningModels = resolvePlanningModels();
+export async function GET() {
   const db = await prisma.$queryRawUnsafe("SELECT 1 as ok").then(() => "ok").catch(() => "error");
   const openAiConfigured = await getOpenAiApiKey().then(Boolean).catch(() => false);
   const auth = getAuthSetup();
@@ -47,20 +42,6 @@ export async function GET(request: Request) {
       clerkConfigured,
       stripeConfigured,
       openaiConfigured: openAiConfigured,
-      openaiModels: includeDeepChecks ? await checkPlanningModelAccess() : {
-        foundation: {
-          model: planningModels.foundation.model,
-          configuredModel: planningModels.foundation.configuredModel,
-          aliasApplied: planningModels.foundation.aliasApplied,
-          configured: Boolean(planningModels.foundation.model && openAiConfigured),
-        },
-        nano: {
-          model: planningModels.nano.model,
-          configuredModel: planningModels.nano.configuredModel,
-          aliasApplied: planningModels.nano.aliasApplied,
-          configured: Boolean(planningModels.nano.model && openAiConfigured),
-        },
-      },
       storageConfigured:
         env.ARTIFACT_STORAGE_DRIVER === "local"
           ? true

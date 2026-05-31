@@ -115,8 +115,7 @@ Optional:
 
 ### Current model recommendation
 
-- `OPENAI_MODEL=gpt-5.4`
-- `OPENAI_FREE_MODEL=gpt-5.4-nano`
+- `OPENAI_MODEL=gpt-5.4-mini`
 
 ### Notes
 

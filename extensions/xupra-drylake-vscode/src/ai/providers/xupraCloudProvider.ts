@@ -67,11 +67,6 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       return { available: false, reason: "Connect a Xupra account to use DryLake planning." };
     }
 
-    const token = await this.readAccessToken();
-    if (!token?.trim()) {
-      return { available: false, reason: "Sign in to DryLake again to use hosted card generation." };
-    }
-
     return { available: true };
   }
 

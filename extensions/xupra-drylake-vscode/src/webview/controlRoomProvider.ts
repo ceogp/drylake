@@ -728,12 +728,12 @@ export class ControlRoomProvider {
     const modelTier = this.readLastModelTier();
     const banner = renderPlanningModelBanner(modelTier);
     const chatPanel = renderChatPanel(chatState, planningProvider, Boolean(runbook), this.chatCollapsed(), modelTier);
-    const body = runbook
-      ? (view === "kanban"
-        ? renderKanban(runbook, pendingPlanChange, profilesByAgent)
-        : renderPipeline(runbook, pendingPlanChange, profilesByAgent))
-      : this.readPlanningLoading()
-        ? renderKanbanLoadingState()
+    const body = this.readPlanningLoading()
+      ? renderKanbanLoadingState()
+      : runbook
+        ? (view === "kanban"
+          ? renderKanban(runbook, pendingPlanChange, profilesByAgent)
+          : renderPipeline(runbook, pendingPlanChange, profilesByAgent))
         : renderKanbanEmptyState();
     const executionToggle = renderExecutionModeToggle(runbook);
     const runNextButton = runbook?.phases.length ? '<button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>' : "";

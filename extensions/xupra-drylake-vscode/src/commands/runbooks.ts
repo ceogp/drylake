@@ -36,7 +36,6 @@ import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
 import type { ApiClient } from "../services/apiClient";
 import type { StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
-import { isWorkspaceContextError, resolveWorkspaceRoot } from "../services/workspaceContext";
 import { scanWorkspaceFiles, getWorkspaceDisplayName } from "../services/workspaceScanner";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type {
@@ -81,8 +80,8 @@ const MODE_CHOICES: Array<vscode.QuickPickItem & { mode: XuMode }> = [
 
 const PLANNING_PROVIDER_CHOICES: Array<vscode.QuickPickItem & { providerId: DryLakeProviderId }> = [
   {
-    label: "Xupra AI",
-    description: "Hosted GPT 5.4 planning",
+    label: "DryLake AI Planning",
+    description: "Xupra hosted",
     detail: "Default hosted planner for chat-first DryLake planning.",
     providerId: "xupra-pro-ai",
   },
@@ -141,6 +140,15 @@ const DIRECT_PROVIDER_SETUP: Record<DirectPlanningProviderId, {
 };
 
 const NO_LOCAL_PLAN_MESSAGE = "No local DryLake plan found. Open the Control Room to create one.";
+
+function workspaceRoot() {
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+  if (!root) {
+    throw new Error("Open a workspace folder before starting a DryLake plan.");
+  }
+
+  return root;
+}
 
 function relativePath(uri: vscode.Uri) {
   return vscode.workspace.asRelativePath(uri, false).replace(/\\/g, "/");
@@ -333,6 +341,24 @@ async function pickPlanningProvider(arg?: unknown): Promise<DryLakeProviderId | 
   return picked?.providerId;
 }
 
+async function requireConnectedBuildSession(deps: RunbookCommandDeps) {
+  if (deps.stateStore.getConnection().userEmail) {
+    return true;
+  }
+
+  const choice = await vscode.window.showWarningMessage(
+    "Connect your DryLake account before starting a DryLake plan.",
+    "Connect DryLake",
+  );
+
+  if (choice !== "Connect DryLake") {
+    return false;
+  }
+
+  await vscode.commands.executeCommand("xupra.connect");
+  return Boolean(deps.stateStore.getConnection().userEmail);
+}
+
 async function pickMode(arg?: unknown): Promise<XuMode | undefined> {
   const fromArg = modeFromArg(arg);
   if (fromArg) {
@@ -414,39 +440,6 @@ async function preparePlanningProvider(
 async function persistModelTier(stateStore: StateStore, modelTier: unknown): Promise<void> {
   if (modelTier === "nano" || modelTier === "foundation") {
     await stateStore.setLastModelTier(modelTier);
-  }
-}
-
-function isHostedPlanningAuthFailure(message: string | undefined) {
-  const normalized = message?.toLowerCase() ?? "";
-  return (
-    normalized.includes("authentication required") ||
-    normalized.includes("invalid or expired") ||
-    normalized.includes("connect a xupra account") ||
-    normalized.includes("sign in to drylake")
-  );
-}
-
-async function clearStaleHostedPlanningConnection(
-  deps: RunbookCommandDeps,
-  provider: DryLakeAiProvider,
-  message: string | undefined,
-) {
-  if (provider.id !== "xupra-pro-ai" || !isHostedPlanningAuthFailure(message)) {
-    return;
-  }
-
-  deps.apiClient.setAccessToken(undefined);
-  await deps.stateStore.clearAccessToken();
-  await deps.stateStore.clearConnection();
-
-  const choice = await vscode.window.showWarningMessage(
-    "Your DryLake extension connection expired. Reconnect to use hosted card generation. A local starter plan was kept visible.",
-    "Reconnect DryLake",
-  );
-
-  if (choice === "Reconnect DryLake") {
-    await vscode.commands.executeCommand("xupra.connect");
   }
 }
 
@@ -617,12 +610,11 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
           if (draftResult.providerGenerated) {
             await seedChatWithClarifyingQuestions({ deps, provider, prompt: text, mode });
           } else {
-            await clearStaleHostedPlanningConnection(deps, provider, draftResult.providerMessage);
             await deps.stateStore.appendChatMessage({
               role: "system",
               text: draftResult.providerMessage
-                ? `${provider.label} could not refine the starter plan: ${draftResult.providerMessage}`
-                : `${provider.label} could not refine the starter plan.`,
+                ? `${provider.label} could not generate a plan: ${draftResult.providerMessage}`
+                : `${provider.label} could not generate a plan.`,
             });
           }
         },
@@ -646,7 +638,6 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
 
     const availability = await provider.isAvailable();
     if (!availability.available && provider.id !== "external-ai-prompt") {
-      await clearStaleHostedPlanningConnection(deps, provider, availability.reason);
       await deps.stateStore.appendChatMessage({
         role: "system",
         text: availability.reason
@@ -706,21 +697,12 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
           return;
         }
 
-        await clearStaleHostedPlanningConnection(deps, provider, result.error);
         await deps.stateStore.appendChatMessage({
           role: "system",
           text: `${provider.label} Planning Chat is not working: ${result.error ?? "No response returned."}`,
         });
       },
     );
-  } catch (error) {
-    if (isWorkspaceContextError(error)) {
-      void vscode.window.showWarningMessage(error.message);
-      await deps.stateStore.appendChatMessage({ role: "system", text: error.message });
-      return;
-    }
-
-    throw error;
   } finally {
     await deps.stateStore.setPlanningLoading(false);
     await deps.controlRoom.refresh();
@@ -974,19 +956,10 @@ async function generateFirstMessageDraft(params: {
   prompt: string;
   mode: XuMode;
   provider: DryLakeAiProvider;
-}): Promise<{ runbookUri: vscode.Uri; providerGenerated: boolean; providerMessage?: string; usedLocalDraft?: boolean }> {
+}): Promise<{ runbookUri: vscode.Uri; providerGenerated: boolean; providerMessage?: string }> {
   const workspaceSummary = await buildWorkspaceSummary();
   const runbookUri = (await params.deps.sessionStore.findRunbookUri()) ??
     params.deps.sessionStore.getDefaultRunbookUri();
-  const localDraft = createLocalDraftXu({
-    prompt: params.prompt,
-    mode: params.mode,
-    workspaceSummary,
-  });
-
-  await params.deps.sessionStore.writeRunbook(runbookUri, localDraft);
-  await params.deps.controlRoom.refresh();
-  await params.deps.refreshSidebar();
 
   const availability = await params.provider.isAvailable();
   if (!availability.available && params.provider.id !== "external-ai-prompt") {
@@ -994,7 +967,6 @@ async function generateFirstMessageDraft(params: {
       runbookUri,
       providerGenerated: false,
       providerMessage: availability.reason ?? `${params.provider.label} is unavailable right now.`,
-      usedLocalDraft: true,
     };
   }
 
@@ -1015,14 +987,12 @@ async function generateFirstMessageDraft(params: {
       runbookUri,
       providerGenerated: false,
       providerMessage: result.message ?? `${params.provider.label} did not return a valid plan.`,
-      usedLocalDraft: true,
     };
   } catch (error) {
     return {
       runbookUri,
       providerGenerated: false,
       providerMessage: error instanceof Error ? error.message : String(error),
-      usedLocalDraft: true,
     };
   }
 }
@@ -1056,6 +1026,10 @@ export async function startBuildSessionCommand(
 
   const providerId = await pickPlanningProvider(providerArg);
   if (!providerId) {
+    return;
+  }
+
+  if (providerId === "xupra-pro-ai" && !(await requireConnectedBuildSession(deps))) {
     return;
   }
 
@@ -1098,24 +1072,15 @@ export async function startBuildSessionCommand(
         if (draftResult.providerGenerated) {
           await seedChatWithClarifyingQuestions({ deps, provider, prompt: cleanedPrompt, mode });
         } else {
-          await clearStaleHostedPlanningConnection(deps, provider, draftResult.providerMessage);
           await deps.stateStore.appendChatMessage({
             role: "system",
             text: draftResult.providerMessage
-              ? `${provider.label} could not refine the starter plan: ${draftResult.providerMessage}`
-              : `${provider.label} could not refine the starter plan.`,
+              ? `${provider.label} could not generate a plan: ${draftResult.providerMessage}`
+              : `${provider.label} could not generate a plan.`,
           });
         }
       },
     );
-  } catch (error) {
-    if (isWorkspaceContextError(error)) {
-      void vscode.window.showWarningMessage(error.message);
-      await deps.stateStore.appendChatMessage({ role: "system", text: error.message });
-      return;
-    }
-
-    throw error;
   } finally {
     await deps.stateStore.setPlanningLoading(false);
   }
@@ -1265,7 +1230,7 @@ export async function generateAgentFilesCommand(deps: RunbookCommandDeps) {
     return;
   }
 
-  const root = resolveWorkspaceRoot();
+  const root = workspaceRoot();
   const buildSession = deps.stateStore.getBuildSession();
   const files = renderGeneratedFiles(current.runbook, { activeProvider: buildSession });
   const plan = await planGeneratedFiles(files, (logicalPath) => readWorkspaceExisting(root, logicalPath));
@@ -1369,7 +1334,7 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
     ? await resolveHandoffProfile(agent, phase.handoffProfile)
     : undefined;
   const content = renderPhasePrompt(current.runbook, promptPhase, { activeProvider: buildSession, handoffProfile });
-  const workspaceUri = resolveWorkspaceRoot();
+  const workspaceUri = workspaceRoot();
   const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
 
   let message = "";

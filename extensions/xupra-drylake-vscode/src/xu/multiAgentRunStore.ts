@@ -7,8 +7,16 @@ import type {
   MultiAgentAssignmentSource,
   MultiAgentRun,
 } from "../types/multiAgentRun";
-import { resolveWorkspaceRoot } from "../services/workspaceContext";
 import type { XuPhaseAgent } from "./types";
+
+function workspaceRoot() {
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+  if (!root) {
+    throw new Error("Open a workspace folder before starting a DryLake multi-agent run.");
+  }
+
+  return root;
+}
 
 function timestampId(date = new Date()) {
   return date.toISOString().replace(/[:.]/g, "-");
@@ -50,7 +58,7 @@ export class MultiAgentRunStore {
   }
 
   getRunFolder(runId: string) {
-    return vscode.Uri.joinPath(resolveWorkspaceRoot(), ".drylake", "runs", runId);
+    return vscode.Uri.joinPath(workspaceRoot(), ".drylake", "runs", runId);
   }
 
   getTaskSlug(taskPrompt: string) {

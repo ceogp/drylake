@@ -559,7 +559,7 @@ This gives flexibility if pricing changes later.
 Current recommendation after checking official OpenAI docs:
 
 - use OpenAI on the backend
-- default to `gpt-5.4` for assisted normalization jobs
+- default to `gpt-5.4-mini` for assisted normalization jobs
 - use the Responses API with structured outputs where the transformation contract is strongly typed
 - keep deterministic parsing first and invoke the model only for ambiguous files such as loose markdown and Python scripts
 

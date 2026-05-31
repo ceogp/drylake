@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake Coding Agent free AI LLM for planning AI Agents - Hermes Claude Code Codex",
   "description": "Code faster and save tokens with Visual Pipeline Planning.  Use Open source tools like Hermes Agent. Improve your Claude Code with planning like Traycer. Optimize your Agentic AI coding assistants.  Multi-agents. Features specialized agents for Planning, Execution, and Verification.",
-  "version": "0.6.18",
+  "version": "0.6.12",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
@@ -151,14 +151,14 @@
             "hermes-agent"
           ],
           "enumItemLabels": [
-            "Xupra AI",
+            "DryLake AI Planning",
             "Databricks API",
             "Claude API",
             "OpenAI API",
             "Hermes Agent CLI"
           ],
           "default": "xupra-pro-ai",
-          "description": "Planning provider used to create and revise DryLake build plans. Direct API providers prompt once, test the connection, and store accepted keys in VS Code SecretStorage; Xupra AI remains the default."
+          "description": "Planning provider used to create and revise DryLake build plans. Direct API providers prompt once, test the connection, and store accepted keys in VS Code SecretStorage; DryLake AI remains the default."
         },
         "drylake.directApi.timeoutSeconds": {
           "type": "number",
@@ -729,7 +729,6 @@
     "prepackage": "npm run build",
     "prepackage:vsix": "npm run build",
     "package:vsix": "npx @vscode/vsce package --allow-star-activation --allow-missing-repository --baseContentUrl https://drylake.xupracorp.com/marketplace/extension/ --baseImagesUrl https://drylake.xupracorp.com/marketplace/extension/",
-    "smoke:cards": "vitest run src/test/cardGenerationSmoke.test.ts && npm run package:vsix && node scripts/verify-card-vsix.mjs",
     "package:local": "node scripts/package-local-extension.mjs",
     "install:vsix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-vsix.ps1",
     "reinstall:vsix": "npm run package:vsix && npm run install:vsix",

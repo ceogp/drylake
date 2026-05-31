@@ -137,19 +137,6 @@ describe("AI providers", () => {
     expect(availability.available).toBe(true);
   });
 
-  it("requires an extension token for Xupra AI availability", async () => {
-    const provider = new XupraCloudProvider(
-      configuration({ environment: "production", apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
-      proConnection,
-      async () => undefined,
-    );
-
-    await expect(provider.isAvailable()).resolves.toEqual({
-      available: false,
-      reason: "Sign in to DryLake again to use hosted card generation.",
-    });
-  });
-
   it("posts all Xupra AI runbook requests to /api/v1 endpoints", async () => {
     const provider = new XupraCloudProvider(
       configuration({ apiBaseUrl: "https://drylake.xupracorp.com" }) as never,

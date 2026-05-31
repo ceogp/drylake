@@ -116,23 +116,6 @@ describe("runbook route model tier responses", () => {
     expect(service).toHaveBeenCalledWith(expect.anything(), { model: "gpt-5.4-nano" });
   });
 
-  it("routes paid organizations to the GPT 5.4 foundation planning model", async () => {
-    mocks.getRequestOrganizationId.mockResolvedValueOnce("org-pro");
-    mocks.resolveRunbookPlanningAccess.mockResolvedValueOnce({ tier: "foundation", model: "gpt-5.4" });
-    mocks.buildRunbookDraftPrompt.mockResolvedValueOnce({ content: "xu: 1\nkind: ApplicationBuildRunbook\n" });
-
-    const response = await draft(runbookRequest("/api/v1/drylake/runbooks/draft"));
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      ok: true,
-      content: "xu: 1\nkind: ApplicationBuildRunbook\n",
-      modelTier: "foundation",
-    });
-    expect(mocks.buildRunbookDraftPrompt).toHaveBeenCalledWith(expect.anything(), { model: "gpt-5.4" });
-  });
-
   it("preserves sanitized draft AI error messages in the API payload", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     mocks.getRequestOrganizationId.mockResolvedValueOnce("org-pro");
