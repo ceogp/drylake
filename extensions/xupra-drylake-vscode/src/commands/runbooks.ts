@@ -613,8 +613,8 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
             await deps.stateStore.appendChatMessage({
               role: "system",
               text: draftResult.providerMessage
-                ? `${provider.label} could not generate a plan: ${draftResult.providerMessage}`
-                : `${provider.label} could not generate a plan.`,
+                ? `${provider.label} could not refine the starter plan: ${draftResult.providerMessage}`
+                : `${provider.label} could not refine the starter plan.`,
             });
           }
         },
@@ -956,10 +956,19 @@ async function generateFirstMessageDraft(params: {
   prompt: string;
   mode: XuMode;
   provider: DryLakeAiProvider;
-}): Promise<{ runbookUri: vscode.Uri; providerGenerated: boolean; providerMessage?: string }> {
+}): Promise<{ runbookUri: vscode.Uri; providerGenerated: boolean; providerMessage?: string; usedLocalDraft?: boolean }> {
   const workspaceSummary = await buildWorkspaceSummary();
   const runbookUri = (await params.deps.sessionStore.findRunbookUri()) ??
     params.deps.sessionStore.getDefaultRunbookUri();
+  const localDraft = createLocalDraftXu({
+    prompt: params.prompt,
+    mode: params.mode,
+    workspaceSummary,
+  });
+
+  await params.deps.sessionStore.writeRunbook(runbookUri, localDraft);
+  await params.deps.controlRoom.refresh();
+  await params.deps.refreshSidebar();
 
   const availability = await params.provider.isAvailable();
   if (!availability.available && params.provider.id !== "external-ai-prompt") {
@@ -967,6 +976,7 @@ async function generateFirstMessageDraft(params: {
       runbookUri,
       providerGenerated: false,
       providerMessage: availability.reason ?? `${params.provider.label} is unavailable right now.`,
+      usedLocalDraft: true,
     };
   }
 
@@ -987,12 +997,14 @@ async function generateFirstMessageDraft(params: {
       runbookUri,
       providerGenerated: false,
       providerMessage: result.message ?? `${params.provider.label} did not return a valid plan.`,
+      usedLocalDraft: true,
     };
   } catch (error) {
     return {
       runbookUri,
       providerGenerated: false,
       providerMessage: error instanceof Error ? error.message : String(error),
+      usedLocalDraft: true,
     };
   }
 }
@@ -1075,8 +1087,8 @@ export async function startBuildSessionCommand(
           await deps.stateStore.appendChatMessage({
             role: "system",
             text: draftResult.providerMessage
-              ? `${provider.label} could not generate a plan: ${draftResult.providerMessage}`
-              : `${provider.label} could not generate a plan.`,
+              ? `${provider.label} could not refine the starter plan: ${draftResult.providerMessage}`
+              : `${provider.label} could not refine the starter plan.`,
           });
         }
       },

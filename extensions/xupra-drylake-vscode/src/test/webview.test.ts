@@ -526,6 +526,23 @@ describe("Control Room webview", () => {
     expect(html).not.toContain("No plan yet");
   });
 
+  it("renders existing cards while hosted generation is still loading", async () => {
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => ({ runbook: runbook() }) } as never,
+      () => ({ id: "xupra-pro-ai", label: "Xupra AI" }),
+      () => ({ messages: [] }),
+      () => "foundation",
+      () => true,
+    );
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain('class="phase-card');
+    expect(html).not.toContain('class="loading-state"');
+    expect(html).toContain("Cards generated");
+  });
+
   it("collapses and expands the chat panel", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);
