@@ -1118,10 +1118,9 @@ export async function startBuildSessionCommand(
     throw error;
   } finally {
     await deps.stateStore.setPlanningLoading(false);
+    await deps.controlRoom.refresh();
+    await deps.refreshSidebar();
   }
-
-  await deps.controlRoom.refresh();
-  await deps.refreshSidebar();
 }
 
 export async function generateDraftRunbookCommand(deps: RunbookCommandDeps) {

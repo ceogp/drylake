@@ -229,6 +229,65 @@ describe("runbook commands", () => {
     }));
   });
 
+  it("clears loading state and refreshes UI when workspace context is missing on first message", async () => {
+    const workspaceError =
+      "Open a workspace folder or a file from your repo before starting a DryLake build session.";
+    const deps = {
+      apiClient: {
+        openWebUrl: vi.fn(() => mocks.billingUri),
+        setAccessToken: vi.fn(),
+      },
+      stateStore: {
+        getConnection: vi.fn(() => ({
+          userEmail: "owner@example.com",
+          entitlements: {
+            xupra_pro_ai: true,
+            session_cloud_sync: false,
+            pr_summary_generation: false,
+          },
+        })),
+        getAccessToken: vi.fn(async () => "token"),
+        setAwaitingPlanRefreshUntil: vi.fn(async () => undefined),
+        setBuildSession: vi.fn(async () => undefined),
+        setPlanningProvider: vi.fn(async () => undefined),
+        setLastModelTier: vi.fn(async () => undefined),
+        setPlanningLoading: vi.fn(async () => undefined),
+        clearChatHistory: vi.fn(async () => undefined),
+        appendChatMessage: vi.fn(async (message: { role: "user" | "ai" | "system"; text: string }) => ({
+          id: "msg-1",
+          ts: 1,
+          ...message,
+        })),
+      },
+      sessionStore: {
+        findRunbookUri: vi.fn(async () => {
+          throw new Error(workspaceError);
+        }),
+        getDefaultRunbookUri: vi.fn(() => ({ fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" })),
+        createSession: vi.fn(async (session) => ({ id: "session-1", createdAt: "2026-05-16T00:00:00.000Z", ...session })),
+        writeRunbook: vi.fn(async () => undefined),
+      },
+      controlRoom: {
+        createOrShow: vi.fn(async () => undefined),
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+    mocks.providerIsAvailable.mockResolvedValue({ available: true });
+
+    await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout");
+
+    expect(deps.stateStore.setPlanningLoading).toHaveBeenCalledWith(true);
+    expect(deps.stateStore.setPlanningLoading).toHaveBeenLastCalledWith(false);
+    expect(deps.controlRoom.refresh).toHaveBeenCalled();
+    expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith(workspaceError);
+    expect(deps.stateStore.appendChatMessage).toHaveBeenCalledWith({
+      role: "system",
+      text: workspaceError,
+    });
+  });
+
   it("allows connected free users to start AI planning through the nano backend route", async () => {
     const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
     const generatedRunbook = createStarterXu({ prompt: "Build checkout", mode: "build-app" });
