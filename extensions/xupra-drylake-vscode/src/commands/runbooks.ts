@@ -341,24 +341,6 @@ async function pickPlanningProvider(arg?: unknown): Promise<DryLakeProviderId | 
   return picked?.providerId;
 }
 
-async function requireConnectedBuildSession(deps: RunbookCommandDeps) {
-  if (deps.stateStore.getConnection().userEmail) {
-    return true;
-  }
-
-  const choice = await vscode.window.showWarningMessage(
-    "Connect your DryLake account before starting a DryLake plan.",
-    "Connect DryLake",
-  );
-
-  if (choice !== "Connect DryLake") {
-    return false;
-  }
-
-  await vscode.commands.executeCommand("xupra.connect");
-  return Boolean(deps.stateStore.getConnection().userEmail);
-}
-
 async function pickMode(arg?: unknown): Promise<XuMode | undefined> {
   const fromArg = modeFromArg(arg);
   if (fromArg) {
@@ -1074,10 +1056,6 @@ export async function startBuildSessionCommand(
 
   const providerId = await pickPlanningProvider(providerArg);
   if (!providerId) {
-    return;
-  }
-
-  if (providerId === "xupra-pro-ai" && !(await requireConnectedBuildSession(deps))) {
     return;
   }
 
