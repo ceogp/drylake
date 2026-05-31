@@ -137,6 +137,19 @@ describe("AI providers", () => {
     expect(availability.available).toBe(true);
   });
 
+  it("requires an extension token for Xupra AI availability", async () => {
+    const provider = new XupraCloudProvider(
+      configuration({ environment: "production", apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
+      proConnection,
+      async () => undefined,
+    );
+
+    await expect(provider.isAvailable()).resolves.toEqual({
+      available: false,
+      reason: "Sign in to DryLake again to use hosted card generation.",
+    });
+  });
+
   it("posts all Xupra AI runbook requests to /api/v1 endpoints", async () => {
     const provider = new XupraCloudProvider(
       configuration({ apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
@@ -171,6 +184,42 @@ describe("AI providers", () => {
       "https://drylake.xupracorp.com/api/v1/drylake/runbooks/generate-phases",
       "https://drylake.xupracorp.com/api/v1/drylake/runbooks/chat",
     ]);
+  });
+
+  it("times out hanging Xupra AI requests and returns deterministic messages", async () => {
+    const provider = new XupraCloudProvider(
+      configuration({ apiBaseUrl: "https://drylake.xupracorp.com" }) as never,
+      proConnection,
+      async () => "token",
+    );
+    const abortError = Object.assign(new Error("aborted"), { name: "AbortError" });
+    const fetchMock = vi.fn().mockRejectedValue(abortError);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const input = {
+        prompt: "Build app",
+        mode: "build-app" as const,
+        workspaceSummary: "Workspace: test",
+      };
+
+      await expect(provider.generateDraftRunbook(input)).resolves.toEqual({
+        message: "Xupra AI request timed out after 120 seconds.",
+      });
+      await expect(provider.planningChat({ ...input, chatTranscript: "User: hi" })).resolves.toEqual({
+        error: "Xupra AI chat request timed out after 120 seconds.",
+      });
+      await expect(provider.clarifyIntent(input)).resolves.toEqual({
+        message: "Xupra AI clarify request timed out after 120 seconds.",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    for (const call of fetchMock.mock.calls as Array<[string, RequestInit]>) {
+      expect(call[1]?.signal).toBeDefined();
+    }
   });
 
   it("returns model tier metadata from Xupra AI draft and chat responses", async () => {

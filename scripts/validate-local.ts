@@ -92,7 +92,7 @@ async function main() {
         'description = "Review implementation changes and call out risks."',
         'developer_instructions = """Inspect code changes carefully and report concrete issues."""',
         'tools = ["Read", "Grep"]',
-        'model = "gpt-5.4-mini"',
+        'model = "gpt-5.4"',
         'model_reasoning_effort = "medium"',
         'sandbox_mode = "read-only"',
       ].join("\n"),

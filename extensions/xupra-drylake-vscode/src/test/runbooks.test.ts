@@ -163,31 +163,71 @@ beforeEach(() => {
 });
 
 describe("runbook commands", () => {
-  it("requires users to connect before starting a DryLake plan", async () => {
-    mocks.showWarningMessage.mockResolvedValueOnce("Connect DryLake");
+  it("creates local starter cards before prompting disconnected users to reconnect", async () => {
+    const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
+    const messages: Array<{ id: string; ts: number; role: "user" | "ai" | "system"; text: string }> = [];
     const deps = {
-      apiClient: {},
+      apiClient: {
+        setAccessToken: vi.fn(),
+      },
       stateStore: {
         getConnection: vi.fn(() => ({})),
+        getAccessToken: vi.fn(async () => undefined),
+        setPlanningProvider: vi.fn(async () => undefined),
+        setLastModelTier: vi.fn(async () => undefined),
+        setPlanningLoading: vi.fn(async () => undefined),
+        setBuildSession: vi.fn(async () => undefined),
+        clearAccessToken: vi.fn(async () => undefined),
+        clearConnection: vi.fn(async () => undefined),
+        clearChatHistory: vi.fn(async () => undefined),
+        appendChatMessage: vi.fn(async (message: { role: "user" | "ai" | "system"; text: string }) => {
+          const next = { id: `msg-${messages.length + 1}`, ts: messages.length + 1, ...message };
+          messages.push(next);
+          return next;
+        }),
+        getChatHistory: vi.fn(() => ({ messages })),
       },
       sessionStore: {
-        ensureRunbook: vi.fn(),
+        findRunbookUri: vi.fn(async () => null),
+        getDefaultRunbookUri: vi.fn(() => runbookUri),
+        createSession: vi.fn(async (session) => ({ id: "session-1", createdAt: "2026-05-16T00:00:00.000Z", ...session })),
+        writeRunbook: vi.fn(async () => undefined),
       },
       controlRoom: {
         createOrShow: vi.fn(async () => undefined),
+        refresh: vi.fn(async () => undefined),
       },
       refreshSidebar: vi.fn(async () => undefined),
     };
+    mocks.showWarningMessage.mockResolvedValueOnce("Reconnect DryLake");
+    mocks.providerIsAvailable.mockResolvedValueOnce({
+      available: false,
+      reason: "Connect a Xupra account to use DryLake planning.",
+    });
 
     await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout");
 
+    expect(deps.controlRoom.createOrShow).toHaveBeenCalledOnce();
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledWith(
+      runbookUri,
+      expect.objectContaining({
+        intent: expect.objectContaining({ rawPrompt: "Build checkout" }),
+      }),
+    );
+    expect(deps.apiClient.setAccessToken).toHaveBeenCalledWith(undefined);
+    expect(deps.stateStore.clearAccessToken).toHaveBeenCalledOnce();
+    expect(deps.stateStore.clearConnection).toHaveBeenCalledOnce();
     expect(mocks.showWarningMessage).toHaveBeenCalledWith(
-      "Connect your DryLake account before starting a DryLake plan.",
-      "Connect DryLake",
+      "Your DryLake extension connection expired. Reconnect to use hosted card generation. A local starter plan was kept visible.",
+      "Reconnect DryLake",
     );
     expect(mocks.executeCommand).toHaveBeenCalledWith("xupra.connect");
-    expect(deps.sessionStore.ensureRunbook).not.toHaveBeenCalled();
-    expect(deps.controlRoom.createOrShow).not.toHaveBeenCalled();
+    expect(mocks.providerGenerateDraftRunbook).not.toHaveBeenCalled();
+    expect(messages.at(-1)).toEqual(expect.objectContaining({
+      role: "system",
+      text: "Xupra AI could not refine the starter plan: Connect a Xupra account to use DryLake planning.",
+    }));
   });
 
   it("allows connected free users to start AI planning through the nano backend route", async () => {
@@ -246,8 +286,11 @@ describe("runbook commands", () => {
     expect(deps.sessionStore.ensureRunbook).not.toHaveBeenCalled();
     expect(deps.sessionStore.findRunbookUri).toHaveBeenCalledOnce();
     expect(deps.sessionStore.getDefaultRunbookUri).toHaveBeenCalledOnce();
-    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
-    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledWith(runbookUri, generatedRunbook);
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(2);
+    expect(deps.sessionStore.writeRunbook).toHaveBeenNthCalledWith(1, runbookUri, expect.objectContaining({
+      intent: expect.objectContaining({ rawPrompt: "Build checkout" }),
+    }));
+    expect(deps.sessionStore.writeRunbook).toHaveBeenLastCalledWith(runbookUri, generatedRunbook);
     expect(deps.stateStore.setLastModelTier).toHaveBeenCalledWith("nano");
     expect(deps.stateStore.setPlanningLoading).toHaveBeenNthCalledWith(1, true);
     expect(deps.stateStore.setPlanningLoading).toHaveBeenLastCalledWith(false);
@@ -322,7 +365,8 @@ describe("runbook commands", () => {
     expect(configurationArg.get("aiProvider")).toBe("openai-api");
     expect(deps.stateStore.setPlanningProviderSecret).toHaveBeenCalledWith("openai-api", "sk-test-openai");
     expect(validateConnection).toHaveBeenCalledOnce();
-    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledWith(runbookUri, generatedRunbook);
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(2);
+    expect(deps.sessionStore.writeRunbook).toHaveBeenLastCalledWith(runbookUri, generatedRunbook);
   });
 
   it("rejects a direct planning provider key when the live connection test fails", async () => {
@@ -377,7 +421,7 @@ describe("runbook commands", () => {
     expect(mocks.providerGenerateDraftRunbook).not.toHaveBeenCalled();
   });
 
-  it("leaves first-message no-plan failures in chat without creating a local prompt-derived draft", async () => {
+  it("keeps starter cards visible when first-message AI planning fails", async () => {
     const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
     const messages: Array<{ id: string; ts: number; role: "user" | "ai" | "system"; text: string }> = [];
     const deps = {
@@ -421,15 +465,20 @@ describe("runbook commands", () => {
     await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout");
 
     expect(deps.sessionStore.ensureRunbook).not.toHaveBeenCalled();
-    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledWith(
+      runbookUri,
+      expect.objectContaining({
+        intent: expect.objectContaining({ rawPrompt: "Build checkout" }),
+      }),
+    );
     expect(mocks.providerGenerateDraftRunbook).toHaveBeenCalledWith(expect.not.objectContaining({
       currentRunbook: expect.anything(),
     }));
     expect(messages.at(-1)).toEqual(expect.objectContaining({
       role: "system",
-      text: "Xupra AI could not generate a plan: Xupra AI is not configured: OPENAI_MODEL is missing. (500).",
+      text: "Xupra AI could not refine the starter plan: Xupra AI is not configured: OPENAI_MODEL is missing. (500).",
     }));
-    expect(messages.at(-1)?.text).not.toContain("local starter plan");
     expect(messages.at(-1)?.text).not.toContain("local draft");
   });
 

@@ -22,6 +22,8 @@ type Endpoint =
 
 type ChatEndpoint = "/api/v1/drylake/runbooks/chat";
 
+const CLOUD_REQUEST_TIMEOUT_MS = 120_000;
+
 function modelTierFrom(value: unknown): RunbookModelTier | undefined {
   return value === "nano" || value === "foundation" ? value : undefined;
 }
@@ -67,7 +69,34 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       return { available: false, reason: "Connect a Xupra account to use DryLake planning." };
     }
 
+    const token = await this.readAccessToken();
+    if (!token?.trim()) {
+      return { available: false, reason: "Sign in to DryLake again to use hosted card generation." };
+    }
+
     return { available: true };
+  }
+
+  private async fetchWithTimeout(url: string, init: RequestInit) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CLOUD_REQUEST_TIMEOUT_MS);
+
+    try {
+      return await fetch(url, {
+        ...init,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private timeoutSeconds() {
+    return CLOUD_REQUEST_TIMEOUT_MS / 1000;
+  }
+
+  private isAbortError(error: unknown) {
+    return typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
   }
 
   private async post(endpoint: Endpoint, input: GenerateDraftRunbookInput): Promise<GenerateDraftRunbookResult> {
@@ -80,7 +109,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
     const token = await this.readAccessToken();
 
     try {
-      const response = await fetch(`${baseUrl}${endpoint}`, {
+      const response = await this.fetchWithTimeout(`${baseUrl}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -138,6 +167,12 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       const modelTier = modelTierFrom(payload?.modelTier);
       return { runbook: parsed.runbook, ...(modelTier ? { modelTier } : {}) };
     } catch (error) {
+      if (this.isAbortError(error)) {
+        return {
+          message: `Xupra AI request timed out after ${this.timeoutSeconds()} seconds.`,
+        };
+      }
+
       return {
         message: error instanceof Error
           ? `Xupra AI request failed: ${error.message}`
@@ -156,7 +191,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
     const token = await this.readAccessToken();
 
     try {
-      const response = await fetch(`${baseUrl}${endpoint}`, {
+      const response = await this.fetchWithTimeout(`${baseUrl}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -197,6 +232,12 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       const runbook = runbookFrom(payload.proposedRunbook ?? payload.runbook);
       return { reply: payload.reply, ...(runbook ? { runbook } : {}), ...(modelTier ? { modelTier } : {}) };
     } catch (error) {
+      if (this.isAbortError(error)) {
+        return {
+          error: `Xupra AI chat request timed out after ${this.timeoutSeconds()} seconds.`,
+        };
+      }
+
       return {
         error: error instanceof Error
           ? `Xupra AI chat request failed: ${error.message}`
@@ -235,7 +276,7 @@ export class XupraCloudProvider implements DryLakeAiProvider {
     const token = await this.readAccessToken();
 
     try {
-      const response = await fetch(`${baseUrl}/api/v1/drylake/runbooks/clarify`, {
+      const response = await this.fetchWithTimeout(`${baseUrl}/api/v1/drylake/runbooks/clarify`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -268,6 +309,12 @@ export class XupraCloudProvider implements DryLakeAiProvider {
       const modelTier = modelTierFrom(payload?.modelTier);
       return { questions, ...(modelTier ? { modelTier } : {}) };
     } catch (error) {
+      if (this.isAbortError(error)) {
+        return {
+          message: `Xupra AI clarify request timed out after ${this.timeoutSeconds()} seconds.`,
+        };
+      }
+
       return {
         message: error instanceof Error
           ? `Xupra AI clarify request failed: ${error.message}`
