@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   env: {
-    OPENAI_MODEL: "gpt-5.5",
+    OPENAI_MODEL: "gpt-5.4",
     OPENAI_FREE_MODEL: "gpt-5.4-nano",
   },
   getEntitlementsForOrganization: vi.fn(),
@@ -47,7 +47,7 @@ describe("resolveRunbookPlanningAccess", () => {
 
     await expect(resolveRunbookPlanningAccess("org-pro")).resolves.toEqual({
       tier: "foundation",
-      model: "gpt-5.5",
+      model: "gpt-5.4",
     });
   });
 
@@ -61,7 +61,7 @@ describe("resolveRunbookPlanningAccess", () => {
     try {
       await expect(resolveRunbookPlanningAccess("org-pro")).resolves.toEqual({
         tier: "foundation",
-        model: "gpt-5.5",
+        model: "gpt-5.4",
       });
       expect(warnSpy).toHaveBeenCalledWith(
         "[runbook-planning-access] enabling foundation model via paid-tier fallback",
@@ -79,7 +79,7 @@ describe("resolveRunbookPlanningAccess", () => {
     try {
       await expect(resolveRunbookPlanningAccess("org-enterprise")).resolves.toEqual({
         tier: "foundation",
-        model: "gpt-5.5",
+        model: "gpt-5.4",
       });
       expect(warnSpy).toHaveBeenCalledWith(
         "[runbook-planning-access] enabling foundation model via paid-tier fallback",

@@ -33,7 +33,18 @@ export async function resolveRunbookPlanningAccess(organizationId: string): Prom
     });
   }
 
-  return entitlementAccess || tierFallbackAccess
+  const access: RunbookPlanningAccess = entitlementAccess || tierFallbackAccess
     ? { tier: "foundation", model: env.OPENAI_MODEL }
     : { tier: "nano", model: env.OPENAI_FREE_MODEL };
+
+  console.info("[runbook-planning-access] resolved", {
+    organizationId,
+    entitlementAccess,
+    subscriptionTier: subscription?.tier ?? null,
+    organizationTier: organization?.tier ?? null,
+    modelTier: access.tier,
+    model: access.model,
+  });
+
+  return access;
 }

@@ -151,14 +151,14 @@
             "hermes-agent"
           ],
           "enumItemLabels": [
-            "DryLake AI Planning",
+            "Xupra AI",
             "Databricks API",
             "Claude API",
             "OpenAI API",
             "Hermes Agent CLI"
           ],
           "default": "xupra-pro-ai",
-          "description": "Planning provider used to create and revise DryLake build plans. Direct API providers prompt once, test the connection, and store accepted keys in VS Code SecretStorage; DryLake AI remains the default."
+          "description": "Planning provider used to create and revise DryLake build plans. Direct API providers prompt once, test the connection, and store accepted keys in VS Code SecretStorage; Xupra AI remains the default."
         },
         "drylake.directApi.timeoutSeconds": {
           "type": "number",

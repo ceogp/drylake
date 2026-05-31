@@ -3,8 +3,11 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 import { getAuthSetup } from "@/lib/services/auth";
+import { checkPlanningModelAccess } from "@/lib/services/openai-health";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const includeDeepChecks = url.searchParams.get("deep") === "1";
   const db = await prisma.$queryRawUnsafe("SELECT 1 as ok").then(() => "ok").catch(() => "error");
   const openAiConfigured = await getOpenAiApiKey().then(Boolean).catch(() => false);
   const auth = getAuthSetup();
@@ -42,6 +45,16 @@ export async function GET() {
       clerkConfigured,
       stripeConfigured,
       openaiConfigured: openAiConfigured,
+      openaiModels: includeDeepChecks ? await checkPlanningModelAccess() : {
+        foundation: {
+          model: env.OPENAI_MODEL,
+          configured: Boolean(env.OPENAI_MODEL && openAiConfigured),
+        },
+        nano: {
+          model: env.OPENAI_FREE_MODEL,
+          configured: Boolean(env.OPENAI_FREE_MODEL && openAiConfigured),
+        },
+      },
       storageConfigured:
         env.ARTIFACT_STORAGE_DRIVER === "local"
           ? true

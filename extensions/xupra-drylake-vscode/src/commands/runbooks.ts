@@ -80,8 +80,8 @@ const MODE_CHOICES: Array<vscode.QuickPickItem & { mode: XuMode }> = [
 
 const PLANNING_PROVIDER_CHOICES: Array<vscode.QuickPickItem & { providerId: DryLakeProviderId }> = [
   {
-    label: "DryLake AI Planning",
-    description: "Xupra hosted",
+    label: "Xupra AI",
+    description: "Hosted GPT 5.4 planning",
     detail: "Default hosted planner for chat-first DryLake planning.",
     providerId: "xupra-pro-ai",
   },
