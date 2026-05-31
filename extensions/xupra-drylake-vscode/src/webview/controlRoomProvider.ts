@@ -692,6 +692,11 @@ export class ControlRoomProvider {
     this.panel.webview.html = this.renderHtml(runbook, pendingPlanChange, profilesByAgent);
   }
 
+  dispose() {
+    this.panel?.dispose();
+    this.panel = undefined;
+  }
+
   private async loadHandoffProfiles(runbook: ApplicationBuildRunbook): Promise<HandoffProfilesByAgent> {
     const agents = [...new Set(runbook.phases.map((phase) => phase.agent).filter((agent): agent is (typeof XU_PHASE_AGENTS)[number] =>
       Boolean(agent)

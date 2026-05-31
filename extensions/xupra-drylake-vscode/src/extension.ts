@@ -953,6 +953,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const signedOut = await signOutCommand(apiClient, stateStore);
 
     if (signedOut) {
+      controlRoom.dispose();
       await syncWorkspaceView([]);
     }
   });

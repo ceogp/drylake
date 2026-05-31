@@ -21,7 +21,14 @@ type TestMessage = {
 };
 
 let messageHandler: ((message: TestMessage) => Promise<void>) | undefined;
-let panel: { webview: { html: string; onDidReceiveMessage: ReturnType<typeof vi.fn> } } | undefined;
+let panel:
+  | {
+      dispose: ReturnType<typeof vi.fn>;
+      reveal: ReturnType<typeof vi.fn>;
+      onDidDispose: ReturnType<typeof vi.fn>;
+      webview: { html: string; onDidReceiveMessage: ReturnType<typeof vi.fn> };
+    }
+  | undefined;
 let storedView: unknown;
 let storedChatCollapsed: unknown;
 const executed: Array<{ command: string; args: unknown[] }> = [];
@@ -31,6 +38,7 @@ vi.mock("vscode", () => ({
   window: {
     createWebviewPanel: vi.fn(() => {
       panel = {
+        dispose: vi.fn(),
         reveal: vi.fn(),
         onDidDispose: vi.fn(),
         webview: {
@@ -121,6 +129,16 @@ describe("Control Room webview", () => {
     await messageHandler?.({ command: "drylake.approveArchitecture" });
 
     expect(executed).toContainEqual({ command: "drylake.approveArchitecture", args: [] });
+  });
+
+  it("disposes the open panel for complete sign-out", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => null } as never);
+    await provider.createOrShow(context() as never);
+    const dispose = panel?.dispose;
+
+    provider.dispose();
+
+    expect(dispose).toHaveBeenCalledOnce();
   });
 
   it("renders kanban columns with phases distributed by status", async () => {

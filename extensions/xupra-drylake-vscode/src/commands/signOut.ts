@@ -21,7 +21,7 @@ export async function signOutCommand(apiClient: ApiClient, stateStore: StateStor
   apiClient.setAccessToken(undefined);
   await stateStore.clearAccessToken();
   await stateStore.clearConnection();
-  await stateStore.setAwaitingPlanRefreshUntil(null);
+  await stateStore.clearPlanningSessionState();
 
   void vscode.window.showInformationMessage(
     hadSession ? "Signed out of Xupra DryLake." : "Xupra DryLake is already signed out.",

@@ -181,6 +181,15 @@ export class StateStore {
     await this.setChatHistory(EMPTY_CHAT_STATE);
   }
 
+  async clearPlanningSessionState(): Promise<void> {
+    await this.clearBuildSession();
+    await this.setPlanningProvider(null);
+    await this.setLastModelTier(null);
+    await this.setPlanningLoading(false);
+    await this.clearChatHistory();
+    await this.setAwaitingPlanRefreshUntil(null);
+  }
+
   getActivePhaseSummary(runbook: ApplicationBuildRunbook | null | undefined): ActivePhaseSummary | null {
     const phase = runbook?.phases.find((item) => item.status !== "complete") ?? runbook?.phases[0];
 
