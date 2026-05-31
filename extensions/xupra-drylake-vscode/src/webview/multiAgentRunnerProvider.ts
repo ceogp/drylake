@@ -13,6 +13,7 @@ import {
   renderHandoffProfilePrompt,
   resolveHandoffProfile,
 } from "../agents/handoffProfiles";
+import { resolveWorkspaceRoot } from "../services/workspaceContext";
 import type { HandoffProfileSelection } from "../agents/handoffProfiles";
 import type { ApiClient } from "../services/apiClient";
 import type { MultiAgentAssignmentPlan } from "../types/multiAgentRun";
@@ -89,15 +90,6 @@ const RUNNER_AGENTS: Array<{
   { id: "cursor", label: "Cursor CLI", provider: "Cursor" },
   { id: "copilot", label: "GitHub Copilot Chat", provider: "GitHub" },
 ];
-
-function workspaceRoot() {
-  const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-  if (!root) {
-    throw new Error("Open a workspace folder before starting a DryLake runner task.");
-  }
-
-  return root;
-}
 
 function timestampId(date = new Date()) {
   return date.toISOString().replace(/[:.]/g, "-");
@@ -537,8 +529,8 @@ export class MultiAgentRunnerProvider {
   }
 
   private async writeAuditLog(run: RunnerRun) {
-    const uri = vscode.Uri.joinPath(runDirectory(workspaceRoot(), run.id), "run.json");
-    await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(workspaceRoot(), ".drylake", "runs", run.id));
+    const uri = vscode.Uri.joinPath(runDirectory(resolveWorkspaceRoot(), run.id), "run.json");
+    await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(resolveWorkspaceRoot(), ".drylake", "runs", run.id));
     await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(`${JSON.stringify(run, null, 2)}\n`));
   }
 
@@ -726,7 +718,7 @@ export class MultiAgentRunnerProvider {
     }
 
     const store = this.store();
-    const root = workspaceRoot();
+    const root = resolveWorkspaceRoot();
     const taskSlug = slugify(run.taskPrompt);
     const startedAt = new Date().toISOString();
     const runningRun: RunnerRun = {

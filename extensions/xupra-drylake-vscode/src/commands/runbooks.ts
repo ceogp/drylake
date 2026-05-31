@@ -36,6 +36,7 @@ import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
 import type { ApiClient } from "../services/apiClient";
 import type { StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
+import { isWorkspaceContextError, resolveWorkspaceRoot } from "../services/workspaceContext";
 import { scanWorkspaceFiles, getWorkspaceDisplayName } from "../services/workspaceScanner";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type {
@@ -140,15 +141,6 @@ const DIRECT_PROVIDER_SETUP: Record<DirectPlanningProviderId, {
 };
 
 const NO_LOCAL_PLAN_MESSAGE = "No local DryLake plan found. Open the Control Room to create one.";
-
-function workspaceRoot() {
-  const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-  if (!root) {
-    throw new Error("Open a workspace folder before starting a DryLake plan.");
-  }
-
-  return root;
-}
 
 function relativePath(uri: vscode.Uri) {
   return vscode.workspace.asRelativePath(uri, false).replace(/\\/g, "/");
@@ -721,6 +713,14 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
         });
       },
     );
+  } catch (error) {
+    if (isWorkspaceContextError(error)) {
+      void vscode.window.showWarningMessage(error.message);
+      await deps.stateStore.appendChatMessage({ role: "system", text: error.message });
+      return;
+    }
+
+    throw error;
   } finally {
     await deps.stateStore.setPlanningLoading(false);
     await deps.controlRoom.refresh();
@@ -1108,6 +1108,14 @@ export async function startBuildSessionCommand(
         }
       },
     );
+  } catch (error) {
+    if (isWorkspaceContextError(error)) {
+      void vscode.window.showWarningMessage(error.message);
+      await deps.stateStore.appendChatMessage({ role: "system", text: error.message });
+      return;
+    }
+
+    throw error;
   } finally {
     await deps.stateStore.setPlanningLoading(false);
   }
@@ -1257,7 +1265,7 @@ export async function generateAgentFilesCommand(deps: RunbookCommandDeps) {
     return;
   }
 
-  const root = workspaceRoot();
+  const root = resolveWorkspaceRoot();
   const buildSession = deps.stateStore.getBuildSession();
   const files = renderGeneratedFiles(current.runbook, { activeProvider: buildSession });
   const plan = await planGeneratedFiles(files, (logicalPath) => readWorkspaceExisting(root, logicalPath));
@@ -1361,7 +1369,7 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
     ? await resolveHandoffProfile(agent, phase.handoffProfile)
     : undefined;
   const content = renderPhasePrompt(current.runbook, promptPhase, { activeProvider: buildSession, handoffProfile });
-  const workspaceUri = workspaceRoot();
+  const workspaceUri = resolveWorkspaceRoot();
   const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
 
   let message = "";
