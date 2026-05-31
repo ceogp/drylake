@@ -177,6 +177,113 @@ code {
   color: #6ee7b7 !important;
 }
 
+.cl-rootBox,
+.cl-card,
+.cl-cardBox,
+.cl-main,
+.cl-form,
+.cl-modalContent,
+.cl-popoverBox,
+.cl-userButtonPopoverCard {
+  background-color: #111414 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+  box-shadow: none !important;
+}
+
+.cl-headerTitle,
+.cl-formHeaderTitle,
+.cl-userPreviewMainIdentifier,
+.cl-userButtonPopoverActionButtonText,
+.cl-socialButtonsBlockButtonText {
+  color: #ffffff !important;
+}
+
+.cl-headerSubtitle,
+.cl-formHeaderSubtitle,
+.cl-formFieldLabel,
+.cl-formFieldHintText,
+.cl-footerActionText,
+.cl-dividerText,
+.cl-identityPreviewText,
+.cl-userPreviewSecondaryIdentifier,
+.cl-userButtonPopoverActionButtonIcon,
+.cl-userButtonPopoverActionButton,
+.cl-navbarButton,
+.cl-menuButton,
+.cl-breadcrumbsItem,
+.cl-pageScrollBox,
+.cl-profileSectionTitleText,
+.cl-profileSectionContent {
+  color: #e4e4e7 !important;
+}
+
+.cl-formFieldInput,
+.cl-input {
+  background-color: #090a0a !important;
+  border-color: #52525b !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.cl-formFieldInput::placeholder,
+.cl-input::placeholder {
+  color: #a1a1aa !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #a1a1aa !important;
+}
+
+.cl-socialButtonsBlockButton,
+.cl-userButtonPopoverActionButton,
+.cl-menuButton {
+  background-color: #090a0a !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+  box-shadow: none !important;
+}
+
+.cl-socialButtonsBlockButton:hover,
+.cl-userButtonPopoverActionButton:hover,
+.cl-menuButton:hover {
+  background-color: #18181b !important;
+  border-color: #fb923c !important;
+  color: #ffedd5 !important;
+}
+
+.cl-formButtonPrimary {
+  background-color: #34d399 !important;
+  border-color: #34d399 !important;
+  color: #090a0a !important;
+  box-shadow: none !important;
+}
+
+.cl-formButtonPrimary *,
+.cl-formButtonPrimary:hover * {
+  color: #090a0a !important;
+}
+
+.cl-footerActionLink,
+.cl-formFieldAction,
+.cl-identityPreviewEditButton,
+.cl-breadcrumbsItemDivider,
+.cl-navbarButton:hover,
+.cl-pageLink {
+  color: #6ee7b7 !important;
+}
+
+.cl-dividerLine,
+.cl-profileSection,
+.cl-userButtonPopoverActions,
+.cl-userButtonPopoverFooter {
+  border-color: #27272a !important;
+}
+
+.cl-badge,
+.cl-tag {
+  background-color: #17251d !important;
+  color: #6ee7b7 !important;
+}
+
 .tape-page [class*="bg-white"],
 .tape-page [class*="bg-[#f7f4ea]"],
 .tape-page [class*="bg-stone-50"],

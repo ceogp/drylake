@@ -1,7 +1,10 @@
 "use client";
 
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { Show, UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 import { usePathname, useSearchParams, type ReadonlyURLSearchParams } from "next/navigation";
+
+import { clerkTapeAppearance } from "@/components/drylake-auth-shell";
 
 function getManualMode(value: string | null) {
   if (!value) {
@@ -30,6 +33,12 @@ function buildExtensionConnectPath(searchParams: ReadonlyURLSearchParams) {
   return `/extensions/connect?${params.toString()}`;
 }
 
+function authPath(pathname: string, redirectUrl: string) {
+  const params = new URLSearchParams();
+  params.set("redirect_url", redirectUrl);
+  return `${pathname}?${params.toString()}`;
+}
+
 export function HeaderAuthControls() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -39,40 +48,31 @@ export function HeaderAuthControls() {
     ? buildExtensionConnectPath(searchParams)
     : "/workspace";
 
-  const signInRedirectProps = redirectPath
-    ? {
-        forceRedirectUrl: redirectPath,
-        fallbackRedirectUrl: redirectPath,
-        signUpForceRedirectUrl: redirectPath,
-        signUpFallbackRedirectUrl: redirectPath,
-      }
-    : {};
-
-  const signUpRedirectProps = redirectPath
-    ? {
-        forceRedirectUrl: redirectPath,
-        fallbackRedirectUrl: redirectPath,
-        signInForceRedirectUrl: redirectPath,
-        signInFallbackRedirectUrl: redirectPath,
-      }
-    : {};
-
   return (
     <>
       <Show when="signed-out">
         {isExtensionConnectPage && hasExtensionCallback ? null : (
           <>
-            <SignInButton mode="modal" {...signInRedirectProps}>
-              <button className="rounded border border-zinc-700 bg-zinc-950 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 transition hover:border-orange-400 hover:text-orange-200">Sign In</button>
-            </SignInButton>
-            <SignUpButton mode="modal" {...signUpRedirectProps}>
-              <button className="rounded border border-emerald-400 bg-emerald-400 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-emerald-300">Register to try</button>
-            </SignUpButton>
+            <Link className="rounded border border-zinc-700 bg-zinc-950 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 transition hover:border-orange-400 hover:text-orange-200" href={authPath("/sign-in", redirectPath)}>
+              Sign In
+            </Link>
+            <Link className="rounded border border-emerald-400 bg-emerald-400 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-emerald-300" href={authPath("/sign-up", redirectPath)}>
+              Register to try
+            </Link>
           </>
         )}
       </Show>
       <Show when="signed-in">
-        <UserButton />
+        <UserButton
+          appearance={clerkTapeAppearance}
+          customMenuItems={[
+            { label: "Account", href: "/account" },
+            { label: "Billing", href: "/billing" },
+          ]}
+          signInUrl="/sign-in"
+          userProfileMode="navigation"
+          userProfileUrl="/account"
+        />
       </Show>
     </>
   );
