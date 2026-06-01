@@ -7,7 +7,9 @@ Backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.c
 
 ## Watch The Demo
 
-[![Watch the DryLake demo video](https://drylake.xupracorp.com/marketplace/extension/media/readme-demo-video.jpg)](https://drylake.xupracorp.com/marketplace/extension/media/drylake-demo.mp4)
+<a href="https://drylake.xupracorp.com/marketplace/extension/media/drylake-demo.mp4">
+  <img src="https://drylake.xupracorp.com/marketplace/extension/media/readme-demo-video.png" alt="Watch the DryLake demo video" width="520">
+</a>
 
 ## Planning Models
 
