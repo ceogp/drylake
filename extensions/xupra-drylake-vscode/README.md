@@ -8,12 +8,12 @@ Backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.c
 ## Watch The Demo
 
 <a href="https://drylake.xupracorp.com/marketplace/extension/media/drylake-demo.mp4">
-  <img src="https://drylake.xupracorp.com/marketplace/extension/media/readme-demo-video.png" alt="Watch the DryLake demo video" width="520">
+  <img src="https://drylake.xupracorp.com/marketplace/extension/media/readme-demo-video-v3.png" alt="Watch the DryLake demo video" width="420">
 </a>
 
 ## Planning Models
 
-![DryLake planning model dropdown](https://drylake.xupracorp.com/marketplace/extension/media/readme-planning-models.png)
+<img src="https://drylake.xupracorp.com/marketplace/extension/media/readme-planning-models.png" alt="DryLake planning model dropdown" width="620">
 
 Free users can generate starter plans with GPT-5.4 Nano. Pro users can select **Xupra AI - Frontier Models** from the same planning-model dropdown. Direct API users can bring their own OpenAI, Claude, Databricks, or Hermes Agent setup.
 
@@ -21,13 +21,13 @@ Use the stages dropdown to request up to 12 planning stages, or type naturally i
 
 ## Control Room
 
-![DryLake Control Room kanban](https://drylake.xupracorp.com/marketplace/extension/media/readme-kanban-v2.png)
+<img src="https://drylake.xupracorp.com/marketplace/extension/media/readme-kanban-v2.png" alt="DryLake Control Room kanban" width="620">
 
 Each phase card has one **Agent** dropdown. Assign phases to Claude Code, OpenAI Codex or any agent then press **Run Handoff**. You can also just export as Markdown or copy to `.sh`, and `.bat`.
 
 ## Skills And Handoffs
 
-![DryLake Claude Code skill selector](https://drylake.xupracorp.com/marketplace/extension/media/readme-claude-skill.png)
+<img src="https://drylake.xupracorp.com/marketplace/extension/media/readme-claude-skill.png" alt="DryLake Claude Code skill selector" width="620">
 
 Choose your favorite skill before handing off to your agent.
 
