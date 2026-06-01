@@ -433,6 +433,8 @@ describe("Control Room webview", () => {
     expect(html).toContain('option value="hermes-agent"');
     expect(html).toContain('id="stageCountSelect"');
     expect(html).toContain('<option value="12">12</option>');
+    expect(html).toContain("Upgrade to Frontier Models");
+    expect(html).toContain('data-frontier-upgrade');
 
     await messageHandler?.({
       command: "drylake.startBuildSession",

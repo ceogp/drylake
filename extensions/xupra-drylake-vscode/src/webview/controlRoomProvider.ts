@@ -551,6 +551,7 @@ function renderPlanningProviderSelect(
     }).join("")}
     </select>
     <div class="planning-provider-note" data-provider-note>${escapeHtml(note)}</div>
+    <button type="button" class="frontier-upgrade-cta" data-frontier-upgrade data-command="xupra.openBilling"${activeLocked ? "" : " hidden"}>Upgrade to Frontier Models</button>
   </div>`;
 }
 
@@ -963,6 +964,10 @@ export class ControlRoomProvider {
     .planning-provider-select:focus { outline: none; border-color: rgba(52, 211, 153, 0.72); }
     .planning-provider-select:disabled { opacity: 0.72; cursor: not-allowed; }
     .planning-provider-note { min-height: 16px; color: var(--drylake-muted); font-size: 11px; line-height: 1.35; }
+    .frontier-upgrade-cta { justify-self: start; display: inline-flex; align-items: center; gap: 7px; width: max-content; max-width: 100%; padding: 6px 10px; border: 1px solid rgba(251, 146, 60, 0.78); border-radius: 999px; color: #090a0a; background: var(--drylake-orange); font-size: 11px; font-weight: 750; box-shadow: none; }
+    .frontier-upgrade-cta::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #090a0a; opacity: 0.75; }
+    .frontier-upgrade-cta:hover { color: #090a0a; background: #fdba74; border-color: #fdba74; }
+    .frontier-upgrade-cta[hidden] { display: none; }
     .stage-count-label { display: inline-flex; align-items: center; gap: 8px; color: var(--drylake-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
     .stage-count-select { min-width: 92px; padding: 6px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; text-transform: none; letter-spacing: 0; }
     .stage-count-select:disabled { opacity: 0.72; cursor: not-allowed; }
@@ -1081,6 +1086,11 @@ export class ControlRoomProvider {
         } else {
           note.textContent = option.textContent?.split(" - ").slice(1).join(" - ") || "";
         }
+      }
+
+      const frontierUpgrade = document.querySelector("[data-frontier-upgrade]");
+      if (frontierUpgrade) {
+        frontierUpgrade.hidden = !selectedProviderLocked;
       }
     }
 

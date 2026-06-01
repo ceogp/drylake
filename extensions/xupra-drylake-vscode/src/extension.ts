@@ -702,7 +702,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   register("drylake.startBuildSession", async (...args: unknown[]) => {
-    await startBuildSessionCommand(runbookDeps, context, args[0], args[1], args[2]);
+    await startBuildSessionCommand(runbookDeps, context, args[0], args[1], args[2], args[3]);
   });
 
   register("drylake.openControlRoom", async () => {
