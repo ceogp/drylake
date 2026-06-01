@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.31
+
+### Marketplace metadata
+
+- Updated the Marketplace description to lead with token savings, engineering time savings, phased plans, and skill-based pipelines.
+- Converted the Marketplace metadata check script to ESM so repo lint passes in CI.
+
 ## 0.6.30
 
 ### Marketplace positioning
