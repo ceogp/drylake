@@ -414,6 +414,8 @@ type WebviewMessage = {
   mode?: unknown;
   planningProvider?: unknown;
   manage?: unknown;
+  providerConfigAction?: unknown;
+  providerSecret?: unknown;
   stageCount?: unknown;
 };
 
@@ -540,8 +542,56 @@ function providerNeedsLocalConfiguration(providerId: DryLakeProviderId) {
   return CONFIGURABLE_PLANNING_PROVIDER_IDS.has(providerId);
 }
 
-function providerConfigurationLabel(providerId: DryLakeProviderId) {
-  return providerId === "hermes-agent" ? "Configure Hermes CLI" : "Add or Manage API Key";
+function providerSecretLabel(providerId: DryLakeProviderId) {
+  if (providerId === "claude-api") {
+    return "Anthropic API key";
+  }
+
+  if (providerId === "openai-api") {
+    return "OpenAI API key";
+  }
+
+  if (providerId === "databricks-api") {
+    return "Databricks token";
+  }
+
+  return "Hermes CLI configuration";
+}
+
+function providerSecretPlaceholder(providerId: DryLakeProviderId) {
+  if (providerId === "claude-api") {
+    return "sk-ant-...";
+  }
+
+  if (providerId === "openai-api") {
+    return "sk-...";
+  }
+
+  if (providerId === "databricks-api") {
+    return "dapi...";
+  }
+
+  return "";
+}
+
+function renderProviderConfigurationPanel(activeProvider: PlanningProviderChoice, visible: boolean) {
+  const providerId = activeProvider.providerId;
+  const isHermes = providerId === "hermes-agent";
+  return `<div class="provider-config-panel" data-provider-config-panel${visible ? "" : " hidden"}>
+    <div class="provider-config-title" data-provider-config-title>${escapeHtml(providerSecretLabel(providerId))}</div>
+    <div class="provider-config-help" data-provider-config-help>${isHermes
+      ? "Hermes keys stay in Hermes' own local CLI configuration. DryLake only calls the hermes command."
+      : "Paste the key here. DryLake stores it in VS Code SecretStorage on this machine."}</div>
+    <div class="provider-secret-fields" data-provider-secret-fields${isHermes ? " hidden" : ""}>
+      <input id="providerSecretInput" data-provider-secret-input type="password" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(providerSecretPlaceholder(providerId))}" aria-label="${escapeHtml(providerSecretLabel(providerId))}">
+      <button type="button" data-provider-config-action="save-secret">Save Key</button>
+    </div>
+    <div class="provider-config-actions">
+      <button type="button" class="provider-config-secondary" data-provider-config-action="clear-secret"${isHermes ? " hidden" : ""}>Clear Key</button>
+      <button type="button" class="provider-config-secondary" data-provider-config-action="open-settings">${isHermes ? "Open Hermes Settings" : "Provider Settings"}</button>
+    </div>
+    <div class="provider-secret-status" data-provider-secret-status></div>
+  </div>`;
 }
 
 function renderPlanningProviderSelect(
@@ -569,7 +619,7 @@ function renderPlanningProviderSelect(
     </select>
     <div class="planning-provider-note" data-provider-note>${escapeHtml(note)}</div>
     <button type="button" class="frontier-upgrade-cta" data-frontier-upgrade data-command="xupra.openBilling"${activeLocked ? "" : " hidden"}>Upgrade to Frontier Models</button>
-    <button type="button" class="provider-config-cta" data-provider-config${activeConfigurable ? "" : " hidden"}>${escapeHtml(providerConfigurationLabel(activeProvider.providerId))}</button>
+    ${renderProviderConfigurationPanel(activeProvider, activeConfigurable && !activeLocked)}
   </div>`;
 }
 
@@ -784,7 +834,8 @@ export class ControlRoomProvider {
         await vscode.commands.executeCommand(
           message.command,
           planningProviderFrom(message.planningProvider ?? message.args?.[0]),
-          Boolean(message.manage ?? message.args?.[1]),
+          message.providerConfigAction ?? message.manage ?? message.args?.[1],
+          message.providerSecret ?? message.args?.[2],
         );
         return;
       }
@@ -995,9 +1046,18 @@ export class ControlRoomProvider {
     .frontier-upgrade-cta::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #090a0a; opacity: 0.75; }
     .frontier-upgrade-cta:hover { color: #090a0a; background: #fdba74; border-color: #fdba74; }
     .frontier-upgrade-cta[hidden] { display: none; }
-    .provider-config-cta { justify-self: start; display: inline-flex; align-items: center; width: max-content; max-width: 100%; padding: 5px 9px; border: 1px solid rgba(251, 146, 60, 0.55); border-radius: 4px; color: #fed7aa; background: var(--drylake-orange-soft); font-size: 11px; font-weight: 700; box-shadow: none; }
-    .provider-config-cta:hover { color: #090a0a; background: var(--drylake-orange); border-color: var(--drylake-orange); }
-    .provider-config-cta[hidden] { display: none; }
+    .provider-config-panel { display: grid; gap: 7px; padding: 9px; border: 1px solid rgba(251, 146, 60, 0.42); border-radius: 6px; background: var(--drylake-orange-soft); }
+    .provider-config-panel[hidden] { display: none; }
+    .provider-config-title { color: #fed7aa; font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.08em; }
+    .provider-config-help, .provider-secret-status { color: #fed7aa; font-size: 11px; line-height: 1.35; }
+    .provider-secret-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+    .provider-secret-fields[hidden] { display: none; }
+    .provider-secret-fields input { min-width: 0; padding: 7px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid rgba(251, 146, 60, 0.48); border-radius: 4px; font-size: 12px; }
+    .provider-secret-fields input:focus { outline: none; border-color: var(--drylake-orange); }
+    .provider-config-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .provider-config-secondary { padding: 5px 8px; color: #fed7aa; background: var(--drylake-bg); border-color: rgba(251, 146, 60, 0.5); font-size: 11px; }
+    .provider-config-secondary[hidden] { display: none; }
+    .provider-config-secondary:hover { color: #090a0a; background: var(--drylake-orange); border-color: var(--drylake-orange); }
     .stage-count-label { display: inline-flex; align-items: center; gap: 8px; color: var(--drylake-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
     .stage-count-select { min-width: 92px; padding: 6px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; text-transform: none; letter-spacing: 0; }
     .stage-count-select:disabled { opacity: 0.72; cursor: not-allowed; }
@@ -1101,8 +1161,37 @@ export class ControlRoomProvider {
       return ["databricks-api", "claude-api", "openai-api", "hermes-agent"].includes(providerId);
     }
 
-    function providerConfigurationLabel(providerId) {
-      return providerId === "hermes-agent" ? "Configure Hermes CLI" : "Add or Manage API Key";
+    function providerSecretLabel(providerId) {
+      if (providerId === "claude-api") {
+        return "Anthropic API key";
+      }
+      if (providerId === "openai-api") {
+        return "OpenAI API key";
+      }
+      if (providerId === "databricks-api") {
+        return "Databricks token";
+      }
+      return "Hermes CLI configuration";
+    }
+
+    function providerSecretPlaceholder(providerId) {
+      if (providerId === "claude-api") {
+        return "sk-ant-...";
+      }
+      if (providerId === "openai-api") {
+        return "sk-...";
+      }
+      if (providerId === "databricks-api") {
+        return "dapi...";
+      }
+      return "";
+    }
+
+    function providerSecretHelp(providerId) {
+      if (providerId === "hermes-agent") {
+        return "Hermes keys stay in Hermes' own local CLI configuration. DryLake only calls the hermes command.";
+      }
+      return "Paste the key here. DryLake stores it in VS Code SecretStorage on this machine.";
     }
 
     function syncProviderSelection() {
@@ -1131,10 +1220,37 @@ export class ControlRoomProvider {
         frontierUpgrade.hidden = !selectedProviderLocked;
       }
 
-      const providerConfig = document.querySelector("[data-provider-config]");
+      const providerConfig = document.querySelector("[data-provider-config-panel]");
+      const providerSecretFields = document.querySelector("[data-provider-secret-fields]");
+      const providerSecretInput = document.querySelector("[data-provider-secret-input]");
+      const providerConfigTitle = document.querySelector("[data-provider-config-title]");
+      const providerConfigHelp = document.querySelector("[data-provider-config-help]");
+      const providerClearButton = document.querySelector("[data-provider-config-action='clear-secret']");
+      const providerSettingsButton = document.querySelector("[data-provider-config-action='open-settings']");
+      const isConfigurable = providerNeedsLocalConfiguration(selectedProvider);
+      const isHermes = selectedProvider === "hermes-agent";
       if (providerConfig) {
-        providerConfig.hidden = !providerNeedsLocalConfiguration(selectedProvider);
-        providerConfig.textContent = providerConfigurationLabel(selectedProvider);
+        providerConfig.hidden = selectedProviderLocked || !isConfigurable;
+      }
+      if (providerSecretFields) {
+        providerSecretFields.hidden = isHermes;
+      }
+      if (providerSecretInput) {
+        providerSecretInput.value = "";
+        providerSecretInput.placeholder = providerSecretPlaceholder(selectedProvider);
+        providerSecretInput.setAttribute("aria-label", providerSecretLabel(selectedProvider));
+      }
+      if (providerConfigTitle) {
+        providerConfigTitle.textContent = providerSecretLabel(selectedProvider);
+      }
+      if (providerConfigHelp) {
+        providerConfigHelp.textContent = providerSecretHelp(selectedProvider);
+      }
+      if (providerClearButton) {
+        providerClearButton.hidden = isHermes;
+      }
+      if (providerSettingsButton) {
+        providerSettingsButton.textContent = isHermes ? "Open Hermes Settings" : "Provider Settings";
       }
     }
 
@@ -1220,12 +1336,31 @@ export class ControlRoomProvider {
         return;
       }
 
-      const providerConfig = event.target.closest("[data-provider-config]");
-      if (providerConfig) {
+      const providerConfigAction = event.target.closest("[data-provider-config-action]");
+      if (providerConfigAction) {
+        const action = providerConfigAction.dataset.providerConfigAction || "";
+        const status = document.querySelector("[data-provider-secret-status]");
+        let secret = "";
+        if (action === "save-secret") {
+          const input = document.querySelector("[data-provider-secret-input]");
+          secret = input?.value?.trim() || "";
+          if (!secret) {
+            if (status) {
+              status.textContent = "Paste a key before saving.";
+            }
+            input?.focus();
+            return;
+          }
+          input.value = "";
+          if (status) {
+            status.textContent = "Saving key securely...";
+          }
+        }
         vscode.postMessage({
           command: "drylake.configurePlanningProvider",
           planningProvider: selectedProvider,
-          manage: true
+          providerConfigAction: action,
+          providerSecret: secret
         });
         return;
       }
@@ -1273,11 +1408,11 @@ export class ControlRoomProvider {
         if (selectedProviderLocked) {
           vscode.postMessage({ command: "xupra.openBilling", args: [] });
         } else if (providerNeedsLocalConfiguration(selectedProvider)) {
-          vscode.postMessage({
-            command: "drylake.configurePlanningProvider",
-            planningProvider: selectedProvider,
-            manage: false
-          });
+          if (selectedProvider === "hermes-agent") {
+            document.querySelector("[data-provider-config-action='open-settings']")?.focus();
+          } else {
+            document.querySelector("[data-provider-secret-input]")?.focus();
+          }
         } else {
           document.getElementById("chatInput")?.focus();
         }

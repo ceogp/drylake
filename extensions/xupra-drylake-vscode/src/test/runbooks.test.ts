@@ -449,7 +449,6 @@ describe("runbook commands", () => {
       refreshSidebar: vi.fn(async () => undefined),
     };
     const validateConnection = vi.fn(async () => ({ available: true }));
-    mocks.showInputBox.mockResolvedValueOnce("sk-ant-test");
     mocks.resolveDryLakeAiProvider.mockResolvedValue({
       provider: {
         id: "claude-api",
@@ -465,7 +464,7 @@ describe("runbook commands", () => {
     });
 
     try {
-      await configurePlanningProviderCommand(deps as never, "claude-api");
+      await configurePlanningProviderCommand(deps as never, "claude-api", "save-secret", "sk-ant-test");
     } finally {
       if (originalEnv === undefined) {
         delete process.env.DRYLAKE_TEST_ANTHROPIC_KEY;
@@ -474,10 +473,7 @@ describe("runbook commands", () => {
       }
     }
 
-    expect(mocks.showInputBox).toHaveBeenCalledWith(expect.objectContaining({
-      title: "Connect Claude API",
-      password: true,
-    }));
+    expect(mocks.showInputBox).not.toHaveBeenCalled();
     expect(deps.stateStore.setPlanningProviderSecret).toHaveBeenCalledWith("claude-api", "sk-ant-test");
     expect(validateConnection).toHaveBeenCalledOnce();
     expect(mocks.showInformationMessage).toHaveBeenCalledWith("Claude API is connected for DryLake planning.");

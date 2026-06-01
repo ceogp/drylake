@@ -19,6 +19,8 @@ type TestMessage = {
   mode?: unknown;
   planningProvider?: unknown;
   manage?: unknown;
+  providerConfigAction?: unknown;
+  providerSecret?: unknown;
   stageCount?: unknown;
 };
 
@@ -436,18 +438,20 @@ describe("Control Room webview", () => {
     expect(html).toContain('<option value="12">12</option>');
     expect(html).toContain("Upgrade to Frontier Models");
     expect(html).toContain('data-frontier-upgrade');
-    expect(html).toContain('data-provider-config');
-    expect(html).toContain("Add or Manage API Key");
+    expect(html).toContain('data-provider-config-panel');
+    expect(html).toContain('data-provider-secret-input');
+    expect(html).toContain("Paste the key here. DryLake stores it in VS Code SecretStorage on this machine.");
 
     await messageHandler?.({
       command: "drylake.configurePlanningProvider",
       planningProvider: "claude-api",
-      manage: true,
+      providerConfigAction: "save-secret",
+      providerSecret: "sk-ant-test",
     });
 
     expect(executed).toContainEqual({
       command: "drylake.configurePlanningProvider",
-      args: ["claude-api", true],
+      args: ["claude-api", "save-secret", "sk-ant-test"],
     });
 
     await messageHandler?.({

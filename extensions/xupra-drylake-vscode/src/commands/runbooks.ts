@@ -233,6 +233,43 @@ function configurationString(configuration: vscode.WorkspaceConfiguration, key: 
   return typeof value === "string" ? value.trim() : fallback;
 }
 
+async function ensureDirectProviderRequiredSettings(
+  configuration: vscode.WorkspaceConfiguration,
+  providerId: DirectPlanningProviderId,
+): Promise<boolean> {
+  if (providerId !== "databricks-api") {
+    return true;
+  }
+
+  const workspaceConfigured = await promptForSetting({
+    configuration,
+    key: "databricks.workspaceUrl",
+    title: "Connect Databricks API",
+    prompt: "Enter your Databricks workspace URL.",
+    placeHolder: "https://example.cloud.databricks.com",
+    validate: (value) => {
+      if (!/^https:\/\/[^/]+/i.test(value)) {
+        return "Enter a full https:// Databricks workspace URL.";
+      }
+      return undefined;
+    },
+  });
+  if (!workspaceConfigured) {
+    return false;
+  }
+
+  const endpointConfigured = await promptForSetting({
+    configuration,
+    key: "databricks.endpointName",
+    title: "Connect Databricks API",
+    prompt: "Enter the Databricks Model Serving endpoint name DryLake should use.",
+    placeHolder: "drylake-planner",
+    validate: (value) => value ? undefined : "Endpoint name is required.",
+  });
+
+  return endpointConfigured;
+}
+
 async function promptForSetting(params: {
   configuration: vscode.WorkspaceConfiguration;
   key: string;
@@ -269,35 +306,8 @@ async function ensureDirectPlanningProviderConfigured(
   const configuration = vscode.workspace.getConfiguration("drylake");
   const setup = DIRECT_PROVIDER_SETUP[providerId];
 
-  if (providerId === "databricks-api") {
-    const workspaceConfigured = await promptForSetting({
-      configuration,
-      key: "databricks.workspaceUrl",
-      title: "Connect Databricks API",
-      prompt: "Enter your Databricks workspace URL.",
-      placeHolder: "https://example.cloud.databricks.com",
-      validate: (value) => {
-        if (!/^https:\/\/[^/]+/i.test(value)) {
-          return "Enter a full https:// Databricks workspace URL.";
-        }
-        return undefined;
-      },
-    });
-    if (!workspaceConfigured) {
-      return undefined;
-    }
-
-    const endpointConfigured = await promptForSetting({
-      configuration,
-      key: "databricks.endpointName",
-      title: "Connect Databricks API",
-      prompt: "Enter the Databricks Model Serving endpoint name DryLake should use.",
-      placeHolder: "drylake-planner",
-      validate: (value) => value ? undefined : "Endpoint name is required.",
-    });
-    if (!endpointConfigured) {
-      return undefined;
-    }
+  if (!await ensureDirectProviderRequiredSettings(configuration, providerId)) {
+    return undefined;
   }
 
   const envVar = configurationString(configuration, setup.envSettingKey, setup.defaultEnvVar);
@@ -460,7 +470,8 @@ async function preparePlanningProvider(
 export async function configurePlanningProviderCommand(
   deps: RunbookCommandDeps,
   providerArg?: unknown,
-  manageArg?: unknown,
+  actionArg?: unknown,
+  secretArg?: unknown,
 ) {
   const providerId = planningProviderFromArg(providerArg) ?? await pickPlanningProvider();
   if (!providerId) {
@@ -487,7 +498,42 @@ export async function configurePlanningProviderCommand(
   const envVar = configurationString(configuration, setup.envSettingKey, setup.defaultEnvVar);
   const hasEnvKey = Boolean(process.env[envVar]?.trim());
   const hasStoredKey = Boolean(await deps.stateStore.getPlanningProviderSecret(providerId));
-  const manage = manageArg === true || manageArg === "true";
+  const action = typeof actionArg === "string" ? actionArg : "";
+  const manage = actionArg === true || actionArg === "true" || action === "manage";
+
+  if (action === "save-secret") {
+    const secret = typeof secretArg === "string" ? secretArg.trim() : "";
+    if (!secret) {
+      void vscode.window.showWarningMessage(`${setup.secretLabel} is required.`);
+      return;
+    }
+
+    if (!await ensureDirectProviderRequiredSettings(configuration, providerId)) {
+      return;
+    }
+
+    await deps.stateStore.setPlanningProviderSecret(providerId, secret);
+    const provider = await validateDirectPlanningProvider(deps, providerId, true);
+    if (provider) {
+      void vscode.window.showInformationMessage(`${provider.label} is connected for DryLake planning.`);
+    }
+    return;
+  }
+
+  if (action === "clear-secret") {
+    await deps.stateStore.clearPlanningProviderSecret(providerId);
+    void vscode.window.showInformationMessage(
+      hasEnvKey
+        ? `${setup.label} key removed from VS Code SecretStorage. DryLake may still use ${envVar} from the environment.`
+        : `${setup.label} key removed from VS Code SecretStorage.`,
+    );
+    return;
+  }
+
+  if (action === "open-settings") {
+    await vscode.commands.executeCommand("workbench.action.openSettings", settingsQueryForPlanningProvider(providerId));
+    return;
+  }
 
   if (manage) {
     const action = await vscode.window.showQuickPick(
