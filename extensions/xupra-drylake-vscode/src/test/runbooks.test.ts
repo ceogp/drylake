@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   approvePlanChangeCommand,
   chatSendMessageCommand,
+  configurePlanningProviderCommand,
   handoffPhaseCommand,
   newSessionCommand,
   openSessionsCommand,
@@ -423,6 +424,63 @@ describe("runbook commands", () => {
     expect(mocks.showWarningMessage).toHaveBeenCalledWith("OpenAI API connection failed: 401 unauthorized");
     expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
     expect(mocks.providerGenerateDraftRunbook).not.toHaveBeenCalled();
+  });
+
+  it("configures a direct planning provider key from the Control Room", async () => {
+    configurationValues.set("drylake.claude.apiKeyEnvVar", "DRYLAKE_TEST_ANTHROPIC_KEY");
+    const originalEnv = process.env.DRYLAKE_TEST_ANTHROPIC_KEY;
+    delete process.env.DRYLAKE_TEST_ANTHROPIC_KEY;
+
+    const deps = {
+      apiClient: {},
+      stateStore: {
+        getConnection: vi.fn(() => ({})),
+        getAccessToken: vi.fn(async () => undefined),
+        getPlanningProviderSecret: vi.fn(async () => undefined),
+        setPlanningProviderSecret: vi.fn(async () => undefined),
+        clearPlanningProviderSecret: vi.fn(async () => undefined),
+        setPlanningProvider: vi.fn(async () => undefined),
+      },
+      sessionStore: {},
+      controlRoom: {
+        createOrShow: vi.fn(async () => undefined),
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+    const validateConnection = vi.fn(async () => ({ available: true }));
+    mocks.showInputBox.mockResolvedValueOnce("sk-ant-test");
+    mocks.resolveDryLakeAiProvider.mockResolvedValue({
+      provider: {
+        id: "claude-api",
+        label: "Claude API",
+        isAvailable: mocks.providerIsAvailable,
+        validateConnection,
+        generateDraftRunbook: mocks.providerGenerateDraftRunbook,
+        planningChat: mocks.providerPlanningChat,
+        refinePurpose: mocks.providerRefinePurpose,
+        refineArchitecture: mocks.providerRefineArchitecture,
+        generatePhasePlan: mocks.providerGeneratePhasePlan,
+      },
+    });
+
+    try {
+      await configurePlanningProviderCommand(deps as never, "claude-api");
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env.DRYLAKE_TEST_ANTHROPIC_KEY;
+      } else {
+        process.env.DRYLAKE_TEST_ANTHROPIC_KEY = originalEnv;
+      }
+    }
+
+    expect(mocks.showInputBox).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Connect Claude API",
+      password: true,
+    }));
+    expect(deps.stateStore.setPlanningProviderSecret).toHaveBeenCalledWith("claude-api", "sk-ant-test");
+    expect(validateConnection).toHaveBeenCalledOnce();
+    expect(mocks.showInformationMessage).toHaveBeenCalledWith("Claude API is connected for DryLake planning.");
   });
 
   it("keeps starter cards visible when first-message AI planning fails", async () => {

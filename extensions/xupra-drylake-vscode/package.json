@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake Frontier AI Coding & Planning Agent - Free AI",
   "description": "Orchestrate agents visually, select their skills, and watch.  Save tokens and your time!",
-  "version": "0.6.27",
+  "version": "0.6.28",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
@@ -381,6 +381,10 @@
       {
         "command": "drylake.openControlRoom",
         "title": "DryLake: Open Control Room"
+      },
+      {
+        "command": "drylake.configurePlanningProvider",
+        "title": "DryLake: Configure Planning Provider Key"
       },
       {
         "command": "drylake.openMultiAgentRunner",

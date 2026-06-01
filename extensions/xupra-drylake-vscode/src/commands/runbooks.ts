@@ -112,6 +112,7 @@ const PLANNING_PROVIDER_CHOICES: Array<vscode.QuickPickItem & { providerId: DryL
 ];
 
 type DirectPlanningProviderId = Extract<DryLakeProviderId, "databricks-api" | "claude-api" | "openai-api">;
+type ManagePlanningProviderAction = "set-secret" | "clear-secret" | "open-settings";
 
 const DIRECT_PROVIDER_SETUP: Record<DirectPlanningProviderId, {
   label: string;
@@ -215,6 +216,18 @@ function isDirectPlanningProvider(providerId: DryLakeProviderId | undefined): pr
   return providerId === "databricks-api" || providerId === "claude-api" || providerId === "openai-api";
 }
 
+function settingsQueryForPlanningProvider(providerId: DirectPlanningProviderId) {
+  if (providerId === "openai-api") {
+    return "@ext:xupracorp.drylake drylake.openai";
+  }
+
+  if (providerId === "claude-api") {
+    return "@ext:xupracorp.drylake drylake.claude";
+  }
+
+  return "@ext:xupracorp.drylake drylake.databricks";
+}
+
 function configurationString(configuration: vscode.WorkspaceConfiguration, key: string, fallback = "") {
   const value = configuration.get<string>(key, fallback);
   return typeof value === "string" ? value.trim() : fallback;
@@ -251,6 +264,7 @@ async function promptForSetting(params: {
 async function ensureDirectPlanningProviderConfigured(
   deps: RunbookCommandDeps,
   providerId: DirectPlanningProviderId,
+  options: { forceSecretPrompt?: boolean } = {},
 ): Promise<{ enteredSecret: boolean } | undefined> {
   const configuration = vscode.workspace.getConfiguration("drylake");
   const setup = DIRECT_PROVIDER_SETUP[providerId];
@@ -289,7 +303,7 @@ async function ensureDirectPlanningProviderConfigured(
   const envVar = configurationString(configuration, setup.envSettingKey, setup.defaultEnvVar);
   const hasEnvKey = Boolean(process.env[envVar]?.trim());
   const hasStoredKey = Boolean(await deps.stateStore.getPlanningProviderSecret(providerId));
-  if (hasEnvKey || hasStoredKey) {
+  if (!options.forceSecretPrompt && (hasEnvKey || hasStoredKey)) {
     return { enteredSecret: false };
   }
 
@@ -307,6 +321,42 @@ async function ensureDirectPlanningProviderConfigured(
 
   await deps.stateStore.setPlanningProviderSecret(providerId, secret.trim());
   return { enteredSecret: true };
+}
+
+async function validateDirectPlanningProvider(
+  deps: RunbookCommandDeps,
+  providerId: DirectPlanningProviderId,
+  enteredSecret: boolean,
+  resolvedProvider?: DryLakeAiProvider,
+): Promise<DryLakeAiProvider | undefined> {
+  const provider = resolvedProvider ?? await resolveProvider(deps.stateStore, providerId);
+  if (typeof provider.validateConnection !== "function") {
+    return provider;
+  }
+
+  const validation = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Testing ${provider.label} connection...`,
+      cancellable: false,
+    },
+    async () => provider.validateConnection!(),
+  );
+
+  if (!validation.available) {
+    if (enteredSecret) {
+      await deps.stateStore.clearPlanningProviderSecret(providerId);
+    }
+
+    void vscode.window.showWarningMessage(
+      validation.reason
+        ? `${provider.label} connection failed: ${validation.reason}`
+        : `${provider.label} connection failed.`,
+    );
+    return undefined;
+  }
+
+  return provider;
 }
 
 function configurationWithPlanningProvider(
@@ -404,29 +454,107 @@ async function preparePlanningProvider(
     return provider;
   }
 
-  const validation = await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Testing ${provider.label} connection...`,
-      cancellable: false,
-    },
-    async () => provider.validateConnection!(),
-  );
+  return validateDirectPlanningProvider(deps, providerId, setup.enteredSecret, provider);
+}
 
-  if (!validation.available) {
-    if (setup.enteredSecret) {
-      await deps.stateStore.clearPlanningProviderSecret(providerId);
-    }
-
-    void vscode.window.showWarningMessage(
-      validation.reason
-        ? `${provider.label} connection failed: ${validation.reason}`
-        : `${provider.label} connection failed.`,
-    );
-    return undefined;
+export async function configurePlanningProviderCommand(
+  deps: RunbookCommandDeps,
+  providerArg?: unknown,
+  manageArg?: unknown,
+) {
+  const providerId = planningProviderFromArg(providerArg) ?? await pickPlanningProvider();
+  if (!providerId) {
+    return;
   }
 
-  return provider;
+  if (providerId === "hermes-agent") {
+    const choice = await vscode.window.showInformationMessage(
+      "Hermes Agent CLI uses Hermes' own local provider configuration. DryLake does not store a Hermes API key.",
+      "Open Hermes Settings",
+    );
+    if (choice === "Open Hermes Settings") {
+      await vscode.commands.executeCommand("workbench.action.openSettings", "@ext:xupracorp.drylake drylake.agents.hermes");
+    }
+    return;
+  }
+
+  if (!isDirectPlanningProvider(providerId)) {
+    return;
+  }
+
+  const configuration = vscode.workspace.getConfiguration("drylake");
+  const setup = DIRECT_PROVIDER_SETUP[providerId];
+  const envVar = configurationString(configuration, setup.envSettingKey, setup.defaultEnvVar);
+  const hasEnvKey = Boolean(process.env[envVar]?.trim());
+  const hasStoredKey = Boolean(await deps.stateStore.getPlanningProviderSecret(providerId));
+  const manage = manageArg === true || manageArg === "true";
+
+  if (manage) {
+    const action = await vscode.window.showQuickPick(
+      [
+        {
+          label: "Set or replace API key",
+          description: `Store a ${setup.secretLabel} in VS Code SecretStorage`,
+          action: "set-secret" as ManagePlanningProviderAction,
+        },
+        {
+          label: "Clear stored API key",
+          description: hasStoredKey
+            ? "Remove DryLake's stored key from VS Code SecretStorage"
+            : "No DryLake SecretStorage key is currently saved",
+          action: "clear-secret" as ManagePlanningProviderAction,
+        },
+        {
+          label: "Open provider settings",
+          description: `Configure model, base URL, and the ${envVar} env-var name`,
+          action: "open-settings" as ManagePlanningProviderAction,
+        },
+      ],
+      {
+        title: `Manage ${setup.label}`,
+        placeHolder: hasEnvKey
+          ? `${setup.label} also sees ${envVar} in VS Code's environment.`
+          : `Add or manage the ${setup.secretLabel} used for planning.`,
+        ignoreFocusOut: true,
+      },
+    );
+
+    if (!action) {
+      return;
+    }
+
+    if (action.action === "clear-secret") {
+      await deps.stateStore.clearPlanningProviderSecret(providerId);
+      void vscode.window.showInformationMessage(
+        hasEnvKey
+          ? `${setup.label} key removed from VS Code SecretStorage. DryLake may still use ${envVar} from the environment.`
+          : `${setup.label} key removed from VS Code SecretStorage.`,
+      );
+      return;
+    }
+
+    if (action.action === "open-settings") {
+      await vscode.commands.executeCommand("workbench.action.openSettings", settingsQueryForPlanningProvider(providerId));
+      return;
+    }
+  } else if (hasStoredKey || hasEnvKey) {
+    void vscode.window.showInformationMessage(
+      hasEnvKey
+        ? `${setup.label} is configured from ${envVar}. Use Add or Manage API Key to replace it in VS Code SecretStorage.`
+        : `${setup.label} already has a key in VS Code SecretStorage.`,
+    );
+    return;
+  }
+
+  const configured = await ensureDirectPlanningProviderConfigured(deps, providerId, { forceSecretPrompt: true });
+  if (!configured) {
+    return;
+  }
+
+  const provider = await validateDirectPlanningProvider(deps, providerId, configured.enteredSecret);
+  if (provider) {
+    void vscode.window.showInformationMessage(`${provider.label} is connected for DryLake planning.`);
+  }
 }
 
 async function persistModelTier(stateStore: StateStore, modelTier: unknown): Promise<void> {

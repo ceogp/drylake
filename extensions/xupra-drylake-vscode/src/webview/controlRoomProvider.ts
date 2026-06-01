@@ -64,6 +64,13 @@ const PLANNING_PROVIDERS: Array<{
 const STAGE_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 type PlanningProviderChoice = (typeof PLANNING_PROVIDERS)[number];
 
+const CONFIGURABLE_PLANNING_PROVIDER_IDS = new Set<DryLakeProviderId>([
+  "databricks-api",
+  "claude-api",
+  "openai-api",
+  "hermes-agent",
+]);
+
 const STATUS_LABELS: Record<XuStepStatus, string> = {
   pending: "pending",
   active: "active",
@@ -406,6 +413,7 @@ type WebviewMessage = {
   text?: unknown;
   mode?: unknown;
   planningProvider?: unknown;
+  manage?: unknown;
   stageCount?: unknown;
 };
 
@@ -528,6 +536,14 @@ function planningProviderOptionLabel(provider: PlanningProviderChoice, locked: b
   return `${provider.label} - ${provider.description}`;
 }
 
+function providerNeedsLocalConfiguration(providerId: DryLakeProviderId) {
+  return CONFIGURABLE_PLANNING_PROVIDER_IDS.has(providerId);
+}
+
+function providerConfigurationLabel(providerId: DryLakeProviderId) {
+  return providerId === "hermes-agent" ? "Configure Hermes CLI" : "Add or Manage API Key";
+}
+
 function renderPlanningProviderSelect(
   activeProvider: PlanningProviderChoice,
   hasPlan: boolean,
@@ -535,6 +551,7 @@ function renderPlanningProviderSelect(
 ) {
   const disabled = hasPlan ? " disabled" : "";
   const activeLocked = Boolean(activeProvider.proOnly && !hasFoundationPlanningAccess(connection));
+  const activeConfigurable = providerNeedsLocalConfiguration(activeProvider.providerId);
   const note = activeLocked
     ? "Pro users only. Upgrade to use Xupra AI Frontier Models."
     : activeProvider.choiceId === "xupra-nano"
@@ -552,6 +569,7 @@ function renderPlanningProviderSelect(
     </select>
     <div class="planning-provider-note" data-provider-note>${escapeHtml(note)}</div>
     <button type="button" class="frontier-upgrade-cta" data-frontier-upgrade data-command="xupra.openBilling"${activeLocked ? "" : " hidden"}>Upgrade to Frontier Models</button>
+    <button type="button" class="provider-config-cta" data-provider-config${activeConfigurable ? "" : " hidden"}>${escapeHtml(providerConfigurationLabel(activeProvider.providerId))}</button>
   </div>`;
 }
 
@@ -762,6 +780,15 @@ export class ControlRoomProvider {
         return;
       }
 
+      if (message.command === "drylake.configurePlanningProvider") {
+        await vscode.commands.executeCommand(
+          message.command,
+          planningProviderFrom(message.planningProvider ?? message.args?.[0]),
+          Boolean(message.manage ?? message.args?.[1]),
+        );
+        return;
+      }
+
       if (message.command === "drylake.startBuildSession") {
         const requestedStageCount = stageCountFrom(message.stageCount ?? message.args?.[3]);
         await vscode.commands.executeCommand(
@@ -968,6 +995,9 @@ export class ControlRoomProvider {
     .frontier-upgrade-cta::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #090a0a; opacity: 0.75; }
     .frontier-upgrade-cta:hover { color: #090a0a; background: #fdba74; border-color: #fdba74; }
     .frontier-upgrade-cta[hidden] { display: none; }
+    .provider-config-cta { justify-self: start; display: inline-flex; align-items: center; width: max-content; max-width: 100%; padding: 5px 9px; border: 1px solid rgba(251, 146, 60, 0.55); border-radius: 4px; color: #fed7aa; background: var(--drylake-orange-soft); font-size: 11px; font-weight: 700; box-shadow: none; }
+    .provider-config-cta:hover { color: #090a0a; background: var(--drylake-orange); border-color: var(--drylake-orange); }
+    .provider-config-cta[hidden] { display: none; }
     .stage-count-label { display: inline-flex; align-items: center; gap: 8px; color: var(--drylake-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
     .stage-count-select { min-width: 92px; padding: 6px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; text-transform: none; letter-spacing: 0; }
     .stage-count-select:disabled { opacity: 0.72; cursor: not-allowed; }
@@ -1067,6 +1097,14 @@ export class ControlRoomProvider {
     let selectedProvider = selectedPlanningOption()?.dataset.planningProvider || "xupra-pro-ai";
     let selectedProviderLocked = selectedPlanningOption()?.dataset.proLocked === "true";
 
+    function providerNeedsLocalConfiguration(providerId) {
+      return ["databricks-api", "claude-api", "openai-api", "hermes-agent"].includes(providerId);
+    }
+
+    function providerConfigurationLabel(providerId) {
+      return providerId === "hermes-agent" ? "Configure Hermes CLI" : "Add or Manage API Key";
+    }
+
     function syncProviderSelection() {
       const option = selectedPlanningOption();
       selectedProvider = option?.dataset.planningProvider || "xupra-pro-ai";
@@ -1091,6 +1129,12 @@ export class ControlRoomProvider {
       const frontierUpgrade = document.querySelector("[data-frontier-upgrade]");
       if (frontierUpgrade) {
         frontierUpgrade.hidden = !selectedProviderLocked;
+      }
+
+      const providerConfig = document.querySelector("[data-provider-config]");
+      if (providerConfig) {
+        providerConfig.hidden = !providerNeedsLocalConfiguration(selectedProvider);
+        providerConfig.textContent = providerConfigurationLabel(selectedProvider);
       }
     }
 
@@ -1176,6 +1220,16 @@ export class ControlRoomProvider {
         return;
       }
 
+      const providerConfig = event.target.closest("[data-provider-config]");
+      if (providerConfig) {
+        vscode.postMessage({
+          command: "drylake.configurePlanningProvider",
+          planningProvider: selectedProvider,
+          manage: true
+        });
+        return;
+      }
+
       const commandEl = event.target.closest("[data-command]");
       if (commandEl) {
         vscode.postMessage({ command: commandEl.dataset.command, args: [] });
@@ -1218,6 +1272,12 @@ export class ControlRoomProvider {
         syncProviderSelection();
         if (selectedProviderLocked) {
           vscode.postMessage({ command: "xupra.openBilling", args: [] });
+        } else if (providerNeedsLocalConfiguration(selectedProvider)) {
+          vscode.postMessage({
+            command: "drylake.configurePlanningProvider",
+            planningProvider: selectedProvider,
+            manage: false
+          });
         } else {
           document.getElementById("chatInput")?.focus();
         }

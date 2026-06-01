@@ -14,6 +14,7 @@ import {
   archiveCurrentPlanCommand,
   chatSendMessageCommand,
   clearChatCommand,
+  configurePlanningProviderCommand,
   deleteCurrentPlanCommand,
   exportHandoffPromptCommand,
   generateAgentFilesCommand,
@@ -703,6 +704,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.startBuildSession", async (...args: unknown[]) => {
     await startBuildSessionCommand(runbookDeps, context, args[0], args[1], args[2], args[3]);
+  });
+
+  register("drylake.configurePlanningProvider", async (...args: unknown[]) => {
+    await configurePlanningProviderCommand(runbookDeps, args[0], args[1]);
   });
 
   register("drylake.openControlRoom", async () => {

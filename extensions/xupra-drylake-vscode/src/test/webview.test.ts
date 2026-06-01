@@ -18,6 +18,7 @@ type TestMessage = {
   text?: unknown;
   mode?: unknown;
   planningProvider?: unknown;
+  manage?: unknown;
   stageCount?: unknown;
 };
 
@@ -435,6 +436,19 @@ describe("Control Room webview", () => {
     expect(html).toContain('<option value="12">12</option>');
     expect(html).toContain("Upgrade to Frontier Models");
     expect(html).toContain('data-frontier-upgrade');
+    expect(html).toContain('data-provider-config');
+    expect(html).toContain("Add or Manage API Key");
+
+    await messageHandler?.({
+      command: "drylake.configurePlanningProvider",
+      planningProvider: "claude-api",
+      manage: true,
+    });
+
+    expect(executed).toContainEqual({
+      command: "drylake.configurePlanningProvider",
+      args: ["claude-api", true],
+    });
 
     await messageHandler?.({
       command: "drylake.startBuildSession",
