@@ -559,22 +559,44 @@ export async function diagnosePhaseAgentSetups() {
   return Promise.all(XU_PHASE_AGENTS.map((agent) => diagnosePhaseAgentSetup(agent)));
 }
 
+const SETUP_REPORT_ORDER: Record<XuPhaseAgent, number> = {
+  "claude-code": 0,
+  codex: 1,
+  cursor: 2,
+  gemini: 3,
+  hermes: 4,
+  copilot: 5,
+};
+
+function setupReportLabel(agent: XuPhaseAgent) {
+  if (agent === "cursor") {
+    return "Cursor Agent";
+  }
+
+  if (agent === "hermes") {
+    return "Hermes Agent CLI";
+  }
+
+  return phaseAgentLabel(agent);
+}
+
+function setupReportStatus(diagnostic: PhaseAgentSetupDiagnostic) {
+  if (diagnostic.agent === "copilot") {
+    return diagnostic.status === "found" ? "available" : "unavailable";
+  }
+
+  return diagnostic.status === "found" ? "found" : "not found";
+}
+
 export function renderPhaseAgentSetupReport(diagnostics: PhaseAgentSetupDiagnostic[]) {
+  const sorted = [...diagnostics].sort((left, right) => SETUP_REPORT_ORDER[left.agent] - SETUP_REPORT_ORDER[right.agent]);
+
   return [
     "# DryLake Agent Setup",
     "",
-    ...diagnostics.flatMap((diagnostic) => [
-      `## ${diagnostic.label}`,
-      "",
-      `- Status: ${diagnostic.status === "found" ? "Found" : "Not found"}`,
-      `- Command: \`${diagnostic.command}\``,
-      diagnostic.resolvedCommand ? `- Resolved command: \`${diagnostic.resolvedCommand}\`` : undefined,
-      diagnostic.searchedPath ? `- Searched PATH: \`${diagnostic.searchedPath}\`` : undefined,
-      diagnostic.reason ? `- Reason: ${diagnostic.reason}` : undefined,
-      "- Fallback: Markdown handoff available",
-      `- Setup: ${diagnostic.help}`,
-      "",
-    ].filter((line): line is string => typeof line === "string")),
+    ...sorted.map((diagnostic) => `${setupReportLabel(diagnostic.agent)}: ${setupReportStatus(diagnostic)}`),
+    "",
+    "If a direct CLI command is not available, DryLake saves the phase handoff, copies the prompt, and opens the Markdown artifact.",
   ].join("\n");
 }
 

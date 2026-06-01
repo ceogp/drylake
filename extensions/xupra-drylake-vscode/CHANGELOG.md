@@ -1,0 +1,10 @@
+# Changelog
+
+## 0.6.30
+
+### Marketplace positioning
+
+- Renamed the extension display name to `DryLake — Agent Orchestration for Claude Code, Codex & Cursor`.
+- Updated the Marketplace description to clarify the ticket-to-phased-handoff workflow.
+- Reduced Marketplace keywords to 30 high-intent search terms.
+- Improved README positioning around agent orchestration, visual planning, token-aware handoffs, and multi-agent workflows.

@@ -379,7 +379,7 @@ describe("phase agent launchers", () => {
     expect(mocks.createTerminal).not.toHaveBeenCalled();
   });
 
-  it("renders an agent setup report with command, path, and markdown fallback state", async () => {
+  it("renders a simple agent setup availability report", async () => {
     mocks.execFile.mockImplementation((_file, _args, callback) => callback(new Error("missing executable")));
 
     const diagnostic = await diagnosePhaseAgentSetup("codex");
@@ -387,9 +387,8 @@ describe("phase agent launchers", () => {
 
     expect(diagnostic.status).toBe("not-found");
     expect(report).toContain("DryLake Agent Setup");
-    expect(report).toContain("OpenAI Codex");
-    expect(report).toContain("Command: `codex`");
-    expect(report).toContain("Fallback: Markdown handoff available");
-    expect(report).toContain("Searched PATH:");
+    expect(report).toContain("OpenAI Codex: not found");
+    expect(report).toContain("Markdown artifact");
+    expect(report).not.toContain("Command: `codex`");
   });
 });
