@@ -24,5 +24,5 @@
   <rect x="588" y="476" width="198" height="12" rx="6" fill="#9CA3AF"/>
   <path d="M456 362H520" stroke="#F97316" stroke-width="12" stroke-linecap="round"/>
   <path d="M488 330L520 362L488 394" stroke="#F97316" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="560" y="612" fill="#111827" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700">Connect in VS Code → Sign up in browser → Return to editor</text>
+  <text x="560" y="612" fill="#111827" font-family="Helvetica, Segoe UI, system-ui, sans-serif" font-size="28" font-weight="700">Connect in VS Code → Sign up in browser → Return to editor</text>
 </svg>

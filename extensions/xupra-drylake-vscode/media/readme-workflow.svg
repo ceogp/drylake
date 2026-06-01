@@ -38,5 +38,5 @@
   <rect x="792" y="482" width="272" height="44" rx="18" fill="#1F2937"/>
   <rect x="816" y="498" width="88" height="12" rx="6" fill="#FFFFFF"/>
   <rect x="920" y="498" width="120" height="12" rx="6" fill="#9CA3AF"/>
-  <text x="408" y="612" fill="#111827" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700">Import → Canonicalize → Export</text>
+  <text x="408" y="612" fill="#111827" font-family="Helvetica, Segoe UI, system-ui, sans-serif" font-size="28" font-weight="700">Import → Canonicalize → Export</text>
 </svg>

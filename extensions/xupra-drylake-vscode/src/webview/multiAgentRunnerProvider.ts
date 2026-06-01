@@ -314,7 +314,7 @@ function renderAssignmentReview(run: RunnerRun, profilesByAgent: HandoffProfiles
   const warning = run.conflictWarning
     ? `<div class="warning">${escapeHtml(run.conflictWarning)}</div>`
     : "";
-  const tier = run.modelTier === "nano" ? `<div class="note">Planned with gpt-5.4-nano.</div>` : "";
+  const tier = run.modelTier === "nano" ? `<div class="note">Planned with GPT-5.4 Nano.</div>` : "";
   const cards = run.assignments.map((assignment) => `<article class="assignment-card" data-assignment-agent="${escapeHtml(assignment.agentId)}">
     <div class="agent-info"><span class="agent-icon">${escapeHtml(assignment.agentLabel.slice(0, 1))}</span><span><strong>${escapeHtml(assignment.agentLabel)}</strong><em>${escapeHtml(assignment.scopeBoundary)}</em></span></div>
     <label class="field-label">Subtask summary
@@ -928,7 +928,7 @@ export class MultiAgentRunnerProvider {
   <style>
     * { box-sizing: border-box; }
     :root { --runner-bg: #090a0a; --runner-panel: #111414; --runner-panel-2: #0d0f0f; --runner-line: #27272a; --runner-text: #f4f4f5; --runner-muted: #a1a1aa; --runner-green: #34d399; --runner-orange: #fb923c; --runner-red: #f87171; }
-    body { margin: 0; padding: 16px; color: var(--runner-text); background: var(--runner-bg); font-family: var(--vscode-font-family); font-size: 12px; }
+    body { margin: 0; padding: 16px; color: var(--runner-text); background: var(--runner-bg); font-family: "Helvetica Neue", Helvetica, system-ui, sans-serif; font-size: 12px; }
     .panel-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
     h1 { margin: 0; color: var(--runner-text); font-size: 16px; font-weight: 700; }
     .mode-badge { padding: 2px 8px; border: 1px solid rgba(52, 211, 153, 0.45); border-radius: 3px; background: rgba(52, 211, 153, 0.12); color: #a7f3d0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
@@ -944,7 +944,7 @@ export class MultiAgentRunnerProvider {
     .agent-info { display: flex; align-items: center; gap: 9px; min-width: 0; }
     .agent-info strong { display: block; color: var(--runner-text); font-size: 12px; }
     .agent-info em, .last-run em { display: block; color: var(--runner-muted); font-size: 10px; font-style: normal; }
-    .agent-icon { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--runner-line); border-radius: 4px; background: var(--runner-panel-2); color: #a7f3d0; font-weight: 800; flex: 0 0 auto; }
+    .agent-icon { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--runner-line); border-radius: 4px; background: var(--runner-panel-2); color: #a7f3d0; font-weight: 650; flex: 0 0 auto; }
     footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--runner-line); color: var(--runner-muted); }
     .footer-actions { display: inline-flex; align-items: center; gap: 8px; }
     .run-card > .agent-info, .run-actions, .result-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -959,7 +959,7 @@ export class MultiAgentRunnerProvider {
     .boundary strong { color: var(--runner-text); font-weight: 700; }
     .warning { margin: 8px 0; padding: 8px; border: 1px solid rgba(251, 146, 60, 0.45); background: rgba(251, 146, 60, 0.12); color: #fed7aa; border-radius: 4px; }
     .note { margin: 8px 0; color: var(--runner-muted); }
-    .status-badge { padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 800; }
+    .status-badge { padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 650; }
     .status-badge.running { background: rgba(251, 146, 60, 0.12); color: #fdba74; }
     .status-badge.complete { background: rgba(52, 211, 153, 0.12); color: #6ee7b7; }
     .status-badge.failed { background: rgba(248, 113, 113, 0.14); color: #fca5a5; }

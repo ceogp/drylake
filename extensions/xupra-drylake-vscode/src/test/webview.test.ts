@@ -18,6 +18,7 @@ type TestMessage = {
   text?: unknown;
   mode?: unknown;
   planningProvider?: unknown;
+  stageCount?: unknown;
 };
 
 let messageHandler: ((message: TestMessage) => Promise<void>) | undefined;
@@ -152,10 +153,11 @@ describe("Control Room webview", () => {
     expect(html).toContain('data-drop-status="pending"');
     expect(html).toContain('data-drop-status="active"');
     expect(html).toContain('data-drop-status="complete"');
-    expect(html).toContain('data-phase-id="todo" data-phase-status="pending" draggable="true"');
-    expect(html).toContain('data-phase-id="active" data-phase-status="active" draggable="true"');
-    expect(html).toContain('data-phase-id="approved" data-phase-status="complete" draggable="true"');
-    expect(html).toContain('data-phase-id="done" data-phase-status="complete" draggable="true"');
+    expect(html).toContain('data-phase-id="todo" data-phase-status="pending"');
+    expect(html).toContain('data-phase-id="active" data-phase-status="active"');
+    expect(html).toContain('data-phase-id="approved" data-phase-status="complete"');
+    expect(html).toContain('data-phase-id="done" data-phase-status="complete"');
+    expect(html).toContain('data-drag-phase="todo"');
     expect(html).toContain("Approved phase");
     expect(html).toContain("Drop phase here");
   });
@@ -167,7 +169,8 @@ describe("Control Room webview", () => {
     const html = panel?.webview.html ?? "";
 
     expect(html).toContain('class="pipeline"');
-    expect(html).toContain('data-phase-id="todo" data-phase-status="pending" draggable="true"');
+    expect(html).toContain('data-phase-id="todo" data-phase-status="pending"');
+    expect(html).toContain('class="drag-handle" draggable="true" data-drag-phase="todo"');
     expect(html).toContain('command: "drylake.reorderPhase"');
     expect(html).toContain("drop-before");
     expect(html).toContain("drop-after");
@@ -188,7 +191,7 @@ describe("Control Room webview", () => {
     expect(html).not.toContain("handoff-action-select");
     expect(html).toContain("Require Approval Between Phases");
     expect(html).toContain("Build Plan Chat");
-    expect(html).toContain("AI Provider");
+    expect(html).toContain('aria-label="Planning model"');
     expect(html).toContain("Ask DryLake to update these cards...");
   });
 
@@ -234,7 +237,7 @@ describe("Control Room webview", () => {
 
     const html = panel?.webview.html ?? "";
     const agentSelectorCount = html.match(/class="agent-select"/g)?.length ?? 0;
-    const phaseCardCount = html.match(/class="phase-card/g)?.length ?? 0;
+    const phaseCardCount = html.match(/class="phase-card /g)?.length ?? 0;
 
     expect(agentSelectorCount).toBe(phaseCardCount);
     expect(html).toContain('class="handoff-menu"');
@@ -412,7 +415,7 @@ describe("Control Room webview", () => {
     });
   });
 
-  it("renders planning provider dropdown and routes the selected provider with first chat message", async () => {
+  it("renders the planning provider dropdown and routes the selected provider with first chat message", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => null } as never);
     await provider.createOrShow(context() as never);
 
@@ -420,22 +423,28 @@ describe("Control Room webview", () => {
     expect(html).toContain('id="planningProviderSelect"');
     expect(html.indexOf('id="planningProviderSelect"')).toBeLessThan(html.indexOf("Build Plan Chat"));
     expect(html.indexOf("Build Plan Chat")).toBeLessThan(html.indexOf('id="chatInput"'));
-    expect(html).toContain('option value="xupra-pro-ai"');
+    expect(html).toContain('<select id="planningProviderSelect"');
+    expect(html).toContain('option value="xupra-nano"');
+    expect(html).toContain('option value="xupra-foundation"');
+    expect(html).toContain("Pro users only");
     expect(html).toContain('option value="databricks-api"');
     expect(html).toContain('option value="claude-api"');
     expect(html).toContain('option value="openai-api"');
     expect(html).toContain('option value="hermes-agent"');
+    expect(html).toContain('id="stageCountSelect"');
+    expect(html).toContain('<option value="12">12</option>');
 
     await messageHandler?.({
       command: "drylake.startBuildSession",
       mode: "build-app",
       text: "Build the API.",
       planningProvider: "openai-api",
+      stageCount: 3,
     });
 
     expect(executed).toContainEqual({
       command: "drylake.startBuildSession",
-      args: ["build-app", "Build the API.", "openai-api"],
+      args: ["build-app", "Build the API.", "openai-api", 3],
     });
   });
 
@@ -500,31 +509,43 @@ describe("Control Room webview", () => {
 
     const html = panel?.webview.html ?? "";
 
-    expect(html).toContain("gpt-5.4-nano");
-    expect(html).toContain("GPT 5.5 + Claude Opus 4.6");
-    expect(html).toContain("GPT-5.4 Nano - Free card planning");
-    expect(html).toContain("Free users use GPT-5.4 Nano, or they can bring their own API key.");
+    expect(html).toContain("GPT-5.4 Nano");
+    expect(html).toContain("Xupra AI - Frontier Models");
+    expect(html).toContain("Free User - GPT-5.4 Nano");
+    expect(html).toContain("Free users use GPT-5.4 Nano. Choose up to 12 stages");
+    expect(html).toContain("Pro users only");
+    expect(html).not.toMatch(/GPT\s+5\.5/);
+    expect(html).not.toMatch(/Claude\s+Opus/);
     expect(html).toContain("xupra.openBilling");
     expect(html).toContain('id="chatInput"');
     expect(html).not.toContain("chat-locked");
     expect(html).not.toContain("Xupra AI Planning Chat is a Pro feature");
   });
 
-  it("hides the nano planning banner for foundation and unknown model tiers", async () => {
+  it("hides the nano planning banner for entitled foundation users", async () => {
     const provider = new ControlRoomProvider(
       { readRunbook: async () => null } as never,
       () => ({ id: "xupra-pro-ai", label: "Xupra AI" }),
       () => ({ messages: [] }),
       () => "foundation",
+      () => false,
+      () => ({
+        organizationTier: "pro",
+        entitlements: {
+          xupra_pro_ai: true,
+          session_cloud_sync: false,
+          pr_summary_generation: false,
+        },
+      }),
     );
     await provider.createOrShow(context() as never);
 
     const html = panel?.webview.html ?? "";
 
-    expect(html).not.toContain("gpt-5.4-nano");
+    expect(html).not.toContain('class="nano-banner"');
+    expect(html).not.toContain("We are using <strong>GPT-5.4 Nano</strong>");
     expect(html).not.toContain("Free planning model");
-    expect(html).not.toContain("You are using");
-    expect(html).not.toContain("Upgrade to use Xupra AI foundation models (GPT");
+    expect(html).toContain("Xupra AI - Frontier Models");
   });
 
   it("renders an inline planning skeleton while plan generation is in progress", async () => {

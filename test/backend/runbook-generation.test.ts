@@ -58,4 +58,21 @@ describe("runbook generation prompts", () => {
     expect(userPrompt).toContain("Do not default to 5");
     expect(userPrompt).not.toContain("at least five phases");
   });
+
+  it("honors an explicit requested stage count", async () => {
+    await buildRunbookDraftPrompt({
+      ...input("Build checkout with webhooks"),
+      requestedStageCount: 3,
+    });
+
+    const request = mocks.generateAiText.mock.calls[0][0];
+    const userPrompt = request.userPrompt;
+
+    expect(userPrompt).toContain("User selected exactly 3 planning stages in DryLake.");
+    expect(userPrompt).toContain("Generate exactly 3 phases.");
+    expect(request.textFormat.schema.properties.phases).toMatchObject({
+      minItems: 3,
+      maxItems: 3,
+    });
+  });
 });

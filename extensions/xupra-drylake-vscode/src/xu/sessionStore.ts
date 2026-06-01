@@ -95,6 +95,7 @@ export class XuSessionStore {
     prompt: string;
     mode: XuMode;
     runbookPath: string;
+    requestedStageCount?: number;
     providerId: BuildSessionState["providerId"];
     providerLabel: BuildSessionState["providerLabel"];
   }) {
@@ -105,6 +106,7 @@ export class XuSessionStore {
       prompt: params.prompt,
       createdAt: new Date().toISOString(),
       runbookPath: params.runbookPath,
+      ...(params.requestedStageCount ? { requestedStageCount: params.requestedStageCount } : {}),
       providerId: params.providerId,
       providerLabel: params.providerLabel,
     };

@@ -11,6 +11,9 @@ const targets = [
   { svg: "readme-kanban.svg", png: "readme-kanban-v2.png", width: 1400 },
   { svg: "readme-pipeline.svg", png: "readme-pipeline.png", width: 1400 },
   { svg: "readme-pipeline.svg", png: "readme-pipeline-v2.png", width: 1400 },
+  { svg: "readme-demo-video.svg", png: "readme-demo-video.png", width: 1400 },
+  { svg: "readme-planning-models.svg", png: "readme-planning-models.png", width: 1400 },
+  { svg: "readme-claude-skill.svg", png: "readme-claude-skill.png", width: 1400 },
 ];
 
 for (const t of targets) {

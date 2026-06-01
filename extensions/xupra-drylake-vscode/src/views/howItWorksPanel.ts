@@ -58,7 +58,7 @@ export class HowItWorksPanel {
       margin: 0;
       color: var(--vscode-foreground);
       background: var(--vscode-editor-background);
-      font-family: var(--vscode-font-family);
+      font-family: "Helvetica Neue", Helvetica, system-ui, sans-serif;
       font-size: var(--vscode-font-size);
     }
 

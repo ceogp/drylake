@@ -27,6 +27,7 @@ export type GenerateDraftRunbookInput = {
   prompt: string;
   mode: XuMode;
   workspaceSummary: string;
+  requestedStageCount?: number;
   currentRunbook?: ApplicationBuildRunbook;
 };
 

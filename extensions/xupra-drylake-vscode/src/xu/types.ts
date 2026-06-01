@@ -139,6 +139,7 @@ export type BuildSessionState = {
   prompt: string;
   createdAt: string;
   runbookPath: string;
+  requestedStageCount?: number;
   providerId:
     | "xupra-pro-ai"
     | "databricks-api"

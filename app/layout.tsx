@@ -31,6 +31,7 @@ const monoFont = JetBrains_Mono({
 
 const xupraHomepage = "https://xupracorp.com";
 const discordHref = "https://discord.gg/WQdapuVn";
+const iconVersion = "20260601";
 
 export const metadata: Metadata = {
   title: {
@@ -40,11 +41,11 @@ export const metadata: Metadata = {
   description: "DryLake is a visual kanban and pipeline planner for assigning coding phases to AI coding agents.",
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: `/favicon.ico?v=${iconVersion}`, sizes: "any" },
+      { url: `/icon.svg?v=${iconVersion}`, type: "image/svg+xml" },
     ],
-    shortcut: "/favicon.ico",
-    apple: "/icon.svg",
+    shortcut: `/favicon.ico?v=${iconVersion}`,
+    apple: `/apple-touch-icon.png?v=${iconVersion}`,
   },
 };
 

@@ -276,7 +276,7 @@ describe("runbook commands", () => {
     mocks.providerIsAvailable.mockResolvedValueOnce({ available: true });
     mocks.providerGenerateDraftRunbook.mockResolvedValueOnce({ runbook: generatedRunbook, modelTier: "nano" });
 
-    await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout");
+    await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout", undefined, 3);
 
     expect(mocks.showWarningMessage).not.toHaveBeenCalledWith(
       "Xupra AI requires a Pro plan. Upgrade to unlock.",
@@ -296,6 +296,10 @@ describe("runbook commands", () => {
     expect(deps.stateStore.setPlanningLoading).toHaveBeenLastCalledWith(false);
     expect(mocks.providerGenerateDraftRunbook).toHaveBeenCalledWith(expect.objectContaining({
       prompt: "Build checkout",
+      requestedStageCount: 3,
+    }));
+    expect(deps.sessionStore.createSession).toHaveBeenCalledWith(expect.objectContaining({
+      requestedStageCount: 3,
     }));
     expect(mocks.providerGenerateDraftRunbook).toHaveBeenCalledWith(expect.not.objectContaining({
       currentRunbook: expect.anything(),
@@ -978,7 +982,8 @@ describe("runbook commands", () => {
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "gemini" }));
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(2);
     expect(currentRunbook.phases[0].status).toBe("complete");
-    expect(currentRunbook.phases[1].status).toBe("active");
+    expect(currentRunbook.phases[1].status).toBe("complete");
+    expect(currentRunbook.phases[1].steps.every((step) => step.status === "complete")).toBe(true);
   });
 
   it("autopilot pauses when the next phase has no selected agent", async () => {
@@ -1015,7 +1020,9 @@ describe("runbook commands", () => {
     }));
     expect(mocks.openTextDocument).not.toHaveBeenCalled();
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
-    expect(deps.sessionStore.writeRunbook.mock.calls[0][1].phases.find((phase) => phase.id === "P-01")?.status).toBe("active");
+    const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(written.phases.find((phase) => phase.id === "P-01")?.status).toBe("complete");
+    expect(written.phases.find((phase) => phase.id === "P-01")?.steps.every((step) => step.status === "complete")).toBe(true);
     expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });
@@ -1058,7 +1065,7 @@ describe("runbook commands", () => {
     }));
   });
 
-  it("marks the phase active after a successful handoff launch", async () => {
+  it("auto-completes the phase checklist after a successful handoff launch", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";
     const { deps } = reorderDeps(runbook);
@@ -1068,7 +1075,45 @@ describe("runbook commands", () => {
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
     const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
-    expect(written.phases.find((phase) => phase.id === "P-01")?.status).toBe("active");
+    const phase = written.phases.find((item) => item.id === "P-01");
+    expect(phase?.status).toBe("complete");
+    expect(phase?.steps.every((step) => step.status === "complete")).toBe(true);
+    expect(written.phases.find((item) => item.id === "P-02")?.status).toBe("pending");
+  });
+
+  it("autopilot auto-completes launched phases and starts the next selected phase", async () => {
+    const runbook = reorderRunbook();
+    runbook.handoff.autopilot = true;
+    runbook.phases[0].agent = "codex";
+    runbook.phases[1].agent = "gemini";
+    let currentRunbook = runbook;
+    const uri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
+    const deps = {
+      apiClient: {},
+      stateStore: {
+        getBuildSession: vi.fn(() => null),
+      },
+      sessionStore: {
+        readRunbook: vi.fn(async () => ({ uri, runbook: currentRunbook })),
+        writeRunbook: vi.fn(async (...args: [unknown, ApplicationBuildRunbook]) => {
+          currentRunbook = args[1];
+        }),
+      },
+      controlRoom: {
+        refresh: vi.fn(async () => undefined),
+      },
+      refreshSidebar: vi.fn(async () => undefined),
+    };
+
+    await handoffPhaseCommand(deps as never, "P-01");
+
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "gemini" }));
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(2);
+    expect(currentRunbook.phases[0].status).toBe("complete");
+    expect(currentRunbook.phases[0].steps.every((step) => step.status === "complete")).toBe(true);
+    expect(currentRunbook.phases[1].status).toBe("complete");
+    expect(currentRunbook.phases[1].steps.every((step) => step.status === "complete")).toBe(true);
   });
 
   // Export-only actions must never change phase status.

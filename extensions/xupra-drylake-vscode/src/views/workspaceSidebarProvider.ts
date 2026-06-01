@@ -391,7 +391,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       padding: 0;
       color: var(--xupra-text);
       background: var(--xupra-bg);
-      font-family: var(--vscode-font-family);
+      font-family: "Helvetica Neue", Helvetica, system-ui, sans-serif;
       font-size: var(--vscode-font-size);
     }
 
@@ -602,15 +602,15 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     .item-optimize {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       color: #090a0a;
       background: var(--xupra-orange);
       border: 1px solid var(--xupra-orange);
       border-radius: 4px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 650;
       line-height: 1;
-      padding: 5px 9px;
+      padding: 6px 9px;
       white-space: nowrap;
       cursor: pointer;
       align-self: flex-start;
@@ -624,11 +624,21 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .item-optimize .optimize-mark {
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
       border-radius: 2px;
       object-fit: cover;
       display: inline-block;
+    }
+
+    .optimize-pro-pill {
+      padding: 2px 5px;
+      border: 1px solid rgba(9, 10, 10, 0.28);
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
 
     .file-path {
@@ -1062,7 +1072,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         const optimizePath = options.readOptimizePath ? options.readOptimizePath(entry) : "";
         const itemHtml = '<div class="item-stack"><span class="item-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</span>' + (meta ? '<span class="item-meta" title="' + escapeHtml(meta) + '">' + escapeHtml(meta) + '</span>' : '') + '</div>' + (tag ? '<span class="file-tag">' + escapeHtml(tag) + '</span>' : '');
         const optimizeHtml = optimizePath
-          ? '<button type="button" class="item-optimize" title="Optimize with Xupra AI (Pro)" data-optimize-path="' + escapeHtml(optimizePath) + '" aria-label="Improve with Xupra AI">' + (XUPRA_MARK_DATA_URI ? '<img class="optimize-mark" src="' + XUPRA_MARK_DATA_URI + '" alt="" />' : '') + '<span>improve w/ Xupra AI</span></button>'
+          ? '<button type="button" class="item-optimize" title="Optimize with Xupra AI (Pro)" data-optimize-path="' + escapeHtml(optimizePath) + '" aria-label="Optimize with Xupra AI">' + (XUPRA_MARK_DATA_URI ? '<img class="optimize-mark" src="' + XUPRA_MARK_DATA_URI + '" alt="" />' : '') + '<span>Optimize with Xupra AI</span><span class="optimize-pro-pill">Pro</span></button>'
           : '';
 
         if (options.actionType === 'openImportedSkill' && openId) {

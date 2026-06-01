@@ -7,6 +7,7 @@ export const runbookGenerationInputSchema = z.object({
   prompt: z.string().trim().min(1),
   mode: z.string().trim().min(1),
   workspaceSummary: z.string().trim().min(1),
+  requestedStageCount: z.number().int().min(1).max(12).optional(),
   currentRunbook: z.object({}).catchall(z.unknown()).optional(),
 });
 
@@ -38,6 +39,12 @@ const RUNBOOK_SYSTEM_PROMPT = [
 
 const RUNBOOK_PHASE_COUNT_INSTRUCTION =
   "phases: determine the correct number of phases for this specific task. Simple tasks may need 3 phases. Complex tasks may need 8 or more. Do not default to 5. Each phase must be meaningful and non-redundant.";
+
+function requestedStageInstruction(input: RunbookGenerationInput) {
+  return typeof input.requestedStageCount === "number"
+    ? `User selected exactly ${input.requestedStageCount} planning stages in DryLake. Generate exactly ${input.requestedStageCount} phases.`
+    : "If the user asks for a specific number of planning stages in natural language, honor that number when it is between 1 and 12.";
+}
 
 const stringArraySchema = {
   type: "array",
@@ -222,7 +229,7 @@ const runbookJsonSchema = {
   },
 } satisfies Record<string, unknown>;
 
-function runbookContractLines() {
+function runbookContractLines(input: RunbookGenerationInput) {
   return [
     "Required YAML contract:",
     "xu: 1",
@@ -244,6 +251,7 @@ function runbookContractLines() {
     "provisioning.safety.requiresApprovalBeforeExecution: true",
     "provisioning.safety.executeAutomatically: false",
     RUNBOOK_PHASE_COUNT_INSTRUCTION,
+    requestedStageInstruction(input),
     "each phase must include id, title, optional agent, gate, status, objective, inputs, outputs, steps, acceptance",
     "phase.agent optional enum: claude-code, codex, gemini, cursor, aider, copilot, augment-code",
     "checks.install, checks.dev, checks.build, checks.test, checks.lint",
@@ -288,12 +296,30 @@ function serializeCurrentRunbook(currentRunbook: RunbookGenerationInput["current
   }
 }
 
+function runbookJsonSchemaFor(input: RunbookGenerationInput) {
+  if (typeof input.requestedStageCount !== "number") {
+    return runbookJsonSchema;
+  }
+
+  return {
+    ...runbookJsonSchema,
+    properties: {
+      ...runbookJsonSchema.properties,
+      phases: {
+        ...runbookJsonSchema.properties.phases,
+        minItems: input.requestedStageCount,
+        maxItems: input.requestedStageCount,
+      },
+    },
+  } satisfies Record<string, unknown>;
+}
+
 function basePromptSections(input: RunbookGenerationInput) {
   return [
     "You are generating a DryLake .xu runbook.",
     "Return only YAML. Do not wrap it in Markdown fences.",
     "",
-    ...runbookContractLines(),
+    ...runbookContractLines(input),
     "",
     `Mode: ${input.mode}`,
     "",
@@ -322,7 +348,7 @@ async function generateRunbookYaml(params: {
     textFormat: {
       type: "json_schema",
       name: "drylake_runbook",
-      schema: runbookJsonSchema,
+      schema: runbookJsonSchemaFor(params.input),
       strict: true,
     },
   });

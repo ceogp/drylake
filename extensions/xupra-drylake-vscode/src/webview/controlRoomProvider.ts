@@ -12,6 +12,7 @@ import { XuSessionStore } from "../xu/sessionStore";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { ChatState, PlanningModelTier, PlanningProviderInfo } from "../services/stateStore";
 import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
+import type { ConnectionState } from "../types/package";
 import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../xu/types";
 import type { PendingPlanChangeSet } from "../xu/pendingPlanChanges";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
@@ -26,13 +27,42 @@ const MODE_CARDS: Array<[string, XuMode, string]> = [
   ["Review", "review", "Review existing code and produce a correction plan."],
 ];
 
-const PLANNING_PROVIDERS: Array<[DryLakeProviderId, string, string]> = [
-  ["xupra-pro-ai", "Xupra AI", "Hosted planning"],
-  ["databricks-api", "Databricks API", "BYO endpoint"],
-  ["claude-api", "Claude API", "BYO Anthropic key"],
-  ["openai-api", "OpenAI API", "BYO OpenAI key"],
-  ["hermes-agent", "Hermes Agent CLI", "Local/BYO model"],
+type PlanningProviderChoiceId =
+  | "xupra-nano"
+  | "xupra-foundation"
+  | "databricks-api"
+  | "claude-api"
+  | "openai-api"
+  | "hermes-agent";
+
+const PLANNING_PROVIDERS: Array<{
+  choiceId: PlanningProviderChoiceId;
+  providerId: DryLakeProviderId;
+  label: string;
+  description: string;
+  proOnly?: boolean;
+}> = [
+  {
+    choiceId: "xupra-nano",
+    providerId: "xupra-pro-ai",
+    label: "Free User - GPT-5.4 Nano",
+    description: "Hosted starter planning",
+  },
+  {
+    choiceId: "xupra-foundation",
+    providerId: "xupra-pro-ai",
+    label: "Xupra AI - Frontier Models",
+    description: "Advanced Pro planning",
+    proOnly: true,
+  },
+  { choiceId: "databricks-api", providerId: "databricks-api", label: "Databricks API", description: "BYO endpoint" },
+  { choiceId: "claude-api", providerId: "claude-api", label: "Claude API", description: "BYO Anthropic key" },
+  { choiceId: "openai-api", providerId: "openai-api", label: "OpenAI API", description: "BYO OpenAI key" },
+  { choiceId: "hermes-agent", providerId: "hermes-agent", label: "Hermes Agent CLI", description: "Local/BYO model" },
 ];
+
+const STAGE_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+type PlanningProviderChoice = (typeof PLANNING_PROVIDERS)[number];
 
 const STATUS_LABELS: Record<XuStepStatus, string> = {
   pending: "pending",
@@ -62,9 +92,24 @@ function modeFrom(value: unknown): XuMode {
 }
 
 function planningProviderFrom(value: unknown): DryLakeProviderId {
-  return typeof value === "string" && PLANNING_PROVIDERS.some(([id]) => id === value)
+  return typeof value === "string" && PLANNING_PROVIDERS.some((provider) => provider.providerId === value)
     ? (value as DryLakeProviderId)
     : "xupra-pro-ai";
+}
+
+function stageCountFrom(value: unknown): number | undefined {
+  const numeric = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN;
+  if (!Number.isFinite(numeric)) {
+    return undefined;
+  }
+
+  const rounded = Math.round(numeric);
+  return rounded >= 1 && rounded <= 12 ? rounded : undefined;
+}
+
+function hasFoundationPlanningAccess(connection: ConnectionState) {
+  const tier = String(connection.organizationTier ?? "").toLowerCase();
+  return Boolean(connection.entitlements?.xupra_pro_ai || tier === "pro" || tier === "enterprise");
 }
 
 function autopilotEnabled(runbook: ApplicationBuildRunbook | null) {
@@ -191,7 +236,9 @@ function renderPhaseCard(
     profilesByAgent: HandoffProfilesByAgent;
   },
 ) {
-  const draggable = options.draggable ? ' draggable="true"' : "";
+  const dragHandle = options.draggable
+    ? `<button type="button" class="drag-handle" draggable="true" data-drag-phase="${escapeHtml(phase.id)}" aria-label="Drag ${escapeHtml(phase.title)} to reorder" title="Drag to reorder"><span></span><span></span><span></span></button>`
+    : "";
   const cardClass = `phase-card ${statusClass(phase.status)}${phase.status === "active" ? " active-phase" : ""}`;
   const selectedAgent = phase.agent;
   const actionHint = selectedAgent ? phaseAgentHint(selectedAgent) : "Select a phase agent before running this phase.";
@@ -216,8 +263,11 @@ function renderPhaseCard(
     })
     .join("");
 
-  return `<article class="${cardClass}" data-phase-id="${escapeHtml(phase.id)}" data-phase-status="${statusForKanban(phase.status)}"${draggable}>
-    <div class="phase-id">${escapeHtml(phase.id)}</div>
+  return `<article class="${cardClass}" data-phase-id="${escapeHtml(phase.id)}" data-phase-status="${statusForKanban(phase.status)}">
+    <div class="phase-card-top">
+      ${dragHandle}
+      <div class="phase-id">${escapeHtml(phase.id)}</div>
+    </div>
     <h3 class="phase-title">${escapeHtml(phase.title)}</h3>
     <span class="badge ${statusClass(phase.status)}">${escapeHtml(STATUS_LABELS[phase.status])}</span>
     <p class="objective" title="${escapeHtml(phase.objective)}">${escapeHtml(phase.objective || "No objective recorded.")}</p>
@@ -300,7 +350,7 @@ function renderKanban(
 function renderKanbanEmptyState() {
   return `<section class="empty-state kanban-empty">
     <h2>No plan yet</h2>
-    <p>Describe your task in the chat above — the AI will generate phases here.</p>
+    <p>Describe your task in the chat above - the AI will generate phases here.</p>
   </section>`;
 }
 
@@ -318,15 +368,27 @@ function renderKanbanLoadingState() {
   </section>`;
 }
 
-function renderPlanningModelBanner(modelTier: PlanningModelTier | null) {
-  if (modelTier === "nano") {
-    return `<section class="nano-banner" aria-label="Free planning model">
-      <span class="nano-banner-text">⚡ You are using <strong>gpt-5.4-nano</strong>. Upgrade to use Xupra AI foundation models (GPT 5.5 + Claude Opus 4.6).</span>
-      <button type="button" class="nano-banner-cta" data-command="xupra.openBilling">Upgrade to Pro →</button>
+function renderPlanningModelBanner(
+  modelTier: PlanningModelTier | null,
+  hasPlan: boolean,
+  connection: ConnectionState,
+) {
+  const shouldShowNano = modelTier === "nano" || (!hasPlan && !hasFoundationPlanningAccess(connection));
+  if (!shouldShowNano) {
+    return "";
+  }
+
+  if (hasPlan) {
+    return `<section class="model-tier-bar nano" aria-label="Planning model">
+      <span class="model-tier-dot" aria-hidden="true"></span>
+      <strong>5.4 Nano</strong>
     </section>`;
   }
 
-  return "";
+  return `<section class="nano-banner" aria-label="Free planning model" data-nano-banner>
+    <span class="nano-banner-text">We are using <strong>GPT-5.4 Nano</strong>. Xupra AI Frontier Models are available on Pro.</span>
+    <button type="button" class="nano-banner-cta" data-command="xupra.openBilling">Upgrade to Pro</button>
+  </section>`;
 }
 
 type WebviewMessage = {
@@ -344,12 +406,14 @@ type WebviewMessage = {
   text?: unknown;
   mode?: unknown;
   planningProvider?: unknown;
+  stageCount?: unknown;
 };
 
 type PlanningProviderReader = () => PlanningProviderInfo | null;
 type ChatStateReader = () => ChatState;
 type LastModelTierReader = () => PlanningModelTier | null;
 type PlanningLoadingReader = () => boolean;
+type ConnectionReader = () => ConnectionState;
 
 function formatChatTime(ts: number) {
   try {
@@ -421,42 +485,105 @@ function estimateCardGenerationContext(state: ChatState, hasPlan: boolean) {
   };
 }
 
-function planningProviderLabel(
-  id: DryLakeProviderId,
-  label: string,
-  description: string,
+function activeProviderChoice(
+  planningProvider: PlanningProviderInfo | null,
   modelTier: PlanningModelTier | null,
+  connection: ConnectionState,
+): PlanningProviderChoice {
+  const activeProviderId = planningProvider?.id ?? "xupra-pro-ai";
+  if (activeProviderId !== "xupra-pro-ai") {
+    return PLANNING_PROVIDERS.find((provider) => provider.choiceId === activeProviderId) ?? PLANNING_PROVIDERS[0];
+  }
+
+  if (modelTier === "foundation" && hasFoundationPlanningAccess(connection)) {
+    return PLANNING_PROVIDERS.find((provider) => provider.choiceId === "xupra-foundation") ?? PLANNING_PROVIDERS[0];
+  }
+
+  if (modelTier === "nano" || !hasFoundationPlanningAccess(connection)) {
+    return PLANNING_PROVIDERS[0];
+  }
+
+  return PLANNING_PROVIDERS.find((provider) => provider.choiceId === "xupra-foundation") ?? PLANNING_PROVIDERS[0];
+}
+
+function providerDisplayLabel(provider: PlanningProviderChoice) {
+  if (provider.choiceId === "xupra-nano") {
+    return "GPT-5.4 Nano";
+  }
+
+  if (provider.choiceId === "xupra-foundation") {
+    return "Xupra AI - Frontier Models";
+  }
+
+  return provider.label;
+}
+
+function planningProviderOptionLabel(provider: PlanningProviderChoice, locked: boolean) {
+  if (provider.choiceId === "xupra-foundation") {
+    return locked
+      ? `${provider.label} - Pro users only`
+      : provider.label;
+  }
+
+  return `${provider.label} - ${provider.description}`;
+}
+
+function renderPlanningProviderSelect(
+  activeProvider: PlanningProviderChoice,
+  hasPlan: boolean,
+  connection: ConnectionState,
 ) {
-  if (id !== "xupra-pro-ai") {
-    return `${label} - ${description}`;
-  }
+  const disabled = hasPlan ? " disabled" : "";
+  const activeLocked = Boolean(activeProvider.proOnly && !hasFoundationPlanningAccess(connection));
+  const note = activeLocked
+    ? "Pro users only. Upgrade to use Xupra AI Frontier Models."
+    : activeProvider.choiceId === "xupra-nano"
+      ? "We are using GPT-5.4 Nano for free planning."
+      : activeProvider.description;
 
-  if (modelTier === "nano") {
-    return "GPT-5.4 Nano - Free card planning";
-  }
+  return `<div class="planning-provider-field">
+    <label class="planning-provider-label" for="planningProviderSelect">Planning model</label>
+    <select id="planningProviderSelect" class="planning-provider-select"${disabled} aria-label="Planning model">
+      ${PLANNING_PROVIDERS.map((provider) => {
+      const isActive = provider.choiceId === activeProvider.choiceId;
+      const locked = Boolean(provider.proOnly && !hasFoundationPlanningAccess(connection));
+      return `<option value="${escapeHtml(provider.choiceId)}" data-planning-provider="${escapeHtml(provider.providerId)}" data-pro-locked="${locked ? "true" : "false"}"${isActive ? " selected" : ""}>${escapeHtml(planningProviderOptionLabel(provider, locked))}</option>`;
+    }).join("")}
+    </select>
+    <div class="planning-provider-note" data-provider-note>${escapeHtml(note)}</div>
+  </div>`;
+}
 
-  return "Xupra AI - Foundation planning";
+function renderStageCountSelect(hasPlan: boolean) {
+  const disabled = hasPlan ? " disabled" : "";
+  const title = hasPlan
+    ? "This plan keeps the stage count chosen when the session started."
+    : "Choose a stage count, or leave Auto and ask naturally in chat.";
+
+  return `<label class="stage-count-label" title="${escapeHtml(title)}">
+    <span>Stages</span>
+    <select id="stageCountSelect" class="stage-count-select"${disabled} aria-label="Planning stages">
+      <option value="">Auto</option>
+      ${STAGE_COUNT_OPTIONS.map((count) => `<option value="${count}">${count}</option>`).join("")}
+    </select>
+  </label>`;
 }
 
 function renderPlannerSetup(
   planningProvider: PlanningProviderInfo | null,
   hasPlan: boolean,
   modelTier: PlanningModelTier | null,
+  connection: ConnectionState,
 ) {
-  const activeProviderId = planningProvider?.id ?? "xupra-pro-ai";
-  const providerOptions = PLANNING_PROVIDERS.map(([id, label, description]) => {
-    const selected = id === activeProviderId ? " selected" : "";
-    return `<option value="${escapeHtml(id)}"${selected}>${escapeHtml(planningProviderLabel(id, label, description, modelTier))}</option>`;
-  }).join("");
-  const providerLocked = hasPlan ? " disabled" : "";
-  const providerTitle = hasPlan
-    ? "This plan keeps the AI provider selected when the session started."
-    : "Choose what powers card generation before sending the first message.";
+  const activeProvider = activeProviderChoice(planningProvider, modelTier, connection);
+  const activeProviderLocked = Boolean(activeProvider.proOnly && !hasFoundationPlanningAccess(connection));
   const providerStatus = hasPlan
     ? "Locked for this plan"
-    : modelTier === "nano"
-      ? "Free users use GPT-5.4 Nano, or they can bring their own API key."
-      : "Choose the provider that will generate the first cards.";
+    : activeProvider.choiceId === "xupra-nano"
+      ? "Free users use GPT-5.4 Nano. Choose up to 12 stages, or ask naturally in chat."
+      : activeProviderLocked
+        ? "Xupra AI Frontier Models are available on Pro."
+        : "Choose the provider and stage count that will generate the first cards.";
   const modeChips = hasPlan
     ? ""
     : `<div class="mode-row" aria-label="Plan type">${MODE_CARDS.map(([title, mode], index) => {
@@ -466,18 +593,16 @@ function renderPlannerSetup(
   return `<section class="planner-setup" aria-label="Card generation setup">
     <div class="planner-setup-header">
       <div>
-        <div class="planner-setup-eyebrow">Card Generation</div>
-        <div class="planner-setup-title">Choose the AI provider before chat starts.</div>
+      <div class="planner-setup-eyebrow">Card Generation</div>
+        <div class="planner-setup-title">Choose the planning model before chat starts.</div>
       </div>
       <div class="planner-setup-status">${escapeHtml(providerStatus)}</div>
     </div>
     ${modeChips}
-    <label class="planning-provider-label" title="${escapeHtml(providerTitle)}">
-      <span>AI Provider</span>
-      <select id="planningProviderSelect" class="planning-provider-select"${providerLocked} aria-label="AI provider">
-        ${providerOptions}
-      </select>
-    </label>
+    <div class="planning-controls">
+      ${renderPlanningProviderSelect(activeProvider, hasPlan, connection)}
+      ${renderStageCountSelect(hasPlan)}
+    </div>
   </section>`;
 }
 
@@ -487,12 +612,14 @@ function renderChatPanel(
   hasPlan: boolean,
   collapsed: boolean,
   modelTier: PlanningModelTier | null,
+  connection: ConnectionState,
 ) {
   const cardContext = estimateCardGenerationContext(state, hasPlan);
-  const activeProviderLabel = modelTier === "nano" && planningProvider?.id === "xupra-pro-ai"
-    ? "GPT-5.4 Nano"
-    : planningProvider?.label ?? "Planning AI";
-  const plannerSetup = renderPlannerSetup(planningProvider, hasPlan, modelTier);
+  const activeProvider = activeProviderChoice(planningProvider, modelTier, connection);
+  const activeProviderLabel = planningProvider?.id && planningProvider.id !== "xupra-pro-ai"
+    ? planningProvider.label
+    : providerDisplayLabel(activeProvider);
+  const plannerSetup = renderPlannerSetup(planningProvider, hasPlan, modelTier, connection);
   const messages = state.messages.length
     ? state.messages
         .map((message) => {
@@ -546,6 +673,7 @@ export class ControlRoomProvider {
     private readonly readChatState: ChatStateReader = () => ({ messages: [] }),
     private readonly readLastModelTier: LastModelTierReader = () => null,
     private readonly readPlanningLoading: PlanningLoadingReader = () => false,
+    private readonly readConnection: ConnectionReader = () => ({}),
   ) {}
 
   async createOrShow(context: vscode.ExtensionContext) {
@@ -634,11 +762,13 @@ export class ControlRoomProvider {
       }
 
       if (message.command === "drylake.startBuildSession") {
+        const requestedStageCount = stageCountFrom(message.stageCount ?? message.args?.[3]);
         await vscode.commands.executeCommand(
           message.command,
           modeFrom(message.mode ?? message.args?.[0]),
           message.text ?? message.args?.[1],
           planningProviderFrom(message.planningProvider ?? message.args?.[2]),
+          ...(requestedStageCount ? [requestedStageCount] : []),
         );
         return;
       }
@@ -731,8 +861,10 @@ export class ControlRoomProvider {
     const planningProvider = this.readPlanningProvider();
     const chatState = this.readChatState();
     const modelTier = this.readLastModelTier();
-    const banner = renderPlanningModelBanner(modelTier);
-    const chatPanel = renderChatPanel(chatState, planningProvider, Boolean(runbook), this.chatCollapsed(), modelTier);
+    const connection = this.readConnection();
+    const hasPlan = Boolean(runbook);
+    const banner = renderPlanningModelBanner(modelTier, hasPlan, connection);
+    const chatPanel = renderChatPanel(chatState, planningProvider, hasPlan, this.chatCollapsed(), modelTier, connection);
     const body = runbook
       ? (view === "kanban"
         ? renderKanban(runbook, pendingPlanChange, profilesByAgent)
@@ -750,53 +882,56 @@ export class ControlRoomProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     * { box-sizing: border-box; }
-    :root { --drylake-bg: #090a0a; --drylake-panel: #111414; --drylake-panel-2: #0d0f0f; --drylake-line: #27272a; --drylake-muted: #a1a1aa; --drylake-text: #f4f4f5; --drylake-green: #34d399; --drylake-green-soft: #17251d; --drylake-orange: #fb923c; --drylake-orange-soft: #2a1710; --drylake-red: #f87171; --drylake-paper: #090a0a; --drylake-ink: #f4f4f5; --drylake-yellow: #34d399; --drylake-blue: #fb923c; --drylake-pink: #fb923c; --drylake-white: #111414; }
-    body { margin: 0; color: var(--drylake-text); background: var(--drylake-bg); font-family: var(--vscode-font-family); }
+    :root { --drylake-bg: #090a0a; --drylake-panel: #111414; --drylake-panel-2: #0d0f0f; --drylake-line: #27272a; --drylake-muted: #a1a1aa; --drylake-text: #f4f4f5; --drylake-green: #34d399; --drylake-green-soft: #17251d; --drylake-orange: #fb923c; --drylake-orange-soft: #2a1710; --drylake-red: #f87171; --drylake-paper: #090a0a; --drylake-ink: #f4f4f5; --drylake-yellow: #34d399; --drylake-blue: #fb923c; --drylake-pink: #fb923c; --drylake-white: #111414; --drylake-font: "Helvetica Neue", Helvetica, system-ui, sans-serif; --drylake-brand-font: "Bricolage Grotesque", "Helvetica Neue", Helvetica, system-ui, sans-serif; }
+    body { margin: 0; color: var(--drylake-text); background: var(--drylake-bg); font-family: var(--drylake-font); font-weight: 400; letter-spacing: 0; }
     main { max-width: 1180px; margin: 0 auto; padding: 24px; }
     header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; padding: 12px 16px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
-    h1 { margin: 0; color: var(--drylake-text); font-size: 24px; font-weight: 700; }
-    h2 { margin: 8px 0; color: var(--drylake-text); font-size: 20px; }
+    h1 { margin: 0; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 24px; font-weight: 650; letter-spacing: 0; }
+    h2 { margin: 8px 0; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 20px; font-weight: 600; letter-spacing: 0; }
     h3, p { margin: 0; }
     button, select, textarea { font: inherit; }
-    button { color: #090a0a; background: var(--drylake-green); border: 1px solid var(--drylake-green); border-radius: 4px; padding: 7px 11px; cursor: pointer; font-weight: 800; box-shadow: none; }
+    button { color: #090a0a; background: var(--drylake-green); border: 1px solid var(--drylake-green); border-radius: 4px; padding: 7px 11px; cursor: pointer; font-weight: 650; box-shadow: none; }
     button:hover { background: #6ee7b7; border-color: #6ee7b7; }
     button:disabled { cursor: not-allowed; opacity: 0.55; }
     button.secondary, .toggle-btn { color: var(--drylake-text); background: var(--drylake-bg); border-color: #3f3f46; }
     button.secondary:hover, .toggle-btn:hover { border-color: var(--drylake-orange); color: #fed7aa; background: var(--drylake-bg); }
-    .eyebrow, .planning-banner-eyebrow, .chat-eyebrow, .phase-id { color: var(--drylake-green); text-transform: uppercase; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; }
+    .eyebrow, .planning-banner-eyebrow, .chat-eyebrow, .phase-id { color: var(--drylake-green); text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
     .muted, .objective, .agent-label, .step-count, .drop-zone, .planning-banner-reason, .chat-empty, .chat-meta { color: var(--drylake-muted); line-height: 1.45; }
     .actions, .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
     .toggle-btn.active { color: #090a0a; background: var(--drylake-green); border-color: var(--drylake-green); }
     .pipeline { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 10px; }
-    .arrow { display: flex; align-items: center; padding: 0 8px; color: var(--drylake-orange); font-size: 22px; font-weight: 900; flex: 0 0 auto; }
+    .arrow { display: flex; align-items: center; padding: 0 8px; color: var(--drylake-orange); font-size: 22px; font-weight: 700; flex: 0 0 auto; }
     .phase-card { min-width: 210px; max-width: 220px; flex: 0 0 210px; min-height: 360px; display: flex; flex-direction: column; border: 1px solid var(--drylake-line); border-radius: 8px; padding: 12px; background: var(--drylake-panel); box-shadow: none; overflow: hidden; }
     .phase-card.active, .phase-card.active-phase { border-color: var(--drylake-orange); background: var(--drylake-orange-soft); }
     .phase-card.approved, .phase-card.complete { border-color: rgba(52, 211, 153, 0.65); }
     .phase-card.complete { opacity: 0.82; }
-    .phase-card[draggable="true"] { cursor: grab; }
+    .phase-card-top { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+    .drag-handle { display: inline-grid; grid-template-columns: repeat(3, 3px); gap: 3px; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 22px; padding: 0; color: var(--drylake-muted); background: transparent; border: 1px solid #3f3f46; border-radius: 4px; cursor: move; }
+    .drag-handle span { display: block; width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+    .drag-handle:hover, .drag-handle:focus { color: #fed7aa; background: rgba(251, 146, 60, 0.12); border-color: rgba(251, 146, 60, 0.65); outline: none; }
     .phase-card.dragging { opacity: 0.5; border-style: dashed; }
     .pipeline .phase-card.drop-before { border-left: 4px solid var(--drylake-orange); }
     .pipeline .phase-card.drop-after { border-right: 4px solid var(--drylake-orange); }
     .kanban .phase-card.drop-before { border-top: 4px solid var(--drylake-orange); }
     .kanban .phase-card.drop-after { border-bottom: 4px solid var(--drylake-orange); }
-    .phase-title { margin: 5px 0 8px; color: var(--drylake-text); font-size: 13px; line-height: 1.25; }
-    .badge { display: inline-block; margin-bottom: 8px; padding: 2px 7px; border: 1px solid var(--drylake-line); border-radius: 4px; color: var(--drylake-muted); background: var(--drylake-bg); font-size: 10px; font-weight: 800; }
+    .phase-title { margin: 5px 0 8px; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 13px; font-weight: 600; line-height: 1.25; letter-spacing: 0; }
+    .badge { display: inline-block; margin-bottom: 8px; padding: 2px 7px; border: 1px solid var(--drylake-line); border-radius: 4px; color: var(--drylake-muted); background: var(--drylake-bg); font-size: 10px; font-weight: 650; }
     .badge.active { border-color: rgba(251, 146, 60, 0.6); background: var(--drylake-orange-soft); color: #fed7aa; }
     .badge.approved, .badge.complete { border-color: rgba(52, 211, 153, 0.55); background: var(--drylake-green-soft); color: #a7f3d0; }
     .objective { height: 34px; min-height: 34px; margin-bottom: 8px; font-size: 11px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .task-fit-preview { display: grid; gap: 5px; margin: 0 0 8px; padding: 7px; border: 1px solid rgba(52, 211, 153, 0.28); border-radius: 5px; background: rgba(52, 211, 153, 0.06); }
-    .task-fit-label { color: #a7f3d0; font-size: 9px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
+    .task-fit-label { color: #a7f3d0; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
     .task-fit-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 6px; align-items: start; }
-    .task-fit-row span { color: var(--drylake-green); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; }
+    .task-fit-row span { color: var(--drylake-green); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
     .task-fit-row p { color: var(--drylake-text); font-size: 11px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .agent-label, .profile-label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+    .agent-label, .profile-label { display: block; font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
     .profile-label { margin-top: 6px; }
     .agent-select, .profile-select { width: 100%; margin-top: 4px; padding: 4px 6px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 11px; }
     .profile-select:disabled { opacity: 0.68; cursor: not-allowed; }
     .step-count { margin-top: 8px; font-size: 10px; }
     .kanban { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .kanban-column { min-height: 320px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
-    .column-header { display: flex; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--drylake-line); color: var(--drylake-text); background: var(--drylake-panel-2); text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.12em; }
+    .column-header { display: flex; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--drylake-line); color: var(--drylake-text); background: var(--drylake-panel-2); text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
     .count { padding: 1px 7px; border: 1px solid var(--drylake-line); border-radius: 4px; color: var(--drylake-green); background: var(--drylake-bg); }
     .column-body { min-height: 280px; padding: 10px; }
     .kanban .phase-card { width: 100%; max-width: none; min-width: 0; min-height: 360px; margin-bottom: 8px; }
@@ -804,7 +939,7 @@ export class ControlRoomProvider {
     .kanban-column.drag-over .drop-zone { border-color: var(--drylake-orange); color: #fed7aa; }
     .empty-state, .loading-state { border: 1px solid var(--drylake-line); border-radius: 8px; padding: 18px; background: var(--drylake-panel); box-shadow: none; }
     .loading-state { border-style: dashed; }
-    .loading-title { margin-bottom: 12px; color: var(--drylake-green); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.12em; }
+    .loading-title { margin-bottom: 12px; color: var(--drylake-green); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
     .loading-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .loading-card { display: flex; flex-direction: column; gap: 9px; min-height: 170px; border: 1px solid var(--drylake-line); border-radius: 6px; padding: 12px; background: var(--drylake-panel-2); }
     .loading-line { display: block; height: 10px; border-radius: 999px; background: linear-gradient(90deg, #18181b, #27272a, #18181b); background-size: 200% 100%; animation: pulse 1.2s ease-in-out infinite; }
@@ -815,15 +950,24 @@ export class ControlRoomProvider {
     textarea { width: 100%; min-height: 170px; resize: vertical; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; padding: 12px; line-height: 1.45; }
     .planner-setup { display: grid; gap: 10px; padding: 12px 14px; margin: 0 0 10px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
     .planner-setup-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-    .planner-setup-eyebrow { color: var(--drylake-green); font-size: 10px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
-    .planner-setup-title { margin-top: 2px; color: var(--drylake-text); font-size: 12px; font-weight: 800; }
+    .planner-setup-eyebrow { color: var(--drylake-green); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+    .planner-setup-title { margin-top: 2px; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 12px; font-weight: 600; letter-spacing: 0; }
     .planner-setup-status { max-width: 380px; color: var(--drylake-muted); font-size: 11px; line-height: 1.35; text-align: right; }
     .mode-row { display: flex; flex-wrap: wrap; gap: 6px; }
     .mode-chip { padding: 4px 8px; border: 1px solid #3f3f46; border-radius: 999px; color: var(--drylake-text); background: var(--drylake-bg); font-size: 10px; box-shadow: none; }
     .mode-chip.active { border-color: var(--drylake-green); background: var(--drylake-green-soft); color: #a7f3d0; }
-    .planning-provider-label { display: grid; grid-template-columns: minmax(0, 120px) minmax(0, 1fr); align-items: center; gap: 8px; color: var(--drylake-muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
-    .planning-provider-select { width: 100%; min-width: 0; padding: 6px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; text-transform: none; letter-spacing: 0; }
+    .planning-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+    .planning-provider-field { display: grid; gap: 5px; min-width: 0; }
+    .planning-provider-label { color: var(--drylake-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
+    .planning-provider-select { width: 100%; min-width: 0; padding: 7px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; letter-spacing: 0; }
+    .planning-provider-select:focus { outline: none; border-color: rgba(52, 211, 153, 0.72); }
     .planning-provider-select:disabled { opacity: 0.72; cursor: not-allowed; }
+    .planning-provider-note { min-height: 16px; color: var(--drylake-muted); font-size: 11px; line-height: 1.35; }
+    .stage-count-label { display: inline-flex; align-items: center; gap: 8px; color: var(--drylake-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
+    .stage-count-select { min-width: 92px; padding: 6px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; text-transform: none; letter-spacing: 0; }
+    .stage-count-select:disabled { opacity: 0.72; cursor: not-allowed; }
+    .model-tier-bar { display: inline-flex; align-items: center; gap: 7px; width: max-content; max-width: 100%; padding: 5px 10px; margin: 0 0 12px; border: 1px solid rgba(251, 146, 60, 0.45); border-radius: 999px; color: #fed7aa; background: var(--drylake-orange-soft); font-size: 11px; font-weight: 650; }
+    .model-tier-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--drylake-orange); box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.12); }
     .nano-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; margin: 0 0 14px; border: 1px solid rgba(251, 146, 60, 0.45); border-radius: 6px; background: var(--drylake-orange-soft); font-size: 12px; }
     .nano-banner-text, .plan-change-eyebrow { color: #fed7aa; }
     .nano-banner-cta { padding: 4px 10px; font-size: 11px; white-space: nowrap; }
@@ -839,14 +983,14 @@ export class ControlRoomProvider {
     .phase-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding-top: 10px; }
     .handoff-btn { width: 100%; font-size: 12px; padding: 6px 10px; }
     .handoff-menu { position: relative; }
-    .handoff-menu summary { list-style: none; width: 100%; padding: 5px 8px; border: 1px solid #3f3f46; border-radius: 4px; color: var(--drylake-text); background: var(--drylake-bg); font-size: 11px; font-weight: 800; text-align: center; cursor: pointer; box-shadow: none; }
+    .handoff-menu summary { list-style: none; width: 100%; padding: 5px 8px; border: 1px solid #3f3f46; border-radius: 4px; color: var(--drylake-text); background: var(--drylake-bg); font-size: 11px; font-weight: 650; text-align: center; cursor: pointer; box-shadow: none; }
     .handoff-menu summary::-webkit-details-marker { display: none; }
-    .handoff-menu summary::after { content: " ▾"; }
-    .handoff-menu[open] summary::after { content: " ▴"; }
+    .handoff-menu summary::after { content: " v"; }
+    .handoff-menu[open] summary::after { content: " ^"; }
     .handoff-menu-items { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 6px; padding: 6px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
     .handoff-menu-item { padding: 5px 7px; font-size: 10px; box-shadow: none; background: var(--drylake-bg); color: var(--drylake-text); border-color: #3f3f46; }
     .plan-change-overlay { margin-top: 10px; padding: 9px; border: 1px solid rgba(251, 146, 60, 0.55); border-radius: 5px; background: var(--drylake-orange-soft); flex: 0 0 auto; }
-    .plan-change-eyebrow { text-transform: uppercase; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; }
+    .plan-change-eyebrow { text-transform: uppercase; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; }
     .plan-change-overlay p { margin: 5px 0 8px; color: var(--drylake-text); font-size: 11px; line-height: 1.35; }
     .plan-change-actions { display: grid; grid-template-columns: 1fr; gap: 5px; }
     .plan-change-actions button { padding: 5px 7px; font-size: 10px; box-shadow: none; }
@@ -857,8 +1001,8 @@ export class ControlRoomProvider {
     .chat-clear, .collapse-btn { padding: 4px 8px; font-size: 11px; box-shadow: none; }
     .context-meter { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
     .context-meter-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .context-meter-label { color: var(--drylake-text); font-size: 12px; font-weight: 900; }
-    .context-meter-status { color: var(--drylake-green); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+    .context-meter-label { color: var(--drylake-text); font-size: 12px; font-weight: 650; }
+    .context-meter-status { color: var(--drylake-green); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
     .context-meter-track { width: 100%; height: 7px; overflow: hidden; border-radius: 999px; background: #18181b; }
     .context-meter-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--drylake-orange), var(--drylake-green)); }
     .context-meter-detail { color: var(--drylake-muted); font-size: 11px; line-height: 1.35; }
@@ -872,7 +1016,7 @@ export class ControlRoomProvider {
     .chat-form textarea { min-height: 56px; }
     .chat-form-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
     .chat-hint { font-size: 11px; }
-    @media (max-width: 860px) { header, .nano-banner, .planner-setup-header { align-items: flex-start; flex-direction: column; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) { header, .nano-banner, .planner-setup-header { align-items: flex-start; flex-direction: column; } .planning-controls { grid-template-columns: 1fr; } .stage-count-label { justify-content: flex-start; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -909,7 +1053,37 @@ export class ControlRoomProvider {
     const chatForm = document.getElementById("chatForm");
     const chatInput = document.getElementById("chatInput");
     const planningProviderSelect = document.getElementById("planningProviderSelect");
-    let selectedProvider = planningProviderSelect?.value || "xupra-pro-ai";
+    const stageCountSelect = document.getElementById("stageCountSelect");
+
+    function selectedPlanningOption() {
+      return planningProviderSelect?.selectedOptions?.[0] || null;
+    }
+
+    let selectedProvider = selectedPlanningOption()?.dataset.planningProvider || "xupra-pro-ai";
+    let selectedProviderLocked = selectedPlanningOption()?.dataset.proLocked === "true";
+
+    function syncProviderSelection() {
+      const option = selectedPlanningOption();
+      selectedProvider = option?.dataset.planningProvider || "xupra-pro-ai";
+      selectedProviderLocked = option?.dataset.proLocked === "true";
+
+      const nanoBanner = document.querySelector("[data-nano-banner]");
+      if (nanoBanner) {
+        nanoBanner.hidden = planningProviderSelect?.value !== "xupra-nano";
+      }
+
+      const note = document.querySelector("[data-provider-note]");
+      if (note && option) {
+        if (selectedProviderLocked) {
+          note.textContent = "Pro users only. Upgrade to use Xupra AI Frontier Models.";
+        } else if (planningProviderSelect?.value === "xupra-nano") {
+          note.textContent = "We are using GPT-5.4 Nano for free planning.";
+        } else {
+          note.textContent = option.textContent?.split(" - ").slice(1).join(" - ") || "";
+        }
+      }
+    }
+
     function sendChat() {
       if (!chatInput) {
         return;
@@ -918,12 +1092,19 @@ export class ControlRoomProvider {
       if (!text) {
         return;
       }
+      if (selectedProviderLocked) {
+        vscode.postMessage({ command: "xupra.openBilling", args: [] });
+        return;
+      }
       const hasPlan = document.querySelector(".chat-panel")?.dataset.hasPlan === "true";
+      const stageValue = stageCountSelect?.value || "";
+      const stageCount = stageValue ? Number(stageValue) : undefined;
       vscode.postMessage({
         command: hasPlan ? "drylake.chatSendMessage" : "drylake.startBuildSession",
         text: text,
         mode: selectedMode,
-        planningProvider: selectedProvider
+        planningProvider: selectedProvider,
+        stageCount: stageCount
       });
       chatInput.value = "";
     }
@@ -1024,8 +1205,12 @@ export class ControlRoomProvider {
     document.addEventListener("change", (event) => {
       const providerSelect = event.target.closest("#planningProviderSelect");
       if (providerSelect) {
-        selectedProvider = providerSelect.value || "xupra-pro-ai";
-        document.getElementById("chatInput")?.focus();
+        syncProviderSelection();
+        if (selectedProviderLocked) {
+          vscode.postMessage({ command: "xupra.openBilling", args: [] });
+        } else {
+          document.getElementById("chatInput")?.focus();
+        }
         return;
       }
 
@@ -1061,8 +1246,10 @@ export class ControlRoomProvider {
     });
 
     document.addEventListener("dragstart", (event) => {
-      const card = event.target.closest(".phase-card[draggable='true']");
+      const handle = event.target.closest(".drag-handle[draggable='true']");
+      const card = handle?.closest(".phase-card[data-phase-id]");
       if (!card) {
+        event.preventDefault();
         return;
       }
 
@@ -1074,6 +1261,7 @@ export class ControlRoomProvider {
 
     document.addEventListener("dragend", (event) => {
       event.target.closest(".phase-card")?.classList.remove("dragging");
+      event.target.closest(".drag-handle")?.closest(".phase-card")?.classList.remove("dragging");
       clearDropIndicators();
     });
 

@@ -1,0 +1,93 @@
+<svg width="1400" height="860" viewBox="0 0 1400 860" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070808"/>
+      <stop offset="1" stop-color="#151817"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000000" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="860" rx="30" fill="url(#bg)"/>
+  <rect x="24" y="24" width="1352" height="812" rx="24" fill="none" stroke="#27272a" stroke-width="2"/>
+
+  <g filter="url(#shadow)">
+    <rect x="62" y="58" width="1276" height="116" rx="10" fill="#111414" stroke="#27272a"/>
+    <text x="94" y="96" fill="#6ee7b7" font-size="12" font-weight="700" letter-spacing="2.4">DRYLAKE CONTROL ROOM</text>
+    <text x="94" y="136" fill="#f4f4f5" font-size="30" font-weight="600">Planning model selection stays in one dropdown</text>
+    <rect x="1068" y="84" width="110" height="40" rx="6" fill="#34d399" stroke="#34d399"/>
+    <text x="1101" y="110" fill="#08110d" font-size="13" font-weight="650">Kanban</text>
+    <rect x="1192" y="84" width="102" height="40" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+    <text x="1218" y="110" fill="#d4d4d8" font-size="13" font-weight="650">Sessions</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="62" y="206" width="1276" height="362" rx="10" fill="#111414" stroke="#27272a"/>
+    <text x="94" y="242" fill="#34d399" font-size="12" font-weight="700" letter-spacing="2.2">CARD GENERATION</text>
+    <text x="94" y="276" fill="#f4f4f5" font-size="23" font-weight="600">Choose the planning model before chat starts.</text>
+    <text x="886" y="246" fill="#a1a1aa" font-size="13" font-weight="400">Free users use GPT-5.4 Nano. Pro unlocks Xupra AI Frontier Models.</text>
+
+    <g transform="translate(94 324)">
+      <text x="0" y="0" fill="#a1a1aa" font-size="12" font-weight="650" letter-spacing="1.4">PLANNING MODEL</text>
+      <rect x="0" y="18" width="724" height="50" rx="6" fill="#090a0a" stroke="#34d399"/>
+      <text x="18" y="50" fill="#f4f4f5" font-size="16" font-weight="650">Free User - GPT-5.4 Nano - Hosted starter planning</text>
+      <path d="M676 36 L690 36 L683 48 Z" fill="#a1a1aa"/>
+
+      <g transform="translate(0 76)">
+        <rect width="724" height="194" rx="8" fill="#090a0a" stroke="#3f3f46"/>
+        <rect x="10" y="10" width="704" height="30" rx="5" fill="#17251d" stroke="#34d399"/>
+        <text x="28" y="31" fill="#a7f3d0" font-size="13" font-weight="650">Free User - GPT-5.4 Nano - Hosted starter planning</text>
+        <rect x="10" y="48" width="704" height="30" rx="5" fill="#2a1710" stroke="#fb923c"/>
+        <text x="28" y="69" fill="#fed7aa" font-size="13" font-weight="650">Xupra AI - Frontier Models - Pro users only</text>
+        <text x="28" y="107" fill="#d4d4d8" font-size="13">Databricks API - BYO endpoint</text>
+        <text x="28" y="139" fill="#d4d4d8" font-size="13">Claude API - BYO Anthropic key</text>
+        <text x="28" y="171" fill="#d4d4d8" font-size="13">OpenAI API - BYO OpenAI key</text>
+      </g>
+    </g>
+
+    <g transform="translate(870 324)">
+      <text x="0" y="0" fill="#a1a1aa" font-size="12" font-weight="650" letter-spacing="1.4">STAGES</text>
+      <rect x="0" y="18" width="152" height="50" rx="6" fill="#090a0a" stroke="#3f3f46"/>
+      <text x="22" y="50" fill="#f4f4f5" font-size="16" font-weight="650">3</text>
+      <path d="M116 36 L130 36 L123 48 Z" fill="#a1a1aa"/>
+      <text x="0" y="102" fill="#a1a1aa" font-size="14">Or type naturally:</text>
+      <text x="0" y="132" fill="#f4f4f5" font-size="16" font-weight="650">I want 3 planning stages.</text>
+      <rect x="0" y="166" width="382" height="74" rx="8" fill="#0d0f0f" stroke="#27272a"/>
+      <text x="22" y="196" fill="#a1a1aa" font-size="13">Direct API choices still work when configured.</text>
+      <text x="22" y="224" fill="#a1a1aa" font-size="13">The selected provider powers plan generation.</text>
+    </g>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="62" y="604" width="1276" height="64" rx="10" fill="#2a1710" stroke="#fb923c"/>
+    <circle cx="96" cy="636" r="6" fill="#fb923c"/>
+    <text x="116" y="642" fill="#fed7aa" font-size="18" font-weight="650">We are using GPT-5.4 Nano.</text>
+    <rect x="1140" y="618" width="142" height="36" rx="18" fill="#090a0a" stroke="#fb923c"/>
+    <text x="1170" y="642" fill="#fed7aa" font-size="13" font-weight="650">Upgrade to Pro</text>
+  </g>
+
+  <g transform="translate(62 710)">
+    <rect x="0" y="0" width="138" height="34" rx="17" fill="#2a1710" stroke="#fb923c"/>
+    <circle cx="22" cy="17" r="5" fill="#fb923c"/>
+    <text x="38" y="22" fill="#fed7aa" font-size="13" font-weight="650">5.4 Nano</text>
+  </g>
+
+  <g filter="url(#shadow)" transform="translate(238 712)">
+    <g>
+      <rect width="320" height="86" rx="10" fill="#111414" stroke="#27272a"/>
+      <text x="22" y="32" fill="#34d399" font-size="10" font-weight="700" letter-spacing="1.6">STAGE 01</text>
+      <text x="22" y="60" fill="#f4f4f5" font-size="20" font-weight="650">Map user flows</text>
+    </g>
+    <g transform="translate(360 0)">
+      <rect width="320" height="86" rx="10" fill="#111414" stroke="#27272a"/>
+      <text x="22" y="32" fill="#34d399" font-size="10" font-weight="700" letter-spacing="1.6">STAGE 02</text>
+      <text x="22" y="60" fill="#f4f4f5" font-size="20" font-weight="650">Design implementation</text>
+    </g>
+    <g transform="translate(720 0)">
+      <rect width="320" height="86" rx="10" fill="#111414" stroke="#27272a"/>
+      <text x="22" y="32" fill="#34d399" font-size="10" font-weight="700" letter-spacing="1.6">STAGE 03</text>
+      <text x="22" y="60" fill="#f4f4f5" font-size="20" font-weight="650">Ship and verify</text>
+    </g>
+  </g>
+</svg>

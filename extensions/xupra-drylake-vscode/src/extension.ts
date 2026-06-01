@@ -383,6 +383,7 @@ export async function activate(context: vscode.ExtensionContext) {
     () => stateStore.getChatHistory(),
     () => stateStore.getLastModelTier(),
     () => stateStore.getPlanningLoading(),
+    () => stateStore.getConnection(),
   );
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
@@ -1301,7 +1302,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     if (!originalContent.trim()) {
-      void vscode.window.showWarningMessage("File is empty — nothing to optimize.");
+      void vscode.window.showWarningMessage("File is empty - nothing to optimize.");
       return;
     }
 

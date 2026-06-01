@@ -168,6 +168,16 @@ function handoffActionFromArg(arg: unknown) {
   return phaseHandoffActionFromArg(arg) ?? "run";
 }
 
+function requestedStageCountFromArg(arg: unknown): number | undefined {
+  const value = typeof arg === "number" ? arg : typeof arg === "string" && arg.trim() ? Number(arg) : NaN;
+  if (!Number.isFinite(value)) {
+    return undefined;
+  }
+
+  const rounded = Math.round(value);
+  return rounded >= 1 && rounded <= 12 ? rounded : undefined;
+}
+
 function phaseStatusFromArg(arg: unknown): Extract<XuStepStatus, "pending" | "active" | "complete"> | undefined {
   return arg === "pending" || arg === "active" || arg === "complete" ? arg : undefined;
 }
@@ -563,7 +573,7 @@ async function seedChatWithClarifyingQuestions(params: {
 
     await params.deps.stateStore.appendChatMessage({
       role: "ai",
-      text: `Before I lock the plan, a few quick questions:\n${numbered}\n\nAnswer in one message — anything you skip I'll just guess.`,
+      text: `Before I lock the plan, a few quick questions:\n${numbered}\n\nAnswer in one message - anything you skip I'll just guess.`,
     });
   } catch (error) {
     console.warn("DryLake clarifying questions failed:", error);
@@ -613,11 +623,13 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
             prompt: text,
             mode,
             provider,
+            requestedStageCount: deps.stateStore.getBuildSession()?.requestedStageCount,
           });
           const session = await deps.sessionStore.createSession({
             prompt: text,
             mode,
             runbookPath: relativePath(draftResult.runbookUri),
+            requestedStageCount: deps.stateStore.getBuildSession()?.requestedStageCount,
             providerId: provider.id,
             providerLabel: provider.label,
           });
@@ -684,6 +696,7 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
           prompt: session.prompt.trim(),
           mode: session.mode,
           workspaceSummary,
+          requestedStageCount: session.requestedStageCount,
           currentRunbook: current.runbook,
           chatTranscript,
         });
@@ -921,6 +934,7 @@ async function applyAiDraft(params: {
   runbookUri: vscode.Uri;
   provider: DryLakeAiProvider;
   openExternalPrompt: boolean;
+  requestedStageCount?: number;
 }): Promise<{ runbook: ApplicationBuildRunbook; providerGenerated: boolean; providerMessage?: string }> {
   const workspaceSummary = await buildWorkspaceSummary();
   const localDraft = createLocalDraftXu({
@@ -948,6 +962,7 @@ async function applyAiDraft(params: {
     prompt: params.prompt,
     mode: params.mode,
     workspaceSummary,
+    requestedStageCount: params.requestedStageCount,
     currentRunbook: localDraft,
   });
   await persistModelTier(params.deps.stateStore, result.modelTier);
@@ -974,6 +989,7 @@ async function generateFirstMessageDraft(params: {
   prompt: string;
   mode: XuMode;
   provider: DryLakeAiProvider;
+  requestedStageCount?: number;
 }): Promise<{ runbookUri: vscode.Uri; providerGenerated: boolean; providerMessage?: string }> {
   const workspaceSummary = await buildWorkspaceSummary();
   const runbookUri = (await params.deps.sessionStore.findRunbookUri()) ??
@@ -1002,6 +1018,7 @@ async function generateFirstMessageDraft(params: {
       prompt: params.prompt,
       mode: params.mode,
       workspaceSummary,
+      requestedStageCount: params.requestedStageCount,
     });
     await persistModelTier(params.deps.stateStore, result.modelTier);
 
@@ -1034,6 +1051,7 @@ export async function startBuildSessionCommand(
   modeArg?: unknown,
   promptArg?: unknown,
   providerArg?: unknown,
+  stageCountArg?: unknown,
 ) {
   if (!(typeof promptArg === "string" && promptArg.trim())) {
     await deps.controlRoom.createOrShow(context);
@@ -1046,6 +1064,7 @@ export async function startBuildSessionCommand(
   }
 
   const prompt = promptArg;
+  const requestedStageCount = requestedStageCountFromArg(stageCountArg);
 
   if (!prompt?.trim()) {
     return;
@@ -1083,11 +1102,13 @@ export async function startBuildSessionCommand(
           prompt: cleanedPrompt,
           mode,
           provider,
+          requestedStageCount,
         });
         const session = await deps.sessionStore.createSession({
           prompt: cleanedPrompt,
           mode,
           runbookPath: relativePath(draftResult.runbookUri),
+          requestedStageCount,
           providerId: provider.id,
           providerLabel: provider.label,
         });
@@ -1281,6 +1302,48 @@ function nextPhase(runbook: ApplicationBuildRunbook) {
   return runbook.phases.find((phase) => phase.status !== "complete") ?? runbook.phases[0];
 }
 
+function completePhaseAfterSuccessfulHandoff(runbook: ApplicationBuildRunbook, phaseId: string) {
+  const completedPhaseIndex = runbook.phases.findIndex((phase) => phase.id === phaseId);
+  if (completedPhaseIndex === -1) {
+    return { runbook };
+  }
+
+  const nextActiveIndex = runbook.handoff.autopilot
+    ? runbook.phases.findIndex(
+      (phase, index) => index > completedPhaseIndex && phase.status !== "complete",
+    )
+    : -1;
+  let completedPhase: ApplicationBuildRunbook["phases"][number] | undefined;
+  let nextActive: ApplicationBuildRunbook["phases"][number] | undefined;
+
+  const phases: ApplicationBuildRunbook["phases"] = runbook.phases.map((phase, index) => {
+    if (index === completedPhaseIndex) {
+      completedPhase = {
+        ...phase,
+        status: "complete" as const,
+        steps: phase.steps.map((step) => ({ ...step, status: "complete" as const })),
+      };
+      return completedPhase;
+    }
+
+    if (index === nextActiveIndex) {
+      nextActive = { ...phase, status: "active" as const };
+      return nextActive;
+    }
+
+    return phase.status === "active" ? { ...phase, status: "pending" as const } : phase;
+  });
+
+  return {
+    runbook: {
+      ...runbook,
+      phases,
+    },
+    completedPhase,
+    nextActive,
+  };
+}
+
 export async function exportHandoffPromptCommand(deps: RunbookCommandDeps) {
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
@@ -1387,24 +1450,32 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
     const launchResult = await launchPhaseAgent({ agent, prompt: content, promptFile, workspaceUri });
 
     if (launchResult.status === "launched") {
-      const updated: ApplicationBuildRunbook = {
-        ...current.runbook,
-        phases: current.runbook.phases.map((item) => {
-          if (item.id !== phaseId) {
-            return item.status === "active" ? { ...item, status: "pending" } : item;
-          }
-          return { ...item, status: "active" };
-        }),
-      };
-      await deps.sessionStore.writeRunbook(current.uri, updated);
-    }
+      const completion = completePhaseAfterSuccessfulHandoff(current.runbook, phaseId);
+      await deps.sessionStore.writeRunbook(current.uri, completion.runbook);
 
-    warning = launchResult.status === "not-installed" || launchResult.status === "failed";
-    message = launchResult.status === "launched"
-      ? launchResult.message
-      : `${launchResult.message} Prompt copied to clipboard.`;
-
-    if (launchResult.status !== "launched") {
+      const completedTitle = completion.completedPhase?.title ?? phase.title;
+      if (completion.runbook.handoff.autopilot && completion.nextActive) {
+        if (!explicitPhaseAgent(completion.nextActive.agent)) {
+          warning = true;
+          message = `${completedTitle} complete. Autopilot is paused until you select an agent for ${completion.nextActive.title}.`;
+        } else {
+          await deps.controlRoom.refresh();
+          await deps.refreshSidebar();
+          void vscode.window.showInformationMessage(
+            `${completedTitle} complete. Autopilot starting ${completion.nextActive.title}.`,
+          );
+          await handoffPhaseCommand(deps, completion.nextActive.id);
+          return;
+        }
+      } else {
+        const nextPending = completion.runbook.phases.find((item) => item.status !== "complete");
+        message = nextPending
+          ? `${completedTitle} complete. Use Run Next Phase to continue.`
+          : `${completedTitle} complete. All phases done.`;
+      }
+    } else {
+      warning = launchResult.status === "not-installed" || launchResult.status === "failed";
+      message = `${launchResult.message} Prompt copied to clipboard.`;
       await showAgentLaunchFallbackActions({
         result: launchResult,
         promptContent: content,
