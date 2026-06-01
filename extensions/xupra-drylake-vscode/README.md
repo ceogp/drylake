@@ -7,7 +7,7 @@ Backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.c
 
 ## Watch The Demo
 
-[![Watch the DryLake demo video](https://drylake.xupracorp.com/marketplace/extension/media/readme-demo-video.png)](https://drylake.xupracorp.com/marketplace/extension/media/drylake-demo.mp4)
+[![Watch the DryLake demo video](https://drylake.xupracorp.com/marketplace/extension/media/readme-demo-video.jpg)](https://drylake.xupracorp.com/marketplace/extension/media/drylake-demo.mp4)
 
 ## Planning Models
 
@@ -28,8 +28,6 @@ Each phase card has one **Agent** dropdown. Assign phases to Claude Code, OpenAI
 ![DryLake Claude Code skill selector](https://drylake.xupracorp.com/marketplace/extension/media/readme-claude-skill.png)
 
 Choose your favorite skill before handing off to your agent.
-
-![DryLake pipeline view](https://drylake.xupracorp.com/marketplace/extension/media/readme-pipeline-v2.png)
 
 ## What It Does
 
