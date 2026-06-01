@@ -1,8 +1,20 @@
-# DryLake — Agent Orchestration for Claude Code, Codex & Cursor
+# DryLake AI for VS Code - Agent Planning for Claude Code, Codex, Cursor & Gemini
 
-DryLake turns tickets, bugs, feature requests, and product specs into phased implementation plans. Assign each phase to Claude Code, OpenAI Codex, Cursor, Gemini, Hermes, or GitHub Copilot, then run clean handoffs from a visual Kanban.
+DryLake turns tickets, bugs, feature requests, and product specs into phased implementation plans. Assign each phase to Claude Code, OpenAI Codex, Cursor, Gemini, Hermes, or Copilot, attach the right skill, then run clean handoffs from a visual Kanban.
 
-DryLake is not another coding agent. It is the planning and orchestration layer between your issue, your repo, and the agents you already use.
+DryLake is the planning and orchestration layer between your issue, your repo, and the AI coding agents you already use.
+
+---
+
+- **All agents, one planning workflow:** Plan work for Claude Code, Codex, Cursor, Gemini, Hermes, Copilot, and other coding agents from one visual pipeline.
+- **Phased implementation plans:** Split large tickets into safe stages with acceptance criteria, generated tasks, and stage-specific handoff context.
+- **Skill-based pipelines:** Attach reusable skills or profiles before handoff so each agent gets the right instructions for architecture, implementation, review, or testing.
+- **Token-aware handoffs:** Keep prompts focused by sending one phase at a time instead of dumping the entire project context into every agent.
+- **Visual Kanban orchestration:** Move from planning to execution with phase cards, agent dropdowns, skill selectors, exports, and handoff artifacts.
+- **Bring your own tools:** Use local CLI agents when available, direct API providers when configured, or copied Markdown prompts as a fallback.
+- **Free planning path:** Start with free planning and upgrade when you want Frontier Models and deeper Xupra AI planning support.
+
+---
 
 ## Watch The Demo
 
@@ -11,9 +23,8 @@ DryLake is not another coding agent. It is the planning and orchestration layer 
 </a>
 
 ## What DryLake does
-
 - Converts tickets into phased implementation plans.
-- Lets you assign each phase to Claude Code, Codex, Cursor, Gemini, Hermes, or Copilot.
+- Lets you assign each phase to Claude Code, Codex, Cursor, Gemini, etc.
 - Runs focused handoffs from a visual Kanban or pipeline.
 - Attaches skills/profiles to phase prompts.
 - Estimates prompt tokens before handoff.
@@ -37,18 +48,6 @@ DryLake is not another coding agent. It is the planning and orchestration layer 
 5. Assign a phase to Claude Code, Codex, Cursor, Gemini, Hermes, or Copilot.
 6. Click `Run Handoff`.
 
-## Supported agents
-
-| Agent | Handoff mode |
-|---|---|
-| Claude Code | Direct CLI handoff when `claude` is available |
-| OpenAI Codex | Direct CLI handoff when `codex` is available |
-| Cursor Agent | Direct CLI handoff when `cursor-agent` is available |
-| Gemini CLI | Direct CLI handoff when `gemini` is available |
-| Hermes Agent CLI | Direct CLI handoff when `hermes` is available |
-| GitHub Copilot Chat | Prompt handoff / workspace handoff |
-
-If a direct CLI command is not available, DryLake saves the phase handoff, copies the prompt, and opens the Markdown artifact instead of pretending the launch worked.
 
 ## Planning Models
 
@@ -70,25 +69,6 @@ Each phase card has one **Agent** dropdown. Assign phases to Claude Code, OpenAI
 
 Choose your favorite skill before handing off to your agent.
 
-## Claude Code planning workflow
-
-Use DryLake to split a ticket into implementation phases, attach the right skill/profile, then hand the active phase to Claude Code.
-
-## OpenAI Codex handoff workflow
-
-Plan the work before invoking Codex. DryLake keeps each handoff focused so Codex gets the specific phase, acceptance criteria, and files to inspect.
-
-## Cursor Agent workflow
-
-Use DryLake as a visual planning layer for Cursor Agent. Generate phases, review the plan, then hand off implementation work from the Kanban.
-
-## Multi-agent Kanban for AI coding
-
-DryLake lets you assign different stages of one feature to different agents. For example: architecture to Claude Code, implementation to Codex, local IDE execution to Cursor, and final review to Copilot.
-
-## Token-aware planning
-
-DryLake estimates prompt tokens before handoff and helps split oversized work into smaller phases.
 
 ## Security And Infrastructure
 

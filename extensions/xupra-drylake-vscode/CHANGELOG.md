@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.32
+
+### Marketplace metadata
+
+- Updated the extension display name to `Drylake Agent -AI Coding Copilot`.
+- Added a top-of-page Marketplace README feature callout block for agent planning, skills, token-aware handoffs, and visual orchestration.
+
 ## 0.6.31
 
 ### Marketplace metadata
