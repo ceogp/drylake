@@ -1,26 +1,22 @@
-# DryLake AI for VS Code - Agent Planning for Claude Code, Codex, Cursor & Gemini
+# DryLake AI for VS Code
 
-DryLake turns tickets, bugs, feature requests, and product specs into phased implementation plans. Assign each phase to Claude Code, OpenAI Codex, Cursor, Gemini, Hermes, or Copilot, attach the right skill, then run clean handoffs from a visual Kanban.
+## Free AI planning cards for Claude Code, Codex, Cursor, Gemini and coding agents.
 
-DryLake is the planning and orchestration layer between your issue, your repo, and the AI coding agents you already use.
+DryLake turns tickets, bugs, and product specs into visual planning cards. Pick a planning model, generate phased implementation stages, assign each stage to your favorite coding agent, attach a skill, and run focused handoffs from VS Code.
 
----
-
-- **All agents, one planning workflow:** Plan work for Claude Code, Codex, Cursor, Gemini, Hermes, Copilot, and other coding agents from one visual pipeline.
-- **Phased implementation plans:** Split large tickets into safe stages with acceptance criteria, generated tasks, and stage-specific handoff context.
-- **Skill-based pipelines:** Attach reusable skills or profiles before handoff so each agent gets the right instructions for architecture, implementation, review, or testing.
-- **Token-aware handoffs:** Keep prompts focused by sending one phase at a time instead of dumping the entire project context into every agent.
-- **Visual Kanban orchestration:** Move from planning to execution with phase cards, agent dropdowns, skill selectors, exports, and handoff artifacts.
-- **Bring your own tools:** Use local CLI agents when available, direct API providers when configured, or copied Markdown prompts as a fallback.
-- **Free planning path:** Start with free planning and upgrade when you want Frontier Models and deeper Xupra AI planning support.
+![DryLake AI planning workflow](https://drylake.xupracorp.com/marketplace/extension/media/drylake-workflow.gif)
 
 ---
 
-## Watch The Demo
+- **Free AI planning:** Start with free planning, then upgrade when you want Xupra AI Frontier Models.
+- **Save tokens and time:** Visual planning cards allow you to use smaller models with better results.
+- **All agents, one planning workflow:** Plan work for Claude Code, Codex, Cursor, Gemini, Hermes, Copilot, and more.
+- **Phased implementation plans:** Split large tasks into safe stages with acceptance criteria and focused handoff prompts.
+- **Skills for every handoff:** Attach reusable skills/profiles for architecture, implementation, review, testing, and debugging.
+- **Bring your own API/model:** Use direct OpenAI, Claude/Anthropic, Databricks, or Hermes planning providers today, with broader OpenAI-compatible provider support planned.
+- **Visual Kanban orchestration:** Move from ticket to plan to agent handoff without losing context.
 
-<a href="https://drylake.xupracorp.com/marketplace/extension/media/drylake-demo.mp4">
-  <img src="https://drylake.xupracorp.com/marketplace/extension/media/readme-demo-video-v3.png" alt="Watch the DryLake demo video" width="420">
-</a>
+---
 
 ## What DryLake does
 - Converts tickets into phased implementation plans.

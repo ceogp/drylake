@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.33
+
+### Marketplace conversion
+
+- Added an autoplaying DryLake workflow GIF showing planning cards, agent selection, skills, and sequential handoffs.
+- Updated Marketplace README copy around free AI planning, token savings, skills, and bring-your-own API/model positioning.
+- Expanded Marketplace keywords with free AI, free LLM, Claude Code, OpenRouter, Sonnet, Traycer, and agent orchestration terms.
+
 ## 0.6.32
 
 ### Marketplace metadata
