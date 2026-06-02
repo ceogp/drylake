@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.35
+
+### Marketplace positioning
+
+- Restored the higher-performing Marketplace display name, description, categories, and broad keyword set from the late-May install run.
+
 ## 0.6.34
 
 ### Marketplace proof
