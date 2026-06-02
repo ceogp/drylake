@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.34
+
+### Marketplace proof
+
+- Moved the 99VC and AWS Startups backing statement to the top of the Marketplace README.
+
 ## 0.6.33
 
 ### Marketplace conversion

@@ -55,6 +55,21 @@ const securityPoints = [
 
 const discordHref = "https://discord.gg/WQdapuVn";
 
+const backingPartners = [
+  {
+    label: "99VC",
+    href: "https://ninetynine.vc/",
+    mark: "99VC",
+    detail: "venture backing",
+  },
+  {
+    label: "AWS Startups",
+    href: "https://aws.amazon.com/startups/",
+    mark: "aws",
+    detail: "startups",
+  },
+];
+
 function StatusPill({ children }: { children: string }) {
   return (
     <span className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
@@ -89,6 +104,32 @@ function ActionLink({
     <a className={className} href={href}>
       {children}
     </a>
+  );
+}
+
+function BackingLogos() {
+  return (
+    <div className="mt-7">
+      <p className="text-sm font-medium text-zinc-300">DryLake is backed by 99VC and AWS Startups.</p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        {backingPartners.map((partner) => (
+          <a
+            key={partner.label}
+            className="group inline-flex h-12 items-center gap-3 rounded border border-zinc-800 bg-zinc-950/90 px-4 text-zinc-200 shadow-lg shadow-black/20 transition hover:border-orange-400 hover:text-orange-100"
+            href={partner.href}
+            rel="noreferrer"
+            target="_blank"
+            aria-label={partner.label}
+          >
+            <span className="font-semibold tracking-[0.02em] text-zinc-50">{partner.mark}</span>
+            <span className="h-5 w-px bg-zinc-800 group-hover:bg-orange-400/70" />
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500 group-hover:text-orange-200">
+              {partner.detail}
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -178,6 +219,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
               DryLake turns a coding task into a phase-based build plan, lets you assign the right AI agent,
               then keeps validation in your hands before work is marked done.
             </p>
+            <BackingLogos />
             <div className="mt-8 flex flex-wrap gap-3">
               <ActionLink href={primaryHref}>{marketing ? "Register to try" : "Start build"}</ActionLink>
               <ActionLink href={secondaryHref} variant="secondary">
@@ -189,20 +231,6 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
               <ActionLink href={discordHref} variant="secondary">
                 Join Discord
               </ActionLink>
-            </div>
-            <div className="mt-8 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.16em] text-zinc-500">
-              <span>Backed by</span>
-              {trustLinks.slice(1, 3).map((item) => (
-                <a
-                  key={item.label}
-                  className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 font-semibold text-zinc-300 transition hover:border-orange-400 hover:text-orange-200"
-                  href={item.href}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  {item.label}
-                </a>
-              ))}
             </div>
           </section>
 

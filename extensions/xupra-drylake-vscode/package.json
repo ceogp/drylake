@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "Drylake Agent - AI Coding Copilot",
   "description": "Free AI planning for coding agents. Save tokens with visual phase cards, assign Claude Code, Codex, Cursor or Gemini, attach skills, and bring your own API/model.",
-  "version": "0.6.33",
+  "version": "0.6.34",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",

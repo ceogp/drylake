@@ -2,6 +2,8 @@
 
 ## Free AI planning cards for Claude Code, Codex, Cursor, Gemini and coding agents.
 
+DryLake is backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.com/startups/).
+
 DryLake turns tickets, bugs, and product specs into visual planning cards. Pick a planning model, generate phased implementation stages, assign each stage to your favorite coding agent, attach a skill, and run focused handoffs from VS Code.
 
 ![DryLake AI planning workflow](https://drylake.xupracorp.com/marketplace/extension/media/drylake-workflow.gif)
@@ -72,8 +74,6 @@ Choose your favorite skill before handing off to your agent.
 - **Encrypted credentials.** Credentials and extension tokens are encrypted before storage.
 - **AWS-backed secrets.** Runtime secrets can use AWS Secrets Manager, and S3 artifacts support AWS KMS encryption.
 - **Workspace-scoped execution.** Agent handoffs run from the user workspace with workspace-scoped auth and no shared customer filesystem.
-
-DryLake is backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.com/startups/).
 
 ## Open Source
 
