@@ -180,6 +180,9 @@ function batchPromptArgCommand(executable: string, args = "") {
     `powershell -NoProfile -ExecutionPolicy Bypass -Command "$prompt = Get-Content -Raw $env:PROMPT_FILE; ${powerShellCommand(executableCommand, args)} $prompt"`;
 }
 
+const CONTINUE_HEADLESS_ARGS = "-p --allow Write --allow Edit --allow Bash";
+const AUGGIE_INSTRUCTION_FILE_ARGS = "--print --instruction-file";
+
 export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
   "claude-code": {
     id: "claude-code",
@@ -345,9 +348,9 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     commandSetting: "agents.continue.command",
     help: "Install Continue CLI, configure a model, and make the `cn` command available on PATH.",
     terminalCommand: (promptFilePath, executableCommand = "cn") =>
-      fromPromptFile(crossShellCommand(executableCommand, "-p"), promptFilePath),
-    shellScriptCommand: shellPromptArgCommand("cn", "-p"),
-    batchScriptCommand: batchPromptArgCommand("cn", "-p"),
+      fromPromptFile(crossShellCommand(executableCommand, CONTINUE_HEADLESS_ARGS), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("cn", CONTINUE_HEADLESS_ARGS),
+    batchScriptCommand: batchPromptArgCommand("cn", CONTINUE_HEADLESS_ARGS),
   },
   cline: {
     id: "cline",
@@ -395,9 +398,11 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     commandSetting: "agents.auggie.command",
     help: "Install Auggie CLI, authenticate with Augment, and make the `auggie` command available on PATH.",
     terminalCommand: (promptFilePath, executableCommand = "auggie") =>
-      fromPromptFile(crossShellCommand(executableCommand, "--print"), promptFilePath),
-    shellScriptCommand: shellPromptArgCommand("auggie", "--print"),
-    batchScriptCommand: batchPromptArgCommand("auggie", "--print"),
+      crossShellCommand(executableCommand, `${AUGGIE_INSTRUCTION_FILE_ARGS} ${quotePath(promptFilePath)}`),
+    shellScriptCommand: (promptFileRef, executableCommand = "auggie") =>
+      shellCommand(executableCommand, `${AUGGIE_INSTRUCTION_FILE_ARGS} ${promptFileRef}`),
+    batchScriptCommand: (executableCommand = "auggie") =>
+      `${quoteCmd(executableCommand)} ${AUGGIE_INSTRUCTION_FILE_ARGS} "%PROMPT_FILE%"`,
   },
   copilot: {
     id: "copilot",

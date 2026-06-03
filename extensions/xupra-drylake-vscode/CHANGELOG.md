@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.38
+
+### Agent handoff reliability
+
+- Added Continue CLI headless edit/write/bash allowances for generated phase handoffs.
+- Switched Auggie CLI handoffs to instruction-file input so larger DryLake prompts do not rely on inline command text.
+
 ## 0.6.37
 
 ### Marketplace README

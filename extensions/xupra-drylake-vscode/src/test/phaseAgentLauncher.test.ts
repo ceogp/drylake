@@ -218,8 +218,15 @@ describe("phase agent launchers", () => {
     expect(PHASE_AGENT_LAUNCHERS.qwen.terminalCommand("/tmp/prompt.md")).toContain("qwen -p");
     expect(PHASE_AGENT_LAUNCHERS.qwen.shellScriptCommand('"$PROMPT_FILE"')).toBe('qwen -p "$(cat "$PROMPT_FILE")"');
     expect(PHASE_AGENT_LAUNCHERS["continue"].executable).toBe("cn");
-    expect(PHASE_AGENT_LAUNCHERS["continue"].terminalCommand("/tmp/prompt.md")).toContain("cn -p");
-    expect(PHASE_AGENT_LAUNCHERS["continue"].shellScriptCommand('"$PROMPT_FILE"')).toBe('cn -p "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS["continue"].terminalCommand("/tmp/prompt.md")).toContain(
+      "cn -p --allow Write --allow Edit --allow Bash",
+    );
+    expect(PHASE_AGENT_LAUNCHERS["continue"].shellScriptCommand('"$PROMPT_FILE"')).toBe(
+      'cn -p --allow Write --allow Edit --allow Bash "$(cat "$PROMPT_FILE")"',
+    );
+    expect(PHASE_AGENT_LAUNCHERS["continue"].batchScriptCommand()).toContain(
+      "cn -p --allow Write --allow Edit --allow Bash $prompt",
+    );
     expect(PHASE_AGENT_LAUNCHERS.cline.executable).toBe("cline");
     expect(PHASE_AGENT_LAUNCHERS.cline.terminalCommand("/tmp/prompt.md", "cline", "/repo")).toContain("cline");
     expect(PHASE_AGENT_LAUNCHERS.cline.terminalCommand("/tmp/prompt.md", "cline", "/repo")).toContain("--cwd");
@@ -232,8 +239,13 @@ describe("phase agent launchers", () => {
     expect(PHASE_AGENT_LAUNCHERS.kilo.terminalCommand("/tmp/prompt.md")).toContain("kilo run --auto");
     expect(PHASE_AGENT_LAUNCHERS.kilo.shellScriptCommand('"$PROMPT_FILE"')).toBe('kilo run --auto "$(cat "$PROMPT_FILE")"');
     expect(PHASE_AGENT_LAUNCHERS.auggie.executable).toBe("auggie");
-    expect(PHASE_AGENT_LAUNCHERS.auggie.terminalCommand("/tmp/prompt.md")).toContain("auggie --print");
-    expect(PHASE_AGENT_LAUNCHERS.auggie.shellScriptCommand('"$PROMPT_FILE"')).toBe('auggie --print "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS.auggie.terminalCommand("/tmp/prompt.md")).toContain(
+      "auggie --print --instruction-file",
+    );
+    expect(PHASE_AGENT_LAUNCHERS.auggie.shellScriptCommand('"$PROMPT_FILE"')).toBe(
+      'auggie --print --instruction-file "$PROMPT_FILE"',
+    );
+    expect(PHASE_AGENT_LAUNCHERS.auggie.batchScriptCommand()).toBe('"auggie" --print --instruction-file "%PROMPT_FILE%"');
     expect(PHASE_AGENT_LAUNCHERS.copilot.commandId).toBe("workbench.action.chat.open");
   });
 
