@@ -83,6 +83,15 @@ describe("runbook generators", () => {
       hermes: "You are running as Hermes Agent CLI.",
       cursor: "You are running as Cursor CLI.",
       copilot: "You are running as GitHub Copilot Chat.",
+      blackbox: "You are running as Blackbox CLI.",
+      goose: "You are running as Goose CLI.",
+      opencode: "You are running as OpenCode.",
+      qwen: "You are running as Qwen Code.",
+      "continue": "You are running as Continue CLI.",
+      cline: "You are running as Cline CLI.",
+      aider: "You are running as Aider.",
+      kilo: "You are running as Kilo Code.",
+      auggie: "You are running as Auggie CLI.",
     };
 
     for (const agent of XU_PHASE_AGENTS) {

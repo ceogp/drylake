@@ -285,6 +285,120 @@ export const PHASE_AGENT_LAUNCHERS: Record<XuPhaseAgent, PhaseAgentLauncher> = {
     shellScriptCommand: shellPromptArgCommand("cursor-agent", "-p"),
     batchScriptCommand: batchPromptArgCommand("cursor-agent", "-p"),
   },
+  blackbox: {
+    id: "blackbox",
+    label: "Blackbox CLI",
+    kind: "terminal",
+    executable: "blackbox",
+    commandSetting: "agents.blackbox.command",
+    help: "Install Blackbox CLI, run `blackbox configure`, and make the `blackbox` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "blackbox") =>
+      crossShellCommand(executableCommand, `run ${quotePath(promptFilePath)}`),
+    shellScriptCommand: (promptFileRef, executableCommand = "blackbox") =>
+      shellCommand(executableCommand, `run ${promptFileRef}`),
+    batchScriptCommand: (executableCommand = "blackbox") =>
+      `${quoteCmd(executableCommand)} run "%PROMPT_FILE%"`,
+  },
+  goose: {
+    id: "goose",
+    label: "Goose CLI",
+    kind: "terminal",
+    executable: "goose",
+    commandSetting: "agents.goose.command",
+    help: "Install Goose CLI, configure its provider, and make the `goose` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "goose") =>
+      crossShellCommand(executableCommand, `run -i ${quotePath(promptFilePath)}`),
+    shellScriptCommand: (promptFileRef, executableCommand = "goose") =>
+      shellCommand(executableCommand, `run -i ${promptFileRef}`),
+    batchScriptCommand: (executableCommand = "goose") =>
+      `${quoteCmd(executableCommand)} run -i "%PROMPT_FILE%"`,
+  },
+  opencode: {
+    id: "opencode",
+    label: "OpenCode",
+    kind: "terminal",
+    executable: "opencode",
+    commandSetting: "agents.opencode.command",
+    help: "Install OpenCode CLI, configure its provider, and make the `opencode` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "opencode") =>
+      fromPromptFile(crossShellCommand(executableCommand, "run"), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("opencode", "run"),
+    batchScriptCommand: batchPromptArgCommand("opencode", "run"),
+  },
+  qwen: {
+    id: "qwen",
+    label: "Qwen Code",
+    kind: "terminal",
+    executable: "qwen",
+    commandSetting: "agents.qwen.command",
+    help: "Install Qwen Code, configure access credentials, and make the `qwen` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "qwen") =>
+      fromPromptFile(crossShellCommand(executableCommand, "-p"), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("qwen", "-p"),
+    batchScriptCommand: batchPromptArgCommand("qwen", "-p"),
+  },
+  "continue": {
+    id: "continue",
+    label: "Continue CLI",
+    kind: "terminal",
+    executable: "cn",
+    commandSetting: "agents.continue.command",
+    help: "Install Continue CLI, configure a model, and make the `cn` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "cn") =>
+      fromPromptFile(crossShellCommand(executableCommand, "-p"), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("cn", "-p"),
+    batchScriptCommand: batchPromptArgCommand("cn", "-p"),
+  },
+  cline: {
+    id: "cline",
+    label: "Cline CLI",
+    kind: "terminal",
+    executable: "cline",
+    commandSetting: "agents.cline.command",
+    help: "Install Cline CLI, authenticate it, and make the `cline` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "cline", workspacePath) =>
+      fromPromptFile(crossShellCommand(executableCommand, workspacePath ? `--cwd ${quotePath(workspacePath)}` : ""), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("cline"),
+    batchScriptCommand: batchPromptArgCommand("cline"),
+  },
+  aider: {
+    id: "aider",
+    label: "Aider",
+    kind: "terminal",
+    executable: "aider",
+    commandSetting: "agents.aider.command",
+    help: "Install Aider, configure model/API credentials, and make the `aider` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "aider") =>
+      crossShellCommand(executableCommand, `--message-file ${quotePath(promptFilePath)} --yes-always`),
+    shellScriptCommand: (promptFileRef, executableCommand = "aider") =>
+      shellCommand(executableCommand, `--message-file ${promptFileRef} --yes-always`),
+    batchScriptCommand: (executableCommand = "aider") =>
+      `${quoteCmd(executableCommand)} --message-file "%PROMPT_FILE%" --yes-always`,
+  },
+  kilo: {
+    id: "kilo",
+    label: "Kilo Code",
+    kind: "terminal",
+    executable: "kilo",
+    commandSetting: "agents.kilo.command",
+    help: "Install Kilo Code CLI, configure a provider, and make the `kilo` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "kilo") =>
+      fromPromptFile(crossShellCommand(executableCommand, "run --auto"), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("kilo", "run --auto"),
+    batchScriptCommand: batchPromptArgCommand("kilo", "run --auto"),
+  },
+  auggie: {
+    id: "auggie",
+    label: "Auggie CLI",
+    kind: "terminal",
+    executable: "auggie",
+    commandSetting: "agents.auggie.command",
+    help: "Install Auggie CLI, authenticate with Augment, and make the `auggie` command available on PATH.",
+    terminalCommand: (promptFilePath, executableCommand = "auggie") =>
+      fromPromptFile(crossShellCommand(executableCommand, "--print"), promptFilePath),
+    shellScriptCommand: shellPromptArgCommand("auggie", "--print"),
+    batchScriptCommand: batchPromptArgCommand("auggie", "--print"),
+  },
   copilot: {
     id: "copilot",
     label: "GitHub Copilot Chat",
@@ -565,16 +679,49 @@ const SETUP_REPORT_ORDER: Record<XuPhaseAgent, number> = {
   cursor: 2,
   gemini: 3,
   hermes: 4,
-  copilot: 5,
+  blackbox: 5,
+  goose: 6,
+  opencode: 7,
+  qwen: 8,
+  "continue": 9,
+  cline: 10,
+  aider: 11,
+  kilo: 12,
+  auggie: 13,
+  copilot: 14,
 };
 
 function setupReportLabel(agent: XuPhaseAgent) {
+  if (agent === "blackbox") {
+    return "Blackbox CLI";
+  }
+
   if (agent === "cursor") {
     return "Cursor Agent";
   }
 
   if (agent === "hermes") {
     return "Hermes Agent CLI";
+  }
+
+  if (agent === "qwen") {
+    return "Qwen Code";
+  }
+
+  if (agent === "continue") {
+    return "Continue CLI";
+  }
+
+  if (agent === "cline") {
+    return "Cline CLI";
+  }
+
+  if (agent === "kilo") {
+    return "Kilo Code";
+  }
+
+  if (agent === "auggie") {
+    return "Auggie CLI";
   }
 
   return phaseAgentLabel(agent);

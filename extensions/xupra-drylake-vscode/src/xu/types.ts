@@ -7,6 +7,15 @@ export const XU_PHASE_AGENTS = [
   "hermes",
   "cursor",
   "copilot",
+  "blackbox",
+  "goose",
+  "opencode",
+  "qwen",
+  "continue",
+  "cline",
+  "aider",
+  "kilo",
+  "auggie",
 ] as const;
 
 export type XuPhaseAgent = (typeof XU_PHASE_AGENTS)[number];
@@ -17,7 +26,7 @@ export type XuMode = "build-app" | "phases" | "plan" | "review";
 
 export type XuHandoffProfileKind = "skill" | "agent" | "instruction";
 
-export type XuHandoffProfileSourcePlatform = "codex" | "claude" | "copilot";
+export type XuHandoffProfileSourcePlatform = "codex" | "claude" | "copilot" | "blackbox";
 
 export type XuHandoffProfileRef = {
   kind: XuHandoffProfileKind;

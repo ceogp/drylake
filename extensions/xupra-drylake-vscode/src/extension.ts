@@ -99,6 +99,10 @@ function inferSourcePlatformFromPath(logicalPath?: string) {
     return "codex";
   }
 
+  if (normalized.startsWith(".blackbox/")) {
+    return "blackbox";
+  }
+
   if (normalized.startsWith(".cursor/")) {
     return "cursor";
   }

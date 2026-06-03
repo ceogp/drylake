@@ -11,6 +11,15 @@ const AGENT_PREAMBLES: Record<XuPhaseAgent, string> = {
   hermes: "You are running as Hermes Agent CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
   cursor: "You are running as Cursor CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
   copilot: "You are running as GitHub Copilot Chat. Use chat handoff context to guide the next coding step.",
+  blackbox: "You are running as Blackbox CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  goose: "You are running as Goose CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  opencode: "You are running as OpenCode. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  qwen: "You are running as Qwen Code. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  "continue": "You are running as Continue CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  cline: "You are running as Cline CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  aider: "You are running as Aider. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  kilo: "You are running as Kilo Code. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
+  auggie: "You are running as Auggie CLI. Use the focused phase objective, steps, and acceptance criteria to make safe workspace edits.",
 };
 
 const PROVIDER_PREAMBLES: Record<BuildSessionState["providerId"], string> = {

@@ -366,13 +366,18 @@ describe("Control Room webview", () => {
 
     expect(html).toContain("Gemini CLI");
     expect(html).toContain("Hermes Agent");
+    expect(html).toContain("Blackbox CLI");
+    expect(html).toContain("Goose CLI");
+    expect(html).toContain("OpenCode");
+    expect(html).toContain("Qwen Code");
+    expect(html).toContain("Continue CLI");
+    expect(html).toContain("Cline CLI");
+    expect(html).toContain("Aider");
+    expect(html).toContain("Kilo Code");
+    expect(html).toContain("Auggie CLI");
     expect(html).not.toContain("token-meter");
-    expect(html).not.toContain("Blackbox");
     expect(html).not.toContain("Droid");
-    expect(html).not.toContain("Continue.dev");
-    expect(html).not.toContain("Aider");
     expect(html).not.toContain("Augment Code");
-    expect(html).not.toContain("Cline");
     expect(html).not.toContain("Windsurf");
     expect(html).not.toContain("Roo Code");
     expect(html).not.toContain("External AI Prompt");

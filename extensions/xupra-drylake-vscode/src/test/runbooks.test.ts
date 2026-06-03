@@ -1119,6 +1119,44 @@ describe("runbook commands", () => {
     }));
   });
 
+  it("persists selected Blackbox skills on the phase and injects the selected skill into the handoff prompt", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "blackbox";
+    const { deps } = reorderDeps(runbook);
+    mocks.scanWorkspaceFiles.mockResolvedValue([
+      {
+        logicalPath: ".blackbox/skills/frontend/SKILL.md",
+        category: "skill",
+        content: "Use Blackbox frontend conventions before editing files.",
+      },
+    ]);
+
+    await updatePhaseHandoffProfileCommand(deps as never, "P-01", ".blackbox/skills/frontend/SKILL.md");
+
+    const writtenAfterSelection = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(writtenAfterSelection.phases.find((phase) => phase.id === "P-01")?.handoffProfile).toMatchObject({
+      label: "frontend",
+      logicalPath: ".blackbox/skills/frontend/SKILL.md",
+      sourcePlatform: "blackbox",
+      kind: "skill",
+    });
+    runbook.phases[0].handoffProfile = writtenAfterSelection.phases[0].handoffProfile;
+    deps.sessionStore.writeRunbook.mockClear();
+
+    await handoffPhaseCommand(deps as never, "P-01");
+
+    expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining("Use this Blackbox skill for this handoff."),
+    }));
+    expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining("Use Blackbox frontend conventions before editing files."),
+    }));
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({
+      agent: "blackbox",
+      prompt: expect.stringContaining(".blackbox/skills/frontend/SKILL.md"),
+    }));
+  });
+
   it("auto-completes the phase checklist after a successful handoff launch", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";

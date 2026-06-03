@@ -64,7 +64,7 @@ beforeEach(() => {
   mocks.createTerminal.mockReturnValue(mocks.terminal);
 });
 
-const FUTURE_PHASE_AGENTS = ["blackbox", "droid", "aider", "augment-code", "continue", "cline"] as const;
+const FUTURE_PHASE_AGENTS = ["droid", "augment-code", "windsurf", "roo-code"] as const;
 
 describe("phase agent launchers", () => {
   it("keeps GitHub Copilot as an agent choice instead of a second handoff mode", () => {
@@ -89,7 +89,23 @@ describe("phase agent launchers", () => {
   });
 
   it("does not include unverified phase agent launchers", () => {
-    expect(XU_PHASE_AGENTS).toEqual(["claude-code", "codex", "gemini", "hermes", "cursor", "copilot"]);
+    expect(XU_PHASE_AGENTS).toEqual([
+      "claude-code",
+      "codex",
+      "gemini",
+      "hermes",
+      "cursor",
+      "copilot",
+      "blackbox",
+      "goose",
+      "opencode",
+      "qwen",
+      "continue",
+      "cline",
+      "aider",
+      "kilo",
+      "auggie",
+    ]);
 
     for (const agent of FUTURE_PHASE_AGENTS) {
       expect(XU_PHASE_AGENTS).not.toContain(agent as never);
@@ -104,6 +120,15 @@ describe("phase agent launchers", () => {
     expect(PHASE_AGENT_LAUNCHERS.gemini.kind).toBe("terminal");
     expect(PHASE_AGENT_LAUNCHERS.hermes.kind).toBe("terminal");
     expect(PHASE_AGENT_LAUNCHERS.copilot.kind).toBe("vscode-command");
+    expect(PHASE_AGENT_LAUNCHERS.blackbox.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.goose.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.opencode.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.qwen.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS["continue"].kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.cline.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.aider.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.kilo.kind).toBe("terminal");
+    expect(PHASE_AGENT_LAUNCHERS.auggie.kind).toBe("terminal");
 
     if (
       PHASE_AGENT_LAUNCHERS["claude-code"].kind !== "terminal" ||
@@ -111,6 +136,15 @@ describe("phase agent launchers", () => {
       PHASE_AGENT_LAUNCHERS.cursor.kind !== "terminal" ||
       PHASE_AGENT_LAUNCHERS.gemini.kind !== "terminal" ||
       PHASE_AGENT_LAUNCHERS.hermes.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.blackbox.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.goose.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.opencode.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.qwen.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS["continue"].kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.cline.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.aider.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.kilo.kind !== "terminal" ||
+      PHASE_AGENT_LAUNCHERS.auggie.kind !== "terminal" ||
       PHASE_AGENT_LAUNCHERS.copilot.kind !== "vscode-command"
     ) {
       throw new Error("Unexpected launcher kind");
@@ -168,6 +202,38 @@ describe("phase agent launchers", () => {
     expect(PHASE_AGENT_LAUNCHERS.hermes.terminalCommand("/tmp/prompt.md")).toContain("hermes chat -q");
     expect(PHASE_AGENT_LAUNCHERS.hermes.shellScriptCommand('"$PROMPT_FILE"')).toBe('hermes chat -q "$(cat "$PROMPT_FILE")"');
     expect(PHASE_AGENT_LAUNCHERS.hermes.batchScriptCommand()).toContain("hermes chat -q $prompt");
+    expect(PHASE_AGENT_LAUNCHERS.blackbox.executable).toBe("blackbox");
+    expect(PHASE_AGENT_LAUNCHERS.blackbox.terminalCommand("/tmp/prompt.md")).toContain("blackbox run");
+    expect(PHASE_AGENT_LAUNCHERS.blackbox.shellScriptCommand('"$PROMPT_FILE"')).toBe('blackbox run "$PROMPT_FILE"');
+    expect(PHASE_AGENT_LAUNCHERS.blackbox.batchScriptCommand()).toBe('"blackbox" run "%PROMPT_FILE%"');
+    expect(PHASE_AGENT_LAUNCHERS.goose.executable).toBe("goose");
+    expect(PHASE_AGENT_LAUNCHERS.goose.terminalCommand("/tmp/prompt.md")).toContain("goose run -i");
+    expect(PHASE_AGENT_LAUNCHERS.goose.shellScriptCommand('"$PROMPT_FILE"')).toBe('goose run -i "$PROMPT_FILE"');
+    expect(PHASE_AGENT_LAUNCHERS.goose.batchScriptCommand()).toBe('"goose" run -i "%PROMPT_FILE%"');
+    expect(PHASE_AGENT_LAUNCHERS.opencode.executable).toBe("opencode");
+    expect(PHASE_AGENT_LAUNCHERS.opencode.terminalCommand("/tmp/prompt.md")).toContain("opencode run");
+    expect(PHASE_AGENT_LAUNCHERS.opencode.shellScriptCommand('"$PROMPT_FILE"')).toBe('opencode run "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS.opencode.batchScriptCommand()).toContain("opencode run $prompt");
+    expect(PHASE_AGENT_LAUNCHERS.qwen.executable).toBe("qwen");
+    expect(PHASE_AGENT_LAUNCHERS.qwen.terminalCommand("/tmp/prompt.md")).toContain("qwen -p");
+    expect(PHASE_AGENT_LAUNCHERS.qwen.shellScriptCommand('"$PROMPT_FILE"')).toBe('qwen -p "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS["continue"].executable).toBe("cn");
+    expect(PHASE_AGENT_LAUNCHERS["continue"].terminalCommand("/tmp/prompt.md")).toContain("cn -p");
+    expect(PHASE_AGENT_LAUNCHERS["continue"].shellScriptCommand('"$PROMPT_FILE"')).toBe('cn -p "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS.cline.executable).toBe("cline");
+    expect(PHASE_AGENT_LAUNCHERS.cline.terminalCommand("/tmp/prompt.md", "cline", "/repo")).toContain("cline");
+    expect(PHASE_AGENT_LAUNCHERS.cline.terminalCommand("/tmp/prompt.md", "cline", "/repo")).toContain("--cwd");
+    expect(PHASE_AGENT_LAUNCHERS.cline.shellScriptCommand('"$PROMPT_FILE"')).toBe('cline "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS.aider.executable).toBe("aider");
+    expect(PHASE_AGENT_LAUNCHERS.aider.terminalCommand("/tmp/prompt.md")).toContain("aider --message-file");
+    expect(PHASE_AGENT_LAUNCHERS.aider.shellScriptCommand('"$PROMPT_FILE"')).toBe('aider --message-file "$PROMPT_FILE" --yes-always');
+    expect(PHASE_AGENT_LAUNCHERS.aider.batchScriptCommand()).toBe('"aider" --message-file "%PROMPT_FILE%" --yes-always');
+    expect(PHASE_AGENT_LAUNCHERS.kilo.executable).toBe("kilo");
+    expect(PHASE_AGENT_LAUNCHERS.kilo.terminalCommand("/tmp/prompt.md")).toContain("kilo run --auto");
+    expect(PHASE_AGENT_LAUNCHERS.kilo.shellScriptCommand('"$PROMPT_FILE"')).toBe('kilo run --auto "$(cat "$PROMPT_FILE")"');
+    expect(PHASE_AGENT_LAUNCHERS.auggie.executable).toBe("auggie");
+    expect(PHASE_AGENT_LAUNCHERS.auggie.terminalCommand("/tmp/prompt.md")).toContain("auggie --print");
+    expect(PHASE_AGENT_LAUNCHERS.auggie.shellScriptCommand('"$PROMPT_FILE"')).toBe('auggie --print "$(cat "$PROMPT_FILE")"');
     expect(PHASE_AGENT_LAUNCHERS.copilot.commandId).toBe("workbench.action.chat.open");
   });
 

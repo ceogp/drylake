@@ -33,7 +33,9 @@ function slugForName(name: string) {
 function fallbackSkillPath(skill: ImportedWorkspaceSkillRule) {
   const slug = slugForName(skill.name);
 
-  switch (skill.sourcePlatform) {
+    switch (skill.sourcePlatform) {
+    case "blackbox":
+      return `.blackbox/skills/${slug}/SKILL.md`;
     case "codex":
       return `.codex/skills/${slug}/SKILL.md`;
     case "cursor":
@@ -105,6 +107,7 @@ function defaultRuntimeLogicalPath(rawValue: string) {
 
   if (
     logicalPath.startsWith(".codex/") ||
+    logicalPath.startsWith(".blackbox/") ||
     logicalPath.startsWith(".claude/") ||
     logicalPath.startsWith(".cursor/") ||
     logicalPath.startsWith(".windsurf/") ||

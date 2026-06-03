@@ -11,6 +11,7 @@ const PATTERNS = [
   ".agents/skills/**/SKILL.md",
   ".codex/agents/**/*.toml",
   ".codex/skills/**/SKILL.md",
+  ".blackbox/skills/**/SKILL.md",
   ".claude/skills/**/SKILL.md",
   ".claude/agents/**/*.md",
   ".cursor/skills/**/SKILL.md",
@@ -60,6 +61,11 @@ const GLOBAL_SCAN_ROOTS = [
   {
     absolutePath: () => path.join(os.homedir(), ".codex", "skills"),
     logicalBase: ".codex/skills",
+    matches: (relativePath: string) => /(^|\/)SKILL\.md$/i.test(relativePath),
+  },
+  {
+    absolutePath: () => path.join(os.homedir(), ".blackbox", "skills"),
+    logicalBase: ".blackbox/skills",
     matches: (relativePath: string) => /(^|\/)SKILL\.md$/i.test(relativePath),
   },
   {
@@ -331,7 +337,7 @@ function isSupportedFolderImportFile(rootUri: vscode.Uri, fileUri: vscode.Uri) {
     return true;
   }
 
-  if (baseName === "skill.md" && /(^|\/)(\.agents|\.codex|\.claude|\.cursor)?\/?skills\//i.test(logicalPath)) {
+  if (baseName === "skill.md" && /(^|\/)(\.agents|\.codex|\.blackbox|\.claude|\.cursor)?\/?skills\//i.test(logicalPath)) {
     return true;
   }
 
@@ -376,6 +382,7 @@ function getLogicalPathForSelectedFolder(rootUri: vscode.Uri, fileUri: vscode.Ur
     if (
       part === ".agents" ||
       part === ".codex" ||
+      part === ".blackbox" ||
       part === ".claude" ||
       part === ".cursor" ||
       part === ".windsurf" ||
@@ -439,7 +446,7 @@ export function classifyWorkspaceFile(logicalPath: string): DetectedWorkspaceFil
     return "instruction";
   }
 
-  if (/\/?(\.agents\/skills|\.codex\/skills|\.claude\/skills|\.cursor\/skills)\/.+\/SKILL\.md$/i.test(logicalPath)) {
+  if (/\/?(\.agents\/skills|\.codex\/skills|\.blackbox\/skills|\.claude\/skills|\.cursor\/skills)\/.+\/SKILL\.md$/i.test(logicalPath)) {
     return "skill";
   }
 

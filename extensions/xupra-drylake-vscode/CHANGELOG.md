@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.36
+
+### Agent compatibility
+
+- Added selectable phase and multi-agent handoffs for Blackbox CLI, Goose CLI, OpenCode, Qwen Code, Continue CLI, Cline CLI, Aider, Kilo Code, and Auggie CLI.
+- Restored broader Marketplace categories and added the new agent names to Marketplace keywords.
+
 ## 0.6.35
 
 ### Marketplace positioning

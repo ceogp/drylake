@@ -15,7 +15,7 @@ export type HandoffProfileSelection = {
 const MAX_PROFILE_CHARS = 6_000;
 
 export function supportsHandoffProfiles(agent: XuPhaseAgent) {
-  return agent === "codex" || agent === "claude-code" || agent === "copilot";
+  return agent === "codex" || agent === "claude-code" || agent === "copilot" || agent === "blackbox";
 }
 
 function normalizeLogicalPath(value: string) {
@@ -60,6 +60,13 @@ function matchesAgent(agent: XuPhaseAgent, logicalPath: string, category: string
     );
   }
 
+  if (agent === "blackbox") {
+    return (
+      category === "skill" &&
+      /^\.blackbox\/skills\/.+\/SKILL\.md$/i.test(normalized)
+    );
+  }
+
   return false;
 }
 
@@ -76,7 +83,27 @@ function sourcePlatformForAgent(agent: XuPhaseAgent): HandoffProfileSelection["s
     return "codex";
   }
 
+  if (agent === "blackbox") {
+    return "blackbox";
+  }
+
   return undefined;
+}
+
+function sourcePlatformLabel(sourcePlatform: HandoffProfileSelection["sourcePlatform"]) {
+  if (sourcePlatform === "codex") {
+    return "Codex";
+  }
+
+  if (sourcePlatform === "claude") {
+    return "Claude";
+  }
+
+  if (sourcePlatform === "blackbox") {
+    return "Blackbox";
+  }
+
+  return "GitHub Copilot";
 }
 
 function kindForCategory(category: string): HandoffProfileSelection["kind"] {
@@ -156,7 +183,7 @@ export function renderHandoffProfilePrompt(profile: HandoffProfileSelection | un
   return [
     "## Requested Skill / Agent Profile",
     "",
-    `Use this ${profile.sourcePlatform === "codex" ? "Codex" : profile.sourcePlatform === "claude" ? "Claude" : "GitHub Copilot"} ${profile.kind} for this handoff.`,
+    `Use this ${sourcePlatformLabel(profile.sourcePlatform)} ${profile.kind} for this handoff.`,
     `- Name: ${profile.label}`,
     `- Source: ${profile.logicalPath}`,
     "",

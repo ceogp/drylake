@@ -88,6 +88,15 @@ const RUNNER_AGENTS: Array<{
   { id: "hermes", label: "Hermes Agent", provider: "Hermes" },
   { id: "cursor", label: "Cursor CLI", provider: "Cursor" },
   { id: "copilot", label: "GitHub Copilot Chat", provider: "GitHub" },
+  { id: "blackbox", label: "Blackbox CLI", provider: "Blackbox" },
+  { id: "goose", label: "Goose CLI", provider: "Block" },
+  { id: "opencode", label: "OpenCode", provider: "OpenCode" },
+  { id: "qwen", label: "Qwen Code", provider: "Qwen" },
+  { id: "continue", label: "Continue CLI", provider: "Continue" },
+  { id: "cline", label: "Cline CLI", provider: "Cline" },
+  { id: "aider", label: "Aider", provider: "Aider" },
+  { id: "kilo", label: "Kilo Code", provider: "Kilo" },
+  { id: "auggie", label: "Auggie CLI", provider: "Augment" },
 ];
 
 function workspaceRoot() {

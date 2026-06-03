@@ -43,6 +43,7 @@ vi.mock("../agents/handoffProfiles", () => ({
     if (agent === "codex") return profile.sourcePlatform === "codex";
     if (agent === "claude-code") return profile.sourcePlatform === "claude";
     if (agent === "copilot") return profile.sourcePlatform === "copilot";
+    if (agent === "blackbox") return profile.sourcePlatform === "blackbox";
     return false;
   },
   handoffProfileRef: (profile: { kind: string; label: string; logicalPath: string; sourcePlatform: string }) => ({
@@ -182,9 +183,26 @@ describe("Multi-Agent Runner webview", () => {
     expect(html).toContain('value="codex"');
     expect(html).toContain('value="gemini"');
     expect(html).toContain('value="hermes"');
+    expect(html).toContain('value="blackbox"');
+    expect(html).toContain('value="goose"');
+    expect(html).toContain('value="opencode"');
+    expect(html).toContain('value="qwen"');
+    expect(html).toContain('value="continue"');
+    expect(html).toContain('value="cline"');
+    expect(html).toContain('value="aider"');
+    expect(html).toContain('value="kilo"');
+    expect(html).toContain('value="auggie"');
     expect(html).toContain("Hermes Agent");
+    expect(html).toContain("Blackbox CLI");
+    expect(html).toContain("Goose CLI");
+    expect(html).toContain("OpenCode");
+    expect(html).toContain("Qwen Code");
+    expect(html).toContain("Continue CLI");
+    expect(html).toContain("Cline CLI");
+    expect(html).toContain("Aider");
+    expect(html).toContain("Kilo Code");
+    expect(html).toContain("Auggie CLI");
     expect(html).toContain("Phase / task prompt");
-    expect(html).not.toContain("Blackbox");
     expect(html).not.toContain("Droid");
     expect(html).not.toContain("Coming soon");
   });

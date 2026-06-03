@@ -1,6 +1,6 @@
 # DryLake AI for VS Code
 
-## Free AI planning cards for Claude Code, Codex, Cursor, Gemini and coding agents.
+## Free AI planning cards for Claude Code, Codex, Cursor, Gemini, Cline, Blackbox and coding agents.
 
 DryLake is backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.com/startups/).
 
@@ -12,7 +12,7 @@ DryLake turns tickets, bugs, and product specs into visual planning cards. Pick 
 
 - **Free AI planning:** Start with free planning, then upgrade when you want Xupra AI Frontier Models.
 - **Save tokens and time:** Visual planning cards allow you to use smaller models with better results.
-- **All agents, one planning workflow:** Plan work for Claude Code, Codex, Cursor, Gemini, Hermes, Copilot, and more.
+- **All agents, one planning workflow:** Plan work for Claude Code, Codex, Cursor, Gemini, Hermes, Copilot, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, Auggie, and more.
 - **Phased implementation plans:** Split large tasks into safe stages with acceptance criteria and focused handoff prompts.
 - **Skills for every handoff:** Attach reusable skills/profiles for architecture, implementation, review, testing, and debugging.
 - **Bring your own API/model:** Use direct OpenAI, Claude/Anthropic, Databricks, or Hermes planning providers today, with broader OpenAI-compatible provider support planned.
@@ -22,7 +22,7 @@ DryLake turns tickets, bugs, and product specs into visual planning cards. Pick 
 
 ## What DryLake does
 - Converts tickets into phased implementation plans.
-- Lets you assign each phase to Claude Code, Codex, Cursor, Gemini, etc.
+- Lets you assign each phase to Claude Code, Codex, Cursor, Gemini, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, Auggie, etc.
 - Runs focused handoffs from a visual Kanban or pipeline.
 - Attaches skills/profiles to phase prompts.
 - Estimates prompt tokens before handoff.
@@ -43,7 +43,7 @@ DryLake turns tickets, bugs, and product specs into visual planning cards. Pick 
 2. Run `DryLake: Start Build Session`.
 3. Paste a ticket, bug report, feature request, or product spec.
 4. Review the generated phases.
-5. Assign a phase to Claude Code, Codex, Cursor, Gemini, Hermes, or Copilot.
+5. Assign a phase to Claude Code, Codex, Cursor, Gemini, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, Auggie, Hermes, or Copilot.
 6. Click `Run Handoff`.
 
 
@@ -59,7 +59,7 @@ Use the stages dropdown to request up to 12 planning stages, or type naturally i
 
 <img src="https://drylake.xupracorp.com/marketplace/extension/media/readme-kanban-v2.png" alt="DryLake Control Room kanban" width="620">
 
-Each phase card has one **Agent** dropdown. Assign phases to Claude Code, OpenAI Codex or any agent, then press **Run Handoff**. You can also export as Markdown or copy to `.sh` and `.bat`.
+Each phase card has one **Agent** dropdown. Assign phases to Claude Code, OpenAI Codex, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, Auggie, or any supported agent, then press **Run Handoff**. You can also export as Markdown or copy to `.sh` and `.bat`.
 
 ## Skills And Handoffs
 
