@@ -2,6 +2,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 
 import { scanWorkspaceFiles } from "../services/workspaceScanner";
+import { XU_PHASE_AGENTS } from "../xu/types";
 import type { XuHandoffProfileRef, XuPhaseAgent } from "../xu/types";
 
 export type HandoffProfileSelection = {
@@ -15,7 +16,7 @@ export type HandoffProfileSelection = {
 const MAX_PROFILE_CHARS = 6_000;
 
 export function supportsHandoffProfiles(agent: XuPhaseAgent) {
-  return agent === "codex" || agent === "claude-code" || agent === "copilot" || agent === "blackbox";
+  return (XU_PHASE_AGENTS as readonly string[]).includes(agent);
 }
 
 function normalizeLogicalPath(value: string) {
@@ -31,12 +32,25 @@ function profileLabel(logicalPath: string) {
   return path.posix.basename(normalized, path.posix.extname(normalized)) || normalized;
 }
 
+function matchesDryLakeProfile(logicalPath: string, category: string) {
+  const normalized = normalizeLogicalPath(logicalPath);
+
+  return (
+    category === "skill" &&
+    /^\.agents\/skills\/.+\/SKILL\.md$/i.test(normalized)
+  ) || (
+    category === "skill" &&
+    /^\.cursor\/skills\/.+\/SKILL\.md$/i.test(normalized)
+  );
+}
+
 function matchesAgent(agent: XuPhaseAgent, logicalPath: string, category: string) {
   const normalized = normalizeLogicalPath(logicalPath);
+
   if (agent === "codex") {
     return (
       category === "skill" &&
-      (/^\.codex\/skills\/.+\/SKILL\.md$/i.test(normalized) || /^\.agents\/skills\/.+\/SKILL\.md$/i.test(normalized))
+      /^\.codex\/skills\/.+\/SKILL\.md$/i.test(normalized)
     ) || (
       category === "agent_config" &&
       /^\.codex\/agents\/.+\.toml$/i.test(normalized)
@@ -91,6 +105,10 @@ function sourcePlatformForAgent(agent: XuPhaseAgent): HandoffProfileSelection["s
 }
 
 function sourcePlatformLabel(sourcePlatform: HandoffProfileSelection["sourcePlatform"]) {
+  if (sourcePlatform === "drylake") {
+    return "DryLake";
+  }
+
   if (sourcePlatform === "codex") {
     return "Codex";
   }
@@ -104,6 +122,14 @@ function sourcePlatformLabel(sourcePlatform: HandoffProfileSelection["sourcePlat
   }
 
   return "GitHub Copilot";
+}
+
+function sourcePlatformForProfile(agent: XuPhaseAgent, logicalPath: string, category: string) {
+  if (matchesDryLakeProfile(logicalPath, category)) {
+    return "drylake" as const;
+  }
+
+  return matchesAgent(agent, logicalPath, category) ? sourcePlatformForAgent(agent) : undefined;
 }
 
 function kindForCategory(category: string): HandoffProfileSelection["kind"] {
@@ -124,21 +150,27 @@ export async function collectHandoffProfiles(agent: XuPhaseAgent): Promise<Hando
   }
 
   const files = await scanWorkspaceFiles(vscode.workspace.getConfiguration("xupra"));
-  const sourcePlatform = sourcePlatformForAgent(agent);
-  if (!sourcePlatform) {
-    return [];
-  }
 
   return files
-    .filter((file) => matchesAgent(agent, file.logicalPath, file.category))
-    .map((file): HandoffProfileSelection => ({
-      kind: kindForCategory(file.category),
-      label: profileLabel(file.logicalPath),
-      logicalPath: normalizeLogicalPath(file.logicalPath),
-      sourcePlatform,
-      content: file.content,
+    .map((file) => ({
+      file,
+      sourcePlatform: sourcePlatformForProfile(agent, file.logicalPath, file.category),
     }))
-    .sort((left, right) => left.kind.localeCompare(right.kind) || left.label.localeCompare(right.label));
+    .filter((entry): entry is typeof entry & { sourcePlatform: HandoffProfileSelection["sourcePlatform"] } =>
+      Boolean(entry.sourcePlatform)
+    )
+    .map((file): HandoffProfileSelection => ({
+      kind: kindForCategory(file.file.category),
+      label: profileLabel(file.file.logicalPath),
+      logicalPath: normalizeLogicalPath(file.file.logicalPath),
+      sourcePlatform: file.sourcePlatform,
+      content: file.file.content,
+    }))
+    .sort((left, right) =>
+      left.sourcePlatform.localeCompare(right.sourcePlatform) ||
+      left.kind.localeCompare(right.kind) ||
+      left.label.localeCompare(right.label)
+    );
 }
 
 export function handoffProfileRef(profile: HandoffProfileSelection): XuHandoffProfileRef {
@@ -153,6 +185,10 @@ export function handoffProfileRef(profile: HandoffProfileSelection): XuHandoffPr
 export function handoffProfileMatchesAgent(agent: XuPhaseAgent, profile: XuHandoffProfileRef | undefined) {
   if (!profile) {
     return false;
+  }
+
+  if (profile.sourcePlatform === "drylake") {
+    return supportsHandoffProfiles(agent);
   }
 
   const sourcePlatform = sourcePlatformForAgent(agent);

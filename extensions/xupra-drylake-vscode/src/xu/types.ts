@@ -26,7 +26,7 @@ export type XuMode = "build-app" | "phases" | "plan" | "review";
 
 export type XuHandoffProfileKind = "skill" | "agent" | "instruction";
 
-export type XuHandoffProfileSourcePlatform = "codex" | "claude" | "copilot" | "blackbox";
+export type XuHandoffProfileSourcePlatform = "codex" | "claude" | "copilot" | "blackbox" | "drylake";
 
 export type XuHandoffProfileRef = {
   kind: XuHandoffProfileKind;

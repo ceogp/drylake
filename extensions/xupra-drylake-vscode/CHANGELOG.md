@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.43
+
+### Workflow fidelity
+
+- Added cross-agent DryLake skill/profile selection for all phase agents.
+- Updated the Marketplace workflow GIF wording to match handoff-launch behavior.
+
 ## 0.6.42
 
 ### Marketplace media

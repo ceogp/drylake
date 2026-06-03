@@ -85,7 +85,11 @@ function asHandoffProfileRef(value: unknown): XuHandoffProfileRef | undefined {
 
   if (
     (kind !== "skill" && kind !== "agent" && kind !== "instruction") ||
-    (sourcePlatform !== "codex" && sourcePlatform !== "claude" && sourcePlatform !== "copilot" && sourcePlatform !== "blackbox") ||
+    (sourcePlatform !== "codex" &&
+      sourcePlatform !== "claude" &&
+      sourcePlatform !== "copilot" &&
+      sourcePlatform !== "blackbox" &&
+      sourcePlatform !== "drylake") ||
     !label ||
     !logicalPath
   ) {
