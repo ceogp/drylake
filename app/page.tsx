@@ -9,32 +9,10 @@ import {
   normalizeHost,
 } from "@/lib/site-hosts";
 
-const agents = [
-  { name: "OpenAI Codex", status: "Ready", tone: "text-emerald-300" },
-  { name: "Claude Code", status: "Ready", tone: "text-emerald-300" },
-  { name: "Gemini CLI", status: "Queued", tone: "text-orange-300" },
-  { name: "Cursor", status: "Manual", tone: "text-zinc-300" },
-];
-
-const phases = [
-  { label: "01", title: "Plan", detail: "Convert the request into scoped phases", state: "Done" },
-  { label: "02", title: "Assign", detail: "Choose the agent for each phase", state: "Active" },
-  { label: "03", title: "Run", detail: "Launch focused handoff prompts", state: "Next" },
-  { label: "04", title: "Validate", detail: "Review workspace changes", state: "Pending" },
-];
-
-const terminalLines = [
-  "[SCAN] workspace context loaded",
-  "[PLAN] 4 phases generated",
-  "[ASSIGN] phase 02 -> OpenAI Codex",
-  "[HANDOFF] prompt copied and terminal opened",
-  "[VALIDATE] awaiting user review",
-];
-
 const proofPoints = [
-  ["Agent handoffs", "Send focused prompts to Codex, Claude Code, Gemini CLI, Cursor, or Copilot Chat."],
-  ["Workspace context", "Keep plans tied to the actual files, constraints, and validation steps in the repo."],
-  ["Manual validation", "Inspect the workspace before marking an attempt complete or failed."],
+  ["Visual phase planning", "Turn a ticket, bug, feature request, or pasted AI prompt into cards your team can scan."],
+  ["Agent and skill routing", "Assign each phase to Claude Code, Codex, Cline, Continue, Kilo, Gemini, Cursor, or another local agent."],
+  ["Token control", "Use smaller focused handoffs instead of one oversized prompt that burns context and hides risk."],
 ];
 
 const trustLinks = [
@@ -53,8 +31,6 @@ const securityPoints = [
   ["GitLab CI/CD", "Production deploys run through GitLab validation, HTTPS checks, audit logs, and environment isolation guards."],
 ];
 
-const discordHref = "https://discord.gg/WQdapuVn";
-
 const backingPartners = [
   {
     label: "99VC",
@@ -68,6 +44,30 @@ const backingPartners = [
     mark: "aws",
     detail: "startups",
   },
+];
+
+const supportedAgents = [
+  "Claude Code",
+  "OpenAI Codex",
+  "Gemini CLI",
+  "Hermes Agent",
+  "Cursor CLI",
+  "GitHub Copilot Chat",
+  "Blackbox CLI",
+  "Goose CLI",
+  "OpenCode",
+  "Qwen Code",
+  "Continue CLI",
+  "Cline CLI",
+  "Aider",
+  "Kilo Code",
+  "Auggie CLI",
+];
+
+const accountPaths = [
+  ["Free users", "Use visual planning cards, local agent handoffs, prompt export, and extension connection without a paid plan."],
+  ["Pro users", "Manage hosted Xupra AI planning, billing status, entitlements, and the Stripe customer portal from one account surface."],
+  ["Teams later", "Organization switching, roles, and admin controls stay separate from the customer account page."],
 ];
 
 function StatusPill({ children }: { children: string }) {
@@ -101,7 +101,7 @@ function ActionLink({
   }
 
   return (
-    <a className={className} href={href}>
+    <a className={className} href={href} rel="noreferrer" target="_blank">
       {children}
     </a>
   );
@@ -133,62 +133,51 @@ function BackingLogos() {
   );
 }
 
-function ControlRoomPreview() {
+function WorkflowGifPreview() {
   return (
     <section
-      aria-label="DryLake control room preview"
-      className="grid gap-4 rounded-lg border border-zinc-800 bg-[#0d0f0f]/95 p-4 shadow-2xl shadow-black/40"
+      aria-label="DryLake workflow preview"
+      className="overflow-hidden rounded-lg border border-zinc-800 bg-[#0d0f0f]/95 shadow-2xl shadow-black/40"
     >
-      <div className="flex items-center justify-between gap-4 border-b border-zinc-800 pb-3">
-        <div className="min-w-0">
-          <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Current build</p>
-          <h2 className="mt-1 truncate text-lg font-semibold text-zinc-100">Checkout reliability fix</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
+        <div>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+            VS Code workflow
+          </p>
+          <p className="mt-1 text-sm text-zinc-400">
+            Rearrange cards, assign agents, attach skills, launch handoffs.
+          </p>
         </div>
-        <span className="rounded bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-          active
+        <span className="rounded border border-orange-400/40 bg-orange-400/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-200">
+          6 phases
         </span>
       </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        {phases.map((phase) => (
-          <article key={phase.label} className="rounded border border-zinc-800 bg-zinc-950 p-4">
-            <div className="flex items-start justify-between gap-4">
-              <span className="font-mono text-sm text-zinc-500">{phase.label}</span>
-              <span className="rounded bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">{phase.state}</span>
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-zinc-100">{phase.title}</h3>
-            <p className="mt-2 min-h-10 text-sm leading-5 text-zinc-400">{phase.detail}</p>
-          </article>
-        ))}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded border border-zinc-800 bg-zinc-950 p-4">
-          <h3 className="text-sm font-semibold text-zinc-200">Agent matrix</h3>
-          <div className="mt-4 grid gap-3">
-            {agents.map((agent) => (
-              <div key={agent.name} className="flex items-center justify-between gap-4 text-sm">
-                <span className="truncate text-zinc-300">{agent.name}</span>
-                <span className={agent.tone}>{agent.status}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="rounded border border-zinc-800 bg-black p-4 font-mono text-xs leading-6 text-zinc-400">
-          {terminalLines.map((line) => (
-            <div key={line}>
-              <span className="text-orange-300">$</span> {line}
-            </div>
-          ))}
-        </div>
+      <Image
+        src="/marketplace/extension/media/drylake-workflow.gif"
+        alt="DryLake workflow showing planning cards, agent selection, skill selection, and terminal handoffs"
+        width={1120}
+        height={630}
+        priority
+        unoptimized
+        sizes="(min-width: 1024px) 54vw, 100vw"
+        className="aspect-video w-full object-cover object-top"
+      />
+      <div className="grid gap-2 border-t border-zinc-800 bg-zinc-950/80 p-4 text-sm text-zinc-300 sm:grid-cols-3">
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">5.4 Nano free planning</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Bring local coding agents</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Upgrade for Frontier planning</span>
       </div>
     </section>
   );
 }
 
 function HomeExperience({ marketing }: { marketing: boolean }) {
-  const primaryHref = marketing ? getConfiguredAppUrlForPath("/sign-up", "redirect_url=/workspace") : "/upload";
-  const secondaryHref = marketing ? getConfiguredAppUrlForPath("/pricing") : "/pricing";
+  const appHref = (pathname: string, search = "") =>
+    marketing ? getConfiguredAppUrlForPath(pathname, search) : pathname;
+  const primaryHref = marketing ? getConfiguredAppUrlForPath("/sign-up", "redirect_url=/workspace") : "/workspace";
+  const pricingHref = appHref("/pricing");
+  const accountHref = appHref("/account");
+  const installHref = appHref("/extensions/install");
 
   return (
     <main className="min-h-screen bg-[#090a0a] text-zinc-100">
@@ -213,28 +202,28 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
               <StatusPill>Multi-agent handoffs</StatusPill>
             </div>
             <h1 className="max-w-4xl text-5xl font-semibold leading-[1.02] text-zinc-50 sm:text-6xl lg:text-7xl">
-              Save tokens and time using AI Agents.
+              DryLake plans AI coding work before agents burn tokens.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-              DryLake turns a coding task into a phase-based build plan, lets you assign the right AI agent,
-              then keeps validation in your hands before work is marked done.
+              Turn tickets, bugs, product specs, and messy prompts into visual phase cards. Assign each
+              card to your coding agent, attach the right skill, and run focused handoffs from VS Code.
             </p>
             <BackingLogos />
             <div className="mt-8 flex flex-wrap gap-3">
-              <ActionLink href={primaryHref}>{marketing ? "Register to try" : "Start build"}</ActionLink>
-              <ActionLink href={secondaryHref} variant="secondary">
+              <ActionLink href={primaryHref}>{marketing ? "Register free" : "Open workspace"}</ActionLink>
+              <ActionLink href={installHref} variant="secondary">
+                Install extension
+              </ActionLink>
+              <ActionLink href={accountHref} variant="secondary">
+                Manage account
+              </ActionLink>
+              <ActionLink href={pricingHref} variant="secondary">
                 View pricing
-              </ActionLink>
-              <ActionLink href="https://github.com/gmkdigitalmedia/drylake" variant="secondary">
-                Open source GitHub
-              </ActionLink>
-              <ActionLink href={discordHref} variant="secondary">
-                Join Discord
               </ActionLink>
             </div>
           </section>
 
-          <ControlRoomPreview />
+          <WorkflowGifPreview />
         </div>
       </section>
 
@@ -243,11 +232,38 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Workflow</p>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              Built for engineers who need control, not decoration.
+              Built for engineers who want planning control before execution.
             </h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {proofPoints.map(([title, body]) => (
+              <article key={title} className="rounded-lg border border-zinc-800 bg-[#111414] p-5">
+                <h3 className="text-base font-semibold text-zinc-100">{title}</h3>
+                <p className="mt-3 text-sm leading-6 text-zinc-400">{body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="account" className="border-b border-zinc-800 bg-[#090a0a] px-5 py-16 sm:px-8 lg:px-10">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="grid content-start gap-5">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-300">Account management</p>
+            <h2 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
+              One page for plan status, billing, extension connection, and settings.
+            </h2>
+            <p className="text-base leading-7 text-zinc-400">
+              Free users should never feel blocked from using the visual planner. Paid users should
+              see exactly what Pro unlocks and where to manage billing.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <ActionLink href={accountHref}>Open account</ActionLink>
+              <ActionLink href={pricingHref} variant="secondary">Compare plans</ActionLink>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {accountPaths.map(([title, body]) => (
               <article key={title} className="rounded-lg border border-zinc-800 bg-[#111414] p-5">
                 <h3 className="text-base font-semibold text-zinc-100">{title}</h3>
                 <p className="mt-3 text-sm leading-6 text-zinc-400">{body}</p>
@@ -272,12 +288,23 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
           <div className="grid content-center gap-5">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-300">Validation first</p>
             <h2 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              Agents can run the work. You still approve the result.
+              Route phases to the agents your users already have.
             </h2>
             <p className="text-base leading-7 text-zinc-400">
-              The V1 flow stays simple: choose an agent, launch the task, inspect the workspace, then mark the
-              attempt complete or failed. The audit trail records assignments, commands, status, and review notes.
+              DryLake creates focused handoff files and terminal launches. It does not pretend to own
+              every agent runtime; it gives Claude Code, Codex, Cline, Continue, Kilo, and other tools
+              the exact phase context they need.
             </p>
+            <div className="flex flex-wrap gap-2">
+              {supportedAgents.map((agent) => (
+                <span
+                  key={agent}
+                  className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-300"
+                >
+                  {agent}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>

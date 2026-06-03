@@ -122,6 +122,14 @@ export default async function BillingPage({
                 </Link>
               </div>
             ) : null}
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/account">
+                Account
+              </Link>
+              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/workspace">
+                Continue to Workspace
+              </Link>
+            </div>
           </section>
 
           <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
@@ -204,6 +212,14 @@ export default async function BillingPage({
                 After upgrading, return to VS Code or Cursor to continue.
               </p>
             )}
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/account">
+                Account
+              </Link>
+              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/workspace">
+                Continue to Workspace
+              </Link>
+            </div>
           </article>
 
           <article className="tape-panel bg-white p-6">

@@ -99,8 +99,14 @@ export default async function RootLayout({
             <a className="rounded border border-emerald-400 bg-emerald-400 px-3 py-2 text-zinc-950 transition hover:bg-emerald-300" href={dryLakeOrigin}>
               DryLake
             </a>
+            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/extensions/install`}>
+              Install
+            </a>
             <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/pricing`}>
               Pricing
+            </a>
+            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/account`}>
+              Account
             </a>
           </nav>
         </div>
@@ -163,6 +169,9 @@ export default async function RootLayout({
             <nav className="hidden items-center gap-3 text-sm font-semibold text-zinc-300 md:flex">
               <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/upload">
                 Import
+              </Link>
+              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/extensions/install">
+                Install
               </Link>
               <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/account">
                 Account

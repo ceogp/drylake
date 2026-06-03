@@ -9,17 +9,35 @@ export const metadata: Metadata = {
 };
 
 const freeFeatures = [
-  "Create a workspace and use the visual planning board.",
-  "Review phases, steps, and validation notes.",
+  "Use free AI planning cards for coding-agent work.",
+  "Review phases, steps, token estimates, and validation notes.",
   "Copy or export prompts and Markdown handoffs.",
-  "Use local handoffs with your installed coding agents.",
+  "Run local handoffs with your installed coding agents.",
 ];
 
 const proFeatures = [
-  "Xupra AI planning chat for changing scope live.",
-  "AI-generated build plans from tickets, specs, bugs, and feature requests.",
+  "Xupra AI Frontier planning for larger or more complex tickets.",
+  "AI-generated and AI-refined build plans from tickets, specs, bugs, and feature requests.",
   "Cloud-backed planning sessions tied to your account.",
-  "Priority path for team and enterprise workflow features.",
+  "Priority path for team, admin, and enterprise workflow features.",
+];
+
+const supportedAgents = [
+  "Claude Code",
+  "OpenAI Codex",
+  "Gemini CLI",
+  "Hermes Agent",
+  "Cursor CLI",
+  "GitHub Copilot Chat",
+  "Blackbox CLI",
+  "Goose CLI",
+  "OpenCode",
+  "Qwen Code",
+  "Continue CLI",
+  "Cline CLI",
+  "Aider",
+  "Kilo Code",
+  "Auggie CLI",
 ];
 
 function SignUpLink({
@@ -51,11 +69,11 @@ export default function PricingPage() {
           <div className="max-w-3xl">
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Pricing</p>
             <h1 className="mt-4 text-4xl font-semibold leading-tight text-zinc-50 sm:text-5xl">
-              Start free. Upgrade when you want hosted AI planning.
+              Start free. Upgrade when you want Frontier planning.
             </h1>
             <p className="mt-5 text-lg leading-8 text-zinc-300">
-              Free is for using DryLake as the visual control room. Pro adds Xupra-hosted AI that
-              turns messy tickets into phases and updates the plan from chat.
+              Free gives users the visual control room for phase cards, skills, and local handoffs.
+              Pro adds Xupra-hosted planning for bigger tickets and more demanding workflows.
             </p>
           </div>
         </section>
@@ -78,7 +96,7 @@ export default function PricingPage() {
               ))}
             </ul>
             <div className="mt-6">
-              <SignUpLink variant="secondary">Register to try</SignUpLink>
+              <SignUpLink variant="secondary">Register free</SignUpLink>
             </div>
           </article>
 
@@ -103,16 +121,32 @@ export default function PricingPage() {
               <Link className="inline-flex rounded border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-orange-400 hover:text-orange-200" href="/billing">
                 Manage Billing
               </Link>
+              <Link className="inline-flex rounded border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-orange-400 hover:text-orange-200" href="/account">
+                Account
+              </Link>
             </div>
           </article>
         </section>
 
         <section className="rounded-lg border border-orange-400/30 bg-orange-400/10 p-6">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">Current supported handoffs</p>
-          <p className="mt-3 text-base leading-7 text-orange-100">
-            Claude Code, OpenAI Codex, Gemini CLI, Cursor CLI, and GitHub Copilot Chat. Only verified
-            handoff paths are shown in the public interface.
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">
+            Current supported handoffs
           </p>
+          <p className="mt-3 max-w-3xl text-base leading-7 text-orange-100">
+            DryLake launches focused handoff prompts for the agents users already keep in their IDE
+            or terminal. Install the matching CLI locally for direct terminal handoff, or use the
+            Markdown prompt fallback when a direct launch is not available.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {supportedAgents.map((agent) => (
+              <span
+                key={agent}
+                className="rounded border border-orange-300/30 bg-zinc-950/70 px-3 py-2 text-xs font-semibold text-orange-100"
+              >
+                {agent}
+              </span>
+            ))}
+          </div>
         </section>
       </section>
     </main>
