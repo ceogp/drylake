@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.42
+
+### Marketplace media
+
+- Updated the workflow GIF to show card rearranging, per-card agent and skill assignment, per-phase terminal creation, and a longer outcome screen with token usage.
+
 ## 0.6.41
 
 ### Marketplace media
