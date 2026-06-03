@@ -1,6 +1,6 @@
 # DryLake AI for VS Code
 
-## Free AI planning cards for Claude Code, Codex, Cursor, Gemini, Cline, Blackbox and coding agents.
+## Free AI planning cards for Claude Code, Codex, Cursor, Cline, Blackbox, Goose, OpenCode, Qwen and coding agents.
 
 DryLake is backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.com/startups/).
 
@@ -24,10 +24,35 @@ DryLake turns tickets, bugs, and product specs into visual planning cards. Pick 
 - Converts tickets into phased implementation plans.
 - Lets you assign each phase to Claude Code, Codex, Cursor, Gemini, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, Auggie, etc.
 - Runs focused handoffs from a visual Kanban or pipeline.
+- Launches supported local CLIs when they are installed and configured.
 - Attaches skills/profiles to phase prompts.
 - Estimates prompt tokens before handoff.
 - Saves handoff artifacts as Markdown, shell, or batch files.
 - Falls back to copied Markdown prompts when a CLI agent is not installed.
+
+## Supported Coding Agents
+
+DryLake is an orchestration layer for the coding agents you already use. Each phase can be assigned to a different agent from the same **Agent** dropdown.
+
+| Agent | Handoff mode |
+|---|---|
+| Claude Code | Direct CLI handoff when `claude` is available |
+| OpenAI Codex | Direct CLI handoff when `codex` is available |
+| Gemini CLI | Direct CLI handoff when `gemini` is available |
+| Hermes Agent | Direct CLI handoff when `hermes` is available |
+| Cursor CLI | Direct CLI handoff when `cursor-agent` is available |
+| GitHub Copilot Chat | VS Code chat handoff when Copilot Chat is installed |
+| Blackbox CLI | Direct CLI handoff when `blackbox` is available |
+| Goose CLI | Direct CLI handoff when `goose` is available |
+| OpenCode | Direct CLI handoff when `opencode` is available |
+| Qwen Code | Direct CLI handoff when `qwen` is available |
+| Continue CLI | Direct CLI handoff when `cn` is available |
+| Cline CLI | Direct CLI handoff when `cline` is available |
+| Aider | Direct CLI handoff when `aider` is available |
+| Kilo Code | Direct CLI handoff when `kilo` is available |
+| Auggie CLI | Direct CLI handoff when `auggie` is available |
+
+Run `DryLake: Check Agent Setup` to see which agents are available on your machine. Missing CLIs still get a saved Markdown handoff, copyable prompt, and export scripts.
 
 ## Best for
 
@@ -90,4 +115,4 @@ DryLake has a public open-source mirror on GitHub:
 
 ## Non-affiliation
 
-DryLake is not affiliated with Anthropic, OpenAI, Google, GitHub, Microsoft, Cursor, or their respective owners.
+DryLake is not affiliated with Anthropic, OpenAI, Google, GitHub, Microsoft, Cursor, Blackbox, Block, Alibaba Cloud, Continue, Cline, Aider, Kilo Code, Augment, or their respective owners.

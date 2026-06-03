@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake Coding Agent free AI LLM for planning AI Agents - Hermes Claude Code Codex",
   "description": "Code faster and save tokens with Visual Pipeline Planning.  Use Open source tools like Hermes Agent. Improve your Claude Code with planning like Traycer. Optimize your Agentic AI coding assistants.  Multi-agents. Features specialized agents for Planning, Execution, and Verification.",
-  "version": "0.6.36",
+  "version": "0.6.37",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",

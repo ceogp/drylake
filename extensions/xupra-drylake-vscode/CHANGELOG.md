@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.37
+
+### Marketplace README
+
+- Added a supported coding agents section for Claude Code, Codex, Gemini, Hermes, Cursor, Copilot, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, and Auggie.
+- Clarified that direct handoffs require the matching local CLI and fall back to Markdown prompts when missing.
+
 ## 0.6.36
 
 ### Agent compatibility
