@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.40
+
+### Marketplace media
+
+- Replaced the Marketplace workflow GIF with a higher-fidelity DryLake planning, skills, and sequential agent handoff animation.
+
 ## 0.6.39
 
 ### Marketplace positioning
