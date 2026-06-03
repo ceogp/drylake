@@ -63,7 +63,7 @@ export default function ExtensionInstallPage() {
                 Install via command line
               </p>
               <div className="mt-3 rounded border border-zinc-800 bg-black px-5 py-4 font-mono text-xs leading-6 text-zinc-300">
-                &quot;C:\Users\%USERNAME%\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd&quot; --install-extension xupracorp.drylake
+                &amp; &quot;$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd&quot; --install-extension xupracorp.drylake
               </div>
               <p className="mt-3 text-sm leading-7 text-zinc-500">
                 Use the full Microsoft VS Code path if Cursor owns the <span className="font-mono text-xs">code</span>{" "}
