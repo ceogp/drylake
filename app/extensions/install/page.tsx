@@ -62,21 +62,23 @@ export default function ExtensionInstallPage() {
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-300">
                 Install via command line
               </p>
-              <div className="mt-3 rounded border border-zinc-800 bg-black px-5 py-4 font-mono text-xs text-zinc-300">
-                code --install-extension xupracorp.drylake
+              <div className="mt-3 rounded border border-zinc-800 bg-black px-5 py-4 font-mono text-xs leading-6 text-zinc-300">
+                &quot;C:\Users\%USERNAME%\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd&quot; --install-extension xupracorp.drylake
               </div>
               <p className="mt-3 text-sm leading-7 text-zinc-500">
-                This works when the <span className="font-mono text-xs">code</span> CLI is on your PATH.
+                Use the full Microsoft VS Code path if Cursor owns the <span className="font-mono text-xs">code</span>{" "}
+                command on your PATH. Check with <span className="font-mono text-xs">where code</span>.
               </p>
             </div>
 
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-300">
-                Manual fallback
+                Cursor and manual fallback
               </p>
               <div className="mt-3 rounded border border-zinc-800 bg-zinc-950 px-5 py-4 text-sm leading-7 text-zinc-400">
-                Use <span className="font-mono text-xs text-zinc-200">Extensions: Install from VSIX...</span> if
-                you are testing a local build or do not have the CLI configured.
+                Cursor&apos;s CLI may search a different extension gallery. Use the Marketplace button for VS Code,
+                or use <span className="font-mono text-xs text-zinc-200">Extensions: Install from VSIX...</span>{" "}
+                when installing a local build in VS Code or Cursor.
               </div>
             </div>
           </div>
