@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.44
+
+### Marketplace media
+
+- Switched the Marketplace workflow GIF to a versioned 6-phase handoff URL so cached older demos are not reused.
+
 ## 0.6.43
 
 ### Workflow fidelity
