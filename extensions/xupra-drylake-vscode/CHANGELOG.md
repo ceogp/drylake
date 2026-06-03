@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.41
+
+### Marketplace media
+
+- Slowed the Marketplace workflow GIF to half speed so the planning, skills, and handoff sequence is easier to follow.
+
 ## 0.6.40
 
 ### Marketplace media
