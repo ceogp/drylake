@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.39
+
+### Marketplace positioning
+
+- Updated the Marketplace display name to `DryLake Agent AI planner for Agents Skills - Cline Codex Claude Hermes Continue Kilo`.
+
 ## 0.6.38
 
 ### Agent handoff reliability

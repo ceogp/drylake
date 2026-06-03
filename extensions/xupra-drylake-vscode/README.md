@@ -1,4 +1,4 @@
-# DryLake AI for VS Code
+# DryLake Agent AI planner for Agents Skills - Cline Codex Claude Hermes Continue Kilo
 
 ## Free AI planning cards for Claude Code, Codex, Cursor, Cline, Blackbox, Goose, OpenCode, Qwen and coding agents.
 
