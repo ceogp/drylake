@@ -153,7 +153,7 @@ function WorkflowGifPreview() {
         </span>
       </div>
       <Image
-        src="/marketplace/extension/media/drylake-workflow.gif"
+        src="/marketplace/extension/media/drylake-workflow-6phase-handoffs.gif"
         alt="DryLake workflow showing planning cards, agent selection, skill selection, and terminal handoffs"
         width={1120}
         height={630}
