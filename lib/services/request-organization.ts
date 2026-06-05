@@ -8,7 +8,12 @@ import {
 export const INVALID_EXTENSION_TOKEN_ERROR = "Invalid extension token";
 export const REQUEST_AUTHENTICATION_REQUIRED_ERROR = "Authentication required";
 
-export async function getRequestOrganizationId(request: Request) {
+export type RequestOrganizationContext = {
+  organizationId: string;
+  userId: string;
+};
+
+export async function getRequestOrganizationContext(request: Request): Promise<RequestOrganizationContext> {
   const token = request.headers.get(EXTENSION_TOKEN_HEADER)?.trim();
 
   if (token) {
@@ -25,6 +30,7 @@ export async function getRequestOrganizationId(request: Request) {
       },
       select: {
         organizationId: true,
+        userId: true,
       },
     });
 
@@ -32,7 +38,10 @@ export async function getRequestOrganizationId(request: Request) {
       throw new Error(INVALID_EXTENSION_TOKEN_ERROR);
     }
 
-    return membership.organizationId;
+    return {
+      organizationId: membership.organizationId,
+      userId: membership.userId,
+    };
   }
 
   const appContext = await getCurrentAppContext();
@@ -41,5 +50,13 @@ export async function getRequestOrganizationId(request: Request) {
     throw new Error(REQUEST_AUTHENTICATION_REQUIRED_ERROR);
   }
 
-  return appContext.organization.id;
+  return {
+    organizationId: appContext.organization.id,
+    userId: appContext.user.id,
+  };
+}
+
+export async function getRequestOrganizationId(request: Request) {
+  const context = await getRequestOrganizationContext(request);
+  return context.organizationId;
 }

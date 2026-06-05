@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   generatePlanningChatReply: vi.fn(),
-  getRequestOrganizationId: vi.fn(),
+  getRequestOrganizationContext: vi.fn(),
+  recordRunbookPlanningUsage: vi.fn(),
   resolveRunbookPlanningAccess: vi.fn(),
   safeParse: vi.fn(),
 }));
@@ -10,7 +11,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/services/request-organization", () => ({
   INVALID_EXTENSION_TOKEN_ERROR: "Invalid extension token",
   REQUEST_AUTHENTICATION_REQUIRED_ERROR: "Authentication required",
-  getRequestOrganizationId: mocks.getRequestOrganizationId,
+  getRequestOrganizationContext: mocks.getRequestOrganizationContext,
+}));
+
+vi.mock("@/lib/services/extension-usage-events", () => ({
+  recordRunbookPlanningUsage: mocks.recordRunbookPlanningUsage,
 }));
 
 vi.mock("@/lib/services/runbook-planning-access", () => ({
@@ -54,16 +59,19 @@ async function json(response: Response) {
 
 beforeEach(() => {
   mocks.generatePlanningChatReply.mockReset();
-  mocks.getRequestOrganizationId.mockReset();
+  mocks.getRequestOrganizationContext.mockReset();
+  mocks.recordRunbookPlanningUsage.mockReset();
   mocks.resolveRunbookPlanningAccess.mockReset();
   mocks.safeParse.mockReset();
+  mocks.getRequestOrganizationContext.mockResolvedValue({ organizationId: "org-pro", userId: "user-123" });
+  mocks.recordRunbookPlanningUsage.mockResolvedValue(undefined);
   mocks.resolveRunbookPlanningAccess.mockResolvedValue({ tier: "foundation", model: "gpt-5.4" });
   mocks.safeParse.mockImplementation((body: unknown) => ({ success: true, data: body }));
 });
 
 describe("POST /api/v1/drylake/runbooks/chat", () => {
   it("returns unauthorized for unauthenticated requests", async () => {
-    mocks.getRequestOrganizationId.mockRejectedValueOnce(new Error("Authentication required"));
+    mocks.getRequestOrganizationContext.mockRejectedValueOnce(new Error("Authentication required"));
 
     const response = await POST(chatRequest());
     const body = await json(response);
@@ -78,10 +86,11 @@ describe("POST /api/v1/drylake/runbooks/chat", () => {
     });
     expect(mocks.resolveRunbookPlanningAccess).not.toHaveBeenCalled();
     expect(mocks.generatePlanningChatReply).not.toHaveBeenCalled();
+    expect(mocks.recordRunbookPlanningUsage).not.toHaveBeenCalled();
   });
 
   it("routes strict-mode free organizations to the nano planning model", async () => {
-    mocks.getRequestOrganizationId.mockResolvedValueOnce("org-free");
+    mocks.getRequestOrganizationContext.mockResolvedValueOnce({ organizationId: "org-free", userId: "user-123" });
     mocks.resolveRunbookPlanningAccess.mockResolvedValueOnce({ tier: "nano", model: "gpt-5.4-nano" });
     mocks.generatePlanningChatReply.mockResolvedValueOnce({ reply: "Use a queue for retries." });
 
@@ -98,10 +107,16 @@ describe("POST /api/v1/drylake/runbooks/chat", () => {
       expect.anything(),
       { model: "gpt-5.4-nano" },
     );
+    expect(mocks.recordRunbookPlanningUsage).toHaveBeenCalledWith(expect.objectContaining({
+      organizationId: "org-free",
+      actorUserId: "user-123",
+      promptKind: "planning_chat",
+      promptText: "User: hello",
+    }));
   });
 
   it("returns successful entitled chat replies", async () => {
-    mocks.getRequestOrganizationId.mockResolvedValueOnce("org-pro");
+    mocks.getRequestOrganizationContext.mockResolvedValueOnce({ organizationId: "org-pro", userId: "user-123" });
     mocks.generatePlanningChatReply.mockResolvedValueOnce({ reply: "Use a queue for retries." });
 
     const response = await POST(chatRequest());
@@ -126,7 +141,7 @@ describe("POST /api/v1/drylake/runbooks/chat", () => {
       kind: "ApplicationBuildRunbook",
       phases: [{ id: "phase-01", title: "Implement", status: "pending" }],
     };
-    mocks.getRequestOrganizationId.mockResolvedValueOnce("org-pro");
+    mocks.getRequestOrganizationContext.mockResolvedValueOnce({ organizationId: "org-pro", userId: "user-123" });
     mocks.generatePlanningChatReply.mockResolvedValueOnce({
       reply: "I drafted an updated plan for approval.",
       proposedRunbook,
@@ -146,7 +161,7 @@ describe("POST /api/v1/drylake/runbooks/chat", () => {
 
   it("preserves sanitized backend AI error messages in the API payload", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    mocks.getRequestOrganizationId.mockResolvedValueOnce("org-pro");
+    mocks.getRequestOrganizationContext.mockResolvedValueOnce({ organizationId: "org-pro", userId: "user-123" });
     mocks.generatePlanningChatReply.mockRejectedValueOnce(
       new Error("Xupra AI is not configured: OPENAI_MODEL is missing."),
     );

@@ -867,15 +867,24 @@ describe("runbook commands", () => {
     return value;
   }
 
-  function reorderDeps(runbook = reorderRunbook()) {
+  function reorderDeps(runbook = reorderRunbook(), options?: { usageSync?: boolean; buildSessionId?: string }) {
     const uri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
     const writeRunbook = vi.fn(async (...args: [unknown, ApplicationBuildRunbook]) => {
       void args;
     });
+    const recordUsageEvent = vi.fn(async () => ({
+      event: {
+        id: "event-1",
+        createdAt: "2026-06-03T00:00:00.000Z",
+      },
+    }));
     const deps = {
-      apiClient: {},
+      apiClient: {
+        recordUsageEvent,
+      },
       stateStore: {
-        getBuildSession: vi.fn(() => null),
+        getBuildSession: vi.fn(() => options?.buildSessionId ? { id: options.buildSessionId } : null),
+        getAccessToken: vi.fn(async () => options?.usageSync ? "token-1" : undefined),
       },
       sessionStore: {
         readRunbook: vi.fn(async () => ({ uri, runbook })),
@@ -887,7 +896,11 @@ describe("runbook commands", () => {
       refreshSidebar: vi.fn(async () => undefined),
     };
 
-    return { deps, runbook };
+    return { deps, runbook, recordUsageEvent };
+  }
+
+  async function flushQueuedUsageEvents() {
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   function expectNoPhaseStatusUpdateCommand() {
@@ -1081,6 +1094,113 @@ describe("runbook commands", () => {
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });
 
+  it("records signed-in phase agent selections", async () => {
+    const { deps, recordUsageEvent } = reorderDeps(reorderRunbook(), {
+      usageSync: true,
+      buildSessionId: "session-1",
+    });
+
+    await updatePhaseAgentCommand(deps as never, "P-01", "gemini");
+    await flushQueuedUsageEvents();
+
+    expect(recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "phase_agent_selected",
+      sessionId: "session-1",
+      phaseId: "P-01",
+      phaseTitle: "Phase 1",
+      agentId: "gemini",
+      workspaceHash: expect.any(String),
+    }));
+  });
+
+  it("records signed-in skill selections", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps, recordUsageEvent } = reorderDeps(runbook, {
+      usageSync: true,
+      buildSessionId: "session-1",
+    });
+    mocks.scanWorkspaceFiles.mockResolvedValue([
+      {
+        logicalPath: ".codex/skills/token-reduction/SKILL.md",
+        category: "skill",
+        content: "Use token reduction before editing files.",
+      },
+    ]);
+
+    await updatePhaseHandoffProfileCommand(deps as never, "P-01", ".codex/skills/token-reduction/SKILL.md");
+    await flushQueuedUsageEvents();
+
+    expect(recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "phase_skill_selected",
+      sessionId: "session-1",
+      phaseId: "P-01",
+      phaseTitle: "Phase 1",
+      agentId: "codex",
+      skillLogicalPath: ".codex/skills/token-reduction/SKILL.md",
+    }));
+  });
+
+  it("records signed-in handoff launches and automatic phase completion", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps, recordUsageEvent } = reorderDeps(runbook, {
+      usageSync: true,
+      buildSessionId: "session-1",
+    });
+
+    await handoffPhaseCommand(deps as never, "P-01");
+    await flushQueuedUsageEvents();
+
+    expect(recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "phase_handoff_launched",
+      sessionId: "session-1",
+      phaseId: "P-01",
+      phaseTitle: "Phase 1",
+      agentId: "codex",
+      actionType: "run",
+      launchStatus: "launched",
+      promptEstimatedTokens: expect.any(Number),
+    }));
+    expect(recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "phase_marked_complete",
+      phaseId: "P-01",
+      agentId: "codex",
+      metadata: expect.objectContaining({
+        completionMode: "handoff_launch",
+      }),
+    }));
+  });
+
+  it("records signed-in launch failures without completing the phase", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps, recordUsageEvent } = reorderDeps(runbook, {
+      usageSync: true,
+      buildSessionId: "session-1",
+    });
+    mocks.launchPhaseAgent.mockResolvedValueOnce({
+      status: "not-installed",
+      message: "OpenAI Codex is not installed.",
+      reasonCode: "not-found",
+    });
+
+    await handoffPhaseCommand(deps as never, "P-01");
+    await flushQueuedUsageEvents();
+
+    expect(recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "phase_handoff_launch_failed",
+      phaseId: "P-01",
+      agentId: "codex",
+      actionType: "run",
+      launchStatus: "not-installed",
+      reasonCode: "not-found",
+    }));
+    expect(recordUsageEvent).not.toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "phase_marked_complete",
+    }));
+  });
+
   it("persists selected Codex skills on the phase and injects the selected skill into the handoff prompt", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";
@@ -1257,6 +1377,30 @@ describe("runbook commands", () => {
     expect(mocks.openTextDocument).not.toHaveBeenCalled();
     expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
     expectNoPhaseStatusUpdateCommand();
+  });
+
+  it("records signed-in prompt export actions separately from launches", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "gemini";
+    const { deps, recordUsageEvent } = reorderDeps(runbook, {
+      usageSync: true,
+      buildSessionId: "session-1",
+    });
+
+    await handoffPhaseCommand(deps as never, "P-01", "copy");
+    await flushQueuedUsageEvents();
+
+    expect(recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "phase_handoff_exported",
+      sessionId: "session-1",
+      phaseId: "P-01",
+      agentId: "gemini",
+      actionType: "copy",
+      launchStatus: "exported",
+    }));
+    expect(recordUsageEvent).not.toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "phase_handoff_launched",
+    }));
   });
 
   it("exports selected phase prompts as markdown", async () => {

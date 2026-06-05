@@ -43,6 +43,7 @@ const serverEnvSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default("gpt-5.4"),
   OPENAI_FREE_MODEL: z.string().default("gpt-5.4-nano"),
+  EXTENSION_PROMPT_CAPTURE_MODE: z.enum(["off", "preview", "full"]).default("preview"),
   SKILLS_SH_API_KEY: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),

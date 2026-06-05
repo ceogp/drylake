@@ -50,6 +50,7 @@ import {
 } from "./services/optimization";
 import { installGeneratedFilesToRuntimeHome } from "./services/runtimeInstall";
 import { StateStore } from "./services/stateStore";
+import { recordExtensionUsageEvent } from "./services/usageEvents";
 import { scanWorkspaceFiles } from "./services/workspaceScanner";
 import type { PackageVersionDetail } from "./types/api";
 import type { ImportedWorkspaceSnapshot } from "./types/package";
@@ -802,6 +803,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.checkAgentSetup", async () => {
     await openPhaseAgentSetupReport();
+    const accessToken = await stateStore.getAccessToken().catch(() => undefined);
+    if (accessToken) {
+      void recordExtensionUsageEvent(apiClient, {
+        eventName: "agent_setup_checked",
+      });
+    }
   });
 
   register("drylake.approvePlanChange", async (...args: unknown[]) => {

@@ -14,6 +14,23 @@ import type {
 
 type JsonValue = Record<string, unknown>;
 
+export type ExtensionUsageEventPayload = {
+  eventName: string;
+  sessionId?: string;
+  workspaceHash?: string;
+  phaseId?: string;
+  phaseTitle?: string;
+  agentId?: string;
+  skillLogicalPath?: string;
+  actionType?: string;
+  launchStatus?: string;
+  reasonCode?: string;
+  promptEstimatedTokens?: number;
+  promptKind?: string;
+  promptText?: string;
+  metadata?: Record<string, unknown>;
+};
+
 type BrowserConnectSessionPayload = {
   token: {
     token: string;
@@ -327,6 +344,14 @@ export class ApiClient {
       }>;
       modelTier: "nano" | "foundation";
     }>("/api/v1/drylake/runner/plan-assignments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
+  async recordUsageEvent(params: ExtensionUsageEventPayload) {
+    return this.request<{ event: { id: string; createdAt: string } }>("/api/v1/extension/usage-events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),

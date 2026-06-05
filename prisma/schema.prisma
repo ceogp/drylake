@@ -26,6 +26,7 @@ model User {
   auditEvents          AuditEvent[]            @relation("AuditActor")
   credentialAccessLogs CredentialAccessLog[]   @relation("CredentialAccessActor")
   extensionAuthRequests ExtensionAuthRequest[]
+  extensionUsageEvents ExtensionUsageEvent[]    @relation("ExtensionUsageActor")
 }
 
 model Profile {
@@ -58,6 +59,7 @@ model Organization {
   deploymentJobs DeploymentJob[]
   auditEvents   AuditEvent[]
   extensionAuthRequests ExtensionAuthRequest[]
+  extensionUsageEvents ExtensionUsageEvent[]
 }
 
 model OrganizationMembership {
@@ -325,6 +327,39 @@ model AuditEvent {
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   actorUser      User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+}
+
+model ExtensionUsageEvent {
+  id                    String       @id @default(cuid())
+  organizationId        String
+  actorUserId           String?
+  eventName             String
+  sessionId             String?
+  workspaceHash         String?
+  phaseId               String?
+  phaseTitle            String?
+  agentId               String?
+  skillLogicalPath      String?
+  actionType            String?
+  launchStatus          String?
+  reasonCode            String?
+  promptEstimatedTokens Int?
+  promptKind            String?
+  promptPreview         String?
+  promptText            String?
+  promptHash            String?
+  promptCaptured        Boolean      @default(false)
+  promptCaptureMode     String?
+  metadataJson          Json?
+  createdAt             DateTime     @default(now())
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser             User?        @relation("ExtensionUsageActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, eventName, createdAt])
+  @@index([organizationId, agentId])
+  @@index([organizationId, skillLogicalPath])
+  @@index([organizationId, promptHash])
 }
 
 model ExtensionAuthRequest {

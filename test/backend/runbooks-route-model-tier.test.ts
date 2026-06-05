@@ -4,7 +4,8 @@ const mocks = vi.hoisted(() => ({
   buildRunbookDraftPrompt: vi.fn(),
   clarifyRunbookIntent: vi.fn(),
   generateRunbookPhasePlanPrompt: vi.fn(),
-  getRequestOrganizationId: vi.fn(),
+  getRequestOrganizationContext: vi.fn(),
+  recordRunbookPlanningUsage: vi.fn(),
   refineRunbookArchitecturePrompt: vi.fn(),
   refineRunbookPurposePrompt: vi.fn(),
   resolveRunbookPlanningAccess: vi.fn(),
@@ -14,7 +15,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/services/request-organization", () => ({
   INVALID_EXTENSION_TOKEN_ERROR: "Invalid extension token",
   REQUEST_AUTHENTICATION_REQUIRED_ERROR: "Authentication required",
-  getRequestOrganizationId: mocks.getRequestOrganizationId,
+  getRequestOrganizationContext: mocks.getRequestOrganizationContext,
+}));
+
+vi.mock("@/lib/services/extension-usage-events", () => ({
+  recordRunbookPlanningUsage: mocks.recordRunbookPlanningUsage,
 }));
 
 vi.mock("@/lib/services/runbook-planning-access", () => ({
@@ -53,13 +58,15 @@ beforeEach(() => {
   mocks.buildRunbookDraftPrompt.mockReset();
   mocks.clarifyRunbookIntent.mockReset();
   mocks.generateRunbookPhasePlanPrompt.mockReset();
-  mocks.getRequestOrganizationId.mockReset();
+  mocks.getRequestOrganizationContext.mockReset();
+  mocks.recordRunbookPlanningUsage.mockReset();
   mocks.refineRunbookArchitecturePrompt.mockReset();
   mocks.refineRunbookPurposePrompt.mockReset();
   mocks.resolveRunbookPlanningAccess.mockReset();
   mocks.safeParse.mockReset();
 
-  mocks.getRequestOrganizationId.mockResolvedValue("org-free");
+  mocks.getRequestOrganizationContext.mockResolvedValue({ organizationId: "org-free", userId: "user-123" });
+  mocks.recordRunbookPlanningUsage.mockResolvedValue(undefined);
   mocks.resolveRunbookPlanningAccess.mockResolvedValue({ tier: "nano", model: "gpt-5.4-nano" });
   mocks.safeParse.mockImplementation((body: unknown) => ({ success: true, data: body }));
 });
@@ -114,11 +121,16 @@ describe("runbook route model tier responses", () => {
       modelTier: "nano",
     });
     expect(service).toHaveBeenCalledWith(expect.anything(), { model: "gpt-5.4-nano" });
+    expect(mocks.recordRunbookPlanningUsage).toHaveBeenCalledWith(expect.objectContaining({
+      organizationId: "org-free",
+      actorUserId: "user-123",
+      promptText: "Build checkout",
+    }));
   });
 
   it("preserves sanitized draft AI error messages in the API payload", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    mocks.getRequestOrganizationId.mockResolvedValueOnce("org-pro");
+    mocks.getRequestOrganizationContext.mockResolvedValueOnce({ organizationId: "org-pro", userId: "user-123" });
     mocks.resolveRunbookPlanningAccess.mockResolvedValueOnce({ tier: "foundation", model: "gpt-5.4" });
     mocks.buildRunbookDraftPrompt.mockRejectedValueOnce(
       new Error("Xupra AI is not configured: OPENAI_MODEL is missing."),

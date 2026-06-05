@@ -34,9 +34,12 @@ import { XuSessionStore } from "../xu/sessionStore";
 import type { DryLakeAiProvider } from "../ai/DryLakeAiProvider";
 import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
 import type { ApiClient } from "../services/apiClient";
+import type { ExtensionUsageEventPayload } from "../services/apiClient";
+import { recordExtensionUsageEvent } from "../services/usageEvents";
 import type { StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
 import { scanWorkspaceFiles, getWorkspaceDisplayName } from "../services/workspaceScanner";
+import { estimateTokens } from "../utils/tokenEstimate";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type {
   ApplicationBuildRunbook,
@@ -167,6 +170,67 @@ function explicitPhaseAgent(agent: unknown): XuPhaseAgent | undefined {
 
 function handoffActionFromArg(arg: unknown) {
   return phaseHandoffActionFromArg(arg) ?? "run";
+}
+
+async function hasUsageSyncSession(stateStore: StateStore) {
+  try {
+    return Boolean(await stateStore.getAccessToken());
+  } catch {
+    return false;
+  }
+}
+
+function queueUsageEvent(deps: RunbookCommandDeps, payload: ExtensionUsageEventPayload) {
+  void (async () => {
+    if (typeof deps.apiClient.recordUsageEvent !== "function") {
+      return;
+    }
+
+    if (!await hasUsageSyncSession(deps.stateStore)) {
+      return;
+    }
+
+    await recordExtensionUsageEvent(deps.apiClient, payload);
+  })();
+}
+
+function buildSessionId(deps: RunbookCommandDeps) {
+  return deps.stateStore.getBuildSession()?.id;
+}
+
+function providerUsesHostedPlanningRoutes(provider: DryLakeAiProvider) {
+  return provider.id === "xupra-pro-ai";
+}
+
+function queuePlanningPromptEvent(
+  deps: RunbookCommandDeps,
+  params: {
+    provider: DryLakeAiProvider;
+    sessionId?: string;
+    eventName: "planning_prompt_submitted" | "planning_chat_message";
+    promptKind: string;
+    promptText: string;
+    mode?: XuMode;
+    requestedStageCount?: number;
+  },
+) {
+  if (providerUsesHostedPlanningRoutes(params.provider)) {
+    return;
+  }
+
+  queueUsageEvent(deps, {
+    eventName: params.eventName,
+    sessionId: params.sessionId,
+    actionType: params.promptKind,
+    promptKind: params.promptKind,
+    promptText: params.promptText,
+    metadata: {
+      providerId: params.provider.id,
+      providerLabel: params.provider.label,
+      mode: params.mode,
+      requestedStageCount: params.requestedStageCount,
+    },
+  });
 }
 
 function requestedStageCountFromArg(arg: unknown): number | undefined {
@@ -808,6 +872,15 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
             providerLabel: provider.label,
           });
           await deps.stateStore.setBuildSession(session);
+          queuePlanningPromptEvent(deps, {
+            provider,
+            sessionId: session.id,
+            eventName: "planning_prompt_submitted",
+            promptKind: "planning_initial_message",
+            promptText: text,
+            mode,
+            requestedStageCount: session.requestedStageCount,
+          });
           if (draftResult.providerGenerated) {
             await seedChatWithClarifyingQuestions({ deps, provider, prompt: text, mode });
           } else {
@@ -873,6 +946,15 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
           requestedStageCount: session.requestedStageCount,
           currentRunbook: current.runbook,
           chatTranscript,
+        });
+        queuePlanningPromptEvent(deps, {
+          provider,
+          sessionId: session.id,
+          eventName: "planning_chat_message",
+          promptKind: "planning_chat",
+          promptText: text,
+          mode: session.mode,
+          requestedStageCount: session.requestedStageCount,
         });
         await persistModelTier(deps.stateStore, result.modelTier);
 
@@ -1287,6 +1369,15 @@ export async function startBuildSessionCommand(
           providerLabel: provider.label,
         });
         await deps.stateStore.setBuildSession(session);
+        queuePlanningPromptEvent(deps, {
+          provider,
+          sessionId: session.id,
+          eventName: "planning_prompt_submitted",
+          promptKind: "planning_start_build",
+          promptText: cleanedPrompt,
+          mode,
+          requestedStageCount,
+        });
         if (draftResult.providerGenerated) {
           await seedChatWithClarifyingQuestions({ deps, provider, prompt: cleanedPrompt, mode });
         } else {
@@ -1597,6 +1688,21 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
   const content = renderPhasePrompt(current.runbook, promptPhase, { activeProvider: buildSession, handoffProfile });
   const workspaceUri = workspaceRoot();
   const promptFile = await writePhaseHandoffFile({ workspaceUri, phase, agent, content });
+  const promptEstimate = estimateTokens(content, "phase");
+  const promptFilePath = relativePath(promptFile);
+  const selectedSkillPath = handoffProfile?.logicalPath ?? phase.handoffProfile?.logicalPath;
+  const usageBase: Omit<ExtensionUsageEventPayload, "eventName"> = {
+    sessionId: buildSession?.id,
+    phaseId: phase.id,
+    phaseTitle: phase.title,
+    agentId: agent,
+    skillLogicalPath: selectedSkillPath,
+    promptEstimatedTokens: promptEstimate.estimatedTokens,
+  };
+  const handoffPromptUsage = {
+    promptKind: "phase_handoff",
+    promptText: content,
+  };
 
   let message = "";
   let warning = false;
@@ -1604,10 +1710,26 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
   if (handoffAction === "copy") {
     await vscode.env.clipboard.writeText(content);
     message = "Phase prompt copied to clipboard.";
+    queueUsageEvent(deps, {
+      ...usageBase,
+      ...handoffPromptUsage,
+      eventName: "phase_handoff_exported",
+      actionType: handoffAction,
+      launchStatus: "exported",
+      metadata: { exportMode: "clipboard", promptFile: promptFilePath },
+    });
   } else if (handoffAction === "markdown") {
     const document = await vscode.workspace.openTextDocument(promptFile);
     await vscode.window.showTextDocument(document, { preview: false });
-    message = `Exported Markdown handoff to ${relativePath(promptFile)}.`;
+    message = `Exported Markdown handoff to ${promptFilePath}.`;
+    queueUsageEvent(deps, {
+      ...usageBase,
+      ...handoffPromptUsage,
+      eventName: "phase_handoff_exported",
+      actionType: handoffAction,
+      launchStatus: "exported",
+      metadata: { exportMode: "markdown", promptFile: promptFilePath },
+    });
   } else if (handoffAction === "script-sh" || handoffAction === "script-bat") {
     const shell = handoffAction === "script-sh" ? "sh" : "bat";
     try {
@@ -1615,28 +1737,84 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
       const document = await vscode.workspace.openTextDocument(scriptFile);
       await vscode.window.showTextDocument(document, { preview: false });
       message = `Exported ${shell === "sh" ? "bash" : "Windows batch"} handoff script to ${relativePath(scriptFile)}.`;
+      queueUsageEvent(deps, {
+        ...usageBase,
+        ...handoffPromptUsage,
+        eventName: "phase_handoff_exported",
+        actionType: handoffAction,
+        launchStatus: "exported",
+        metadata: {
+          exportMode: shell === "sh" ? "bash" : "batch",
+          promptFile: promptFilePath,
+          scriptFile: relativePath(scriptFile),
+        },
+      });
     } catch (error) {
       warning = true;
       const detail = error instanceof Error ? error.message : String(error);
       message = `DryLake could not export a script for this phase: ${detail}`;
+      queueUsageEvent(deps, {
+        ...usageBase,
+        ...handoffPromptUsage,
+        eventName: "phase_handoff_exported",
+        actionType: handoffAction,
+        launchStatus: "failed",
+        reasonCode: "script-export-error",
+        metadata: { exportMode: shell === "sh" ? "bash" : "batch", promptFile: promptFilePath },
+      });
     }
   } else {
     const launchResult = await launchPhaseAgent({ agent, prompt: content, promptFile, workspaceUri });
+    queueUsageEvent(deps, {
+      ...usageBase,
+      ...handoffPromptUsage,
+      eventName: launchResult.status === "launched" ? "phase_handoff_launched" : "phase_handoff_launch_failed",
+      actionType: "run",
+      launchStatus: launchResult.status,
+      reasonCode: launchResult.reasonCode,
+      metadata: {
+        promptFile: promptFilePath,
+        agentLabel: launchResult.agentLabel,
+        executable: launchResult.executable,
+      },
+    });
 
     if (launchResult.status === "launched") {
       const completion = completePhaseAfterSuccessfulHandoff(current.runbook, phaseId);
       await deps.sessionStore.writeRunbook(current.uri, completion.runbook);
+      queueUsageEvent(deps, {
+        ...usageBase,
+        eventName: "phase_marked_complete",
+        actionType: "run",
+        launchStatus: launchResult.status,
+        metadata: {
+          completionMode: "handoff_launch",
+          autopilot: completion.runbook.handoff.autopilot,
+        },
+      });
 
       const completedTitle = completion.completedPhase?.title ?? phase.title;
       if (completion.runbook.handoff.autopilot && completion.nextActive) {
         if (!explicitPhaseAgent(completion.nextActive.agent)) {
           warning = true;
-          message = `${completedTitle} complete. Autopilot is paused until you select an agent for ${completion.nextActive.title}.`;
+          message = `${completedTitle} handoff launched and marked complete. Autopilot is paused until you select an agent for ${completion.nextActive.title}.`;
         } else {
+          queueUsageEvent(deps, {
+            eventName: "phase_autopilot_started_next",
+            sessionId: buildSession?.id,
+            phaseId: completion.nextActive.id,
+            phaseTitle: completion.nextActive.title,
+            agentId: explicitPhaseAgent(completion.nextActive.agent),
+            skillLogicalPath: completion.nextActive.handoffProfile?.logicalPath,
+            metadata: {
+              previousPhaseId: phase.id,
+              previousPhaseTitle: phase.title,
+            },
+          });
           await deps.controlRoom.refresh();
           await deps.refreshSidebar();
           void vscode.window.showInformationMessage(
-            `${completedTitle} complete. Autopilot starting ${completion.nextActive.title}.`,
+            `${completedTitle} handoff launched and marked complete. Autopilot starting ${completion.nextActive.title}.`,
           );
           await handoffPhaseCommand(deps, completion.nextActive.id);
           return;
@@ -1644,8 +1822,8 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
       } else {
         const nextPending = completion.runbook.phases.find((item) => item.status !== "complete");
         message = nextPending
-          ? `${completedTitle} complete. Use Run Next Phase to continue.`
-          : `${completedTitle} complete. All phases done.`;
+          ? `${completedTitle} handoff launched and marked complete. Use Run Next Phase to continue.`
+          : `${completedTitle} handoff launched and marked complete. All phase handoffs launched.`;
       }
     } else {
       warning = launchResult.status === "not-installed" || launchResult.status === "failed";
@@ -1685,6 +1863,7 @@ export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdA
   }
 
   let changed = false;
+  const previousPhase = current.runbook.phases.find((phase) => phase.id === phaseId);
   const updated: ApplicationBuildRunbook = {
     ...current.runbook,
     phases: current.runbook.phases.map((phase) => {
@@ -1711,6 +1890,18 @@ export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdA
   await deps.sessionStore.writeRunbook(current.uri, updated);
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
+  const updatedPhase = updated.phases.find((item) => item.id === phaseId);
+  queueUsageEvent(deps, {
+    eventName: "phase_agent_selected",
+    sessionId: buildSessionId(deps),
+    phaseId,
+    phaseTitle: updatedPhase?.title,
+    agentId: agent,
+    skillLogicalPath: updatedPhase?.handoffProfile?.logicalPath,
+    metadata: {
+      clearedIncompatibleSkill: Boolean(previousPhase?.handoffProfile && !updatedPhase?.handoffProfile),
+    },
+  });
 }
 
 export async function updatePhaseHandoffProfileCommand(
@@ -1765,6 +1956,19 @@ export async function updatePhaseHandoffProfileCommand(
   await deps.sessionStore.writeRunbook(current.uri, updated);
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
+  queueUsageEvent(deps, {
+    eventName: "phase_skill_selected",
+    sessionId: buildSessionId(deps),
+    phaseId,
+    phaseTitle: phase.title,
+    agentId: agent,
+    skillLogicalPath: selectedProfile?.logicalPath,
+    metadata: {
+      clearedSkill: !selectedProfile,
+      skillKind: selectedProfile?.kind,
+      sourcePlatform: selectedProfile?.sourcePlatform,
+    },
+  });
 }
 
 export async function updatePhaseStatusCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown, statusArg?: unknown) {

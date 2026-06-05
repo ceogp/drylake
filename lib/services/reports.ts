@@ -9,7 +9,16 @@ export async function getAuditEvents(organizationId: string) {
 }
 
 export async function getUsageSummary(organizationId: string) {
-  const [projects, packages, versions, credentials, integrations, transformJobs, deploymentJobs] =
+  const [
+    projects,
+    packages,
+    versions,
+    credentials,
+    integrations,
+    transformJobs,
+    deploymentJobs,
+    extensionUsageEvents,
+  ] =
     await Promise.all([
       prisma.project.count({ where: { organizationId, archivedAt: null } }),
       prisma.agentPackage.count({ where: { project: { organizationId } } }),
@@ -18,6 +27,7 @@ export async function getUsageSummary(organizationId: string) {
       prisma.integration.count({ where: { organizationId } }),
       prisma.transformJob.count({ where: { organizationId } }),
       prisma.deploymentJob.count({ where: { organizationId } }),
+      prisma.extensionUsageEvent.count({ where: { organizationId } }),
     ]);
 
   return {
@@ -28,6 +38,7 @@ export async function getUsageSummary(organizationId: string) {
     integrations,
     transformJobs,
     deploymentJobs,
+    extensionUsageEvents,
   };
 }
 
