@@ -64,6 +64,19 @@ Run `DryLake: Check Agent Setup` to see which agents are available on your machi
 - Reducing wasted tokens from oversized prompts.
 - Creating auditable handoff artifacts for team workflows.
 
+## Roadmap: MCP And Local Planning
+
+DryLake is becoming a control plane for agent workflows, not only a VS Code planning UI. The current extension already creates phase cards, estimates handoff tokens, assigns agents, attaches skills, launches supported local CLIs, and saves auditable handoff artifacts.
+
+Next, we are working toward:
+
+- **DryLake MCP server:** Let MCP-capable clients ask DryLake to create plans, estimate tokens, retrieve the next phase, create handoffs, and update phase status.
+- **MCP setup checks:** Detect MCP configuration across VS Code, Claude Code, Cursor, Gemini CLI, and other local agent clients.
+- **Engineering MCP recipes:** Start with GitHub issues/PRs, Jira/Confluence tickets/specs, Sentry bugs, and Playwright validation workflows.
+- **DryLake Local Planner:** Use existing local model runners such as Ollama, LM Studio, or OpenAI-compatible local endpoints for starter plans, summarization, token compression, and acceptance-criteria extraction.
+
+These roadmap items are not all shipped yet. We are listing them here so users can see the direction clearly as DryLake evolves.
+
 ## Quick start
 
 1. Install DryLake.
