@@ -1,0 +1,14 @@
+---
+description: Use DryLake Agent Preflight before non-trivial coding work
+alwaysApply: true
+---
+
+Before editing files for a non-trivial feature, bug fix, refactor, test-generation task, product spec, GitHub issue, Jira ticket, or Sentry issue:
+
+1. Use DryLake Agent Preflight.
+2. Work only on the active phase returned by DryLake.
+3. Use the DryLake handoff as the implementation contract.
+4. Do not start future phases unless DryLake marks them active.
+5. Update DryLake phase status when the phase is complete, blocked, or validating.
+
+If DryLake is unavailable, tell the user that Agent Preflight could not run instead of pretending a preflight plan exists.

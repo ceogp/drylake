@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "drylake": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@xupracorp/drylake-mcp"
+      ],
+      "env": {
+        "DRYLAKE_API_BASE_URL": "https://drylake.xupracorp.com",
+        "DRYLAKE_AGENT_TOKEN": "${DRYLAKE_AGENT_TOKEN}"
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "drylake-agent-preflight",
+  "displayName": "DryLake Agent Preflight",
+  "version": "0.6.50",
+  "description": "Make coding agents ask DryLake for a structured plan, token budget, phase contract, and focused handoff before editing code.",
+  "author": {
+    "name": "Xupra",
+    "email": "support@xupracorp.com"
+  },
+  "homepage": "https://drylake.xupracorp.com/",
+  "repository": "https://github.com/gmkdigitalmedia/drylake",
+  "license": "MIT",
+  "keywords": [
+    "drylake",
+    "agent-preflight",
+    "planning",
+    "mcp",
+    "cursor",
+    "coding-agents"
+  ],
+  "category": "developer-tools",
+  "tags": [
+    "agents",
+    "mcp",
+    "planning",
+    "developer-tools"
+  ],
+  "skills": "./skills/",
+  "rules": "./rules/"
+}

@@ -86,6 +86,16 @@ These roadmap items are not all shipped yet. We are listing them here so users c
 5. Assign a phase to Claude Code, Codex, Cursor, Gemini, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, Auggie, Hermes, or Copilot.
 6. Click `Run Handoff`.
 
+## Install In Cursor And Open VSX
+
+DryLake uses the same extension build for VS Code, Open VSX-compatible editors, and Cursor.
+
+- VS Code Marketplace: `xupracorp.drylake`
+- Open VSX: `xupracorp.drylake`
+- Cursor: install from extension search when visible, or install the latest `drylake-<version>.vsix` with `Extensions: Install from VSIX`.
+
+The Cursor plugin/MCP scaffold is being prepared for DryLake Agent Preflight, the paid planning layer for coding agents.
+
 
 ## Planning Models
 

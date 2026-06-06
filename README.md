@@ -76,6 +76,16 @@ Package the extension:
 npx @vscode/vsce package
 ```
 
+## Distribution
+
+DryLake is released as one VS Code-compatible extension across three paths:
+
+- Visual Studio Marketplace: `xupracorp.drylake`
+- Open VSX: `xupracorp.drylake`
+- Cursor: install the same VSIX today, with the Cursor plugin/MCP path prepared under `drylake-cursor-plugin/`
+
+Release automation is documented in [docs/distribution-release.md](docs/distribution-release.md). Cursor install instructions are in [docs/cursor.md](docs/cursor.md), and Open VSX publishing notes are in [docs/publishing-open-vsx.md](docs/publishing-open-vsx.md).
+
 ## Open Source
 
 Public mirror:
