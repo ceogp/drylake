@@ -3,6 +3,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const extensionPackagePath = path.join(root, "extensions", "xupra-drylake-vscode", "package.json");
+const cursorMarketplacePath = path.join(root, ".cursor-plugin", "marketplace.json");
 const cursorPluginPath = path.join(root, "drylake-cursor-plugin", ".cursor-plugin", "plugin.json");
 const cursorMcpPath = path.join(root, "drylake-cursor-plugin", "mcp.json");
 const mcpPackagePath = path.join(root, "packages", "drylake-mcp", "package.json");
@@ -13,6 +14,7 @@ async function readJson(filePath) {
 }
 
 const extensionPackage = await readJson(extensionPackagePath);
+const cursorMarketplace = await readJson(cursorMarketplacePath);
 const cursorPlugin = await readJson(cursorPluginPath);
 const cursorMcp = await readJson(cursorMcpPath);
 const mcpPackage = await readJson(mcpPackagePath);
@@ -30,6 +32,15 @@ if (extensionPackage.name !== "drylake") {
 
 if (cursorPlugin.name !== "drylake-agent-preflight") {
   failures.push(`Cursor plugin name must stay drylake-agent-preflight, found ${cursorPlugin.name}.`);
+}
+
+const cursorMarketplacePlugin = cursorMarketplace.plugins?.find((plugin) => plugin.name === cursorPlugin.name);
+if (!cursorMarketplacePlugin) {
+  failures.push("Cursor marketplace index must list drylake-agent-preflight.");
+} else if (cursorMarketplacePlugin.source !== "drylake-cursor-plugin") {
+  failures.push(
+    `Cursor marketplace source must stay drylake-cursor-plugin, found ${cursorMarketplacePlugin.source}.`,
+  );
 }
 
 if (cursorPlugin.version !== extensionPackage.version) {

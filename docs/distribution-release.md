@@ -4,7 +4,7 @@ DryLake should ship as one extension build across three distribution paths:
 
 1. Visual Studio Marketplace for normal VS Code users.
 2. Open VSX for VS Code-compatible ecosystems.
-3. Cursor distribution through VSIX install today and Cursor plugin/MCP packaging as the next path.
+3. Cursor distribution through the same VSIX plus Cursor plugin/MCP packaging.
 
 The extension identity must stay stable:
 
@@ -21,7 +21,7 @@ Every release should:
 3. Publish that same VSIX to Visual Studio Marketplace.
 4. Publish that same VSIX to Open VSX.
 5. Upload that same VSIX as a Cursor-installable release artifact.
-6. Package the Cursor plugin scaffold with the same version number.
+6. Package the Cursor plugin repository shape with the same version number.
 7. Publish or package the MCP server when Agent Preflight is part of the release.
 
 ## Required CI Variables
@@ -33,10 +33,13 @@ Set these once in GitLab CI/CD variables:
 
 Optional:
 
-- `CURSOR_PLUGIN_PUBLISH_URL`: future Cursor plugin publishing endpoint if Cursor provides a direct submission API.
 - `NPM_TOKEN`: npm publish token for `@xupracorp/drylake-mcp` once the MCP server is ready for public release.
 
-The current pipeline packages Cursor artifacts but does not publish directly into Cursor Marketplace because Cursor plugin publication currently depends on Cursor marketplace/repository submission and approval.
+Current Cursor behavior:
+
+- Cursor can use the same VSIX artifact.
+- Cursor can install the MCP server through `@xupracorp/drylake-mcp`.
+- Cursor Marketplace plugin listing still requires a signed-in submission at `https://cursor.com/marketplace/publish` and Cursor review. The pipeline packages the plugin repository shape that Cursor expects, but Cursor does not currently provide a public non-interactive publish token/API for final Marketplace approval.
 
 ## Release Command
 
@@ -51,9 +54,10 @@ The tag pipeline will:
 
 - validate the app,
 - package the VSIX,
-- package the Cursor plugin scaffold,
+- package the Cursor plugin repository shape,
 - publish to Visual Studio Marketplace when a VSCE token is configured,
 - publish to Open VSX when an OVSX token is configured,
+- publish the MCP npm package when an NPM token is configured,
 - keep Cursor artifacts available from the pipeline/package output.
 
 ## Local Verification
@@ -71,4 +75,4 @@ npm run package:extension
 
 - Visual Studio Marketplace uses `vsce publish`.
 - Open VSX uses `ovsx publish`; the namespace must match the extension `publisher`.
-- Cursor users can install the VSIX manually today. The Cursor plugin scaffold is prepared for the MCP/Agent Preflight product path.
+- Cursor users can install the same VSIX today. The Cursor plugin package contains `.cursor-plugin/marketplace.json`, the plugin manifest, MCP config, rules, and skills for submission/review.

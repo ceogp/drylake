@@ -1,0 +1,17 @@
+{
+  "name": "drylake-cursor-plugins",
+  "owner": {
+    "name": "Xupra",
+    "email": "support@xupracorp.com"
+  },
+  "metadata": {
+    "description": "DryLake Cursor plugins for agent preflight planning, MCP handoffs, and token-aware coding workflows."
+  },
+  "plugins": [
+    {
+      "name": "drylake-agent-preflight",
+      "source": "drylake-cursor-plugin",
+      "description": "Make Cursor ask DryLake for a structured plan, token budget, phase contract, and focused handoff before coding."
+    }
+  ]
+}

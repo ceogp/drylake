@@ -87,6 +87,30 @@ validate:
   rules:
     - if: $CI_COMMIT_BRANCH
 
+verify_distribution_publish_config:
+  stage: validate
+  image: node:22-bookworm
+  script:
+    - |
+      missing=""
+      if [ -z "${VSCE_PAT:-${VSCE_TOKEN:-}}" ]; then
+        missing="$missing VSCE_PAT_or_VSCE_TOKEN"
+      fi
+      if [ -z "${OVSX_TOKEN:-}" ]; then
+        missing="$missing OVSX_TOKEN"
+      fi
+      if [ -z "${NPM_TOKEN:-}" ]; then
+        missing="$missing NPM_TOKEN"
+      fi
+      if [ -n "$missing" ]; then
+        echo "Distribution publish is not fully configured. Missing:$missing" >&2
+        echo "Set these as protected GitLab CI/CD variables before pushing a drylake-v<version> release tag." >&2
+        exit 1
+      fi
+      echo "Distribution publish credentials are configured for VS Marketplace, Open VSX, and npm MCP package publishing."
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^drylake-v?[0-9]+\.[0-9]+\.[0-9]+$/'
+
 package_extension_distribution:
   stage: package
   image: node:22-bookworm
@@ -104,7 +128,7 @@ package_extension_distribution:
     - cd packages/drylake-mcp && npm pack --pack-destination "$CI_PROJECT_DIR/release" && cd "$CI_PROJECT_DIR"
     - EXT_VERSION="$(node -p "require('./extensions/xupra-drylake-vscode/package.json').version")"
     - cp "extensions/xupra-drylake-vscode/drylake-${EXT_VERSION}.vsix" "release/drylake-${EXT_VERSION}.vsix"
-    - tar -czf "release/drylake-cursor-plugin-${EXT_VERSION}.tgz" drylake-cursor-plugin
+    - tar -czf "release/drylake-cursor-plugin-${EXT_VERSION}.tgz" .cursor-plugin drylake-cursor-plugin
     - printf "EXT_VERSION=%s\n" "$EXT_VERSION" > release/extension.env
   artifacts:
     expire_in: 30 days
@@ -136,7 +160,7 @@ publish_vs_marketplace:
     - cd extensions/xupra-drylake-vscode
     - npx @vscode/vsce publish --packagePath "$VSIX" -p "$MARKETPLACE_TOKEN"
   rules:
-    - if: '$CI_COMMIT_TAG =~ /^drylake-v?[0-9]+\.[0-9]+\.[0-9]+$/ && ($VSCE_PAT || $VSCE_TOKEN)'
+    - if: '$CI_COMMIT_TAG =~ /^drylake-v?[0-9]+\.[0-9]+\.[0-9]+$/'
 
 publish_open_vsx:
   stage: publish
@@ -150,7 +174,7 @@ publish_open_vsx:
     - test -f "$VSIX"
     - npx ovsx publish "$VSIX" -p "$OVSX_TOKEN"
   rules:
-    - if: '$CI_COMMIT_TAG =~ /^drylake-v?[0-9]+\.[0-9]+\.[0-9]+$/ && $OVSX_TOKEN'
+    - if: '$CI_COMMIT_TAG =~ /^drylake-v?[0-9]+\.[0-9]+\.[0-9]+$/'
 
 publish_mcp_npm:
   stage: publish
@@ -165,7 +189,7 @@ publish_mcp_npm:
     - test -f "$TARBALL"
     - npm publish "$TARBALL" --access public
   rules:
-    - if: '$CI_COMMIT_TAG =~ /^drylake-v?[0-9]+\.[0-9]+\.[0-9]+$/ && $NPM_TOKEN'
+    - if: '$CI_COMMIT_TAG =~ /^drylake-v?[0-9]+\.[0-9]+\.[0-9]+$/'
 
 publish_cursor_artifacts:
   stage: publish

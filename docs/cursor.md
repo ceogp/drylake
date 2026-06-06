@@ -58,6 +58,7 @@ Global Cursor MCP config lives at:
 The repository includes:
 
 ```text
+./.cursor-plugin/marketplace.json
 drylake-cursor-plugin/
   .cursor-plugin/plugin.json
   mcp.json
@@ -67,3 +68,10 @@ drylake-cursor-plugin/
 ```
 
 This scaffold prepares DryLake for Cursor plugin distribution. The MCP package lives in `packages/drylake-mcp` and should be published to npm as `@xupracorp/drylake-mcp` when the preflight API is deployed.
+
+Cursor Marketplace listing still requires manual submission/review:
+
+1. Confirm the public repository contains `.cursor-plugin/marketplace.json` and `drylake-cursor-plugin/.cursor-plugin/plugin.json`.
+2. Sign in to Cursor.
+3. Open `https://cursor.com/marketplace/publish`.
+4. Submit the public repository link for review.
