@@ -1397,12 +1397,6 @@ export class ControlRoomProvider {
       return insertionSide(card, event, orientation) === "before" ? previousPhaseId(card) : card.dataset.phaseId;
     }
 
-    function chooseAutopilotForHandoff() {
-      return window.confirm(
-        "After this handoff starts, should DryLake automatically start the next phase after you mark this one complete?\\n\\nOK = Autopilot\\nCancel = Approval required, launch this phase only"
-      );
-    }
-
     document.addEventListener("click", (event) => {
       const viewButton = event.target.closest("[data-view]");
       if (viewButton) {
@@ -1496,16 +1490,11 @@ export class ControlRoomProvider {
       const handoffBtn = event.target.closest("[data-handoff-phase]");
       if (handoffBtn) {
         const action = handoffBtn.dataset.handoffAction || "run";
-        const autopilot = action === "run" ? chooseAutopilotForHandoff() : undefined;
-        const payload = {
+        vscode.postMessage({
           command: "drylake.handoffPhase",
           phaseId: handoffBtn.dataset.handoffPhase,
           handoffAction: action
-        };
-        if (typeof autopilot === "boolean") {
-          payload.autopilot = autopilot;
-        }
-        vscode.postMessage(payload);
+        });
       }
     });
 

@@ -172,6 +172,27 @@ function handoffActionFromArg(arg: unknown) {
   return phaseHandoffActionFromArg(arg) ?? "run";
 }
 
+async function promptForHandoffExecutionMode() {
+  const autopilot = "Autopilot";
+  const requireApproval = "Require Approval";
+  const choice = await vscode.window.showInformationMessage(
+    "Run this handoff in Autopilot mode? Autopilot starts the next phase only after you mark this one complete.",
+    { modal: true },
+    autopilot,
+    requireApproval,
+  );
+
+  if (choice === autopilot) {
+    return true;
+  }
+
+  if (choice === requireApproval) {
+    return false;
+  }
+
+  return undefined;
+}
+
 async function hasUsageSyncSession(stateStore: StateStore) {
   try {
     return Boolean(await stateStore.getAccessToken());
@@ -1773,7 +1794,7 @@ export async function handoffPhaseCommand(
 ) {
   const phaseId = typeof phaseIdArg === "string" ? phaseIdArg.trim() : "";
   const handoffAction = handoffActionFromArg(handoffActionArg);
-  const autopilotChoice = typeof autopilotChoiceArg === "boolean" ? autopilotChoiceArg : undefined;
+  let autopilotChoice = typeof autopilotChoiceArg === "boolean" ? autopilotChoiceArg : undefined;
   if (!phaseId) {
     void vscode.window.showWarningMessage("DryLake could not start the handoff because no phase was specified.");
     return;
@@ -1803,6 +1824,13 @@ export async function handoffPhaseCommand(
   if (!agent) {
     void vscode.window.showWarningMessage(`Select an agent for ${phase.title} before running this phase.`);
     return;
+  }
+
+  if (handoffAction === "run" && typeof autopilotChoice !== "boolean") {
+    autopilotChoice = await promptForHandoffExecutionMode();
+    if (typeof autopilotChoice !== "boolean") {
+      return;
+    }
   }
 
   const buildSession = deps.stateStore.getBuildSession();
@@ -1953,21 +1981,33 @@ export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdA
 
   let changed = false;
   const previousPhase = current.runbook.phases.find((phase) => phase.id === phaseId);
+  let cascadedCount = 0;
   const updated: ApplicationBuildRunbook = {
     ...current.runbook,
     phases: current.runbook.phases.map((phase) => {
-      if (phase.id !== phaseId) {
-        return phase;
+      if (phase.id === phaseId) {
+        changed = true;
+        return {
+          ...phase,
+          agent,
+          handoffProfile: handoffProfileMatchesAgent(agent, phase.handoffProfile)
+            ? phase.handoffProfile
+            : undefined,
+        };
       }
 
-      changed = true;
-      return {
-        ...phase,
-        agent,
-        handoffProfile: handoffProfileMatchesAgent(agent, phase.handoffProfile)
-          ? phase.handoffProfile
-          : undefined,
-      };
+      if (!explicitPhaseAgent(phase.agent)) {
+        cascadedCount += 1;
+        return {
+          ...phase,
+          agent,
+          handoffProfile: handoffProfileMatchesAgent(agent, phase.handoffProfile)
+            ? phase.handoffProfile
+            : undefined,
+        };
+      }
+
+      return phase;
     }),
   };
 
@@ -1989,6 +2029,7 @@ export async function updatePhaseAgentCommand(deps: RunbookCommandDeps, phaseIdA
     skillLogicalPath: updatedPhase?.handoffProfile?.logicalPath,
     metadata: {
       clearedIncompatibleSkill: Boolean(previousPhase?.handoffProfile && !updatedPhase?.handoffProfile),
+      appliedToUnassignedPhases: cascadedCount,
     },
   });
 }
@@ -2145,7 +2186,7 @@ export async function updatePhaseStatusCommand(deps: RunbookCommandDeps, phaseId
         },
       });
       void vscode.window.showInformationMessage(`${completedPhase.title} complete. Autopilot starting ${nextActive.title}.`);
-      await handoffPhaseCommand(deps, nextActive.id);
+      await handoffPhaseCommand(deps, nextActive.id, "run", true);
       return;
     }
 
@@ -2289,7 +2330,7 @@ export async function toggleStepCommand(
         void vscode.window.showInformationMessage(
           `${phaseWithUpdatedSteps.title} complete. Autopilot starting ${nextActive.title}.`,
         );
-        await handoffPhaseCommand(deps, nextActive.id);
+        await handoffPhaseCommand(deps, nextActive.id, "run", true);
         return;
       }
     }

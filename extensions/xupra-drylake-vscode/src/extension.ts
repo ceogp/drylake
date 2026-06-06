@@ -930,7 +930,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }`,
     );
 
-    if (configuration.get<boolean>("openDashboardAfterConnect", true)) {
+    if (configuration.get<boolean>("openDashboardAfterConnect", false)) {
       await openWebAppCommand(apiClient);
     }
   });
@@ -983,7 +983,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }`,
       );
 
-      if (configuration.get<boolean>("openDashboardAfterConnect", true)) {
+      if (configuration.get<boolean>("openDashboardAfterConnect", false)) {
         await openWebAppCommand(apiClient);
       }
     } catch (error) {

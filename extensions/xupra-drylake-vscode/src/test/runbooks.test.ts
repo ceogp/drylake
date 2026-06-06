@@ -1012,6 +1012,14 @@ describe("runbook commands", () => {
     expect(mocks.executeCommand).not.toHaveBeenCalledWith("drylake.updatePhaseStatus", expect.anything(), expect.anything());
   }
 
+  function chooseRequireApproval() {
+    mocks.showInformationMessage.mockResolvedValueOnce("Require Approval");
+  }
+
+  function chooseAutopilot() {
+    mocks.showInformationMessage.mockResolvedValueOnce("Autopilot");
+  }
+
   it("moves a phase to the front when afterPhaseId is null", async () => {
     const { deps } = reorderDeps();
 
@@ -1090,11 +1098,43 @@ describe("runbook commands", () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";
     const { deps } = reorderDeps(runbook);
+    chooseRequireApproval();
 
     await runNextPhaseCommand(deps as never);
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
     expect(mocks.openTextDocument).not.toHaveBeenCalled();
+  });
+
+  it("asks for handoff execution mode before launching a phase", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps } = reorderDeps(runbook);
+    chooseAutopilot();
+
+    await handoffPhaseCommand(deps as never, "P-01");
+
+    expect(mocks.showInformationMessage).toHaveBeenCalledWith(
+      "Run this handoff in Autopilot mode? Autopilot starts the next phase only after you mark this one complete.",
+      { modal: true },
+      "Autopilot",
+      "Require Approval",
+    );
+    const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(written.handoff.autopilot).toBe(true);
+    expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
+  });
+
+  it("cancels handoff launch when execution mode is dismissed", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = "codex";
+    const { deps } = reorderDeps(runbook);
+    mocks.showInformationMessage.mockResolvedValueOnce(undefined);
+
+    await handoffPhaseCommand(deps as never, "P-01");
+
+    expect(mocks.launchPhaseAgent).not.toHaveBeenCalled();
+    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
   });
 
   it("toggles autopilot mode in the runbook", async () => {
@@ -1179,7 +1219,7 @@ describe("runbook commands", () => {
     runbook.phases[0].agent = "gemini";
     const { deps } = reorderDeps(runbook);
 
-    await handoffPhaseCommand(deps as never, "P-01");
+    await handoffPhaseCommand(deps as never, "P-01", undefined, false);
 
     expect(mocks.writeClipboard).not.toHaveBeenCalled();
     expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
@@ -1197,6 +1237,19 @@ describe("runbook commands", () => {
     expect(written.phases.find((phase) => phase.id === "P-01")?.steps.every((step) => step.status === "pending")).toBe(true);
     expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
+  });
+
+  it("applies the selected phase agent to other unassigned phases", async () => {
+    const runbook = reorderRunbook();
+    runbook.phases[0].agent = undefined;
+    runbook.phases[1].agent = undefined;
+    runbook.phases[2].agent = "codex";
+    const { deps } = reorderDeps(runbook);
+
+    await updatePhaseAgentCommand(deps as never, "P-01", "gemini");
+
+    const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
+    expect(written.phases.map((phase) => phase.agent)).toEqual(["gemini", "gemini", "codex"]);
   });
 
   it("records signed-in phase agent selections", async () => {
@@ -1254,7 +1307,7 @@ describe("runbook commands", () => {
       buildSessionId: "session-1",
     });
 
-    await handoffPhaseCommand(deps as never, "P-01");
+    await handoffPhaseCommand(deps as never, "P-01", undefined, false);
     await flushQueuedUsageEvents();
 
     expect(recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -1298,7 +1351,7 @@ describe("runbook commands", () => {
       reasonCode: "not-found",
     });
 
-    await handoffPhaseCommand(deps as never, "P-01");
+    await handoffPhaseCommand(deps as never, "P-01", undefined, false);
     await flushQueuedUsageEvents();
 
     expect(recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -1338,7 +1391,7 @@ describe("runbook commands", () => {
     runbook.phases[0].handoffProfile = writtenAfterSelection.phases[0].handoffProfile;
     deps.sessionStore.writeRunbook.mockClear();
 
-    await handoffPhaseCommand(deps as never, "P-01");
+    await handoffPhaseCommand(deps as never, "P-01", undefined, false);
 
     expect(mocks.showQuickPick).not.toHaveBeenCalled();
     expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
@@ -1376,7 +1429,7 @@ describe("runbook commands", () => {
     runbook.phases[0].handoffProfile = writtenAfterSelection.phases[0].handoffProfile;
     deps.sessionStore.writeRunbook.mockClear();
 
-    await handoffPhaseCommand(deps as never, "P-01");
+    await handoffPhaseCommand(deps as never, "P-01", undefined, false);
 
     expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining("Use this Blackbox skill for this handoff."),
@@ -1395,7 +1448,7 @@ describe("runbook commands", () => {
     runbook.phases[0].agent = "codex";
     const { deps } = reorderDeps(runbook);
 
-    await handoffPhaseCommand(deps as never, "P-01");
+    await handoffPhaseCommand(deps as never, "P-01", undefined, false);
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
@@ -1430,7 +1483,7 @@ describe("runbook commands", () => {
       refreshSidebar: vi.fn(async () => undefined),
     };
 
-    await handoffPhaseCommand(deps as never, "P-01");
+    await handoffPhaseCommand(deps as never, "P-01", undefined, true);
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
     expect(mocks.launchPhaseAgent).not.toHaveBeenCalledWith(expect.objectContaining({ agent: "gemini" }));
@@ -1561,7 +1614,7 @@ describe("runbook commands", () => {
     runbook.phases[0].agent = "codex";
     const { deps } = reorderDeps(runbook);
 
-    await handoffPhaseCommand(deps as never, "P-01", "unsupported-action");
+    await handoffPhaseCommand(deps as never, "P-01", "unsupported-action", false);
 
     expect(mocks.writePhaseHandoffFile).toHaveBeenCalledWith(expect.objectContaining({
       agent: "codex",
@@ -1592,7 +1645,7 @@ describe("runbook commands", () => {
     const { deps } = reorderDeps(runbook);
     mocks.launchPhaseAgent.mockResolvedValueOnce({ status: "fallback", message: "DryLake copied the phase prompt." });
 
-    await handoffPhaseCommand(deps as never, "P-01");
+    await handoffPhaseCommand(deps as never, "P-01", undefined, true);
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "cursor" }));
     expect(mocks.showAgentLaunchFallbackActions).toHaveBeenCalledWith(expect.objectContaining({
@@ -1617,7 +1670,7 @@ describe("runbook commands", () => {
       message: "OpenAI Codex is not installed.",
     });
 
-    await handoffPhaseCommand(deps as never, "P-01");
+    await handoffPhaseCommand(deps as never, "P-01", undefined, false);
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
     expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
