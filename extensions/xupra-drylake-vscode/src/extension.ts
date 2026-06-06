@@ -713,7 +713,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const register = (command: string, callback: (...args: unknown[]) => unknown) => {
     context.subscriptions.push(vscode.commands.registerCommand(command, async (...args: unknown[]) => {
-      if (registrationRequiredCommands.has(command) && !await requireRegisteredUser(stateStore)) {
+      if (registrationRequiredCommands.has(command) && !await requireRegisteredUser(stateStore, apiClient)) {
+        await controlRoom.refresh();
+        await syncWorkspaceView();
         return;
       }
 
@@ -771,7 +773,9 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("drylake.requireRegistration", async () => {
-    await requireRegisteredUser(stateStore);
+    await requireRegisteredUser(stateStore, apiClient);
+    await controlRoom.refresh();
+    await syncWorkspaceView();
   });
 
   register("drylake.openMultiAgentRunner", async () => {
