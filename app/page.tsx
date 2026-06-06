@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
+import { DryLakeLogo } from "@/components/drylake-logo";
 import {
   getConfiguredAppUrlForPath,
   isConfiguredMarketingHost,
@@ -197,6 +198,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
 
         <div className="relative z-10 mx-auto grid min-h-[92vh] max-w-7xl items-center gap-10 px-5 py-12 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-10">
           <section className="max-w-3xl">
+            <DryLakeLogo className="mb-8 h-20 w-auto sm:h-24" priority />
             <div className="mb-6 flex flex-wrap gap-2">
               <StatusPill>VS Code control room</StatusPill>
               <StatusPill>Multi-agent handoffs</StatusPill>

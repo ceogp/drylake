@@ -1,0 +1,7 @@
+<svg width="1200" height="280" viewBox="0 0 1200 280" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Xupra wordmark">
+  <rect width="1200" height="280" fill="transparent"/>
+  <text x="74" y="181" fill="#090a0a" font-family="Segoe UI Light, Helvetica Neue, Helvetica, system-ui, sans-serif" font-size="126" font-weight="300" letter-spacing="1">Xupra</text>
+  <path d="M78 214H492" stroke="#ff5a1f" stroke-width="8" stroke-linecap="square"/>
+  <path d="M80 66H236" stroke="#36b979" stroke-width="5" stroke-linecap="square"/>
+  <text x="78" y="246" fill="#52525b" font-family="IBM Plex Mono, ui-monospace, SFMono-Regular, Consolas, monospace" font-size="18" font-weight="600" letter-spacing="4">AI INFRASTRUCTURE</text>
+</svg>

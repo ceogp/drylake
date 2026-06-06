@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
+import { DryLakeLogo } from "@/components/drylake-logo";
 import { getConfiguredAppOrigin } from "@/lib/site-hosts";
 
 export const metadata: Metadata = {
@@ -38,19 +38,9 @@ export default function AboutPage() {
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-10">
         <section className="grid gap-8 rounded-lg border border-zinc-800 bg-[#111414] p-6 md:p-8 lg:grid-cols-[1fr_0.78fr] lg:p-10">
           <div className="space-y-8">
-            <div className="flex flex-wrap items-center gap-4">
-              <Image
-                alt="DryLake logo"
-                className="h-14 w-14 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
-                height={64}
-                priority
-                src="/blackwhite.webp"
-                width={64}
-              />
+            <div className="flex flex-wrap items-center gap-5">
+              <DryLakeLogo className="h-16 w-auto" priority />
               <div>
-                <p className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-zinc-100">
-                  DryLake
-                </p>
                 <p className="mt-1 text-sm text-zinc-500">Save tokens and time using AI Agents.</p>
               </div>
             </div>

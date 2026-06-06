@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import { createProjectAction } from "@/app/actions";
+import { DryLakeLogo } from "@/components/drylake-logo";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 import { getActiveWorkspace, getImportWorkspacePath } from "@/lib/services/workspace";
 
@@ -30,18 +30,9 @@ export async function AppHome() {
       <section className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-16 md:px-10 lg:py-24">
         <div className="flex flex-col gap-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="tape-card flex items-center gap-4 bg-white px-4 py-3">
-              <Image
-                alt="DryLake logo"
-                className="h-12 w-12 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
-                height={48}
-                src="/blackwhite.webp"
-                width={48}
-              />
+            <div className="tape-card flex items-center gap-5 bg-white px-4 py-3">
+              <DryLakeLogo className="h-12 w-auto" priority />
               <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-stone-500">
-                  DryLake
-                </p>
                 <p className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
                   Dashboard
                 </p>

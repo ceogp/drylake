@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { ClerkProvider } from "@clerk/nextjs";
 import { headers } from "next/headers";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { setActiveOrganizationAction } from "@/app/actions";
+import { DryLakeLogo } from "@/components/drylake-logo";
 import { clerkTapeAppearance } from "@/components/drylake-auth-shell";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
@@ -72,18 +72,9 @@ export default async function RootLayout({
     <>
       <div className="sticky top-0 z-50 border-b border-zinc-800 bg-[#090a0a]/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-          <a className="flex items-center gap-3" href={xupraHomepage}>
-            <Image
-              alt="DryLake logo"
-              className="h-10 w-10 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
-              height={44}
-              src="/blackwhite.webp"
-              width={44}
-            />
+          <a className="flex items-center gap-4" href={xupraHomepage}>
+            <DryLakeLogo className="h-11 w-auto" priority />
             <div className="min-w-0">
-              <div className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-zinc-100">
-                DryLake
-              </div>
               <div className="hidden text-xs text-zinc-500 sm:block">
                 Save tokens and time using AI Agents.
               </div>
@@ -117,14 +108,8 @@ export default async function RootLayout({
     <>
       <div className="sticky top-0 z-50 border-b border-zinc-800 bg-[#090a0a]/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-          <Link className="flex items-center gap-3" href="/admin">
-            <Image
-              alt="DryLake logo"
-              className="h-10 w-10 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
-              height={44}
-              src="/blackwhite.webp"
-              width={44}
-            />
+          <Link className="flex items-center gap-4" href="/admin">
+            <DryLakeLogo className="h-11 w-auto" priority />
             <div className="min-w-0">
               <div className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-zinc-100">
                 Xupra Internal Admin
@@ -149,18 +134,9 @@ export default async function RootLayout({
       <div className="sticky top-0 z-50 border-b border-zinc-800 bg-[#090a0a]/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <div className="flex items-center gap-4">
-            <a className="flex items-center gap-3" href={xupraHomepage}>
-              <Image
-                alt="DryLake logo"
-                className="h-10 w-10 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
-                height={44}
-                src="/blackwhite.webp"
-                width={44}
-              />
+            <a className="flex items-center gap-4" href={xupraHomepage}>
+              <DryLakeLogo className="h-11 w-auto" priority />
               <div className="min-w-0">
-                <div className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-zinc-100">
-                  DryLake
-                </div>
                 <div className="hidden text-xs text-zinc-500 lg:block">
                   Save tokens and time using AI Agents.
                 </div>

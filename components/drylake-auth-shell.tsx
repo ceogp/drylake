@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { ClerkDevelopmentModeSuppressor } from "@/components/clerk-development-mode-suppressor";
+import { DryLakeLogo } from "@/components/drylake-logo";
 
 export const clerkTapeAppearance = {
   variables: {
@@ -78,18 +78,8 @@ export function DryLakeAuthShell({
       <ClerkDevelopmentModeSuppressor />
       <div className="mx-auto grid min-h-[calc(100vh-6rem)] w-full max-w-6xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
         <section className="space-y-8">
-          <Link className="inline-flex items-center gap-3" href="/">
-            <Image
-              alt="DryLake logo"
-              className="h-12 w-12 rounded border border-zinc-700 bg-zinc-950 object-contain p-1"
-              height={56}
-              src="/blackwhite.webp"
-              width={56}
-              priority
-            />
-            <span className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-zinc-100">
-              DryLake
-            </span>
+          <Link className="inline-flex items-center" href="/">
+            <DryLakeLogo className="h-14 w-auto" priority />
           </Link>
           <div className="space-y-5">
             <p className="tape-eyebrow">{eyebrow}</p>
