@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 /extensions/*/node_modules
+/packages/*/node_modules
 /extensions/*/dist
 /extensions/xupra-drylake-vscode/.development-extension/
 /extensions/xupra-drylake-vscode/development-vsix/

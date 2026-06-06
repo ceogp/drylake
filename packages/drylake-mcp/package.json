@@ -1,0 +1,44 @@
+{
+  "name": "@xupracorp/drylake-mcp",
+  "version": "0.1.0",
+  "description": "DryLake Agent Preflight MCP server for structured planning before coding agents edit code.",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://drylake.xupracorp.com/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gmkdigitalmedia/drylake.git",
+    "directory": "packages/drylake-mcp"
+  },
+  "bin": {
+    "drylake-mcp": "./bin/drylake-mcp.js"
+  },
+  "files": [
+    "bin/",
+    "README.md",
+    "server.json"
+  ],
+  "keywords": [
+    "mcp",
+    "drylake",
+    "agent-preflight",
+    "coding-agents",
+    "planning",
+    "cursor",
+    "claude-code",
+    "codex"
+  ],
+  "mcpName": "io.github.gmkdigitalmedia/drylake-mcp",
+  "scripts": {
+    "start": "node bin/drylake-mcp.js",
+    "smoke": "node --check bin/drylake-mcp.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "agenttransfer": "file:../..",
+    "zod": "^4.3.6"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

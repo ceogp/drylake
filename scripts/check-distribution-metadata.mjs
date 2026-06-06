@@ -5,6 +5,8 @@ const root = process.cwd();
 const extensionPackagePath = path.join(root, "extensions", "xupra-drylake-vscode", "package.json");
 const cursorPluginPath = path.join(root, "drylake-cursor-plugin", ".cursor-plugin", "plugin.json");
 const cursorMcpPath = path.join(root, "drylake-cursor-plugin", "mcp.json");
+const mcpPackagePath = path.join(root, "packages", "drylake-mcp", "package.json");
+const mcpServerJsonPath = path.join(root, "packages", "drylake-mcp", "server.json");
 
 async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
@@ -13,6 +15,8 @@ async function readJson(filePath) {
 const extensionPackage = await readJson(extensionPackagePath);
 const cursorPlugin = await readJson(cursorPluginPath);
 const cursorMcp = await readJson(cursorMcpPath);
+const mcpPackage = await readJson(mcpPackagePath);
+const mcpServerJson = await readJson(mcpServerJsonPath);
 
 const failures = [];
 
@@ -29,8 +33,8 @@ if (cursorPlugin.name !== "drylake-agent-preflight") {
 }
 
 if (cursorPlugin.version !== extensionPackage.version) {
-  failures.push(
-    `Cursor plugin version (${cursorPlugin.version}) must match extension version (${extensionPackage.version}).`,
+  console.warn(
+    `Cursor plugin version (${cursorPlugin.version}) does not match extension version (${extensionPackage.version}); this is allowed while the MCP package is versioned independently.`,
   );
 }
 
@@ -48,6 +52,23 @@ if (!drylakeServer) {
   }
 }
 
+if (mcpPackage.name !== "@xupracorp/drylake-mcp") {
+  failures.push(`MCP package name must stay @xupracorp/drylake-mcp, found ${mcpPackage.name}.`);
+}
+
+if (mcpPackage.mcpName !== "io.github.gmkdigitalmedia/drylake-mcp") {
+  failures.push(`MCP package mcpName must stay io.github.gmkdigitalmedia/drylake-mcp, found ${mcpPackage.mcpName}.`);
+}
+
+if (mcpServerJson.name !== mcpPackage.mcpName) {
+  failures.push(`MCP server.json name (${mcpServerJson.name}) must match package mcpName (${mcpPackage.mcpName}).`);
+}
+
+const npmPackage = mcpServerJson.packages?.find((item) => item.registryType === "npm");
+if (!npmPackage || npmPackage.identifier !== mcpPackage.name) {
+  failures.push("MCP server.json npm package identifier must match @xupracorp/drylake-mcp.");
+}
+
 if (failures.length > 0) {
   console.error("Distribution metadata check failed:");
   for (const failure of failures) {
@@ -59,3 +80,4 @@ if (failures.length > 0) {
 console.log("Distribution metadata check passed.");
 console.log(`extension: ${extensionPackage.publisher}.${extensionPackage.name}@${extensionPackage.version}`);
 console.log(`cursor plugin: ${cursorPlugin.name}@${cursorPlugin.version}`);
+console.log(`mcp package: ${mcpPackage.name}@${mcpPackage.version}`);

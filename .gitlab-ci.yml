@@ -91,14 +91,17 @@ package_extension_distribution:
   stage: package
   image: node:22-bookworm
   script:
+    - mkdir -p release
     - npm --prefix extensions/xupra-drylake-vscode ci --include=dev --prefer-offline --no-audit --fund=false
+    - npm --prefix packages/drylake-mcp ci --include=dev --prefer-offline --no-audit --fund=false
     - npm --prefix extensions/xupra-drylake-vscode run check:marketplace
     - npm --prefix extensions/xupra-drylake-vscode run check:cursor
     - npm run check:distribution
     - npm --prefix extensions/xupra-drylake-vscode run typecheck
     - npm --prefix extensions/xupra-drylake-vscode test
+    - npm --prefix packages/drylake-mcp run smoke
     - npm --prefix extensions/xupra-drylake-vscode run package:vsix
-    - mkdir -p release
+    - cd packages/drylake-mcp && npm pack --pack-destination "$CI_PROJECT_DIR/release" && cd "$CI_PROJECT_DIR"
     - EXT_VERSION="$(node -p "require('./extensions/xupra-drylake-vscode/package.json').version")"
     - cp "extensions/xupra-drylake-vscode/drylake-${EXT_VERSION}.vsix" "release/drylake-${EXT_VERSION}.vsix"
     - tar -czf "release/drylake-cursor-plugin-${EXT_VERSION}.tgz" drylake-cursor-plugin
@@ -148,6 +151,21 @@ publish_open_vsx:
     - npx ovsx publish "$VSIX" -p "$OVSX_TOKEN"
   rules:
     - if: '$CI_COMMIT_TAG =~ /^drylake-v?[0-9]+\.[0-9]+\.[0-9]+$/ && $OVSX_TOKEN'
+
+publish_mcp_npm:
+  stage: publish
+  image: node:22-bookworm
+  needs:
+    - job: package_extension_distribution
+      artifacts: true
+  script:
+    - ': "${NPM_TOKEN:?NPM_TOKEN is required to publish @xupracorp/drylake-mcp}"'
+    - npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+    - TARBALL="$(ls release/xupracorp-drylake-mcp-*.tgz | head -n 1)"
+    - test -f "$TARBALL"
+    - npm publish "$TARBALL" --access public
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^drylake-v?[0-9]+\.[0-9]+\.[0-9]+$/ && $NPM_TOKEN'
 
 publish_cursor_artifacts:
   stage: publish

@@ -24,7 +24,7 @@ If it does not appear yet:
 
 ## Cursor MCP Config For Agent Preflight
 
-The Agent Preflight MCP package is the planned agent-facing path:
+The Agent Preflight MCP package is the agent-facing path:
 
 ```json
 {
@@ -66,5 +66,4 @@ drylake-cursor-plugin/
   README.md
 ```
 
-This scaffold prepares DryLake for Cursor plugin distribution once the Agent Preflight MCP package is live.
-
+This scaffold prepares DryLake for Cursor plugin distribution. The MCP package lives in `packages/drylake-mcp` and should be published to npm as `@xupracorp/drylake-mcp` when the preflight API is deployed.

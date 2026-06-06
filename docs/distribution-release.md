@@ -22,6 +22,7 @@ Every release should:
 4. Publish that same VSIX to Open VSX.
 5. Upload that same VSIX as a Cursor-installable release artifact.
 6. Package the Cursor plugin scaffold with the same version number.
+7. Publish or package the MCP server when Agent Preflight is part of the release.
 
 ## Required CI Variables
 
@@ -33,6 +34,7 @@ Set these once in GitLab CI/CD variables:
 Optional:
 
 - `CURSOR_PLUGIN_PUBLISH_URL`: future Cursor plugin publishing endpoint if Cursor provides a direct submission API.
+- `NPM_TOKEN`: npm publish token for `@xupracorp/drylake-mcp` once the MCP server is ready for public release.
 
 The current pipeline packages Cursor artifacts but does not publish directly into Cursor Marketplace because Cursor plugin publication currently depends on Cursor marketplace/repository submission and approval.
 
@@ -70,4 +72,3 @@ npm run package:extension
 - Visual Studio Marketplace uses `vsce publish`.
 - Open VSX uses `ovsx publish`; the namespace must match the extension `publisher`.
 - Cursor users can install the VSIX manually today. The Cursor plugin scaffold is prepared for the MCP/Agent Preflight product path.
-

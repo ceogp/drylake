@@ -7,26 +7,27 @@ datasource db {
 }
 
 model User {
-  id                   String                  @id @default(cuid())
-  email                String                  @unique
-  authProvider         String                  @default("dev")
-  authSubject          String?
-  status               String                  @default("active")
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-  profile              Profile?
-  memberships          OrganizationMembership[]
-  createdProjects      Project[]               @relation("ProjectCreator")
-  createdPackages      AgentPackage[]          @relation("PackageCreator")
-  createdVersions      PackageVersion[]        @relation("VersionCreator")
-  createdCredentials   Credential[]            @relation("CredentialCreator")
-  createdTargets       DeploymentTarget[]      @relation("TargetCreator")
-  transformJobs        TransformJob[]          @relation("TransformJobCreator")
-  deploymentJobs       DeploymentJob[]         @relation("DeploymentJobCreator")
-  auditEvents          AuditEvent[]            @relation("AuditActor")
-  credentialAccessLogs CredentialAccessLog[]   @relation("CredentialAccessActor")
+  id                    String                   @id @default(cuid())
+  email                 String                   @unique
+  authProvider          String                   @default("dev")
+  authSubject           String?
+  status                String                   @default("active")
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  profile               Profile?
+  memberships           OrganizationMembership[]
+  createdProjects       Project[]                @relation("ProjectCreator")
+  createdPackages       AgentPackage[]           @relation("PackageCreator")
+  createdVersions       PackageVersion[]         @relation("VersionCreator")
+  createdCredentials    Credential[]             @relation("CredentialCreator")
+  createdTargets        DeploymentTarget[]       @relation("TargetCreator")
+  transformJobs         TransformJob[]           @relation("TransformJobCreator")
+  deploymentJobs        DeploymentJob[]          @relation("DeploymentJobCreator")
+  auditEvents           AuditEvent[]             @relation("AuditActor")
+  credentialAccessLogs  CredentialAccessLog[]    @relation("CredentialAccessActor")
   extensionAuthRequests ExtensionAuthRequest[]
-  extensionUsageEvents ExtensionUsageEvent[]    @relation("ExtensionUsageActor")
+  extensionUsageEvents  ExtensionUsageEvent[]    @relation("ExtensionUsageActor")
+  createdAgentTokens    AgentToken[]             @relation("AgentTokenCreator")
 }
 
 model Profile {
@@ -43,23 +44,25 @@ model Profile {
 }
 
 model Organization {
-  id            String                   @id @default(cuid())
-  name          String
-  slug          String                   @unique
-  tier          String                   @default("free")
-  status        String                   @default("active")
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  memberships   OrganizationMembership[]
-  projects      Project[]
-  credentials   Credential[]
-  integrations  Integration[]
-  subscriptions Subscription[]
-  transformJobs TransformJob[]
-  deploymentJobs DeploymentJob[]
-  auditEvents   AuditEvent[]
+  id                    String                   @id @default(cuid())
+  name                  String
+  slug                  String                   @unique
+  tier                  String                   @default("free")
+  status                String                   @default("active")
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  memberships           OrganizationMembership[]
+  projects              Project[]
+  credentials           Credential[]
+  integrations          Integration[]
+  subscriptions         Subscription[]
+  transformJobs         TransformJob[]
+  deploymentJobs        DeploymentJob[]
+  auditEvents           AuditEvent[]
   extensionAuthRequests ExtensionAuthRequest[]
-  extensionUsageEvents ExtensionUsageEvent[]
+  extensionUsageEvents  ExtensionUsageEvent[]
+  agentTokens           AgentToken[]
+  agentPreflightRuns    AgentPreflightRun[]
 }
 
 model OrganizationMembership {
@@ -75,42 +78,42 @@ model OrganizationMembership {
 }
 
 model Subscription {
-  id             String       @id @default(cuid())
-  organizationId String
-  provider       String       @default("local")
-  tier           String       @default("free")
-  status         String       @default("trial")
-  stripeCustomerId String?
+  id                   String       @id @default(cuid())
+  organizationId       String
+  provider             String       @default("local")
+  tier                 String       @default("free")
+  status               String       @default("trial")
+  stripeCustomerId     String?
   stripeSubscriptionId String?
-  stripePriceId  String?
-  currentPeriodEndsAt DateTime?
-  cancelAtPeriodEnd Boolean   @default(false)
-  limitsJson     Json?
-  entitlementsJson Json?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stripePriceId        String?
+  currentPeriodEndsAt  DateTime?
+  cancelAtPeriodEnd    Boolean      @default(false)
+  limitsJson           Json?
+  entitlementsJson     Json?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId])
   @@unique([stripeSubscriptionId])
 }
 
 model Project {
-  id              String             @id @default(cuid())
-  organizationId  String
-  name            String
-  slug            String
-  description     String?
-  createdByUserId String
-  archivedAt      DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdByUser   User               @relation("ProjectCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  packages        AgentPackage[]
+  id                String             @id @default(cuid())
+  organizationId    String
+  name              String
+  slug              String
+  description       String?
+  createdByUserId   String
+  archivedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByUser     User               @relation("ProjectCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  packages          AgentPackage[]
   deploymentTargets DeploymentTarget[]
-  transformJobs   TransformJob[]
-  deploymentJobs  DeploymentJob[]
+  transformJobs     TransformJob[]
+  deploymentJobs    DeploymentJob[]
 
   @@unique([organizationId, slug])
 }
@@ -136,25 +139,25 @@ model AgentPackage {
 }
 
 model PackageVersion {
-  id                 String          @id @default(cuid())
-  agentPackageId     String
-  versionNumber      Int
-  status             String          @default("draft")
-  origin             String          @default("manual")
-  manifestJson       Json
+  id                  String          @id @default(cuid())
+  agentPackageId      String
+  versionNumber       Int
+  status              String          @default("draft")
+  origin              String          @default("manual")
+  manifestJson        Json
   agentDefinitionJson Json
-  compatibilityJson  Json?
-  validationJson     Json?
-  rawSnapshotPrefix  String?
-  createdByUserId    String
-  createdAt          DateTime        @default(now())
-  agentPackage       AgentPackage    @relation(fields: [agentPackageId], references: [id], onDelete: Cascade)
-  createdByUser      User            @relation("VersionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  files              PackageFile[]
-  subagents          Subagent[]
-  skillRules         SkillRule[]
-  transformJobs      TransformJob[]
-  deploymentJobs     DeploymentJob[]
+  compatibilityJson   Json?
+  validationJson      Json?
+  rawSnapshotPrefix   String?
+  createdByUserId     String
+  createdAt           DateTime        @default(now())
+  agentPackage        AgentPackage    @relation(fields: [agentPackageId], references: [id], onDelete: Cascade)
+  createdByUser       User            @relation("VersionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  files               PackageFile[]
+  subagents           Subagent[]
+  skillRules          SkillRule[]
+  transformJobs       TransformJob[]
+  deploymentJobs      DeploymentJob[]
 
   @@unique([agentPackageId, versionNumber])
 }
@@ -176,32 +179,32 @@ model PackageFile {
 }
 
 model Subagent {
-  id             String         @id @default(cuid())
+  id               String         @id @default(cuid())
   packageVersionId String
-  name           String
-  slug           String
-  description    String
-  instructionsMd String
-  toolsJson      Json?
-  modelHint      String?
-  permissionMode String?
-  metadataJson   Json?
-  sortOrder      Int            @default(0)
-  createdAt      DateTime       @default(now())
-  packageVersion PackageVersion @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
+  name             String
+  slug             String
+  description      String
+  instructionsMd   String
+  toolsJson        Json?
+  modelHint        String?
+  permissionMode   String?
+  metadataJson     Json?
+  sortOrder        Int            @default(0)
+  createdAt        DateTime       @default(now())
+  packageVersion   PackageVersion @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
 
   @@unique([packageVersionId, slug])
 }
 
 model SkillRule {
-  id             String         @id @default(cuid())
+  id               String         @id @default(cuid())
   packageVersionId String
-  name           String
-  kind           String
-  bodyMd         String
-  metadataJson   Json?
-  createdAt      DateTime       @default(now())
-  packageVersion PackageVersion @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
+  name             String
+  kind             String
+  bodyMd           String
+  metadataJson     Json?
+  createdAt        DateTime       @default(now())
+  packageVersion   PackageVersion @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
 }
 
 model Credential {
@@ -226,14 +229,14 @@ model Credential {
 }
 
 model CredentialAccessLog {
-  id          String     @id @default(cuid())
+  id           String     @id @default(cuid())
   credentialId String
-  actorUserId String?
-  action      String
-  jobId       String?
-  createdAt   DateTime   @default(now())
-  credential  Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
-  actorUser   User?      @relation("CredentialAccessActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorUserId  String?
+  action       String
+  jobId        String?
+  createdAt    DateTime   @default(now())
+  credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  actorUser    User?      @relation("CredentialAccessActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 }
 
 model Integration {
@@ -271,49 +274,49 @@ model DeploymentTarget {
 }
 
 model TransformJob {
-  id              String          @id @default(cuid())
-  organizationId  String
-  projectId       String?
-  agentPackageId  String?
+  id               String          @id @default(cuid())
+  organizationId   String
+  projectId        String?
+  agentPackageId   String?
   packageVersionId String?
-  jobType         String
-  status          String          @default("queued")
-  sourcePlatform  String?
-  targetPlatform  String?
-  inputJson       Json?
-  resultJson      Json?
-  errorJson       Json?
-  startedAt       DateTime?
-  finishedAt      DateTime?
-  createdByUserId String
-  createdAt       DateTime        @default(now())
-  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  project         Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  agentPackage    AgentPackage?   @relation(fields: [agentPackageId], references: [id], onDelete: SetNull)
-  packageVersion  PackageVersion? @relation(fields: [packageVersionId], references: [id], onDelete: SetNull)
-  createdByUser   User            @relation("TransformJobCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  jobType          String
+  status           String          @default("queued")
+  sourcePlatform   String?
+  targetPlatform   String?
+  inputJson        Json?
+  resultJson       Json?
+  errorJson        Json?
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdByUserId  String
+  createdAt        DateTime        @default(now())
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project          Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  agentPackage     AgentPackage?   @relation(fields: [agentPackageId], references: [id], onDelete: SetNull)
+  packageVersion   PackageVersion? @relation(fields: [packageVersionId], references: [id], onDelete: SetNull)
+  createdByUser    User            @relation("TransformJobCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
 }
 
 model DeploymentJob {
-  id                String           @id @default(cuid())
-  organizationId    String
-  projectId         String
-  packageVersionId  String
+  id                 String           @id @default(cuid())
+  organizationId     String
+  projectId          String
+  packageVersionId   String
   deploymentTargetId String
-  status            String           @default("queued")
-  triggerSource     String           @default("ui")
-  gitRef            String?
-  outputJson        Json?
-  errorJson         Json?
-  startedAt         DateTime?
-  finishedAt        DateTime?
-  createdByUserId   String
-  createdAt         DateTime         @default(now())
-  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  packageVersion    PackageVersion   @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
-  deploymentTarget  DeploymentTarget @relation(fields: [deploymentTargetId], references: [id], onDelete: Cascade)
-  createdByUser     User             @relation("DeploymentJobCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  status             String           @default("queued")
+  triggerSource      String           @default("ui")
+  gitRef             String?
+  outputJson         Json?
+  errorJson          Json?
+  startedAt          DateTime?
+  finishedAt         DateTime?
+  createdByUserId    String
+  createdAt          DateTime         @default(now())
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project            Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  packageVersion     PackageVersion   @relation(fields: [packageVersionId], references: [id], onDelete: Cascade)
+  deploymentTarget   DeploymentTarget @relation(fields: [deploymentTargetId], references: [id], onDelete: Cascade)
+  createdByUser      User             @relation("DeploymentJobCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
 }
 
 model AuditEvent {
@@ -363,20 +366,76 @@ model ExtensionUsageEvent {
 }
 
 model ExtensionAuthRequest {
-  id             String       @id @default(cuid())
-  code           String       @unique
+  id             String        @id @default(cuid())
+  code           String        @unique
   organizationId String?
   userId         String?
   editor         String
-  status         String       @default("pending")
+  status         String        @default("pending")
   expiresAt      DateTime
   approvedAt     DateTime?
   deniedAt       DateTime?
   exchangedAt    DateTime?
   pollTokenHash  String?
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime      @default(now())
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status, expiresAt])
+}
+
+model AgentToken {
+  id                   String              @id @default(cuid())
+  externalId           String              @unique
+  organizationId       String?
+  createdByUserId      String?
+  name                 String
+  sourceClient         String              @default("unknown")
+  tokenPrefix          String
+  tokenHash            String              @unique
+  status               String              @default("trial")
+  plan                 String              @default("agent_trial")
+  scopesJson           Json
+  balanceCredits       Int                 @default(3)
+  freeCreditsUsed      Int                 @default(0)
+  paidCreditsPurchased Int                 @default(0)
+  registrationIpHash   String?
+  expiresAt            DateTime?
+  lastUsedAt           DateTime?
+  revokedAt            DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  organization         Organization?       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByUser        User?               @relation("AgentTokenCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  preflightRuns        AgentPreflightRun[]
+
+  @@index([organizationId, status])
+  @@index([status, expiresAt])
+  @@index([registrationIpHash, createdAt])
+}
+
+model AgentPreflightRun {
+  id                      String        @id @default(cuid())
+  agentTokenId            String
+  organizationId          String?
+  status                  String        @default("created")
+  tier                    String
+  sourceClient            String        @default("unknown")
+  targetAgent             String?
+  taskPreview             String
+  taskHash                String
+  title                   String
+  creditsDebited          Int
+  estimatedOriginalTokens Int
+  estimatedHandoffTokens  Int
+  planJson                Json
+  handoffJson             Json
+  assuranceJson           Json?
+  createdAt               DateTime      @default(now())
+  agentToken              AgentToken    @relation(fields: [agentTokenId], references: [id], onDelete: Cascade)
+  organization            Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([agentTokenId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([taskHash])
 }

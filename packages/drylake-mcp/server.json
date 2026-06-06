@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.gmkdigitalmedia/drylake-mcp",
+  "title": "DryLake Agent Preflight",
+  "description": "Structured phase planning, token budgets, next-phase contracts, focused handoffs, and assurance checklists for coding agents before they edit code.",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@xupracorp/drylake-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
