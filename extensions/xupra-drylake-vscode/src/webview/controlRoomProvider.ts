@@ -202,16 +202,16 @@ function renderPhaseSteps(phase: XuPhase) {
 }
 
 function renderPhaseTaskFit(phase: XuPhase) {
-  const firstStep = phase.steps.find((step) => step.text.trim().length > 0)?.text;
+  const purpose = phase.objective.trim();
   const firstAcceptance = phase.acceptance.find((item) => item.trim().length > 0);
 
-  if (!firstStep && !firstAcceptance) {
+  if (!purpose && !firstAcceptance) {
     return "";
   }
 
   return `<div class="task-fit-preview" aria-label="Generated task-specific card preview">
-    <div class="task-fit-label">Generated for this task</div>
-    ${firstStep ? `<div class="task-fit-row"><span>Next</span><p title="${escapeHtml(firstStep)}">${escapeHtml(firstStep)}</p></div>` : ""}
+    <div class="task-fit-label">This card will do</div>
+    ${purpose ? `<div class="task-fit-row"><span>Does</span><p title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</p></div>` : ""}
     ${firstAcceptance ? `<div class="task-fit-row"><span>Done</span><p title="${escapeHtml(firstAcceptance)}">${escapeHtml(firstAcceptance)}</p></div>` : ""}
   </div>`;
 }
@@ -629,18 +629,21 @@ function renderPlanningProviderSelect(
 
 function renderStageCountSelect(hasPlan: boolean) {
   const disabled = hasPlan ? " disabled" : "";
-  const title = hasPlan
+  const helpText = hasPlan
     ? "This plan keeps the planning step count chosen when the session started."
     : "Planning Steps are the number of phase cards DryLake creates. Fewer steps are faster; more steps create smaller, safer handoffs. Choose Auto or 1-12.";
 
-  return `<label class="stage-count-label" title="${escapeHtml(title)}">
-    <span>Planning Steps</span>
-    <span class="planning-info-icon" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">i</span>
+  return `<div class="stage-count-field">
+    <label class="stage-count-label" for="stageCountSelect">
+      <span>Planning Steps</span>
+      <button type="button" class="planning-info-icon" data-info-toggle="stage-count" aria-label="Explain planning steps" aria-expanded="false">i</button>
+    </label>
     <select id="stageCountSelect" class="stage-count-select"${disabled} aria-label="Planning steps">
       <option value="">Auto</option>
       ${STAGE_COUNT_OPTIONS.map((count) => `<option value="${count}">${count}</option>`).join("")}
     </select>
-  </label>`;
+    <p class="planning-info-text" data-info-panel="stage-count" hidden>${escapeHtml(helpText)}</p>
+  </div>`;
 }
 
 function renderPlannerSetup(
@@ -968,7 +971,7 @@ export class ControlRoomProvider {
   <style>
     * { box-sizing: border-box; }
     :root { --drylake-bg: #090a0a; --drylake-panel: #111414; --drylake-panel-2: #0d0f0f; --drylake-line: #27272a; --drylake-muted: #a1a1aa; --drylake-text: #f4f4f5; --drylake-green: #34d399; --drylake-green-soft: #17251d; --drylake-orange: #fb923c; --drylake-orange-soft: #2a1710; --drylake-red: #f87171; --drylake-paper: #090a0a; --drylake-ink: #f4f4f5; --drylake-yellow: #34d399; --drylake-blue: #fb923c; --drylake-pink: #fb923c; --drylake-white: #111414; --drylake-font: "Helvetica Neue", Helvetica, system-ui, sans-serif; --drylake-brand-font: "Bricolage Grotesque", "Helvetica Neue", Helvetica, system-ui, sans-serif; }
-    body { margin: 0; color: var(--drylake-text); background: var(--drylake-bg); font-family: var(--drylake-font); font-weight: 400; letter-spacing: 0; }
+    body { margin: 0; color: var(--drylake-text); background: var(--drylake-bg); font-family: var(--drylake-font); font-weight: 400; letter-spacing: 0; color-scheme: dark; }
     main { max-width: 1180px; margin: 0 auto; padding: 24px; }
     header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; padding: 12px 16px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
     h1 { margin: 0; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 24px; font-weight: 650; letter-spacing: 0; }
@@ -1041,12 +1044,13 @@ export class ControlRoomProvider {
     .mode-row { display: flex; flex-wrap: wrap; gap: 6px; }
     .mode-chip { padding: 4px 8px; border: 1px solid #3f3f46; border-radius: 999px; color: var(--drylake-text); background: var(--drylake-bg); font-size: 10px; box-shadow: none; }
     .mode-chip.active { border-color: var(--drylake-green); background: var(--drylake-green-soft); color: #a7f3d0; }
-    .planning-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+    .planning-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, auto); align-items: start; gap: 10px; }
     .planning-provider-field { display: grid; gap: 5px; min-width: 0; }
     .planning-provider-label { color: var(--drylake-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
     .planning-provider-select { width: 100%; min-width: 0; padding: 7px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; letter-spacing: 0; }
     .planning-provider-select:focus { outline: none; border-color: rgba(52, 211, 153, 0.72); }
     .planning-provider-select:disabled { opacity: 0.72; cursor: not-allowed; }
+    .planning-provider-select option, .stage-count-select option { color: var(--drylake-text); background: var(--drylake-bg); }
     .planning-provider-note { min-height: 16px; color: var(--drylake-muted); font-size: 11px; line-height: 1.35; }
     .frontier-upgrade-cta { justify-self: start; display: inline-flex; align-items: center; gap: 7px; width: max-content; max-width: 100%; padding: 6px 10px; border: 1px solid rgba(251, 146, 60, 0.78); border-radius: 999px; color: #090a0a; background: var(--drylake-orange); font-size: 11px; font-weight: 750; box-shadow: none; }
     .frontier-upgrade-cta::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #090a0a; opacity: 0.75; }
@@ -1064,10 +1068,13 @@ export class ControlRoomProvider {
     .provider-config-secondary { padding: 5px 8px; color: #fed7aa; background: var(--drylake-bg); border-color: rgba(251, 146, 60, 0.5); font-size: 11px; }
     .provider-config-secondary[hidden] { display: none; }
     .provider-config-secondary:hover { color: #090a0a; background: var(--drylake-orange); border-color: var(--drylake-orange); }
+    .stage-count-field { display: grid; gap: 6px; min-width: 0; }
     .stage-count-label { display: inline-flex; align-items: center; gap: 8px; color: var(--drylake-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
-    .planning-info-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 1px solid rgba(251, 146, 60, 0.72); border-radius: 999px; color: var(--drylake-orange); background: var(--drylake-orange-soft); font-size: 11px; font-weight: 800; text-transform: none; letter-spacing: 0; cursor: help; }
+    .planning-info-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 1px solid rgba(251, 146, 60, 0.72); border-radius: 999px; color: var(--drylake-orange); background: var(--drylake-orange-soft); font-size: 11px; font-weight: 800; text-transform: none; letter-spacing: 0; cursor: pointer; }
+    .planning-info-icon:hover, .planning-info-icon:focus { color: #090a0a; background: var(--drylake-orange); border-color: var(--drylake-orange); outline: none; }
     .stage-count-select { min-width: 92px; padding: 6px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; text-transform: none; letter-spacing: 0; }
     .stage-count-select:disabled { opacity: 0.72; cursor: not-allowed; }
+    .planning-info-text { margin: 0; color: var(--drylake-muted); font-size: 11px; line-height: 1.4; }
     .model-tier-bar { display: inline-flex; align-items: center; gap: 7px; width: max-content; max-width: 100%; padding: 5px 10px; margin: 0 0 12px; border: 1px solid rgba(251, 146, 60, 0.45); border-radius: 999px; color: #fed7aa; background: var(--drylake-orange-soft); font-size: 11px; font-weight: 650; }
     .model-tier-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--drylake-orange); box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.12); }
     .nano-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; margin: 0 0 14px; border: 1px solid rgba(251, 146, 60, 0.45); border-radius: 6px; background: var(--drylake-orange-soft); font-size: 12px; }
@@ -1277,6 +1284,20 @@ export class ControlRoomProvider {
       }
     }
 
+    function toggleInfoPanel(key) {
+      const panel = document.querySelector('[data-info-panel="' + key + '"]');
+      const button = document.querySelector('[data-info-toggle="' + key + '"]');
+      if (!panel || !button) {
+        return;
+      }
+
+      const nextHidden = !panel.hidden;
+      panel.hidden = nextHidden;
+      button.setAttribute("aria-expanded", nextHidden ? "false" : "true");
+    }
+
+    syncProviderSelection();
+
     function sendChat() {
       if (!chatInput) {
         return;
@@ -1396,6 +1417,12 @@ export class ControlRoomProvider {
           providerConfigAction: action,
           providerSecret: secret
         });
+        return;
+      }
+
+      const infoToggle = event.target.closest("[data-info-toggle]");
+      if (infoToggle) {
+        toggleInfoPanel(infoToggle.dataset.infoToggle || "");
         return;
       }
 

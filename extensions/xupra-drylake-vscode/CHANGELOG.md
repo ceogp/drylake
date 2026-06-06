@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.48
+
+### Planning and connection flow
+
+- Generate planning cards from the first prompt instead of forcing multiple clarification rounds before any cards appear.
+- Refine existing cards in follow-up chat with shorter guidance about what to tighten next.
+- Reworked the planning-steps help affordance into an inline explainer and tightened dark-mode styling for the planning model picker.
+- Made browser handoff after approval optional so the editor poll path can complete connection without an extra redirect.
+
 ## 0.6.44
 
 ### Marketplace media

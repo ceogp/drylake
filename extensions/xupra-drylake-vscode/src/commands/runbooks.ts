@@ -822,6 +822,12 @@ function promptWithClarification(pending: PendingPlanDraftState, answer: string)
   ].join("\n");
 }
 
+function renderInitialDraftReadyMessage(runbook: ApplicationBuildRunbook) {
+  const phaseCount = runbook.phases.length;
+  const phaseLabel = phaseCount === 1 ? "card" : "cards";
+  return `DryLake drafted ${phaseCount} planning ${phaseLabel}. Review the cards below and reply with the most important refinement: scope, users, files to touch, data/auth, constraints, or deployment.`;
+}
+
 async function reportPlanningFailure(
   deps: RunbookCommandDeps,
   provider: DryLakeAiProvider | undefined,
@@ -948,7 +954,7 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
               });
               await deps.stateStore.appendChatMessage({
                 role: "ai",
-                text: "DryLake generated planning cards from your answer.",
+                text: renderInitialDraftReadyMessage(draftResult.runbook),
               });
             },
           );
@@ -972,11 +978,11 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: "DryLake is preparing a required planning question...",
+            title: "DryLake is generating your planning cards...",
             cancellable: false,
           },
           async () => {
-            await startRequiredClarificationFlow({
+            await startInitialDraftSession({
               deps,
               provider,
               prompt: text,
@@ -1346,7 +1352,7 @@ async function generateRequiredFirstMessageDraft(params: {
   mode: XuMode;
   provider: DryLakeAiProvider;
   requestedStageCount?: number;
-}): Promise<{ runbookUri: vscode.Uri }> {
+}): Promise<{ runbookUri: vscode.Uri; runbook: ApplicationBuildRunbook }> {
   const workspaceSummary = await buildWorkspaceSummary();
   const runbookUri = (await params.deps.sessionStore.findRunbookUri()) ??
     params.deps.sessionStore.getDefaultRunbookUri();
@@ -1367,13 +1373,58 @@ async function generateRequiredFirstMessageDraft(params: {
 
     if (result.runbook) {
       await params.deps.sessionStore.writeRunbook(runbookUri, result.runbook);
-      return { runbookUri };
+      return { runbookUri, runbook: result.runbook };
     }
 
     throw new Error(result.message ?? `${params.provider.label} did not return a valid plan.`);
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : String(error));
   }
+}
+
+async function startInitialDraftSession(params: {
+  deps: RunbookCommandDeps;
+  prompt: string;
+  mode: XuMode;
+  provider: DryLakeAiProvider;
+  requestedStageCount?: number;
+}) {
+  const cleanedPrompt = params.prompt.trim();
+  await params.deps.stateStore.clearBuildSession();
+  await params.deps.stateStore.clearChatHistory();
+  await params.deps.stateStore.clearPendingPlanDraft();
+  await params.deps.stateStore.appendChatMessage({ role: "user", text: cleanedPrompt });
+  await params.deps.controlRoom.refresh();
+
+  const draftResult = await generateRequiredFirstMessageDraft({
+    deps: params.deps,
+    prompt: cleanedPrompt,
+    mode: params.mode,
+    provider: params.provider,
+    requestedStageCount: params.requestedStageCount,
+  });
+  const session = await params.deps.sessionStore.createSession({
+    prompt: cleanedPrompt,
+    mode: params.mode,
+    runbookPath: relativePath(draftResult.runbookUri),
+    requestedStageCount: params.requestedStageCount,
+    providerId: params.provider.id,
+    providerLabel: params.provider.label,
+  });
+  await params.deps.stateStore.setBuildSession(session);
+  queuePlanningPromptEvent(params.deps, {
+    provider: params.provider,
+    sessionId: session.id,
+    eventName: "planning_prompt_submitted",
+    promptKind: "planning_initial_message",
+    promptText: cleanedPrompt,
+    mode: params.mode,
+    requestedStageCount: params.requestedStageCount,
+  });
+  await params.deps.stateStore.appendChatMessage({
+    role: "ai",
+    text: renderInitialDraftReadyMessage(draftResult.runbook),
+  });
 }
 
 export async function openControlRoomCommand(deps: RunbookCommandDeps, context: vscode.ExtensionContext) {
@@ -1423,11 +1474,11 @@ export async function startBuildSessionCommand(
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "DryLake is preparing a required planning question...",
+        title: "DryLake is generating your planning cards...",
         cancellable: false,
       },
       async () => {
-        await startRequiredClarificationFlow({
+        await startInitialDraftSession({
           deps,
           prompt: prompt.trim(),
           mode,

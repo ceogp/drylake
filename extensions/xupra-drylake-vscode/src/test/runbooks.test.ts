@@ -171,7 +171,7 @@ beforeEach(() => {
 });
 
 describe("runbook commands", () => {
-  it("does not create cards when required AI clarification is unavailable", async () => {
+  it("does not create cards when hosted planning is unavailable", async () => {
     const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
     const messages: Array<{ id: string; ts: number; role: "user" | "ai" | "system"; text: string }> = [];
     const deps = {
@@ -236,8 +236,9 @@ describe("runbook commands", () => {
     }));
   });
 
-  it("asks connected free users a required planning question through the nano backend route", async () => {
+  it("generates cards immediately for connected free users through the nano backend route", async () => {
     const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
+    const generatedRunbook = createStarterXu({ prompt: "Build checkout", mode: "build-app" });
     const deps = {
       apiClient: {
         openWebUrl: vi.fn(() => mocks.billingUri),
@@ -282,7 +283,7 @@ describe("runbook commands", () => {
       refreshSidebar: vi.fn(async () => undefined),
     };
     mocks.providerIsAvailable.mockResolvedValueOnce({ available: true });
-    mocks.providerClarifyIntent.mockResolvedValueOnce({ questions: ["Which files should the agents focus on?"], modelTier: "nano" });
+    mocks.providerGenerateDraftRunbook.mockResolvedValueOnce({ runbook: generatedRunbook, modelTier: "nano" });
 
     await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout", undefined, 3);
 
@@ -292,26 +293,32 @@ describe("runbook commands", () => {
     );
     expect(mocks.openExternal).not.toHaveBeenCalled();
     expect(deps.sessionStore.ensureRunbook).not.toHaveBeenCalled();
-    expect(deps.sessionStore.findRunbookUri).not.toHaveBeenCalled();
-    expect(deps.sessionStore.getDefaultRunbookUri).not.toHaveBeenCalled();
-    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
+    expect(deps.sessionStore.findRunbookUri).toHaveBeenCalledOnce();
+    expect(deps.sessionStore.getDefaultRunbookUri).toHaveBeenCalledOnce();
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledWith(runbookUri, generatedRunbook);
+    expect(deps.sessionStore.createSession).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: "Build checkout",
+      requestedStageCount: 3,
+      providerId: "xupra-pro-ai",
+    }));
+    expect(deps.stateStore.setBuildSession).toHaveBeenCalledWith(expect.objectContaining({
+      id: "session-1",
+      requestedStageCount: 3,
+    }));
     expect(deps.stateStore.setLastModelTier).toHaveBeenCalledWith("nano");
     expect(deps.stateStore.setPlanningLoading).toHaveBeenNthCalledWith(1, true);
     expect(deps.stateStore.setPlanningLoading).toHaveBeenLastCalledWith(false);
-    expect(mocks.providerClarifyIntent).toHaveBeenCalledWith(expect.objectContaining({
-      prompt: "Build checkout",
-    }));
-    expect(deps.stateStore.setPendingPlanDraft).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mocks.providerGenerateDraftRunbook).toHaveBeenCalledWith(expect.objectContaining({
       prompt: "Build checkout",
       requestedStageCount: 3,
-      questions: ["Which files should the agents focus on?"],
     }));
-    expect(deps.sessionStore.createSession).not.toHaveBeenCalled();
-    expect(mocks.providerGenerateDraftRunbook).not.toHaveBeenCalled();
+    expect(mocks.providerClarifyIntent).not.toHaveBeenCalled();
+    expect(deps.stateStore.setPendingPlanDraft).not.toHaveBeenCalled();
   });
 
-  it("uses an explicit planning provider from the Control Room for required clarification", async () => {
+  it("uses an explicit planning provider from the Control Room for first-pass card generation", async () => {
     const runbookUri = { fsPath: "C:/repo/drylake.xu", path: "/repo/drylake.xu" };
+    const generatedRunbook = createStarterXu({ prompt: "Build checkout", mode: "build-app" });
     const deps = {
       apiClient: {},
       stateStore: {
@@ -364,7 +371,7 @@ describe("runbook commands", () => {
       },
     });
     mocks.providerIsAvailable.mockResolvedValueOnce({ available: true });
-    mocks.providerClarifyIntent.mockResolvedValueOnce({ questions: ["What area should this plan modify?"] });
+    mocks.providerGenerateDraftRunbook.mockResolvedValueOnce({ runbook: generatedRunbook });
 
     await startBuildSessionCommand(deps as never, { subscriptions: [] } as never, "build-app", "Build checkout", "openai-api");
 
@@ -376,12 +383,15 @@ describe("runbook commands", () => {
     expect(configurationArg.get("aiProvider")).toBe("openai-api");
     expect(deps.stateStore.setPlanningProviderSecret).toHaveBeenCalledWith("openai-api", "sk-test-openai");
     expect(validateConnection).toHaveBeenCalledOnce();
-    expect(deps.sessionStore.writeRunbook).not.toHaveBeenCalled();
-    expect(deps.stateStore.setPendingPlanDraft).toHaveBeenCalledWith(expect.objectContaining({
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledWith(runbookUri, generatedRunbook);
+    expect(deps.stateStore.setPendingPlanDraft).not.toHaveBeenCalled();
+    expect(deps.sessionStore.createSession).toHaveBeenCalledWith(expect.objectContaining({
       providerId: "openai-api",
-      questions: ["What area should this plan modify?"],
     }));
-    expect(mocks.providerGenerateDraftRunbook).not.toHaveBeenCalled();
+    expect(mocks.providerGenerateDraftRunbook).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: "Build checkout",
+    }));
+    expect(mocks.providerClarifyIntent).not.toHaveBeenCalled();
   });
 
   it("rejects a direct planning provider key when the live connection test fails", async () => {
@@ -624,7 +634,7 @@ describe("runbook commands", () => {
     }));
     expect(messages.at(-1)).toEqual(expect.objectContaining({
       role: "ai",
-      text: "DryLake generated planning cards from your answer.",
+      text: "DryLake drafted 5 planning cards. Review the cards below and reply with the most important refinement: scope, users, files to touch, data/auth, constraints, or deployment.",
     }));
   });
 

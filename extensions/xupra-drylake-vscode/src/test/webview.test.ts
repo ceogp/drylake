@@ -196,6 +196,9 @@ describe("Control Room webview", () => {
     expect(html).toContain("Build Plan Chat");
     expect(html).toContain('aria-label="Planning model"');
     expect(html).toContain("Ask DryLake to update these cards...");
+    expect(html).toContain('data-info-toggle="stage-count"');
+    expect(html).toContain('data-info-panel="stage-count"');
+    expect(html).toContain("This plan keeps the planning step count chosen when the session started.");
   });
 
   it("renders generated task-specific card previews", async () => {
@@ -217,8 +220,8 @@ describe("Control Room webview", () => {
 
     const html = panel?.webview.html ?? "";
 
-    expect(html).toContain("Generated for this task");
-    expect(html).toContain("Add Clerk session checks before marketplace card generation.");
+    expect(html).toContain("This card will do");
+    expect(html).toContain("Wire Clerk sign-in to a marketplace onboarding flow.");
     expect(html).toContain("Marketplace cards show onboarding status from the authenticated account.");
   });
 

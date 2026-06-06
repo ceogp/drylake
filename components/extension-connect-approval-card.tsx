@@ -89,7 +89,7 @@ export function ExtensionConnectApprovalCard({
       </h2>
       <p className="mt-3 text-sm leading-7 text-stone-700">
         {isReady
-          ? "The editor is polling in the background and should finish connecting automatically."
+          ? "The editor is polling in the background and should finish connecting automatically. Switch back to the editor first."
           : "Approve this request for the account and workspace currently shown in your browser session."}
       </p>
 
@@ -102,7 +102,7 @@ export function ExtensionConnectApprovalCard({
         >
           {isReady ? "Approved" : isPending ? "Approving..." : "Approve Connection"}
         </button>
-        {returnUrl ? (
+        {returnUrl && !isReady ? (
           <a
             className="tape-button bg-white px-5 py-3 text-sm text-black"
             href={returnUrl}
@@ -117,6 +117,16 @@ export function ExtensionConnectApprovalCard({
           Open Dashboard
         </a>
       </div>
+
+      {returnUrl && isReady ? (
+        <p className="mt-4 text-xs leading-6 text-stone-500">
+          Browser handoff is optional after approval. If the editor does not complete on its own,
+          <a className="ml-1 underline decoration-stone-400 underline-offset-4" href={returnUrl}>
+            try the browser handoff
+          </a>
+          .
+        </p>
+      ) : null}
 
       {approvedAt ? (
         <p className="mt-4 text-xs leading-6 text-stone-500">
