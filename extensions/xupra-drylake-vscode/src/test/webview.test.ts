@@ -429,6 +429,7 @@ describe("Control Room webview", () => {
 
     const html = panel?.webview.html ?? "";
     expect(html).toContain('id="planningProviderSelect"');
+    expect(html).toContain('data-registered="false"');
     expect(html.indexOf('id="planningProviderSelect"')).toBeLessThan(html.indexOf("Build Plan Chat"));
     expect(html.indexOf("Build Plan Chat")).toBeLessThan(html.indexOf('id="chatInput"'));
     expect(html).toContain('<select id="planningProviderSelect"');
@@ -440,6 +441,8 @@ describe("Control Room webview", () => {
     expect(html).toContain('option value="openai-api"');
     expect(html).toContain('option value="hermes-agent"');
     expect(html).toContain('id="stageCountSelect"');
+    expect(html).toContain("Planning Steps");
+    expect(html).toContain('class="planning-info-icon"');
     expect(html).toContain('<option value="12">12</option>');
     expect(html).toContain("Upgrade to Frontier Models");
     expect(html).toContain('data-frontier-upgrade');
@@ -537,7 +540,7 @@ describe("Control Room webview", () => {
     expect(html).toContain("GPT-5.4 Nano");
     expect(html).toContain("Xupra AI - Frontier Models");
     expect(html).toContain("Free User - GPT-5.4 Nano");
-    expect(html).toContain("Free users use GPT-5.4 Nano. Choose up to 12 stages");
+    expect(html).toContain("Free users use GPT-5.4 Nano. Choose up to 12 planning steps");
     expect(html).toContain("Pro users only");
     expect(html).not.toMatch(/GPT\s+5\.5/);
     expect(html).not.toMatch(/Claude\s+Opus/);

@@ -21,6 +21,7 @@ const PLANNING_PROVIDER_KEY = "drylake.planningProvider";
 const CHAT_HISTORY_KEY = "drylake.chatHistory";
 const LAST_MODEL_TIER_KEY = "drylake.lastModelTier";
 const PLANNING_LOADING_KEY = "drylake.planningLoading";
+const PENDING_PLAN_DRAFT_KEY = "drylake.pendingPlanDraft";
 
 export type PlanningModelTier = "nano" | "foundation";
 
@@ -34,6 +35,17 @@ export type PlanningProviderInfo = {
   id: BuildSessionState["providerId"];
   label: BuildSessionState["providerLabel"];
   reason?: string;
+};
+
+export type PendingPlanDraftState = {
+  id: string;
+  prompt: string;
+  mode: BuildSessionState["mode"];
+  createdAt: string;
+  providerId: BuildSessionState["providerId"];
+  providerLabel: BuildSessionState["providerLabel"];
+  questions: string[];
+  requestedStageCount?: number;
 };
 
 export type ChatMessageRole = "user" | "ai" | "system";
@@ -132,6 +144,18 @@ export class StateStore {
     await this.context.workspaceState.update(BUILD_SESSION_KEY, null);
   }
 
+  getPendingPlanDraft(): PendingPlanDraftState | null {
+    return this.context.workspaceState.get<PendingPlanDraftState | null>(PENDING_PLAN_DRAFT_KEY, null);
+  }
+
+  async setPendingPlanDraft(state: PendingPlanDraftState | null): Promise<void> {
+    await this.context.workspaceState.update(PENDING_PLAN_DRAFT_KEY, state);
+  }
+
+  async clearPendingPlanDraft(): Promise<void> {
+    await this.setPendingPlanDraft(null);
+  }
+
   getPlanningProvider(): PlanningProviderInfo | null {
     return this.context.workspaceState.get<PlanningProviderInfo | null>(PLANNING_PROVIDER_KEY, null);
   }
@@ -183,6 +207,7 @@ export class StateStore {
 
   async clearPlanningSessionState(): Promise<void> {
     await this.clearBuildSession();
+    await this.clearPendingPlanDraft();
     await this.setPlanningProvider(null);
     await this.setLastModelTier(null);
     await this.setPlanningLoading(false);

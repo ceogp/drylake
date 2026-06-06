@@ -168,7 +168,7 @@ function planningChatPrompt(input: PlanningChatInput) {
 function clarifyPrompt(input: ClarifyIntentInput) {
   return [
     "You help scope a DryLake build session.",
-    "Return between 2 and 4 short clarifying questions about the user's prompt.",
+    "Return between 1 and 4 short clarifying questions about the user's prompt.",
     "Return ONLY a JSON array of strings. No prose, no Markdown fences.",
     "",
     `Mode: ${input.mode}`,

@@ -4,6 +4,8 @@
 
 DryLake is backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://aws.amazon.com/startups/).
 
+**Free. No credit card. Connect your DryLake account and start coding in under 30 seconds.**
+
 DryLake turns tickets, bugs, and product specs into visual planning cards. Pick a planning model, generate phased implementation stages, assign each stage to your favorite coding agent, attach a skill, and run focused handoffs from VS Code.
 
 ![DryLake AI planning workflow](https://drylake.xupracorp.com/marketplace/extension/media/drylake-workflow-6phase-handoffs.gif)

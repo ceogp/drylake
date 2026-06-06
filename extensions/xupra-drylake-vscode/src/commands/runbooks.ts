@@ -36,7 +36,7 @@ import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
 import type { ApiClient } from "../services/apiClient";
 import type { ExtensionUsageEventPayload } from "../services/apiClient";
 import { recordExtensionUsageEvent } from "../services/usageEvents";
-import type { StateStore } from "../services/stateStore";
+import type { PendingPlanDraftState, StateStore } from "../services/stateStore";
 import type { ControlRoomProvider } from "../webview/controlRoomProvider";
 import { scanWorkspaceFiles, getWorkspaceDisplayName } from "../services/workspaceScanner";
 import { estimateTokens } from "../utils/tokenEstimate";
@@ -697,7 +697,7 @@ async function clearStaleHostedPlanningConnection(
   await deps.stateStore.clearConnection();
 
   const choice = await vscode.window.showWarningMessage(
-    "Your DryLake extension connection expired. Reconnect to use hosted card generation. A local starter plan was kept visible.",
+    "Your DryLake extension connection expired. Reconnect to use hosted card generation.",
     "Reconnect DryLake",
   );
 
@@ -766,60 +766,128 @@ async function maybeImportExternalResult(sessionStore: XuSessionStore, currentUr
   }
 }
 
-async function seedChatWithClarifyingQuestions(params: {
+async function requestRequiredClarifyingQuestions(params: {
   deps: RunbookCommandDeps;
   provider: DryLakeAiProvider;
   prompt: string;
   mode: XuMode;
-}): Promise<void> {
+}): Promise<string[]> {
   if (typeof params.provider.clarifyIntent !== "function") {
-    await params.deps.stateStore.appendChatMessage({
-      role: "ai",
-      text:
-        "I've drafted a plan based on your prompt. Tell me anything else I should know and I'll refine it.",
-    });
-    return;
+    throw new Error(`${params.provider.label} cannot ask the required planning question.`);
   }
 
-  try {
-    const workspaceSummary = await buildWorkspaceSummary();
-    const result = await params.provider.clarifyIntent({
-      prompt: params.prompt,
+  const availability = await params.provider.isAvailable();
+  if (!availability.available && params.provider.id !== "external-ai-prompt") {
+    throw new Error(availability.reason ?? `${params.provider.label} is unavailable right now.`);
+  }
+
+  const workspaceSummary = await buildWorkspaceSummary();
+  const result = await params.provider.clarifyIntent({
+    prompt: params.prompt,
+    mode: params.mode,
+    workspaceSummary,
+  });
+  await persistModelTier(params.deps.stateStore, result.modelTier);
+
+  const questions = Array.isArray(result.questions)
+    ? result.questions.map((item) => item.trim()).filter((item) => item.length > 0)
+    : [];
+
+  if (questions.length === 0) {
+    throw new Error(result.message ?? `${params.provider.label} did not return a planning question.`);
+  }
+
+  return questions.slice(0, 4);
+}
+
+function renderRequiredClarifyingQuestionMessage(questions: string[]) {
+  const numbered = questions
+    .map((question, index) => `${index + 1}. ${question}`)
+    .join("\n");
+  const intro = questions.length === 1
+    ? "Before I generate the planning cards, answer this required question:"
+    : "Before I generate the planning cards, answer these required questions:";
+  return `${intro}\n${numbered}`;
+}
+
+function promptWithClarification(pending: PendingPlanDraftState, answer: string) {
+  return [
+    pending.prompt.trim(),
+    "",
+    "DryLake asked these required planning questions before generating cards:",
+    ...pending.questions.map((question, index) => `${index + 1}. ${question}`),
+    "",
+    "User answer:",
+    answer.trim(),
+  ].join("\n");
+}
+
+async function reportPlanningFailure(
+  deps: RunbookCommandDeps,
+  provider: DryLakeAiProvider | undefined,
+  error: unknown,
+) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (provider) {
+    await clearStaleHostedPlanningConnection(deps, provider, message);
+  }
+  await deps.stateStore.appendChatMessage({
+    role: "system",
+    text: `DryLake planning failed: ${message}`,
+  });
+  void vscode.window.showErrorMessage(`DryLake planning failed: ${message}`);
+}
+
+async function startRequiredClarificationFlow(params: {
+  deps: RunbookCommandDeps;
+  provider: DryLakeAiProvider;
+  prompt: string;
+  mode: XuMode;
+  requestedStageCount?: number;
+}) {
+  const cleanedPrompt = params.prompt.trim();
+  await params.deps.stateStore.clearBuildSession();
+  await params.deps.stateStore.clearChatHistory();
+  await params.deps.stateStore.clearPendingPlanDraft();
+  await params.deps.stateStore.appendChatMessage({ role: "user", text: cleanedPrompt });
+  await params.deps.controlRoom.refresh();
+
+  const questions = await requestRequiredClarifyingQuestions({
+    deps: params.deps,
+    provider: params.provider,
+    prompt: cleanedPrompt,
+    mode: params.mode,
+  });
+
+  await params.deps.stateStore.setPendingPlanDraft({
+    id: `pending-${Date.now()}`,
+    prompt: cleanedPrompt,
+    mode: params.mode,
+    createdAt: new Date().toISOString(),
+    requestedStageCount: params.requestedStageCount,
+    providerId: params.provider.id,
+    providerLabel: params.provider.label,
+    questions,
+  });
+
+  await params.deps.stateStore.appendChatMessage({
+    role: "ai",
+    text: renderRequiredClarifyingQuestionMessage(questions),
+  });
+
+  queueUsageEvent(params.deps, {
+    eventName: "planning_clarification_requested",
+    actionType: "planning_clarification",
+    promptKind: "planning_initial_message",
+    promptText: cleanedPrompt,
+    metadata: {
+      providerId: params.provider.id,
+      providerLabel: params.provider.label,
       mode: params.mode,
-      workspaceSummary,
-    });
-    await persistModelTier(params.deps.stateStore, result.modelTier);
-
-    const questions = Array.isArray(result.questions)
-      ? result.questions.filter((item) => typeof item === "string" && item.trim().length > 0)
-      : [];
-
-    if (questions.length === 0) {
-      await params.deps.stateStore.appendChatMessage({
-        role: result.message ? "system" : "ai",
-        text: result.message
-          ? `${params.provider.label} generated the plan, but could not generate follow-up questions: ${result.message}`
-          : "I've drafted the plan. Tell me anything else I should know and I'll refine it.",
-      });
-      return;
-    }
-
-    const numbered = questions
-      .slice(0, 4)
-      .map((question, index) => `${index + 1}. ${question}`)
-      .join("\n");
-
-    await params.deps.stateStore.appendChatMessage({
-      role: "ai",
-      text: `Before I lock the plan, a few quick questions:\n${numbered}\n\nAnswer in one message - anything you skip I'll just guess.`,
-    });
-  } catch (error) {
-    console.warn("DryLake clarifying questions failed:", error);
-    await params.deps.stateStore.appendChatMessage({
-      role: "ai",
-      text: "I've drafted the plan. Tell me anything else I should know and I'll refine it.",
-    });
-  }
+      questionCount: questions.length,
+      requestedStageCount: params.requestedStageCount,
+    },
+  });
 }
 
 export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?: unknown) {
@@ -828,74 +896,104 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
     return;
   }
 
-  const userMessage = await deps.stateStore.appendChatMessage({ role: "user", text });
   await deps.stateStore.setPlanningLoading(true);
-  await deps.controlRoom.refresh();
 
   try {
     const current = await deps.sessionStore.readRunbook();
-    const providerId = current ? deps.stateStore.getBuildSession()?.providerId : await pickPlanningProvider();
-    if (!current && !providerId) {
-      return;
-    }
-
-    const provider = current
-      ? await resolveProvider(deps.stateStore, providerId)
-      : await preparePlanningProvider(deps, providerId!);
-    if (!provider) {
-      return;
-    }
 
     if (!current) {
-      const mode = deps.stateStore.getBuildSession()?.mode ?? "build-app";
+      const pending = deps.stateStore.getPendingPlanDraft();
+      if (pending) {
+        const provider = await preparePlanningProvider(deps, pending.providerId);
+        if (!provider) {
+          return;
+        }
+        await deps.stateStore.appendChatMessage({ role: "user", text });
+        await deps.controlRoom.refresh();
 
-      await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "DryLake is generating your plan...",
-          cancellable: false,
-        },
-        async () => {
-          const draftResult = await generateFirstMessageDraft({
-            deps,
-            prompt: text,
-            mode,
-            provider,
-            requestedStageCount: deps.stateStore.getBuildSession()?.requestedStageCount,
-          });
-          const session = await deps.sessionStore.createSession({
-            prompt: text,
-            mode,
-            runbookPath: relativePath(draftResult.runbookUri),
-            requestedStageCount: deps.stateStore.getBuildSession()?.requestedStageCount,
-            providerId: provider.id,
-            providerLabel: provider.label,
-          });
-          await deps.stateStore.setBuildSession(session);
-          queuePlanningPromptEvent(deps, {
-            provider,
-            sessionId: session.id,
-            eventName: "planning_prompt_submitted",
-            promptKind: "planning_initial_message",
-            promptText: text,
-            mode,
-            requestedStageCount: session.requestedStageCount,
-          });
-          if (draftResult.providerGenerated) {
-            await seedChatWithClarifyingQuestions({ deps, provider, prompt: text, mode });
-          } else {
-            await clearStaleHostedPlanningConnection(deps, provider, draftResult.providerMessage);
-            await deps.stateStore.appendChatMessage({
-              role: "system",
-              text: draftResult.providerMessage
-                ? `${provider.label} could not refine the starter plan: ${draftResult.providerMessage}`
-                : `${provider.label} could not refine the starter plan.`,
+        try {
+          await vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Notification,
+              title: "DryLake is generating your planning cards...",
+              cancellable: false,
+            },
+            async () => {
+              const refinedPrompt = promptWithClarification(pending, text);
+              const draftResult = await generateRequiredFirstMessageDraft({
+                deps,
+                prompt: refinedPrompt,
+                mode: pending.mode,
+                provider,
+                requestedStageCount: pending.requestedStageCount,
+              });
+              const session = await deps.sessionStore.createSession({
+                prompt: refinedPrompt,
+                mode: pending.mode,
+                runbookPath: relativePath(draftResult.runbookUri),
+                requestedStageCount: pending.requestedStageCount,
+                providerId: provider.id,
+                providerLabel: provider.label,
+              });
+              await deps.stateStore.setBuildSession(session);
+              await deps.stateStore.clearPendingPlanDraft();
+              queuePlanningPromptEvent(deps, {
+                provider,
+                sessionId: session.id,
+                eventName: "planning_prompt_submitted",
+                promptKind: "planning_initial_message",
+                promptText: refinedPrompt,
+                mode: pending.mode,
+                requestedStageCount: pending.requestedStageCount,
+              });
+              await deps.stateStore.appendChatMessage({
+                role: "ai",
+                text: "DryLake generated planning cards from your answer.",
+              });
+            },
+          );
+        } catch (error) {
+          await reportPlanningFailure(deps, provider, error);
+        }
+        return;
+      }
+
+      const providerId = await pickPlanningProvider();
+      if (!providerId) {
+        return;
+      }
+
+      const provider = await preparePlanningProvider(deps, providerId);
+      if (!provider) {
+        return;
+      }
+
+      try {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "DryLake is preparing a required planning question...",
+            cancellable: false,
+          },
+          async () => {
+            await startRequiredClarificationFlow({
+              deps,
+              provider,
+              prompt: text,
+              mode: deps.stateStore.getBuildSession()?.mode ?? "build-app",
+              requestedStageCount: deps.stateStore.getBuildSession()?.requestedStageCount,
             });
-          }
-        },
-      );
+          },
+        );
+      } catch (error) {
+        await reportPlanningFailure(deps, provider, error);
+      }
       return;
     }
+
+    const provider = await resolveProvider(deps.stateStore, deps.stateStore.getBuildSession()?.providerId);
+    const userMessage = await deps.stateStore.appendChatMessage({ role: "user", text });
+    await deps.controlRoom.refresh();
 
     let session = deps.stateStore.getBuildSession();
     if (!session) {
@@ -999,11 +1097,13 @@ export async function chatSendMessageCommand(deps: RunbookCommandDeps, textArg?:
 
 export async function clearChatCommand(deps: RunbookCommandDeps) {
   await deps.stateStore.clearChatHistory();
+  await deps.stateStore.clearPendingPlanDraft();
   await deps.controlRoom.refresh();
 }
 
 async function clearCurrentPlanningState(deps: RunbookCommandDeps) {
   await deps.stateStore.clearBuildSession();
+  await deps.stateStore.clearPendingPlanDraft();
   await deps.stateStore.clearChatHistory();
   await deps.stateStore.setPlanningLoading(false);
   await deps.sessionStore.clearPendingPlanChanges();
@@ -1240,33 +1340,20 @@ async function applyAiDraft(params: {
   return { runbook: localDraft, providerGenerated: false, providerMessage: result.message };
 }
 
-async function generateFirstMessageDraft(params: {
+async function generateRequiredFirstMessageDraft(params: {
   deps: RunbookCommandDeps;
   prompt: string;
   mode: XuMode;
   provider: DryLakeAiProvider;
   requestedStageCount?: number;
-}): Promise<{ runbookUri: vscode.Uri; providerGenerated: boolean; providerMessage?: string }> {
+}): Promise<{ runbookUri: vscode.Uri }> {
   const workspaceSummary = await buildWorkspaceSummary();
   const runbookUri = (await params.deps.sessionStore.findRunbookUri()) ??
     params.deps.sessionStore.getDefaultRunbookUri();
-  const localDraft = createLocalDraftXu({
-    prompt: params.prompt,
-    mode: params.mode,
-    workspaceSummary,
-  });
-
-  await params.deps.sessionStore.writeRunbook(runbookUri, localDraft);
-  await params.deps.controlRoom.refresh();
-  await params.deps.refreshSidebar();
 
   const availability = await params.provider.isAvailable();
   if (!availability.available && params.provider.id !== "external-ai-prompt") {
-    return {
-      runbookUri,
-      providerGenerated: false,
-      providerMessage: availability.reason ?? `${params.provider.label} is unavailable right now.`,
-    };
+    throw new Error(availability.reason ?? `${params.provider.label} is unavailable right now.`);
   }
 
   try {
@@ -1280,20 +1367,12 @@ async function generateFirstMessageDraft(params: {
 
     if (result.runbook) {
       await params.deps.sessionStore.writeRunbook(runbookUri, result.runbook);
-      return { runbookUri, providerGenerated: true };
+      return { runbookUri };
     }
 
-    return {
-      runbookUri,
-      providerGenerated: false,
-      providerMessage: result.message ?? `${params.provider.label} did not return a valid plan.`,
-    };
+    throw new Error(result.message ?? `${params.provider.label} did not return a valid plan.`);
   } catch (error) {
-    return {
-      runbookUri,
-      providerGenerated: false,
-      providerMessage: error instanceof Error ? error.message : String(error),
-    };
+    throw new Error(error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -1344,53 +1423,21 @@ export async function startBuildSessionCommand(
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "DryLake is generating your plan...",
+        title: "DryLake is preparing a required planning question...",
         cancellable: false,
       },
       async () => {
-        const cleanedPrompt = prompt.trim();
-        await deps.stateStore.clearChatHistory();
-        await deps.stateStore.appendChatMessage({ role: "user", text: cleanedPrompt });
-        await deps.controlRoom.refresh();
-
-        const draftResult = await generateFirstMessageDraft({
+        await startRequiredClarificationFlow({
           deps,
-          prompt: cleanedPrompt,
+          prompt: prompt.trim(),
           mode,
           provider,
           requestedStageCount,
         });
-        const session = await deps.sessionStore.createSession({
-          prompt: cleanedPrompt,
-          mode,
-          runbookPath: relativePath(draftResult.runbookUri),
-          requestedStageCount,
-          providerId: provider.id,
-          providerLabel: provider.label,
-        });
-        await deps.stateStore.setBuildSession(session);
-        queuePlanningPromptEvent(deps, {
-          provider,
-          sessionId: session.id,
-          eventName: "planning_prompt_submitted",
-          promptKind: "planning_start_build",
-          promptText: cleanedPrompt,
-          mode,
-          requestedStageCount,
-        });
-        if (draftResult.providerGenerated) {
-          await seedChatWithClarifyingQuestions({ deps, provider, prompt: cleanedPrompt, mode });
-        } else {
-          await clearStaleHostedPlanningConnection(deps, provider, draftResult.providerMessage);
-          await deps.stateStore.appendChatMessage({
-            role: "system",
-            text: draftResult.providerMessage
-              ? `${provider.label} could not refine the starter plan: ${draftResult.providerMessage}`
-              : `${provider.label} could not refine the starter plan.`,
-          });
-        }
       },
     );
+  } catch (error) {
+    await reportPlanningFailure(deps, provider, error);
   } finally {
     await deps.stateStore.setPlanningLoading(false);
   }

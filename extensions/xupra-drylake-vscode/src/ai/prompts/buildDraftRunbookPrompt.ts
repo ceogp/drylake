@@ -5,8 +5,8 @@ const PHASE_COUNT_INSTRUCTION =
 
 function requestedStageInstruction(input: GenerateDraftRunbookInput) {
   return typeof input.requestedStageCount === "number"
-    ? `User selected exactly ${input.requestedStageCount} planning stages in DryLake. Generate exactly ${input.requestedStageCount} phases.`
-    : "If the user asks for a specific number of planning stages in natural language, honor that number when it is between 1 and 12.";
+    ? `User selected exactly ${input.requestedStageCount} planning steps in DryLake. Generate exactly ${input.requestedStageCount} phases.`
+    : "If the user asks for a specific number of planning steps in natural language, honor that number when it is between 1 and 12.";
 }
 
 export function buildDraftRunbookPrompt(input: GenerateDraftRunbookInput) {

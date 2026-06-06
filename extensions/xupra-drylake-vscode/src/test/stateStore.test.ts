@@ -20,6 +20,7 @@ describe("StateStore", () => {
 
     expect(updates).toEqual([
       ["drylake.buildSession", null],
+      ["drylake.pendingPlanDraft", null],
       ["drylake.planningProvider", null],
       ["drylake.lastModelTier", null],
       ["drylake.planningLoading", false],

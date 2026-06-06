@@ -41,6 +41,7 @@ import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
 import { requireXupraProAiEntitlement } from "./services/featureGates";
 import { ImportedSkillEditorManager } from "./services/importedSkillEditor";
+import { requireRegisteredUser } from "./services/registrationGate";
 import {
   collectRepoContext,
   inferTargetPlatformFromUri,
@@ -666,8 +667,58 @@ export async function activate(context: vscode.ExtensionContext) {
     hasVersionSelection: false,
   });
 
+  const registrationRequiredCommands = new Set([
+    "drylake.startBuildSession",
+    "drylake.configurePlanningProvider",
+    "drylake.openMultiAgentRunner",
+    "drylake.openMultiAgentForPhase",
+    "drylake.multiAgentPlanAssignments",
+    "drylake.multiAgentApproveAssignments",
+    "drylake.multiAgentRun",
+    "drylake.generateDraftRunbook",
+    "drylake.validateXuRunbook",
+    "drylake.approvePurpose",
+    "drylake.approveArchitecture",
+    "drylake.previewProvisioningPlan",
+    "drylake.generateAgentFiles",
+    "drylake.exportHandoffPrompt",
+    "drylake.runNextPhase",
+    "drylake.updatePhaseAgent",
+    "drylake.updatePhaseHandoffProfile",
+    "drylake.updatePhaseStatus",
+    "drylake.reorderPhase",
+    "drylake.toggleStep",
+    "drylake.handoffPhase",
+    "drylake.checkAgentSetup",
+    "drylake.approvePlanChange",
+    "drylake.rejectPlanChange",
+    "drylake.chatSendMessage",
+    "drylake.clearChat",
+    "drylake.newSession",
+    "drylake.archiveCurrentPlan",
+    "drylake.deleteCurrentPlan",
+    "drylake.openSessions",
+    "xupra.scanWorkspace",
+    "xupra.importWorkspace",
+    "xupra.importDefaultLocations",
+    "xupra.importFolder",
+    "xupra.checkCompatibility",
+    "xupra.exportPreview",
+    "xupra.installToRuntime",
+    "xupra.pullPackage",
+    "xupra.showRecentJobs",
+    "xupra.createAgent",
+    "xupra.optimizeFile",
+  ]);
+
   const register = (command: string, callback: (...args: unknown[]) => unknown) => {
-    context.subscriptions.push(vscode.commands.registerCommand(command, callback));
+    context.subscriptions.push(vscode.commands.registerCommand(command, async (...args: unknown[]) => {
+      if (registrationRequiredCommands.has(command) && !await requireRegisteredUser(stateStore)) {
+        return;
+      }
+
+      return callback(...args);
+    }));
   };
 
   const runbookDeps = {
@@ -712,11 +763,15 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("drylake.configurePlanningProvider", async (...args: unknown[]) => {
-    await configurePlanningProviderCommand(runbookDeps, args[0], args[1]);
+    await configurePlanningProviderCommand(runbookDeps, args[0], args[1], args[2]);
   });
 
   register("drylake.openControlRoom", async () => {
     await openControlRoomCommand(runbookDeps, context);
+  });
+
+  register("drylake.requireRegistration", async () => {
+    await requireRegisteredUser(stateStore);
   });
 
   register("drylake.openMultiAgentRunner", async () => {
@@ -860,6 +915,7 @@ export async function activate(context: vscode.ExtensionContext) {
     await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
     const projects = await refreshProjectsSafely("connect");
     await syncWorkspaceView(projects);
+    await controlRoom.refresh();
     const connection = stateStore.getConnection();
 
     void vscode.window.showInformationMessage(

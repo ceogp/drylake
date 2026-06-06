@@ -119,6 +119,10 @@ function hasFoundationPlanningAccess(connection: ConnectionState) {
   return Boolean(connection.entitlements?.xupra_pro_ai || tier === "pro" || tier === "enterprise");
 }
 
+function hasRegisteredConnection(connection: ConnectionState) {
+  return Boolean(connection.userEmail || connection.organizationId);
+}
+
 function autopilotEnabled(runbook: ApplicationBuildRunbook | null) {
   return Boolean(runbook?.handoff.autopilot);
 }
@@ -626,12 +630,13 @@ function renderPlanningProviderSelect(
 function renderStageCountSelect(hasPlan: boolean) {
   const disabled = hasPlan ? " disabled" : "";
   const title = hasPlan
-    ? "This plan keeps the stage count chosen when the session started."
-    : "Choose a stage count, or leave Auto and ask naturally in chat.";
+    ? "This plan keeps the planning step count chosen when the session started."
+    : "Planning Steps are the number of phase cards DryLake creates. Fewer steps are faster; more steps create smaller, safer handoffs. Choose Auto or 1-12.";
 
   return `<label class="stage-count-label" title="${escapeHtml(title)}">
-    <span>Stages</span>
-    <select id="stageCountSelect" class="stage-count-select"${disabled} aria-label="Planning stages">
+    <span>Planning Steps</span>
+    <span class="planning-info-icon" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">i</span>
+    <select id="stageCountSelect" class="stage-count-select"${disabled} aria-label="Planning steps">
       <option value="">Auto</option>
       ${STAGE_COUNT_OPTIONS.map((count) => `<option value="${count}">${count}</option>`).join("")}
     </select>
@@ -649,10 +654,10 @@ function renderPlannerSetup(
   const providerStatus = hasPlan
     ? "Locked for this plan"
     : activeProvider.choiceId === "xupra-nano"
-      ? "Free users use GPT-5.4 Nano. Choose up to 12 stages, or ask naturally in chat."
+      ? "Free users use GPT-5.4 Nano. Choose up to 12 planning steps, or ask naturally in chat."
       : activeProviderLocked
         ? "Xupra AI Frontier Models are available on Pro."
-        : "Choose the provider and stage count that will generate the first cards.";
+        : "Choose the provider and planning step count that will generate the first cards.";
   const modeChips = hasPlan
     ? ""
     : `<div class="mode-row" aria-label="Plan type">${MODE_CARDS.map(([title, mode], index) => {
@@ -685,6 +690,7 @@ function renderChatPanel(
 ) {
   const cardContext = estimateCardGenerationContext(state, hasPlan);
   const activeProvider = activeProviderChoice(planningProvider, modelTier, connection);
+  const registered = hasRegisteredConnection(connection);
   const activeProviderLabel = planningProvider?.id && planningProvider.id !== "xupra-pro-ai"
     ? planningProvider.label
     : providerDisplayLabel(activeProvider);
@@ -705,7 +711,7 @@ function renderChatPanel(
     : `<div class="chat-empty">Describe what you want to build. The AI will generate a phased plan and populate the kanban below.</div>`;
 
   return `${collapsed ? "" : plannerSetup}
-  <section class="chat-panel${collapsed ? " collapsed" : ""}" aria-label="Build plan chat" data-has-plan="${hasPlan ? "true" : "false"}">
+  <section class="chat-panel${collapsed ? " collapsed" : ""}" aria-label="Build plan chat" data-has-plan="${hasPlan ? "true" : "false"}" data-registered="${registered ? "true" : "false"}">
     <div class="chat-header">
       <span class="chat-eyebrow">Build Plan Chat</span>
       <div class="chat-controls">
@@ -723,7 +729,7 @@ function renderChatPanel(
       </div>
       <div class="chat-messages" id="chatMessages">${messages}</div>
       <form class="chat-form" id="chatForm">
-        <textarea id="chatInput" rows="2" placeholder="${hasPlan ? "Ask DryLake to update these cards..." : "Describe what you want to build..."}"></textarea>
+        <textarea id="chatInput" rows="2" placeholder="${hasPlan ? "Ask DryLake to update these cards..." : "Describe what you want to build..."}" aria-label="${registered ? "DryLake planning prompt" : "Register to use DryLake planning"}"></textarea>
         <div class="chat-form-row">
           <span class="chat-hint muted">Enter to send</span>
           <button type="submit">Send</button>
@@ -1059,6 +1065,7 @@ export class ControlRoomProvider {
     .provider-config-secondary[hidden] { display: none; }
     .provider-config-secondary:hover { color: #090a0a; background: var(--drylake-orange); border-color: var(--drylake-orange); }
     .stage-count-label { display: inline-flex; align-items: center; gap: 8px; color: var(--drylake-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.08em; }
+    .planning-info-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 1px solid rgba(251, 146, 60, 0.72); border-radius: 999px; color: var(--drylake-orange); background: var(--drylake-orange-soft); font-size: 11px; font-weight: 800; text-transform: none; letter-spacing: 0; cursor: help; }
     .stage-count-select { min-width: 92px; padding: 6px 8px; color: var(--drylake-text); background: var(--drylake-bg); border: 1px solid #3f3f46; border-radius: 4px; font-size: 12px; text-transform: none; letter-spacing: 0; }
     .stage-count-select:disabled { opacity: 0.72; cursor: not-allowed; }
     .model-tier-bar { display: inline-flex; align-items: center; gap: 7px; width: max-content; max-width: 100%; padding: 5px 10px; margin: 0 0 12px; border: 1px solid rgba(251, 146, 60, 0.45); border-radius: 999px; color: #fed7aa; background: var(--drylake-orange-soft); font-size: 11px; font-weight: 650; }
@@ -1149,6 +1156,22 @@ export class ControlRoomProvider {
     const chatInput = document.getElementById("chatInput");
     const planningProviderSelect = document.getElementById("planningProviderSelect");
     const stageCountSelect = document.getElementById("stageCountSelect");
+
+    function isRegisteredUser() {
+      return document.querySelector(".chat-panel")?.dataset.registered === "true";
+    }
+
+    let registrationPromptOpen = false;
+    function requireRegistration() {
+      if (registrationPromptOpen) {
+        return;
+      }
+      registrationPromptOpen = true;
+      vscode.postMessage({ command: "drylake.requireRegistration", args: [] });
+      setTimeout(() => {
+        registrationPromptOpen = false;
+      }, 1200);
+    }
 
     function selectedPlanningOption() {
       return planningProviderSelect?.selectedOptions?.[0] || null;
@@ -1262,6 +1285,11 @@ export class ControlRoomProvider {
       if (!text) {
         return;
       }
+      if (!isRegisteredUser()) {
+        requireRegistration();
+        chatInput.focus();
+        return;
+      }
       if (selectedProviderLocked) {
         vscode.postMessage({ command: "xupra.openBilling", args: [] });
         return;
@@ -1281,6 +1309,12 @@ export class ControlRoomProvider {
     chatForm?.addEventListener("submit", (event) => {
       event.preventDefault();
       sendChat();
+    });
+    chatInput?.addEventListener("focus", () => {
+      if (!isRegisteredUser()) {
+        requireRegistration();
+        chatInput.blur();
+      }
     });
     chatInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {

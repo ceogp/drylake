@@ -10,6 +10,8 @@ import { generatePhasePlanPrompt } from "../prompts/generatePhasePlanPrompt";
 import { refineArchitecturePrompt } from "../prompts/refineArchitecturePrompt";
 import { refinePurposePrompt } from "../prompts/refinePurposePrompt";
 import type {
+  ClarifyIntentInput,
+  ClarifyIntentResult,
   DryLakeAiProvider,
   GenerateDraftRunbookInput,
   GenerateDraftRunbookResult,
@@ -83,6 +85,43 @@ function planningChatPrompt(input: PlanningChatInput) {
     "",
     "Planning chat transcript:",
     input.chatTranscript,
+  ].join("\n");
+}
+
+function parseJsonArrayOfStrings(raw: string) {
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        .map((item) => item.trim())
+        .slice(0, 4);
+    }
+  } catch {
+    return cleaned
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^\s*[-*\d.)\s]+/, "").trim())
+      .filter((line) => line.length > 0)
+      .slice(0, 4);
+  }
+
+  return [];
+}
+
+function clarifyPrompt(input: ClarifyIntentInput) {
+  return [
+    "You help scope a DryLake build session.",
+    "Return between 1 and 4 short clarifying questions about the user's prompt.",
+    "Return ONLY a JSON array of strings. No prose, no Markdown fences.",
+    "",
+    `Mode: ${input.mode}`,
+    "",
+    "User prompt:",
+    input.prompt,
+    "",
+    "Workspace summary:",
+    input.workspaceSummary || "No workspace summary available.",
   ].join("\n");
 }
 
@@ -205,5 +244,14 @@ export class HermesCliProvider implements DryLakeAiProvider {
       reply: "Hermes Agent CLI returned an updated DryLake plan.",
       runbook: parsed.runbook,
     };
+  }
+
+  async clarifyIntent(input: ClarifyIntentInput): Promise<ClarifyIntentResult> {
+    const result = await this.runPrompt(clarifyPrompt(input));
+    if (!result.content) {
+      return { message: result.error ?? "Hermes Agent CLI did not return planning questions." };
+    }
+
+    return { questions: parseJsonArrayOfStrings(result.content) };
   }
 }
