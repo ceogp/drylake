@@ -192,7 +192,8 @@ describe("Control Room webview", () => {
     expect(html).toContain("Select phase agent");
     expect(html).toContain('data-handoff-action="run"');
     expect(html).not.toContain("handoff-action-select");
-    expect(html).toContain("Require Approval Between Phases");
+    expect(html).toContain("Execution Mode");
+    expect(html).toContain("Approval Required");
     expect(html).toContain("Build Plan Chat");
     expect(html).toContain('aria-label="Planning model"');
     expect(html).toContain("Ask DryLake to update these cards...");
@@ -256,14 +257,14 @@ describe("Control Room webview", () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: autopilotRunbook() }) } as never);
     await provider.createOrShow(context() as never);
 
-    expect(panel?.webview.html).toContain("Autopilot mode");
+    expect(panel?.webview.html).toContain("Autopilot");
     expect(panel?.webview.html).toContain('aria-pressed="true"');
 
     storedView = "kanban";
     await provider.refresh();
 
     expect(panel?.webview.html).toContain('class="kanban"');
-    expect(panel?.webview.html).toContain("Autopilot mode");
+    expect(panel?.webview.html).toContain("Autopilot");
   });
 
   it("routes execution mode toggle messages to the command handler", async () => {
@@ -396,8 +397,8 @@ describe("Control Room webview", () => {
     const html = panel?.webview.html ?? "";
 
     expect(html).not.toContain("Run Next Phase");
-    expect(html).not.toContain("Require Approval Between Phases");
-    expect(html).not.toContain("Autopilot mode");
+    expect(html).not.toContain("Execution Mode");
+    expect(html).not.toContain("data-execution-mode");
   });
 
   it("persists kanban view selection across refreshes", async () => {

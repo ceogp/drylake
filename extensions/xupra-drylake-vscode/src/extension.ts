@@ -857,7 +857,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("drylake.handoffPhase", async (...args: unknown[]) => {
-    await handoffPhaseCommand(runbookDeps, args[0], args[1]);
+    await handoffPhaseCommand(runbookDeps, args[0], args[1], args[2]);
   });
 
   register("drylake.checkAgentSetup", async () => {

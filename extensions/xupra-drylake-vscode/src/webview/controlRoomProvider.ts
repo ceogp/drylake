@@ -273,6 +273,9 @@ function renderPhaseCard(
       return `<button type="button" class="handoff-menu-item" data-handoff-phase="${escapeHtml(phase.id)}" data-handoff-action="${escapeHtml(option.action)}" title="${escapeHtml(option.title)}"${disabled}>${escapeHtml(shortLabel)}</button>`;
     })
     .join("");
+  const markCompleteButton = phase.status === "active"
+    ? `<button type="button" class="secondary mark-complete-btn" data-phase-status-update="${escapeHtml(phase.id)}" data-status="complete" title="Mark this phase complete after the agent terminal has finished.">Mark Complete</button>`
+    : "";
 
   return `<article class="${cardClass}" data-phase-id="${escapeHtml(phase.id)}" data-phase-status="${statusForKanban(phase.status)}">
     <div class="phase-card-top">
@@ -288,6 +291,7 @@ function renderPhaseCard(
     ${renderPhaseSteps(phase)}
     <div class="phase-actions">
       <button type="button" class="primary handoff-btn" data-handoff-phase="${escapeHtml(phase.id)}" data-handoff-action="run" title="${escapeHtml(primaryTitle)}"${disabled}>${escapeHtml(primaryLabel)}</button>
+      ${markCompleteButton}
       <button type="button" class="secondary multi-agent-btn" data-multi-agent-phase="${escapeHtml(phase.id)}" title="Split this phase across multiple selected agents.">Multi-Agent</button>
       <details class="handoff-menu">
         <summary>Export</summary>
@@ -304,12 +308,17 @@ function renderExecutionModeToggle(runbook: ApplicationBuildRunbook | null) {
   }
 
   const enabled = autopilotEnabled(runbook);
-  const label = enabled ? "Autopilot mode" : "Require Approval Between Phases";
+  const label = enabled ? "Autopilot" : "Approval Required";
+  const detail = enabled ? "Starts next phase after you mark complete" : "Stops after each phase";
   const title = enabled
     ? "DryLake starts the next phase automatically after the current phase is marked complete."
     : "DryLake pauses after each phase so you can approve before starting the next phase.";
 
-  return `<button class="toggle-btn execution-toggle${enabled ? " active" : ""}" data-command="drylake.toggleAutopilot" title="${escapeHtml(title)}" aria-pressed="${enabled ? "true" : "false"}">${escapeHtml(label)}</button>`;
+  return `<button class="execution-mode-toggle${enabled ? " active" : ""}" data-command="drylake.toggleAutopilot" data-execution-mode data-autopilot="${enabled ? "true" : "false"}" title="${escapeHtml(title)}" aria-pressed="${enabled ? "true" : "false"}">
+    <span class="execution-mode-label">Execution Mode</span>
+    <strong>${escapeHtml(label)}</strong>
+    <span>${escapeHtml(detail)}</span>
+  </button>`;
 }
 
 function renderPipeline(
@@ -413,6 +422,7 @@ type WebviewMessage = {
   agent?: unknown;
   profileLogicalPath?: unknown;
   handoffAction?: unknown;
+  autopilot?: unknown;
   status?: unknown;
   text?: unknown;
   mode?: unknown;
@@ -820,7 +830,15 @@ export class ControlRoomProvider {
       }
 
       if (message.command === "drylake.handoffPhase") {
-        await vscode.commands.executeCommand(message.command, message.phaseId ?? message.args?.[0], message.handoffAction ?? message.args?.[1]);
+        const args = [
+          message.phaseId ?? message.args?.[0],
+          message.handoffAction ?? message.args?.[1],
+        ];
+        const autopilot = message.autopilot ?? message.args?.[2];
+        if (typeof autopilot === "boolean") {
+          args.push(autopilot);
+        }
+        await vscode.commands.executeCommand(message.command, ...args);
         return;
       }
 
@@ -981,12 +999,18 @@ export class ControlRoomProvider {
     button { color: #090a0a; background: var(--drylake-green); border: 1px solid var(--drylake-green); border-radius: 4px; padding: 7px 11px; cursor: pointer; font-weight: 650; box-shadow: none; }
     button:hover { background: #6ee7b7; border-color: #6ee7b7; }
     button:disabled { cursor: not-allowed; opacity: 0.55; }
-    button.secondary, .toggle-btn { color: var(--drylake-text); background: var(--drylake-bg); border-color: #3f3f46; }
-    button.secondary:hover, .toggle-btn:hover { border-color: var(--drylake-orange); color: #fed7aa; background: var(--drylake-bg); }
+    button.secondary, .toggle-btn, .execution-mode-toggle { color: var(--drylake-text); background: var(--drylake-bg); border-color: #3f3f46; }
+    button.secondary:hover, .toggle-btn:hover, .execution-mode-toggle:hover { border-color: var(--drylake-orange); color: #fed7aa; background: var(--drylake-bg); }
     .eyebrow, .planning-banner-eyebrow, .chat-eyebrow, .phase-id { color: var(--drylake-green); text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
     .muted, .objective, .agent-label, .step-count, .drop-zone, .planning-banner-reason, .chat-empty, .chat-meta { color: var(--drylake-muted); line-height: 1.45; }
     .actions, .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
     .toggle-btn.active { color: #090a0a; background: var(--drylake-green); border-color: var(--drylake-green); }
+    .execution-mode-toggle { display: grid; gap: 2px; min-width: 190px; padding: 7px 10px; text-align: left; border-radius: 6px; }
+    .execution-mode-toggle strong { color: var(--drylake-text); font-size: 12px; line-height: 1.15; }
+    .execution-mode-toggle span { color: var(--drylake-muted); font-size: 10px; line-height: 1.2; }
+    .execution-mode-toggle .execution-mode-label { color: var(--drylake-orange); text-transform: uppercase; font-size: 9px; font-weight: 800; letter-spacing: 0.1em; }
+    .execution-mode-toggle.active { border-color: var(--drylake-green); background: var(--drylake-green-soft); }
+    .execution-mode-toggle.active strong { color: #a7f3d0; }
     .pipeline { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 10px; }
     .arrow { display: flex; align-items: center; padding: 0 8px; color: var(--drylake-orange); font-size: 22px; font-weight: 700; flex: 0 0 auto; }
     .phase-card { min-width: 210px; max-width: 220px; flex: 0 0 210px; min-height: 360px; display: flex; flex-direction: column; border: 1px solid var(--drylake-line); border-radius: 8px; padding: 12px; background: var(--drylake-panel); box-shadow: none; overflow: hidden; }
@@ -1091,6 +1115,7 @@ export class ControlRoomProvider {
     .step-item.done span { text-decoration: line-through; color: #71717a; }
     .phase-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding-top: 10px; }
     .handoff-btn { width: 100%; font-size: 12px; padding: 6px 10px; }
+    .mark-complete-btn { border-color: rgba(52, 211, 153, 0.65); color: #a7f3d0; }
     .handoff-menu { position: relative; }
     .handoff-menu summary { list-style: none; width: 100%; padding: 5px 8px; border: 1px solid #3f3f46; border-radius: 4px; color: var(--drylake-text); background: var(--drylake-bg); font-size: 11px; font-weight: 650; text-align: center; cursor: pointer; box-shadow: none; }
     .handoff-menu summary::-webkit-details-marker { display: none; }
@@ -1372,6 +1397,12 @@ export class ControlRoomProvider {
       return insertionSide(card, event, orientation) === "before" ? previousPhaseId(card) : card.dataset.phaseId;
     }
 
+    function chooseAutopilotForHandoff() {
+      return window.confirm(
+        "After this handoff starts, should DryLake automatically start the next phase after you mark this one complete?\\n\\nOK = Autopilot\\nCancel = Approval required, launch this phase only"
+      );
+    }
+
     document.addEventListener("click", (event) => {
       const viewButton = event.target.closest("[data-view]");
       if (viewButton) {
@@ -1452,13 +1483,29 @@ export class ControlRoomProvider {
         return;
       }
 
+      const phaseStatusBtn = event.target.closest("[data-phase-status-update]");
+      if (phaseStatusBtn) {
+        vscode.postMessage({
+          command: "drylake.updatePhaseStatus",
+          phaseId: phaseStatusBtn.dataset.phaseStatusUpdate,
+          status: phaseStatusBtn.dataset.status || "complete"
+        });
+        return;
+      }
+
       const handoffBtn = event.target.closest("[data-handoff-phase]");
       if (handoffBtn) {
-        vscode.postMessage({
+        const action = handoffBtn.dataset.handoffAction || "run";
+        const autopilot = action === "run" ? chooseAutopilotForHandoff() : undefined;
+        const payload = {
           command: "drylake.handoffPhase",
           phaseId: handoffBtn.dataset.handoffPhase,
-          handoffAction: handoffBtn.dataset.handoffAction || "run"
-        });
+          handoffAction: action
+        };
+        if (typeof autopilot === "boolean") {
+          payload.autopilot = autopilot;
+        }
+        vscode.postMessage(payload);
       }
     });
 

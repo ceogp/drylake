@@ -1665,7 +1665,7 @@ function nextPhase(runbook: ApplicationBuildRunbook) {
   return runbook.phases.find((phase) => phase.status !== "complete") ?? runbook.phases[0];
 }
 
-function completePhaseAfterSuccessfulHandoff(runbook: ApplicationBuildRunbook, phaseId: string) {
+function completePhaseAfterConfirmation(runbook: ApplicationBuildRunbook, phaseId: string) {
   const completedPhaseIndex = runbook.phases.findIndex((phase) => phase.id === phaseId);
   if (completedPhaseIndex === -1) {
     return { runbook };
@@ -1707,6 +1707,27 @@ function completePhaseAfterSuccessfulHandoff(runbook: ApplicationBuildRunbook, p
   };
 }
 
+function markPhaseHandoffLaunched(
+  runbook: ApplicationBuildRunbook,
+  phaseId: string,
+  autopilotChoice?: boolean,
+) {
+  return {
+    ...runbook,
+    handoff: {
+      ...runbook.handoff,
+      autopilot: typeof autopilotChoice === "boolean" ? autopilotChoice : runbook.handoff.autopilot,
+    },
+    phases: runbook.phases.map((phase) => {
+      if (phase.id !== phaseId || phase.status === "complete") {
+        return phase;
+      }
+
+      return { ...phase, status: "active" as const };
+    }),
+  };
+}
+
 export async function exportHandoffPromptCommand(deps: RunbookCommandDeps) {
   const current = await deps.sessionStore.readRunbook();
   if (!current) {
@@ -1744,9 +1765,15 @@ export async function runNextPhaseCommand(deps: RunbookCommandDeps) {
   await handoffPhaseCommand(deps, phase.id);
 }
 
-export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?: unknown, handoffActionArg?: unknown) {
+export async function handoffPhaseCommand(
+  deps: RunbookCommandDeps,
+  phaseIdArg?: unknown,
+  handoffActionArg?: unknown,
+  autopilotChoiceArg?: unknown,
+) {
   const phaseId = typeof phaseIdArg === "string" ? phaseIdArg.trim() : "";
   const handoffAction = handoffActionFromArg(handoffActionArg);
+  const autopilotChoice = typeof autopilotChoiceArg === "boolean" ? autopilotChoiceArg : undefined;
   if (!phaseId) {
     void vscode.window.showWarningMessage("DryLake could not start the handoff because no phase was specified.");
     return;
@@ -1878,51 +1905,15 @@ export async function handoffPhaseCommand(deps: RunbookCommandDeps, phaseIdArg?:
     });
 
     if (launchResult.status === "launched") {
-      const completion = completePhaseAfterSuccessfulHandoff(current.runbook, phaseId);
-      await deps.sessionStore.writeRunbook(current.uri, completion.runbook);
-      queueUsageEvent(deps, {
-        ...usageBase,
-        eventName: "phase_marked_complete",
-        actionType: "run",
-        launchStatus: launchResult.status,
-        metadata: {
-          completionMode: "handoff_launch",
-          autopilot: completion.runbook.handoff.autopilot,
-        },
-      });
-
-      const completedTitle = completion.completedPhase?.title ?? phase.title;
-      if (completion.runbook.handoff.autopilot && completion.nextActive) {
-        if (!explicitPhaseAgent(completion.nextActive.agent)) {
-          warning = true;
-          message = `${completedTitle} handoff launched and marked complete. Autopilot is paused until you select an agent for ${completion.nextActive.title}.`;
-        } else {
-          queueUsageEvent(deps, {
-            eventName: "phase_autopilot_started_next",
-            sessionId: buildSession?.id,
-            phaseId: completion.nextActive.id,
-            phaseTitle: completion.nextActive.title,
-            agentId: explicitPhaseAgent(completion.nextActive.agent),
-            skillLogicalPath: completion.nextActive.handoffProfile?.logicalPath,
-            metadata: {
-              previousPhaseId: phase.id,
-              previousPhaseTitle: phase.title,
-            },
-          });
-          await deps.controlRoom.refresh();
-          await deps.refreshSidebar();
-          void vscode.window.showInformationMessage(
-            `${completedTitle} handoff launched and marked complete. Autopilot starting ${completion.nextActive.title}.`,
-          );
-          await handoffPhaseCommand(deps, completion.nextActive.id);
-          return;
-        }
-      } else {
-        const nextPending = completion.runbook.phases.find((item) => item.status !== "complete");
-        message = nextPending
-          ? `${completedTitle} handoff launched and marked complete. Use Run Next Phase to continue.`
-          : `${completedTitle} handoff launched and marked complete. All phase handoffs launched.`;
-      }
+      const updated = markPhaseHandoffLaunched(current.runbook, phaseId, autopilotChoice);
+      await deps.sessionStore.writeRunbook(current.uri, updated);
+      const nextPending = updated.phases.find((item) => item.id !== phaseId && item.status !== "complete");
+      const continuation = updated.handoff.autopilot && nextPending
+        ? "Autopilot will start the next phase after you mark this phase complete."
+        : nextPending
+          ? "Mark this phase complete when the agent finishes, then use Run Next Phase."
+          : "Mark this phase complete when the agent finishes.";
+      message = `${phase.title} handoff launched. ${continuation}`;
     } else {
       warning = launchResult.status === "not-installed" || launchResult.status === "failed";
       message = `${launchResult.message} Prompt copied to clipboard.`;
@@ -2085,17 +2076,29 @@ export async function updatePhaseStatusCommand(deps: RunbookCommandDeps, phaseId
   }
 
   let changed = false;
-  const updated: ApplicationBuildRunbook = {
-    ...current.runbook,
-    phases: current.runbook.phases.map((phase) => {
-      if (phase.id !== phaseId) {
-        return phase;
-      }
+  let completedPhase: ApplicationBuildRunbook["phases"][number] | undefined;
+  let nextActive: ApplicationBuildRunbook["phases"][number] | undefined;
+  let updated: ApplicationBuildRunbook;
 
-      changed = true;
-      return { ...phase, status };
-    }),
-  };
+  if (status === "complete") {
+    const completion = completePhaseAfterConfirmation(current.runbook, phaseId);
+    updated = completion.runbook;
+    completedPhase = completion.completedPhase;
+    nextActive = completion.nextActive;
+    changed = Boolean(completedPhase);
+  } else {
+    updated = {
+      ...current.runbook,
+      phases: current.runbook.phases.map((phase) => {
+        if (phase.id !== phaseId) {
+          return phase;
+        }
+
+        changed = true;
+        return { ...phase, status };
+      }),
+    };
+  }
 
   if (!changed) {
     void vscode.window.showWarningMessage(`DryLake could not find phase ${phaseId}.`);
@@ -2105,6 +2108,54 @@ export async function updatePhaseStatusCommand(deps: RunbookCommandDeps, phaseId
   await deps.sessionStore.writeRunbook(current.uri, updated);
   await deps.controlRoom.refresh();
   await deps.refreshSidebar();
+
+  if (completedPhase) {
+    queueUsageEvent(deps, {
+      eventName: "phase_marked_complete",
+      sessionId: buildSessionId(deps),
+      phaseId,
+      phaseTitle: completedPhase.title,
+      agentId: explicitPhaseAgent(completedPhase.agent),
+      skillLogicalPath: completedPhase.handoffProfile?.logicalPath,
+      actionType: "manual_completion",
+      metadata: {
+        completionMode: "user_confirmed",
+        autopilot: updated.handoff.autopilot,
+      },
+    });
+
+    if (updated.handoff.autopilot && nextActive) {
+      if (!explicitPhaseAgent(nextActive.agent)) {
+        void vscode.window.showWarningMessage(
+          `${completedPhase.title} complete. Autopilot is paused until you select an agent for ${nextActive.title}.`,
+        );
+        return;
+      }
+
+      queueUsageEvent(deps, {
+        eventName: "phase_autopilot_started_next",
+        sessionId: buildSessionId(deps),
+        phaseId: nextActive.id,
+        phaseTitle: nextActive.title,
+        agentId: explicitPhaseAgent(nextActive.agent),
+        skillLogicalPath: nextActive.handoffProfile?.logicalPath,
+        metadata: {
+          previousPhaseId: completedPhase.id,
+          previousPhaseTitle: completedPhase.title,
+        },
+      });
+      void vscode.window.showInformationMessage(`${completedPhase.title} complete. Autopilot starting ${nextActive.title}.`);
+      await handoffPhaseCommand(deps, nextActive.id);
+      return;
+    }
+
+    const nextPending = updated.phases.find((phase) => phase.status === "pending" || phase.status === "active");
+    if (nextPending) {
+      void vscode.window.showInformationMessage(`${completedPhase.title} complete. Use Run Next Phase to continue.`);
+    } else {
+      void vscode.window.showInformationMessage(`${completedPhase.title} complete. All phases done.`);
+    }
+  }
 }
 
 export async function toggleAutopilotCommand(deps: RunbookCommandDeps) {

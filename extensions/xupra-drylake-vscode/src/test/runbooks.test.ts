@@ -15,6 +15,7 @@ import {
   toggleStepCommand,
   updatePhaseAgentCommand,
   updatePhaseHandoffProfileCommand,
+  updatePhaseStatusCommand,
 } from "../commands/runbooks";
 import { createStarterXu } from "../xu/createStarterXu";
 import type { ApplicationBuildRunbook } from "../xu/types";
@@ -1153,8 +1154,8 @@ describe("runbook commands", () => {
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "gemini" }));
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(2);
     expect(currentRunbook.phases[0].status).toBe("complete");
-    expect(currentRunbook.phases[1].status).toBe("complete");
-    expect(currentRunbook.phases[1].steps.every((step) => step.status === "complete")).toBe(true);
+    expect(currentRunbook.phases[1].status).toBe("active");
+    expect(currentRunbook.phases[1].steps.every((step) => step.status === "pending")).toBe(true);
   });
 
   it("autopilot pauses when the next phase has no selected agent", async () => {
@@ -1192,8 +1193,8 @@ describe("runbook commands", () => {
     expect(mocks.openTextDocument).not.toHaveBeenCalled();
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
     const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
-    expect(written.phases.find((phase) => phase.id === "P-01")?.status).toBe("complete");
-    expect(written.phases.find((phase) => phase.id === "P-01")?.steps.every((step) => step.status === "complete")).toBe(true);
+    expect(written.phases.find((phase) => phase.id === "P-01")?.status).toBe("active");
+    expect(written.phases.find((phase) => phase.id === "P-01")?.steps.every((step) => step.status === "pending")).toBe(true);
     expect(deps.controlRoom.refresh).toHaveBeenCalledOnce();
     expect(deps.refreshSidebar).toHaveBeenCalledOnce();
   });
@@ -1245,7 +1246,7 @@ describe("runbook commands", () => {
     }));
   });
 
-  it("records signed-in handoff launches and automatic phase completion", async () => {
+  it("records signed-in handoff launches and explicit phase completion", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";
     const { deps, recordUsageEvent } = reorderDeps(runbook, {
@@ -1266,12 +1267,20 @@ describe("runbook commands", () => {
       launchStatus: "launched",
       promptEstimatedTokens: expect.any(Number),
     }));
+    expect(recordUsageEvent).not.toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "phase_marked_complete",
+    }));
+
+    recordUsageEvent.mockClear();
+    await updatePhaseStatusCommand(deps as never, "P-01", "complete");
+    await flushQueuedUsageEvents();
+
     expect(recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
       eventName: "phase_marked_complete",
       phaseId: "P-01",
       agentId: "codex",
       metadata: expect.objectContaining({
-        completionMode: "handoff_launch",
+        completionMode: "user_confirmed",
       }),
     }));
   });
@@ -1381,7 +1390,7 @@ describe("runbook commands", () => {
     }));
   });
 
-  it("auto-completes the phase checklist after a successful handoff launch", async () => {
+  it("keeps the phase active after a successful handoff launch", async () => {
     const runbook = reorderRunbook();
     runbook.phases[0].agent = "codex";
     const { deps } = reorderDeps(runbook);
@@ -1392,12 +1401,12 @@ describe("runbook commands", () => {
     expect(deps.sessionStore.writeRunbook).toHaveBeenCalledOnce();
     const written = deps.sessionStore.writeRunbook.mock.calls[0][1];
     const phase = written.phases.find((item) => item.id === "P-01");
-    expect(phase?.status).toBe("complete");
-    expect(phase?.steps.every((step) => step.status === "complete")).toBe(true);
+    expect(phase?.status).toBe("active");
+    expect(phase?.steps.every((step) => step.status === "pending")).toBe(true);
     expect(written.phases.find((item) => item.id === "P-02")?.status).toBe("pending");
   });
 
-  it("autopilot auto-completes launched phases and starts the next selected phase", async () => {
+  it("autopilot starts the next selected phase after explicit completion", async () => {
     const runbook = reorderRunbook();
     runbook.handoff.autopilot = true;
     runbook.phases[0].agent = "codex";
@@ -1424,12 +1433,19 @@ describe("runbook commands", () => {
     await handoffPhaseCommand(deps as never, "P-01");
 
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "codex" }));
+    expect(mocks.launchPhaseAgent).not.toHaveBeenCalledWith(expect.objectContaining({ agent: "gemini" }));
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(1);
+    expect(currentRunbook.phases[0].status).toBe("active");
+    expect(currentRunbook.phases[1].status).toBe("pending");
+
+    await updatePhaseStatusCommand(deps as never, "P-01", "complete");
+
     expect(mocks.launchPhaseAgent).toHaveBeenCalledWith(expect.objectContaining({ agent: "gemini" }));
-    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(2);
+    expect(deps.sessionStore.writeRunbook).toHaveBeenCalledTimes(3);
     expect(currentRunbook.phases[0].status).toBe("complete");
     expect(currentRunbook.phases[0].steps.every((step) => step.status === "complete")).toBe(true);
-    expect(currentRunbook.phases[1].status).toBe("complete");
-    expect(currentRunbook.phases[1].steps.every((step) => step.status === "complete")).toBe(true);
+    expect(currentRunbook.phases[1].status).toBe("active");
+    expect(currentRunbook.phases[1].steps.every((step) => step.status === "pending")).toBe(true);
   });
 
   // Export-only actions must never change phase status.
