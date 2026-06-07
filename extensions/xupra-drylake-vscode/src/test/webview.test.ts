@@ -200,6 +200,22 @@ describe("Control Room webview", () => {
     expect(html).toContain('data-info-toggle="stage-count"');
     expect(html).toContain('data-info-panel="stage-count"');
     expect(html).toContain("This plan keeps the planning step count chosen when the session started.");
+    expect(html).toContain('data-view="security"');
+    expect(html).toContain(">Security</button>");
+  });
+
+  it("renders the Security tab as an IDE firewall scan surface", async () => {
+    storedView = "security";
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain("Safe Developer Rank");
+    expect(html).toContain("DryLake Security Scan");
+    expect(html).toContain("agents, skills, extensions, MCP servers");
+    expect(html).toContain("VS Code does not expose a complete runtime permission list");
+    expect(html).not.toContain("Build Plan Chat");
   });
 
   it("renders generated task-specific card previews", async () => {

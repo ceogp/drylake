@@ -463,6 +463,10 @@
         "title": "DryLake: Open Control Room"
       },
       {
+        "command": "drylake.scanAiCodingSetup",
+        "title": "DryLake: Scan AI Coding Setup"
+      },
+      {
         "command": "drylake.configurePlanningProvider",
         "title": "DryLake: Configure Planning Provider Key"
       },

@@ -52,6 +52,7 @@ import {
 import { installGeneratedFilesToRuntimeHome } from "./services/runtimeInstall";
 import { StateStore } from "./services/stateStore";
 import { recordExtensionUsageEvent } from "./services/usageEvents";
+import { runSecurityScan, writeSecurityScanReports } from "./services/securityScanner";
 import { scanWorkspaceFiles } from "./services/workspaceScanner";
 import type { PackageVersionDetail } from "./types/api";
 import type { ImportedWorkspaceSnapshot } from "./types/package";
@@ -770,6 +771,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("drylake.openControlRoom", async () => {
     await openControlRoomCommand(runbookDeps, context);
+  });
+
+  register("drylake.scanAiCodingSetup", async () => {
+    const scan = await runSecurityScan(configuration);
+    const reports = await writeSecurityScanReports(scan);
+    const document = await vscode.workspace.openTextDocument(reports.report);
+    await vscode.window.showTextDocument(document, { preview: false });
+    void vscode.window.showInformationMessage(`DryLake Safe Developer Rank: ${scan.rank} (${scan.score}/100).`);
   });
 
   register("drylake.requireRegistration", async () => {

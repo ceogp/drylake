@@ -3,6 +3,7 @@
 .development-extension/**
 development-vsix/**
 *.vsix
+media/icon-dl-box-v1.png
 src/**
 tsconfig.json
 esbuild.mjs

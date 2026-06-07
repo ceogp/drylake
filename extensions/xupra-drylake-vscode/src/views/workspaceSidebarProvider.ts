@@ -987,7 +987,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       let html = '<div class="section"><div class="section-header"><span class="section-label">DRYLAKE PLAN</span></div>';
 
       if (!runbook.path && !runbook.sessionName) {
-        html += '<div class="session-card"><div class="session-name">No active plan</div><div class="session-meta">Open the Control Room to paste a ticket, bug, or feature request and create a guided coding plan.</div><button class="big-action primary" data-action="openControlRoom">Create New Plan</button></div></div>';
+        html += '<div class="session-card"><div class="session-name">No active plan</div><div class="session-meta">Open the Control Room to run planning or security scans from one place.</div><button class="big-action primary" data-action="openControlRoom">Open Control Room</button></div></div>';
         return html;
       }
 
@@ -999,7 +999,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       html += '<div class="session-meta">' + escapeHtml(status) + ' · Local plan file: ' + escapeHtml(runbook.path || 'drylake.xu') + ' · ' + escapeHtml(runbook.providerStatus || 'Xupra AI') + '</div>';
       html += '<div class="phase-row"><span>Active phase: ' + escapeHtml(phaseLabel) + '</span><span class="phase-agent">' + escapeHtml(runbook.activePhaseAgent || 'session default') + '</span></div>';
       html += '<div class="plan-note">Existing local plan found. Continue it, archive it, or delete it before starting over.</div>';
-      html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Continue</button><button class="action-btn" data-action="newSession">New Plan</button><button class="action-btn" data-action="archiveCurrentPlan">Archive</button><button class="action-btn danger" data-action="deleteCurrentPlan">Delete</button></div>';
+      html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button><button class="action-btn" data-action="newSession">New Plan</button><button class="action-btn" data-action="archiveCurrentPlan">Archive</button><button class="action-btn danger" data-action="deleteCurrentPlan">Delete</button></div>';
       html += '</div></div>';
       return html;
     }

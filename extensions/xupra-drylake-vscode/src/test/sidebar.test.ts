@@ -76,6 +76,7 @@ describe("sidebar reshape", () => {
 
     expect(html).toContain("No active plan");
     expect(html).toContain('data-action="openControlRoom"');
+    expect(html).toContain("Open Control Room");
     expect(noSessionBranch.indexOf('data-action="openControlRoom"')).toBeGreaterThan(-1);
     expect(html).toContain('data-action="newSession"');
     expect(html).toContain('data-action="archiveCurrentPlan"');

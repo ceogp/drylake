@@ -15,9 +15,11 @@ import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
 import type { ConnectionState } from "../types/package";
 import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../xu/types";
 import type { PendingPlanChangeSet } from "../xu/pendingPlanChanges";
+import { renderSafeDeveloperSummary, runSecurityScan, writeSecurityScanReports } from "../services/securityScanner";
+import type { GuardReportPaths, GuardScanResult, GuardSeverity } from "../services/securityScanner";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
 const CONTROL_ROOM_CHAT_COLLAPSED_KEY = "drylake.controlRoomChatCollapsed";
-type ControlRoomView = "pipeline" | "kanban";
+type ControlRoomView = "pipeline" | "kanban" | "security";
 type HandoffProfilesByAgent = Partial<Record<(typeof XU_PHASE_AGENTS)[number], HandoffProfileSelection[]>>;
 
 const MODE_CARDS: Array<[string, XuMode, string]> = [
@@ -89,7 +91,7 @@ function escapeHtml(value: unknown) {
 }
 
 function controlRoomViewFrom(value: unknown): ControlRoomView {
-  return value === "kanban" ? "kanban" : "pipeline";
+  return value === "kanban" || value === "security" ? value : "pipeline";
 }
 
 function modeFrom(value: unknown): XuMode {
@@ -385,6 +387,155 @@ function renderKanbanLoadingState() {
   return `<section class="loading-state" aria-live="polite" aria-busy="true">
     <div class="loading-title">DryLake is generating your plan...</div>
     <div class="loading-grid">${cards}</div>
+  </section>`;
+}
+
+function severityWeight(severity: GuardSeverity) {
+  if (severity === "critical") return 5;
+  if (severity === "high") return 4;
+  if (severity === "medium") return 3;
+  if (severity === "low") return 2;
+  return 1;
+}
+
+function renderSecurityEmptyState(loading: boolean) {
+  return `<section class="security-panel" aria-label="DryLake Guard security scan">
+    <div class="security-hero">
+      <div>
+        <div class="security-eyebrow">DryLake Guard</div>
+        <h2>Safe Developer Rank</h2>
+        <p>Map this IDE's agentic setup: agents, skills, extensions, MCP servers, env references, and tool connections.</p>
+      </div>
+      <button type="button" data-command="drylake.runSecurityScan"${loading ? " disabled" : ""}>${loading ? "Scanning..." : "DryLake Security Scan"}</button>
+    </div>
+    <div class="security-note">Extension access is inferred from installed extension manifests, activation events, commands, contribution points, and local MCP/config files. VS Code does not expose a complete runtime permission list for third-party extensions.</div>
+  </section>`;
+}
+
+function renderSummaryMetric(label: string, value: number | string, tone = "") {
+  return `<div class="security-metric${tone ? ` ${tone}` : ""}">
+    <span>${escapeHtml(label)}</span>
+    <strong>${escapeHtml(value)}</strong>
+  </div>`;
+}
+
+function renderFindingRows(scan: GuardScanResult) {
+  const findings = scan.findings.slice(0, 18);
+  if (findings.length === 0) {
+    return `<div class="security-empty-line">No critical findings in the local scan.</div>`;
+  }
+
+  return findings.map((finding) => `<div class="security-finding ${escapeHtml(finding.severity)}">
+    <span class="security-severity">${escapeHtml(finding.severity)}</span>
+    <div>
+      <strong>${escapeHtml(finding.title)}</strong>
+      <p>${escapeHtml(finding.evidence)}</p>
+      <p>${escapeHtml(finding.recommendation)}</p>
+      ${finding.path ? `<small>${escapeHtml(finding.path)}${finding.line ? `:${finding.line}` : ""}</small>` : ""}
+    </div>
+  </div>`).join("");
+}
+
+function renderExtensionRows(scan: GuardScanResult) {
+  const extensions = scan.extensions
+    .filter((extension) => !extension.isBuiltin)
+    .slice(0, 12);
+
+  if (extensions.length === 0) {
+    return `<div class="security-empty-line">No third-party extensions were detected.</div>`;
+  }
+
+  return extensions.map((extension) => {
+    const flags = extension.riskFlags.length
+      ? extension.riskFlags.map((flag) => `<span>${escapeHtml(flag)}</span>`).join("")
+      : "<span>No manifest risk flags.</span>";
+    const access = extension.accessSignals.slice(0, 4).map((signal) => `<li>${escapeHtml(signal)}</li>`).join("");
+
+    return `<details class="security-extension">
+      <summary>
+        <span>${escapeHtml(extension.displayName)}</span>
+        <small>${escapeHtml(extension.id)} ${extension.isActive ? "active" : "inactive"}</small>
+      </summary>
+      <div class="security-tags">${flags}</div>
+      <ul>${access}</ul>
+      <small>Activation: ${escapeHtml(extension.activationEvents.slice(0, 5).join(", ") || "not declared")}</small>
+    </details>`;
+  }).join("");
+}
+
+function renderMcpRows(scan: GuardScanResult) {
+  if (scan.mcpServers.length === 0) {
+    return `<div class="security-empty-line">No MCP server configs were detected in the scanned locations.</div>`;
+  }
+
+  return scan.mcpServers.slice(0, 12).map((server) => `<div class="security-mcp ${escapeHtml(server.severity)}">
+    <div>
+      <strong>${escapeHtml(server.name)}</strong>
+      <p>${escapeHtml([server.command, ...server.args].filter(Boolean).join(" ") || server.url || "MCP server")}</p>
+      <small>${escapeHtml(server.configPath)}</small>
+    </div>
+    <div class="security-tags">${server.capabilities.map((capability) => `<span>${escapeHtml(capability)}</span>`).join("")}</div>
+  </div>`).join("");
+}
+
+function renderSecurityPanel(scan: GuardScanResult | null, loading: boolean) {
+  if (!scan) {
+    return renderSecurityEmptyState(loading);
+  }
+
+  const sortedFindings = [...scan.findings].sort((left, right) => severityWeight(right.severity) - severityWeight(left.severity));
+  const topFinding = sortedFindings[0];
+
+  return `<section class="security-panel" aria-label="DryLake Guard security scan">
+    <div class="security-hero">
+      <div>
+        <div class="security-eyebrow">DryLake Guard</div>
+        <h2>Safe Developer Rank: ${escapeHtml(scan.rank)} - ${escapeHtml(scan.score)}/100</h2>
+        <p>${topFinding ? escapeHtml(topFinding.title) : "No critical findings in the local scan."}</p>
+      </div>
+      <div class="security-actions">
+        <button type="button" data-command="drylake.runSecurityScan"${loading ? " disabled" : ""}>${loading ? "Scanning..." : "DryLake Security Scan"}</button>
+        <button type="button" class="secondary" data-command="drylake.openSecurityReport">Open Report</button>
+        <button type="button" class="secondary" data-command="drylake.copySecuritySummary">Copy Summary</button>
+      </div>
+    </div>
+    <div class="security-note">Scanned ${escapeHtml(new Date(scan.scannedAt).toLocaleString())}. Extension access is inferred from manifests/configs; runtime behavior still requires review.</div>
+    <div class="security-score-row">
+      <div class="security-score ${escapeHtml(scan.rank.toLowerCase().replace(/[^a-z]+/g, "-"))}">
+        <span>Score</span>
+        <strong>${escapeHtml(scan.score)}</strong>
+        <small>${escapeHtml(scan.rank)}</small>
+      </div>
+      <div class="security-metrics">
+        ${renderSummaryMetric("Agent files", scan.summary.agentFiles)}
+        ${renderSummaryMetric("Extensions", scan.summary.extensions)}
+        ${renderSummaryMetric("Active extensions", scan.summary.activeExtensions)}
+        ${renderSummaryMetric("MCP servers", scan.summary.mcpServers)}
+        ${renderSummaryMetric("Risky files", scan.summary.riskyFiles)}
+        ${renderSummaryMetric("Findings", scan.summary.findings, scan.summary.critical || scan.summary.high ? "warn" : "")}
+      </div>
+    </div>
+    <div class="security-category-row">
+      ${renderSummaryMetric("MCP Risk", `${scan.categoryScores.mcpRisk}/100`)}
+      ${renderSummaryMetric("Agent Reliability", `${scan.categoryScores.agentReliability}/100`)}
+      ${renderSummaryMetric("Secret Hygiene", `${scan.categoryScores.secretHygiene}/100`)}
+      ${renderSummaryMetric("IDE Bloat", `${scan.categoryScores.ideBloat}/100`)}
+      ${renderSummaryMetric("Token Waste", `${scan.categoryScores.tokenWaste}/100`)}
+    </div>
+    <div class="security-grid">
+      <section class="security-section">
+        <h3>Top Findings</h3>
+        ${renderFindingRows({ ...scan, findings: sortedFindings })}
+      </section>
+      <section class="security-section">
+        <h3>Extension Access Review</h3>
+        ${renderExtensionRows(scan)}
+      </section>
+      <section class="security-section">
+        <h3>MCP And Tool Access</h3>
+        ${renderMcpRows(scan)}
+      </section>
+    </div>
   </section>`;
 }
 
@@ -754,6 +905,9 @@ function renderChatPanel(
 export class ControlRoomProvider {
   private panel?: vscode.WebviewPanel;
   private context?: vscode.ExtensionContext;
+  private securityScan: GuardScanResult | null = null;
+  private securityScanLoading = false;
+  private securityReportPaths: GuardReportPaths | null = null;
 
   constructor(
     private readonly sessionStore: XuSessionStore,
@@ -795,6 +949,43 @@ export class ControlRoomProvider {
         const view = controlRoomViewFrom(message.view ?? message.args?.[0]);
         await context.workspaceState?.update(CONTROL_ROOM_VIEW_KEY, view);
         await this.refresh();
+        return;
+      }
+
+      if (message.command === "drylake.runSecurityScan") {
+        this.securityScanLoading = true;
+        await this.refresh();
+        try {
+          this.securityScan = await runSecurityScan(vscode.workspace.getConfiguration("xupra"));
+          this.securityReportPaths = await writeSecurityScanReports(this.securityScan);
+        } catch (error) {
+          void vscode.window.showErrorMessage(`DryLake Guard scan failed: ${error instanceof Error ? error.message : String(error)}`);
+        } finally {
+          this.securityScanLoading = false;
+        }
+        await this.refresh();
+        return;
+      }
+
+      if (message.command === "drylake.openSecurityReport") {
+        if (!this.securityReportPaths?.report) {
+          void vscode.window.showWarningMessage("Run DryLake Security Scan before opening the report.");
+          return;
+        }
+
+        const document = await vscode.workspace.openTextDocument(this.securityReportPaths.report);
+        await vscode.window.showTextDocument(document, { preview: false });
+        return;
+      }
+
+      if (message.command === "drylake.copySecuritySummary") {
+        if (!this.securityScan) {
+          void vscode.window.showWarningMessage("Run DryLake Security Scan before copying the summary.");
+          return;
+        }
+
+        await vscode.env.clipboard.writeText(renderSafeDeveloperSummary(this.securityScan));
+        void vscode.window.showInformationMessage("Copied DryLake security summary.");
         return;
       }
 
@@ -969,9 +1160,12 @@ export class ControlRoomProvider {
     const modelTier = this.readLastModelTier();
     const connection = this.readConnection();
     const hasPlan = Boolean(runbook);
-    const banner = renderPlanningModelBanner(modelTier, hasPlan, connection);
-    const chatPanel = renderChatPanel(chatState, planningProvider, hasPlan, this.chatCollapsed(), modelTier, connection);
-    const body = runbook
+    const isSecurityView = view === "security";
+    const banner = isSecurityView ? "" : renderPlanningModelBanner(modelTier, hasPlan, connection);
+    const chatPanel = isSecurityView ? "" : renderChatPanel(chatState, planningProvider, hasPlan, this.chatCollapsed(), modelTier, connection);
+    const body = isSecurityView
+      ? renderSecurityPanel(this.securityScan, this.securityScanLoading)
+      : runbook
       ? (view === "kanban"
         ? renderKanban(runbook, pendingPlanChange, profilesByAgent)
         : renderPipeline(runbook, pendingPlanChange, profilesByAgent))
@@ -1150,7 +1344,49 @@ export class ControlRoomProvider {
     .chat-form textarea { min-height: 56px; }
     .chat-form-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
     .chat-hint { font-size: 11px; }
+    .security-panel { display: grid; gap: 14px; }
+    .security-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
+    .security-hero p { max-width: 680px; color: var(--drylake-muted); font-size: 13px; line-height: 1.45; }
+    .security-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .security-eyebrow { color: var(--drylake-orange); text-transform: uppercase; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; }
+    .security-note { padding: 10px 12px; border: 1px solid rgba(251, 146, 60, 0.35); border-radius: 6px; color: #fed7aa; background: var(--drylake-orange-soft); font-size: 12px; line-height: 1.4; }
+    .security-score-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; }
+    .security-score { display: grid; align-content: center; gap: 4px; min-height: 150px; padding: 16px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
+    .security-score span, .security-metric span { color: var(--drylake-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+    .security-score strong { color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 48px; line-height: 1; }
+    .security-score small { color: var(--drylake-green); font-size: 13px; font-weight: 750; }
+    .security-score.scout, .security-score.builder { border-color: rgba(248, 113, 113, 0.6); }
+    .security-score.scout small, .security-score.builder small { color: var(--drylake-red); }
+    .security-score.operator { border-color: rgba(251, 146, 60, 0.62); }
+    .security-score.operator small { color: var(--drylake-orange); }
+    .security-score.guardian, .security-score.sentinel { border-color: rgba(52, 211, 153, 0.6); }
+    .security-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .security-category-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .security-metric { display: grid; gap: 5px; min-height: 70px; padding: 12px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel); }
+    .security-metric strong { color: var(--drylake-text); font-size: 22px; line-height: 1; }
+    .security-metric.warn { border-color: rgba(248, 113, 113, 0.55); }
+    .security-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.82fr); gap: 12px; }
+    .security-section { display: grid; align-content: start; gap: 8px; padding: 12px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
+    .security-section:nth-child(3) { grid-column: 1 / -1; }
+    .security-section h3 { margin: 0 0 2px; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 14px; font-weight: 650; }
+    .security-finding, .security-mcp { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; padding: 9px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
+    .security-finding p, .security-mcp p, .security-extension li { color: var(--drylake-muted); font-size: 12px; line-height: 1.4; }
+    .security-finding small, .security-mcp small, .security-extension small { color: #71717a; font-size: 11px; }
+    .security-severity { align-self: start; padding: 3px 6px; border: 1px solid var(--drylake-line); border-radius: 999px; color: var(--drylake-muted); font-size: 10px; font-weight: 800; text-align: center; text-transform: uppercase; }
+    .security-finding.critical .security-severity, .security-finding.high .security-severity { color: #fecaca; border-color: rgba(248, 113, 113, 0.58); background: rgba(248, 113, 113, 0.1); }
+    .security-finding.medium .security-severity, .security-mcp.medium { border-color: rgba(251, 146, 60, 0.45); }
+    .security-extension { border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
+    .security-extension summary { display: flex; justify-content: space-between; gap: 10px; padding: 9px; cursor: pointer; }
+    .security-extension summary span { color: var(--drylake-text); font-weight: 700; }
+    .security-extension summary small { color: var(--drylake-muted); }
+    .security-extension ul { margin: 0; padding: 0 12px 10px 26px; }
+    .security-tags { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 9px 9px; }
+    .security-tags span { padding: 2px 6px; border: 1px solid rgba(251, 146, 60, 0.36); border-radius: 999px; color: #fed7aa; background: rgba(251, 146, 60, 0.08); font-size: 10px; font-weight: 650; }
+    .security-mcp { grid-template-columns: minmax(0, 1fr) minmax(160px, 0.45fr); }
+    .security-mcp.high { border-color: rgba(248, 113, 113, 0.52); }
+    .security-empty-line { padding: 10px; border: 1px dashed #3f3f46; border-radius: 6px; color: var(--drylake-muted); font-size: 12px; }
     @media (max-width: 860px) { header, .nano-banner, .planner-setup-header { align-items: flex-start; flex-direction: column; } .planning-controls { grid-template-columns: 1fr; } .stage-count-label { justify-content: flex-start; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) { .security-hero { flex-direction: column; } .security-actions { justify-content: flex-start; } .security-score-row, .security-grid { grid-template-columns: 1fr; } .security-metrics, .security-category-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } .security-section:nth-child(3) { grid-column: auto; } }
   </style>
 </head>
 <body>
@@ -1164,6 +1400,7 @@ export class ControlRoomProvider {
         <div class="toggle-group" role="group" aria-label="Control Room view">
           <button class="toggle-btn${view === "pipeline" ? " active" : ""}" data-view="pipeline">Pipeline</button>
           <button class="toggle-btn${view === "kanban" ? " active" : ""}" data-view="kanban">Kanban</button>
+          <button class="toggle-btn${view === "security" ? " active" : ""}" data-view="security">Security</button>
         </div>
         <button class="secondary" data-command="drylake.openSessions">Sessions</button>
         <button class="secondary" data-command="drylake.newSession">New Plan</button>
