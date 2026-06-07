@@ -99,6 +99,14 @@ export async function getOpenAiApiKey(params: { required?: boolean } = {}) {
   });
 }
 
+export async function getBedrockOpenAiApiKey(params: { required?: boolean } = {}) {
+  return getRuntimeSecret({
+    name: "bedrock-openai-api-key",
+    fallback: env.BEDROCK_OPENAI_API_KEY,
+    required: params.required,
+  });
+}
+
 export async function getKimiApiKey(params: { required?: boolean } = {}) {
   return getRuntimeSecret({
     name: "kimi-api-key",

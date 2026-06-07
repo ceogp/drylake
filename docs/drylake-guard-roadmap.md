@@ -13,6 +13,8 @@ The following milestones are intentionally deferred so the product can be built 
 
 ## Milestone 4: Risky Workspace Surface
 
+Status: implemented in the local scanner. Future work is tuning the rule weights and adding paid cloud enrichment.
+
 Expand local scanning beyond agent, extension, and MCP inventory.
 
 Scan metadata for:

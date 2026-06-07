@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.52
+
+### DryLake Guard
+
+- Expanded the local security scan with workspace risk-surface detection for CI/CD workflows, IaC/deployment configs, deploy/release/migration scripts, risky package scripts, credential-like file paths, and generated output bloat.
+- Added Bedrock OpenAI-compatible backend configuration support for hosted Xupra AI planning.
+
 ## 0.6.48
 
 ### Planning and connection flow

@@ -15,6 +15,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "check:distribution": "node scripts/check-distribution-metadata.mjs",
     "check:mcp": "npm --prefix packages/drylake-mcp run smoke",
+    "check:bedrock": "tsx scripts/aws/check-bedrock-openai.ts",
     "package:extension": "npm --prefix extensions/xupra-drylake-vscode run package:vsix",
     "validate:local": "tsx scripts/validate-local.ts",
     "worker:once": "tsx scripts/run-worker.ts",

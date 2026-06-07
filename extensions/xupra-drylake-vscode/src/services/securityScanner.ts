@@ -61,6 +61,15 @@ export type GuardMcpServer = {
   severity: GuardSeverity;
 };
 
+export type GuardWorkspaceSurface = {
+  deploymentFiles: Array<{ path: string; type: string }>;
+  iacFiles: Array<{ path: string; type: string }>;
+  ciWorkflowFiles: Array<{ path: string; type: string }>;
+  credentialLikeFiles: Array<{ path: string; type: string }>;
+  riskyPackageScripts: Array<{ path: string; name: string; risk: string }>;
+  generatedFolders: Array<{ path: string; fileCount: number }>;
+};
+
 export type GuardScanResult = {
   scannedAt: string;
   score: number;
@@ -79,6 +88,7 @@ export type GuardScanResult = {
     extensions: number;
     activeExtensions: number;
     riskyFiles: number;
+    workspaceSurface: number;
     mcpServers: number;
     findings: number;
     critical: number;
@@ -91,6 +101,7 @@ export type GuardScanResult = {
   extensions: GuardExtensionRisk[];
   secrets: GuardSecretFinding[];
   mcpServers: GuardMcpServer[];
+  workspaceSurface: GuardWorkspaceSurface;
   findings: GuardFinding[];
 };
 
@@ -99,6 +110,7 @@ type ScannedAgentFile = { logicalPath: string; category: string; content?: strin
 type PackageContext = {
   packageManagers: string[];
   packageScripts: string[];
+  riskyPackageScripts: GuardWorkspaceSurface["riskyPackageScripts"];
 };
 
 export const SAFE_DEVELOPER_REPORT_PATH = [".drylake", "reports", "safe-developer-report.md"] as const;
@@ -138,6 +150,60 @@ const PACKAGE_CONTEXT_PATTERNS = [
   "**/bun.lockb",
 ];
 
+const WORKSPACE_SURFACE_PATTERNS = [
+  "**/.github/workflows/*.yml",
+  "**/.github/workflows/*.yaml",
+  "**/.gitlab-ci.yml",
+  "**/bitbucket-pipelines.yml",
+  "**/Dockerfile",
+  "**/*.dockerfile",
+  "**/docker-compose*.yml",
+  "**/docker-compose*.yaml",
+  "**/*.tf",
+  "**/*.tfvars",
+  "**/terraform*.tfvars",
+  "**/k8s/**/*.yml",
+  "**/k8s/**/*.yaml",
+  "**/kubernetes/**/*.yml",
+  "**/kubernetes/**/*.yaml",
+  "**/helm/**/*.yml",
+  "**/helm/**/*.yaml",
+  "**/charts/**/*.yml",
+  "**/charts/**/*.yaml",
+  "**/serverless.yml",
+  "**/serverless.yaml",
+  "**/cloudformation*.yml",
+  "**/cloudformation*.yaml",
+  "**/cloudformation*.json",
+  "**/template.yml",
+  "**/template.yaml",
+  "**/cdk.json",
+  "**/samconfig.toml",
+  "**/*deploy*.sh",
+  "**/*deploy*.ps1",
+  "**/*release*.sh",
+  "**/*release*.ps1",
+  "**/*migrate*.sh",
+  "**/*migrate*.ps1",
+  "**/*.pem",
+  "**/*.key",
+  "**/*credential*",
+  "**/*secret*",
+  "**/*service*account*",
+];
+
+const GENERATED_SURFACE_PATTERNS = [
+  "**/generated/**",
+  "**/.drylake/generated/**",
+  "**/raw_source/**",
+  "**/generated_export/**",
+  "**/deployment_output/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/out/**",
+  "**/coverage/**",
+];
+
 const MCP_CONFIG_PATTERNS = [
   "**/.vscode/mcp.json",
   "**/.cursor/mcp.json",
@@ -147,6 +213,7 @@ const MCP_CONFIG_PATTERNS = [
 ];
 
 const EXCLUDE_PATTERN = "**/{node_modules,.git,.next,dist,build,out,coverage,storage,.venv,__pycache__,google-cloud-sdk,generated_export,raw_source,deployment_output,worker-smoke,.system}/**";
+const GENERATED_SCAN_EXCLUDE_PATTERN = "**/{node_modules,.git,.next,storage,.venv,__pycache__,google-cloud-sdk,worker-smoke,.system}/**";
 const MAX_SECURITY_FILES = 220;
 const MAX_FILE_BYTES = 256 * 1024;
 
@@ -631,9 +698,56 @@ function packageManagerFromPath(logicalPath: string) {
   return undefined;
 }
 
+function classifyWorkspaceSurface(logicalPath: string) {
+  const normalized = logicalPath.toLowerCase();
+
+  if (/(^|\/)\.github\/workflows\/.+\.ya?ml$/.test(normalized) || /(^|\/)\.gitlab-ci\.ya?ml$/.test(normalized) || /bitbucket-pipelines\.ya?ml$/.test(normalized)) {
+    return { bucket: "ciWorkflowFiles" as const, type: "CI/CD workflow" };
+  }
+
+  if (
+    /(^|\/)dockerfile$/.test(normalized) ||
+    /\.dockerfile$/.test(normalized) ||
+    /docker-compose.*\.ya?ml$/.test(normalized) ||
+    /\.tf$/.test(normalized) ||
+    /\.tfvars$/.test(normalized) ||
+    /(^|\/)(k8s|kubernetes|helm|charts)\//.test(normalized) ||
+    /serverless\.ya?ml$/.test(normalized) ||
+    /cloudformation.*\.(json|ya?ml)$/.test(normalized) ||
+    /(^|\/)template\.ya?ml$/.test(normalized) ||
+    /(^|\/)cdk\.json$/.test(normalized) ||
+    /(^|\/)samconfig\.toml$/.test(normalized)
+  ) {
+    return { bucket: "iacFiles" as const, type: "Infrastructure or deployment config" };
+  }
+
+  if (/(deploy|release|migrate).*\.(sh|ps1|bat|cmd|ya?ml|json)$/.test(normalized)) {
+    return { bucket: "deploymentFiles" as const, type: "Deployment or migration surface" };
+  }
+
+  if (/\.(pem|key|p12|pfx)$/.test(normalized) || /(credential|secret|service.?account|private.?key)/.test(normalized)) {
+    return { bucket: "credentialLikeFiles" as const, type: "Credential-like file name" };
+  }
+
+  return null;
+}
+
+function packageScriptRisk(name: string, command: unknown) {
+  const text = `${name} ${typeof command === "string" ? command : ""}`.toLowerCase();
+
+  if (/\b(prod|production|deploy|release|publish)\b/.test(text)) return "deployment";
+  if (/\b(delete|destroy|drop|purge|truncate|wipe|remove)\b/.test(text)) return "destructive operation";
+  if (/\b(migrate|migration|prisma migrate|db:push|schema)\b/.test(text)) return "database migration";
+  if (/\b(aws|gcloud|az|kubectl|terraform|docker push|serverless)\b/.test(text)) return "cloud or infrastructure command";
+  if (/\b(secret|token|password|credential|env:prod)\b/.test(text)) return "secret or production credential reference";
+
+  return null;
+}
+
 async function scanPackageContext(): Promise<PackageContext> {
   const managers = new Set<string>();
   const scripts = new Set<string>();
+  const riskyPackageScripts: GuardWorkspaceSurface["riskyPackageScripts"] = [];
   const files = await findWorkspaceFiles(PACKAGE_CONTEXT_PATTERNS, 80);
 
   for (const file of files) {
@@ -661,15 +775,72 @@ async function scanPackageContext(): Promise<PackageContext> {
 
     const parsed = parseJsonObject(text);
     const packageScripts = asRecord(parsed?.scripts);
-    for (const script of Object.keys(packageScripts)) {
+    for (const [script, command] of Object.entries(packageScripts)) {
       scripts.add(script);
+      const risk = packageScriptRisk(script, command);
+      if (risk) {
+        riskyPackageScripts.push({ path: logicalPath, name: script, risk });
+      }
     }
   }
 
   return {
     packageManagers: [...managers].sort(),
     packageScripts: [...scripts].sort(),
+    riskyPackageScripts: riskyPackageScripts.sort((left, right) => left.name.localeCompare(right.name)),
   };
+}
+
+async function scanWorkspaceSurface(): Promise<GuardWorkspaceSurface> {
+  const surface: GuardWorkspaceSurface = {
+    deploymentFiles: [],
+    iacFiles: [],
+    ciWorkflowFiles: [],
+    credentialLikeFiles: [],
+    riskyPackageScripts: [],
+    generatedFolders: [],
+  };
+  const files = await findWorkspaceFiles(WORKSPACE_SURFACE_PATTERNS, MAX_SECURITY_FILES);
+  const seen = new Set<string>();
+
+  for (const file of files) {
+    const logicalPath = vscode.workspace.asRelativePath(file, false).replace(/\\/g, "/");
+    if (seen.has(logicalPath)) {
+      continue;
+    }
+
+    seen.add(logicalPath);
+    const classified = classifyWorkspaceSurface(logicalPath);
+    if (!classified) {
+      continue;
+    }
+
+    surface[classified.bucket].push({
+      path: logicalPath,
+      type: classified.type,
+    });
+  }
+
+  const generatedBuckets = new Map<string, number>();
+  for (const pattern of GENERATED_SURFACE_PATTERNS) {
+    const matches = await vscode.workspace.findFiles(pattern, GENERATED_SCAN_EXCLUDE_PATTERN, 140);
+    for (const uri of matches) {
+      const logicalPath = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, "/");
+      const folder = logicalPath.match(/(^|\/)(\.drylake\/generated|generated|raw_source|generated_export|deployment_output|dist|build|out|coverage)(\/|$)/i)?.[2];
+      if (!folder) {
+        continue;
+      }
+
+      generatedBuckets.set(folder, (generatedBuckets.get(folder) ?? 0) + 1);
+    }
+  }
+
+  surface.generatedFolders = [...generatedBuckets.entries()]
+    .filter(([, fileCount]) => fileCount >= 25)
+    .map(([path, fileCount]) => ({ path, fileCount }))
+    .sort((left, right) => right.fileCount - left.fileCount);
+
+  return surface;
 }
 
 function findingPenalty(severity: GuardSeverity) {
@@ -702,6 +873,7 @@ function buildFindings(params: {
   extensions: GuardExtensionRisk[];
   secrets: GuardSecretFinding[];
   mcpServers: GuardMcpServer[];
+  workspaceSurface: GuardWorkspaceSurface;
 }) {
   const findings: GuardFinding[] = [];
 
@@ -872,6 +1044,90 @@ function buildFindings(params: {
     }));
   }
 
+  for (const script of params.workspaceSurface.riskyPackageScripts.slice(0, 20)) {
+    findings.push(makeFinding({
+      id: `package-script:${script.path}:${script.name}`,
+      category: script.risk === "deployment" || script.risk === "cloud or infrastructure command" ? "mcp-risk" : "agent-reliability",
+      severity: script.risk === "destructive operation" || script.risk === "secret or production credential reference" ? "high" : "medium",
+      title: `Risky package script: ${script.name}`,
+      evidence: `${script.path} declares a ${script.risk} script named "${script.name}".`,
+      recommendation: "Require explicit human approval before agents run this script. Keep production, destructive, and migration scripts out of autonomous handoffs.",
+      safeToShare: true,
+      source: "workspace",
+      path: script.path,
+    }));
+  }
+
+  if (params.workspaceSurface.ciWorkflowFiles.length > 0) {
+    findings.push(makeFinding({
+      id: "workspace:ci-workflows",
+      category: "agent-reliability",
+      severity: "low",
+      title: "CI/CD workflows detected",
+      evidence: `${params.workspaceSurface.ciWorkflowFiles.length} CI/CD workflow file${params.workspaceSurface.ciWorkflowFiles.length === 1 ? "" : "s"} detected.`,
+      recommendation: "Use these workflows as the source of truth for build/test commands and protect deployment jobs from direct agent execution.",
+      safeToShare: true,
+      source: "workspace",
+      path: params.workspaceSurface.ciWorkflowFiles[0]?.path,
+    }));
+  }
+
+  if (params.workspaceSurface.iacFiles.length > 0) {
+    findings.push(makeFinding({
+      id: "workspace:iac-surface",
+      category: "mcp-risk",
+      severity: "medium",
+      title: "Infrastructure-as-code surface detected",
+      evidence: `${params.workspaceSurface.iacFiles.length} Docker, Terraform, Kubernetes, serverless, or cloud configuration file${params.workspaceSurface.iacFiles.length === 1 ? "" : "s"} detected.`,
+      recommendation: "Treat infrastructure files as high-impact agent context. Require approval for any agent-generated changes before apply/deploy commands run.",
+      safeToShare: true,
+      source: "workspace",
+      path: params.workspaceSurface.iacFiles[0]?.path,
+    }));
+  }
+
+  if (params.workspaceSurface.deploymentFiles.length > 0) {
+    findings.push(makeFinding({
+      id: "workspace:deployment-surface",
+      category: "mcp-risk",
+      severity: "high",
+      title: "Deployment or migration scripts detected",
+      evidence: `${params.workspaceSurface.deploymentFiles.length} deploy, release, or migration script${params.workspaceSurface.deploymentFiles.length === 1 ? "" : "s"} detected.`,
+      recommendation: "Block autonomous agent execution of deployment and migration scripts unless a team policy explicitly approves the workspace.",
+      safeToShare: true,
+      source: "workspace",
+      path: params.workspaceSurface.deploymentFiles[0]?.path,
+    }));
+  }
+
+  if (params.workspaceSurface.credentialLikeFiles.length > 0) {
+    findings.push(makeFinding({
+      id: "workspace:credential-like-files",
+      category: "secret-hygiene",
+      severity: "high",
+      title: "Credential-like files detected",
+      evidence: `${params.workspaceSurface.credentialLikeFiles.length} credential-like file path${params.workspaceSurface.credentialLikeFiles.length === 1 ? "" : "s"} detected. File contents were not stored in the report.`,
+      recommendation: "Move credentials into secure storage, verify these paths are ignored from agent context, and rotate any key material that may have been exposed.",
+      safeToShare: false,
+      source: "file",
+      path: params.workspaceSurface.credentialLikeFiles[0]?.path,
+    }));
+  }
+
+  for (const folder of params.workspaceSurface.generatedFolders.slice(0, 10)) {
+    findings.push(makeFinding({
+      id: `workspace:generated-folder:${folder.path}`,
+      category: "token-waste",
+      severity: folder.fileCount >= 100 ? "medium" : "low",
+      title: "Generated output folder visible to agents",
+      evidence: `${folder.path} contains at least ${folder.fileCount} files in this workspace scan.`,
+      recommendation: "Exclude generated output from agent context unless the active task requires it. Add agent ignore rules for build artifacts and generated exports.",
+      safeToShare: true,
+      source: "workspace",
+      path: folder.path,
+    }));
+  }
+
   return findings.sort((left, right) => findingPenalty(right.severity) - findingPenalty(left.severity));
 }
 
@@ -884,6 +1140,13 @@ function summarize(result: Omit<GuardScanResult, "summary">): GuardScanResult["s
     extensions: result.extensions.filter((extension) => !extension.isBuiltin).length,
     activeExtensions: result.extensions.filter((extension) => !extension.isBuiltin && extension.isActive).length,
     riskyFiles: new Set(result.secrets.map((finding) => finding.path)).size,
+    workspaceSurface:
+      result.workspaceSurface.deploymentFiles.length +
+      result.workspaceSurface.iacFiles.length +
+      result.workspaceSurface.ciWorkflowFiles.length +
+      result.workspaceSurface.credentialLikeFiles.length +
+      result.workspaceSurface.riskyPackageScripts.length +
+      result.workspaceSurface.generatedFolders.length,
     mcpServers: result.mcpServers.length,
     findings: result.findings.length,
     critical: countSeverity("critical"),
@@ -920,13 +1183,18 @@ function overallScore(scores: GuardScanResult["categoryScores"]) {
 }
 
 export async function runSecurityScan(configuration?: vscode.WorkspaceConfiguration): Promise<GuardScanResult> {
-  const [workspaceFiles, extensions, secrets, mcpServers, packageContext] = await Promise.all([
+  const [workspaceFiles, extensions, secrets, mcpServers, packageContext, rawWorkspaceSurface] = await Promise.all([
     scanWorkspaceFiles(configuration),
     Promise.resolve(scanInstalledExtensions()),
     scanRiskyFiles(),
     scanMcpServers(),
     scanPackageContext(),
+    scanWorkspaceSurface(),
   ]);
+  const workspaceSurface = {
+    ...rawWorkspaceSurface,
+    riskyPackageScripts: packageContext.riskyPackageScripts,
+  };
   const scannedAgentFiles = workspaceFiles.map((file) => ({
     logicalPath: file.logicalPath,
     category: file.category,
@@ -940,6 +1208,7 @@ export async function runSecurityScan(configuration?: vscode.WorkspaceConfigurat
     extensions,
     secrets,
     mcpServers,
+    workspaceSurface,
   });
   const scores = categoryScores(findings);
   const score = overallScore(scores);
@@ -954,6 +1223,7 @@ export async function runSecurityScan(configuration?: vscode.WorkspaceConfigurat
     extensions,
     secrets,
     mcpServers,
+    workspaceSurface,
     findings,
   };
 
@@ -1041,6 +1311,7 @@ export function renderSafeDeveloperReport(scan: GuardScanResult) {
     `- Active third-party extensions: ${scan.summary.activeExtensions}`,
     `- MCP servers: ${scan.summary.mcpServers}`,
     `- Risky files with secret-like names/patterns: ${scan.summary.riskyFiles}`,
+    `- Workspace risk surface items: ${scan.summary.workspaceSurface}`,
     `- Package managers: ${scan.packageManagers.length ? scan.packageManagers.join(", ") : "none detected"}`,
     `- Package scripts: ${scan.packageScripts.length ? scan.packageScripts.join(", ") : "none detected"}`,
     "",
@@ -1078,6 +1349,35 @@ export function renderSafeDeveloperReport(scan: GuardScanResult) {
       `- Capabilities: ${server.capabilities.join(", ")}`,
       `- Risk flags: ${server.riskFlags.join(" ") || "none"}`,
     ].join("\n")).join("\n\n") || "No MCP server configs detected.",
+    "",
+    "## Workspace Risk Surface",
+    "",
+    `- CI/CD workflows: ${scan.workspaceSurface.ciWorkflowFiles.length}`,
+    `- Infrastructure/deployment config files: ${scan.workspaceSurface.iacFiles.length}`,
+    `- Deploy/release/migration scripts: ${scan.workspaceSurface.deploymentFiles.length}`,
+    `- Credential-like file paths: ${scan.workspaceSurface.credentialLikeFiles.length}`,
+    `- Risky package scripts: ${scan.workspaceSurface.riskyPackageScripts.length}`,
+    `- Generated output folders: ${scan.workspaceSurface.generatedFolders.length}`,
+    "",
+    scan.workspaceSurface.riskyPackageScripts.length
+      ? [
+        "### Risky Package Scripts",
+        "",
+        ...scan.workspaceSurface.riskyPackageScripts.slice(0, 20).map((script) => `- ${script.path} -> ${script.name}: ${script.risk}`),
+      ].join("\n")
+      : "No risky package scripts detected.",
+    "",
+    scan.workspaceSurface.iacFiles.length || scan.workspaceSurface.deploymentFiles.length || scan.workspaceSurface.ciWorkflowFiles.length
+      ? [
+        "### High-Impact Files",
+        "",
+        ...[
+          ...scan.workspaceSurface.ciWorkflowFiles,
+          ...scan.workspaceSurface.iacFiles,
+          ...scan.workspaceSurface.deploymentFiles,
+        ].slice(0, 40).map((item) => `- ${item.path} (${item.type})`),
+      ].join("\n")
+      : "No CI/CD, IaC, deploy, release, or migration files detected.",
     "",
   ].join("\n");
 }
@@ -1138,6 +1438,7 @@ function renderAgenticMap(scan: GuardScanResult) {
     workspace: {
       packageManagers: scan.packageManagers,
       packageScripts: scan.packageScripts,
+      surface: scan.workspaceSurface,
       secretVariableReferences: scan.secrets.map((secret) => ({
         path: secret.path,
         line: secret.line,
@@ -1174,6 +1475,7 @@ export async function writeSecurityScanReports(scan: GuardScanResult, workspaceU
       rank: scan.rank,
       categoryScores: scan.categoryScores,
       summary: scan.summary,
+      workspaceSurface: scan.workspaceSurface,
     }, null, 2)),
     writeText(findings, JSON.stringify(scan.findings.map(safeFinding), null, 2)),
     writeText(agenticMap, JSON.stringify(renderAgenticMap(scan), null, 2)),

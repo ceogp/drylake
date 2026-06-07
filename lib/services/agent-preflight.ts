@@ -6,6 +6,7 @@ import { z } from "zod";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { generateAiText } from "@/lib/services/ai-text";
+import { freePlanningModel } from "@/lib/services/ai-model-selection";
 
 const TRIAL_CREDITS = 3;
 const TRIAL_EXPIRES_IN_HOURS = 72;
@@ -393,7 +394,7 @@ async function generatePreflight(input: PreflightInput): Promise<PreflightOutput
     ].join(" "),
     userPrompt: buildPreflightPrompt(input),
     taskLabel: "agent preflight planning",
-    model: env.OPENAI_FREE_MODEL,
+    model: freePlanningModel(),
     textFormat: {
       type: "json_schema",
       name: "drylake_agent_preflight",

@@ -1,8 +1,9 @@
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
-import { getOpenAiApiKey } from "@/lib/security/runtime-secrets";
+import { getBedrockOpenAiApiKey, getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 import { getAuthSetup } from "@/lib/services/auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
+import { foundationPlanningModel } from "@/lib/services/ai-model-selection";
 
 async function getOrganizationContext() {
   try {
@@ -22,7 +23,9 @@ async function getOrganizationContext() {
 export async function getSetupStatus() {
   const auth = getAuthSetup();
   const { organizationId } = await getOrganizationContext();
-  const openAiConfigured = await getOpenAiApiKey().then(Boolean).catch(() => false);
+  const aiConfigured = env.AI_PROVIDER === "bedrock_openai"
+    ? await getBedrockOpenAiApiKey().then(Boolean).catch(() => false)
+    : await getOpenAiApiKey().then(Boolean).catch(() => false);
 
   const [subscription, credentials, integrations] = organizationId
     ? await Promise.all([
@@ -90,8 +93,9 @@ export async function getSetupStatus() {
             ].filter(Boolean),
     },
     openai: {
-      configured: openAiConfigured,
-      model: env.OPENAI_MODEL,
+      configured: aiConfigured,
+      provider: env.AI_PROVIDER,
+      model: foundationPlanningModel(),
     },
     storage: {
       driver: env.ARTIFACT_STORAGE_DRIVER,

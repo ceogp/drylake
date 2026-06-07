@@ -512,6 +512,7 @@ function renderSecurityPanel(scan: GuardScanResult | null, loading: boolean) {
         ${renderSummaryMetric("Active extensions", scan.summary.activeExtensions)}
         ${renderSummaryMetric("MCP servers", scan.summary.mcpServers)}
         ${renderSummaryMetric("Risky files", scan.summary.riskyFiles)}
+        ${renderSummaryMetric("Workspace surface", scan.summary.workspaceSurface)}
         ${renderSummaryMetric("Findings", scan.summary.findings, scan.summary.critical || scan.summary.high ? "warn" : "")}
       </div>
     </div>

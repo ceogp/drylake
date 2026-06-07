@@ -1,5 +1,7 @@
 import { env } from "@/lib/env";
-import { getKimiApiKey, getOpenAiApiKey } from "@/lib/security/runtime-secrets";
+import { getBedrockOpenAiApiKey, getKimiApiKey, getOpenAiApiKey } from "@/lib/security/runtime-secrets";
+import { generateAiText } from "@/lib/services/ai-text";
+import { canonicalizationModel } from "@/lib/services/ai-model-selection";
 
 export type AssistedNormalization = {
   summary: string;
@@ -120,81 +122,34 @@ export async function normalizeAmbiguousFilesWithAi(params: {
     return normalizeWithKimi(params);
   }
 
-  return normalizeWithOpenAi(params);
+  return normalizeWithResponsesProvider(params);
 }
 
-async function normalizeWithOpenAi(params: {
+async function normalizeWithResponsesProvider(params: {
   files: Array<{
     logicalPath: string;
     content: string;
   }>;
 }) {
-  const apiKey = await getOpenAiApiKey();
+  const apiKey = env.AI_PROVIDER === "bedrock_openai"
+    ? await getBedrockOpenAiApiKey()
+    : await getOpenAiApiKey();
   if (!apiKey) {
     return null;
   }
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
+  const rawText = await generateAiText({
+    systemPrompt,
+    userPrompt: JSON.stringify(params.files, null, 2),
+    taskLabel: "agent package normalization",
+    model: canonicalizationModel(),
+    textFormat: {
+      type: "json_schema",
+      name: "agent_package_extraction",
+      schema: assistedSchema,
+      strict: true,
     },
-    body: JSON.stringify({
-      model: env.OPENAI_MODEL,
-      input: [
-        {
-          role: "system",
-          content: [
-            {
-              type: "input_text",
-              text: systemPrompt,
-            },
-          ],
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: JSON.stringify(params.files, null, 2),
-            },
-          ],
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "agent_package_extraction",
-          schema: assistedSchema,
-          strict: true,
-        },
-      },
-    }),
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI normalization failed: ${errorText}`);
-  }
-
-  const payload = (await response.json()) as {
-    output_text?: string;
-    output?: Array<{
-      content?: Array<{
-        type?: string;
-        text?: string;
-      }>;
-    }>;
-  };
-
-  const rawText =
-    payload.output_text ??
-    payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text;
-
-  if (!rawText) {
-    throw new Error("OpenAI normalization did not return structured text");
-  }
 
   return JSON.parse(rawText) as AssistedNormalization;
 }

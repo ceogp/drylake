@@ -1,5 +1,5 @@
-import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
+import { foundationPlanningModel, freePlanningModel } from "@/lib/services/ai-model-selection";
 import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
 
 export type RunbookPlanningAccess = {
@@ -34,6 +34,6 @@ export async function resolveRunbookPlanningAccess(organizationId: string): Prom
   }
 
   return entitlementAccess || tierFallbackAccess
-    ? { tier: "foundation", model: env.OPENAI_MODEL }
-    : { tier: "nano", model: env.OPENAI_FREE_MODEL };
+    ? { tier: "foundation", model: foundationPlanningModel() }
+    : { tier: "nano", model: freePlanningModel() };
 }

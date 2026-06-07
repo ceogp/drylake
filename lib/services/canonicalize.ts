@@ -6,6 +6,7 @@ import {
   type AssistedNormalization,
   normalizeAmbiguousFilesWithAi,
 } from "@/lib/services/ai-normalization";
+import { canonicalizationModel } from "@/lib/services/ai-model-selection";
 import { hasEntitlement } from "@/lib/services/entitlements";
 import { readArtifactText } from "@/lib/storage/artifacts";
 import { toSlug } from "@/lib/utils/slug";
@@ -90,7 +91,7 @@ function metadataWithCanonicalization(
     canonicalized: true,
     canonicalizedAt: completedAt,
     canonicalizationProvider: env.AI_PROVIDER,
-    canonicalizationModel: env.AI_PROVIDER === "kimi" ? env.KIMI_MODEL : env.OPENAI_MODEL,
+    canonicalizationModel: canonicalizationModel(),
   });
 }
 

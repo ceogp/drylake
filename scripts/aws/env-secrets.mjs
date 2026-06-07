@@ -248,6 +248,13 @@ function validateEnvBundle(content, env) {
     required.push("OPENAI_API_KEY");
   }
 
+  if (values.AI_PROVIDER === "bedrock_openai") {
+    required.push("BEDROCK_OPENAI_API_KEY");
+    if (!values.BEDROCK_OPENAI_REGION && !values.AWS_REGION && !values.BEDROCK_OPENAI_BASE_URL) {
+      warnings.push("BEDROCK_OPENAI_REGION, AWS_REGION, or BEDROCK_OPENAI_BASE_URL is required for Bedrock OpenAI.");
+    }
+  }
+
   if (values.BILLING_PROVIDER === "stripe" && values.BILLING_ENFORCEMENT_MODE === "strict") {
     required.push("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRO_PRICE_ID");
   }

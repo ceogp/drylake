@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   env: {
+    AI_PROVIDER: "openai",
     OPENAI_MODEL: "gpt-5.5",
     OPENAI_FREE_MODEL: "gpt-5.4-nano",
+    BEDROCK_OPENAI_MODEL: "openai.gpt-5.4",
+    BEDROCK_OPENAI_FREE_MODEL: "openai.gpt-5.4-nano",
   },
   getEntitlementsForOrganization: vi.fn(),
   findOrganization: vi.fn(),
@@ -28,6 +31,7 @@ vi.mock("@/lib/prisma", () => ({
 import { resolveRunbookPlanningAccess } from "@/lib/services/runbook-planning-access";
 
 beforeEach(() => {
+  mocks.env.AI_PROVIDER = "openai";
   mocks.getEntitlementsForOrganization.mockReset();
   mocks.findOrganization.mockReset();
 
@@ -94,6 +98,25 @@ describe("resolveRunbookPlanningAccess", () => {
     await expect(resolveRunbookPlanningAccess("org-free")).resolves.toEqual({
       tier: "nano",
       model: "gpt-5.4-nano",
+    });
+  });
+
+  it("uses Bedrock OpenAI model IDs when Bedrock is the active provider", async () => {
+    mocks.env.AI_PROVIDER = "bedrock_openai";
+
+    await expect(resolveRunbookPlanningAccess("org-free")).resolves.toEqual({
+      tier: "nano",
+      model: "openai.gpt-5.4-nano",
+    });
+
+    mocks.getEntitlementsForOrganization.mockResolvedValueOnce({
+      subscription: { tier: "pro" },
+      entitlements: { xupra_pro_ai: true },
+    });
+
+    await expect(resolveRunbookPlanningAccess("org-pro")).resolves.toEqual({
+      tier: "foundation",
+      model: "openai.gpt-5.4",
     });
   });
 });
