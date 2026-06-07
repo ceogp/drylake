@@ -145,6 +145,14 @@ if [ "${NODE_ENV:-}" = "production" ]; then
       anthropic)
         [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${CLAUDE_API_KEY:-}" ] && missing_vars+=("ANTHROPIC_API_KEY or CLAUDE_API_KEY (AI_PROVIDER=anthropic)")
         ;;
+      bedrock_openai)
+        [ -z "${BEDROCK_OPENAI_API_KEY:-}" ] && missing_vars+=("BEDROCK_OPENAI_API_KEY (AI_PROVIDER=bedrock_openai)")
+        [ -z "${BEDROCK_OPENAI_REGION:-}" ] && [ -z "${AWS_REGION:-}" ] && [ -z "${BEDROCK_OPENAI_BASE_URL:-}" ] && missing_vars+=("BEDROCK_OPENAI_REGION, AWS_REGION, or BEDROCK_OPENAI_BASE_URL (AI_PROVIDER=bedrock_openai)")
+        ;;
+      bedrock_anthropic)
+        [ -z "${BEDROCK_API_KEY:-}" ] && [ -z "${AWS_BEARER_TOKEN_BEDROCK:-}" ] && [ -z "${BEDROCK_OPENAI_API_KEY:-}" ] && missing_vars+=("BEDROCK_API_KEY or AWS_BEARER_TOKEN_BEDROCK (AI_PROVIDER=bedrock_anthropic)")
+        [ -z "${BEDROCK_REGION:-}" ] && [ -z "${BEDROCK_OPENAI_REGION:-}" ] && [ -z "${AWS_REGION:-}" ] && missing_vars+=("BEDROCK_REGION, BEDROCK_OPENAI_REGION, or AWS_REGION (AI_PROVIDER=bedrock_anthropic)")
+        ;;
       *)
         [ -z "${OPENAI_API_KEY:-}" ] && missing_vars+=("OPENAI_API_KEY (AI_PROVIDER=openai)")
         ;;

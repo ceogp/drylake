@@ -14,6 +14,10 @@ function isMissingSecretError(error: unknown) {
   return awsError.name === "ResourceNotFoundException";
 }
 
+function firstNonEmpty(...values: Array<string | undefined>) {
+  return values.find((value) => value?.trim()) ?? "";
+}
+
 export async function getRuntimeSecret(params: {
   name: string;
   fallback?: string;
@@ -105,6 +109,16 @@ export async function getBedrockOpenAiApiKey(params: { required?: boolean } = {}
     fallback: env.BEDROCK_OPENAI_API_KEY,
     required: params.required,
   });
+}
+
+export async function getBedrockApiKey(params: { required?: boolean } = {}) {
+  const value = await getRuntimeSecret({
+    name: "bedrock-api-key",
+    fallback: firstNonEmpty(env.BEDROCK_API_KEY, env.AWS_BEARER_TOKEN_BEDROCK, env.BEDROCK_OPENAI_API_KEY),
+    required: params.required,
+  });
+
+  return value.replace(/^=+/, "").trim();
 }
 
 export async function getKimiApiKey(params: { required?: boolean } = {}) {

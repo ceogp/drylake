@@ -45,7 +45,7 @@ xupra-drylake
 Run:
 
 ```bash
-npm run check:bedrock
+npm run check:bedrock:openai
 ```
 
 The check lists models returned by the Bedrock OpenAI-compatible `/models` endpoint and reports whether the configured foundation and free model IDs are available.

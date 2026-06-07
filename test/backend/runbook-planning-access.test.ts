@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
     OPENAI_FREE_MODEL: "gpt-5.4-nano",
     BEDROCK_OPENAI_MODEL: "openai.gpt-5.4",
     BEDROCK_OPENAI_FREE_MODEL: "openai.gpt-5.4-nano",
+    BEDROCK_MODEL: "anthropic.claude-sonnet-4-6",
+    BEDROCK_FREE_MODEL: "anthropic.claude-haiku-4-5-20251001-v1:0",
+    BEDROCK_CODING_MODEL: "anthropic.claude-opus-4-8",
   },
   getEntitlementsForOrganization: vi.fn(),
   findOrganization: vi.fn(),
@@ -117,6 +120,25 @@ describe("resolveRunbookPlanningAccess", () => {
     await expect(resolveRunbookPlanningAccess("org-pro")).resolves.toEqual({
       tier: "foundation",
       model: "openai.gpt-5.4",
+    });
+  });
+
+  it("uses Bedrock Claude Haiku for free users and Sonnet for paid users", async () => {
+    mocks.env.AI_PROVIDER = "bedrock_anthropic";
+
+    await expect(resolveRunbookPlanningAccess("org-free")).resolves.toEqual({
+      tier: "nano",
+      model: "anthropic.claude-haiku-4-5-20251001-v1:0",
+    });
+
+    mocks.getEntitlementsForOrganization.mockResolvedValueOnce({
+      subscription: { tier: "pro" },
+      entitlements: { xupra_pro_ai: true },
+    });
+
+    await expect(resolveRunbookPlanningAccess("org-pro")).resolves.toEqual({
+      tier: "foundation",
+      model: "anthropic.claude-sonnet-4-6",
     });
   });
 });

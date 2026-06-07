@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { getOpenAiApiKey } from "@/lib/security/runtime-secrets";
+import { createBedrockAnthropicResponse, extractBedrockConverseText } from "@/lib/services/bedrock-anthropic";
 import { createBedrockOpenAiResponse } from "@/lib/services/bedrock-openai";
 
 type GenerateTextParams = {
@@ -108,10 +109,28 @@ async function generateWithBedrockOpenAi(params: GenerateTextParams) {
   return extractOpenAiText(payload);
 }
 
+async function generateWithBedrockAnthropic(params: GenerateTextParams) {
+  const model = params.model?.trim() || env.BEDROCK_MODEL?.trim();
+  if (!model) {
+    throw new Error("Xupra AI is not configured: BEDROCK_MODEL is missing.");
+  }
+
+  const payload = await createBedrockAnthropicResponse({
+    model,
+    systemPrompt: withXupraAiIdentity(params.systemPrompt),
+    userPrompt: params.userPrompt,
+    textFormat: params.textFormat,
+  });
+  return extractBedrockConverseText(payload);
+}
+
 export async function generateAiText(params: GenerateTextParams) {
-  const rawText = env.AI_PROVIDER === "bedrock_openai"
-    ? await generateWithBedrockOpenAi(params)
-    : await generateWithOpenAi(params);
+  const rawText =
+    env.AI_PROVIDER === "bedrock_anthropic"
+      ? await generateWithBedrockAnthropic(params)
+      : env.AI_PROVIDER === "bedrock_openai"
+        ? await generateWithBedrockOpenAi(params)
+        : await generateWithOpenAi(params);
 
   if (!rawText?.trim()) {
     throw new Error(`Xupra AI ${params.taskLabel} returned an empty response.`);
