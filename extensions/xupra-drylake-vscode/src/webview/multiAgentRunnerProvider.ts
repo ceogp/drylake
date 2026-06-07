@@ -24,6 +24,7 @@ type RunnerStatus = "idle" | "assignment-review" | "running" | "results";
 type RunnerAgentStatus = "pending" | "running" | "complete" | "failed";
 type RunnerAssignmentSource = "ai" | "manual";
 type RunnerModelTier = "nano" | "foundation";
+const FREE_PLANNING_MODEL_LABEL = "Claude Haiku";
 
 type RunnerAssignment = {
   agentId: XuPhaseAgent;
@@ -323,7 +324,7 @@ function renderAssignmentReview(run: RunnerRun, profilesByAgent: HandoffProfiles
   const warning = run.conflictWarning
     ? `<div class="warning">${escapeHtml(run.conflictWarning)}</div>`
     : "";
-  const tier = run.modelTier === "nano" ? `<div class="note">Planned with GPT-5.4 Nano.</div>` : "";
+  const tier = run.modelTier === "nano" ? `<div class="note">Planned with ${FREE_PLANNING_MODEL_LABEL}.</div>` : "";
   const cards = run.assignments.map((assignment) => `<article class="assignment-card" data-assignment-agent="${escapeHtml(assignment.agentId)}">
     <div class="agent-info"><span class="agent-icon">${escapeHtml(assignment.agentLabel.slice(0, 1))}</span><span><strong>${escapeHtml(assignment.agentLabel)}</strong><em>${escapeHtml(assignment.scopeBoundary)}</em></span></div>
     <label class="field-label">Subtask summary

@@ -19,6 +19,7 @@ import { renderSafeDeveloperSummary, runSecurityScan, writeSecurityScanReports }
 import type { GuardReportPaths, GuardScanResult, GuardSeverity } from "../services/securityScanner";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
 const CONTROL_ROOM_CHAT_COLLAPSED_KEY = "drylake.controlRoomChatCollapsed";
+const FREE_PLANNING_MODEL_LABEL = "Claude Haiku";
 type ControlRoomView = "pipeline" | "kanban" | "security";
 type HandoffProfilesByAgent = Partial<Record<(typeof XU_PHASE_AGENTS)[number], HandoffProfileSelection[]>>;
 
@@ -47,7 +48,7 @@ const PLANNING_PROVIDERS: Array<{
   {
     choiceId: "xupra-nano",
     providerId: "xupra-pro-ai",
-    label: "Free User - GPT-5.4 Nano",
+    label: `Free User - ${FREE_PLANNING_MODEL_LABEL}`,
     description: "Hosted starter planning",
   },
   {
@@ -545,20 +546,20 @@ function renderPlanningModelBanner(
   hasPlan: boolean,
   connection: ConnectionState,
 ) {
-  const shouldShowNano = modelTier === "nano" || (!hasPlan && !hasFoundationPlanningAccess(connection));
-  if (!shouldShowNano) {
+  const shouldShowFreePlanningModel = modelTier === "nano" || (!hasPlan && !hasFoundationPlanningAccess(connection));
+  if (!shouldShowFreePlanningModel) {
     return "";
   }
 
   if (hasPlan) {
     return `<section class="model-tier-bar nano" aria-label="Planning model">
       <span class="model-tier-dot" aria-hidden="true"></span>
-      <strong>5.4 Nano</strong>
+      <strong>${escapeHtml(FREE_PLANNING_MODEL_LABEL)}</strong>
     </section>`;
   }
 
   return `<section class="nano-banner" aria-label="Free planning model" data-nano-banner>
-    <span class="nano-banner-text">We are using <strong>GPT-5.4 Nano</strong>. Xupra AI Frontier Models are available on Pro.</span>
+    <span class="nano-banner-text">We are using <strong>${escapeHtml(FREE_PLANNING_MODEL_LABEL)}</strong>. Xupra AI Frontier Models are available on Pro.</span>
     <button type="button" class="nano-banner-cta" data-command="xupra.openBilling">Upgrade to Pro</button>
   </section>`;
 }
@@ -684,7 +685,7 @@ function activeProviderChoice(
 
 function providerDisplayLabel(provider: PlanningProviderChoice) {
   if (provider.choiceId === "xupra-nano") {
-    return "GPT-5.4 Nano";
+    return FREE_PLANNING_MODEL_LABEL;
   }
 
   if (provider.choiceId === "xupra-foundation") {
@@ -771,7 +772,7 @@ function renderPlanningProviderSelect(
   const note = activeLocked
     ? "Pro users only. Upgrade to use Xupra AI Frontier Models."
     : activeProvider.choiceId === "xupra-nano"
-      ? "We are using GPT-5.4 Nano for free planning."
+      ? `We are using ${FREE_PLANNING_MODEL_LABEL} for free planning.`
       : activeProvider.description;
 
   return `<div class="planning-provider-field">
@@ -819,7 +820,7 @@ function renderPlannerSetup(
   const providerStatus = hasPlan
     ? "Locked for this plan"
     : activeProvider.choiceId === "xupra-nano"
-      ? "Free users use GPT-5.4 Nano. Choose up to 12 planning steps, or ask naturally in chat."
+      ? `Free users use ${FREE_PLANNING_MODEL_LABEL}. Choose up to 12 planning steps, or ask naturally in chat.`
       : activeProviderLocked
         ? "Xupra AI Frontier Models are available on Pro."
         : "Choose the provider and planning step count that will generate the first cards.";
@@ -1502,7 +1503,7 @@ export class ControlRoomProvider {
         if (selectedProviderLocked) {
           note.textContent = "Pro users only. Upgrade to use Xupra AI Frontier Models.";
         } else if (planningProviderSelect?.value === "xupra-nano") {
-          note.textContent = "We are using GPT-5.4 Nano for free planning.";
+          note.textContent = "We are using Claude Haiku for free planning.";
         } else {
           note.textContent = option.textContent?.split(" - ").slice(1).join(" - ") || "";
         }

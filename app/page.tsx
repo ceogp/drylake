@@ -164,7 +164,7 @@ function WorkflowGifPreview() {
         className="aspect-video w-full object-cover object-top"
       />
       <div className="grid gap-2 border-t border-zinc-800 bg-zinc-950/80 p-4 text-sm text-zinc-300 sm:grid-cols-3">
-        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">5.4 Nano free planning</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Claude Haiku free planning</span>
         <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Bring local coding agents</span>
         <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Upgrade for Frontier planning</span>
       </div>
