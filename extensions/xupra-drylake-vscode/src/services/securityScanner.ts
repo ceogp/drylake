@@ -11,7 +11,8 @@ export type GuardFindingCategory =
   | "agent-reliability"
   | "secret-hygiene"
   | "ide-bloat"
-  | "token-waste";
+  | "token-waste"
+  | "blast-radius";
 
 export type GuardFinding = {
   id: string;
@@ -34,10 +35,13 @@ export type GuardExtensionRisk = {
   version: string;
   isActive: boolean;
   isBuiltin: boolean;
+  accessLevel: "low" | "medium" | "high";
   activationEvents: string[];
   contributionPoints: string[];
   accessSignals: string[];
+  capabilityTags: string[];
   riskFlags: string[];
+  manifestEvidence: string[];
 };
 
 export type GuardSecretFinding = {
@@ -59,6 +63,25 @@ export type GuardMcpServer = {
   capabilities: string[];
   riskFlags: string[];
   severity: GuardSeverity;
+  blastRadius: string;
+};
+
+export type GuardConnectionMap = {
+  nodes: Array<{
+    id: string;
+    type: "ide" | "extension" | "agent-config" | "mcp" | "secret" | "workspace-surface";
+    label: string;
+    severity: GuardSeverity;
+    summary: string;
+    capabilities: string[];
+  }>;
+  edges: Array<{
+    from: string;
+    to: string;
+    label: string;
+    severity: GuardSeverity;
+  }>;
+  highRiskPaths: string[];
 };
 
 export type GuardWorkspaceSurface = {
@@ -80,6 +103,7 @@ export type GuardScanResult = {
     secretHygiene: number;
     ideBloat: number;
     tokenWaste: number;
+    blastRadius: number;
   };
   summary: {
     agentFiles: number;
@@ -90,6 +114,7 @@ export type GuardScanResult = {
     riskyFiles: number;
     workspaceSurface: number;
     mcpServers: number;
+    highImpactConnections: number;
     findings: number;
     critical: number;
     high: number;
@@ -102,6 +127,7 @@ export type GuardScanResult = {
   secrets: GuardSecretFinding[];
   mcpServers: GuardMcpServer[];
   workspaceSurface: GuardWorkspaceSurface;
+  connectionMap: GuardConnectionMap;
   findings: GuardFinding[];
 };
 
@@ -280,6 +306,7 @@ function normalizedPublisher(extensionId: string, packageJson: Record<string, un
 function extensionAccessSignals(packageJson: Record<string, unknown>, activationEvents: string[], contributionPoints: string[]) {
   const signals = new Set<string>();
   const extensionKind = readStringArray(packageJson.extensionKind).join(", ");
+  const commandText = commandTitles(packageJson).join(" ").toLowerCase();
 
   signals.add("Can execute extension-host code after activation; VS Code does not expose a browser-style permission list.");
 
@@ -295,8 +322,24 @@ function extensionAccessSignals(packageJson: Record<string, unknown>, activation
     signals.add("Contributes commands that users or other extension flows can invoke.");
   }
 
-  if (contributionPoints.includes("debuggers") || contributionPoints.includes("taskDefinitions")) {
+  if (contributionPoints.includes("debuggers") || contributionPoints.includes("taskDefinitions") || contributionPoints.includes("terminal")) {
     signals.add("Contributes debugger/task capabilities that may run local commands.");
+  }
+
+  if (contributionPoints.includes("authentication")) {
+    signals.add("Contributes authentication providers or account/session flows.");
+  }
+
+  if (contributionPoints.includes("notebooks") || contributionPoints.includes("notebookRenderer")) {
+    signals.add("Contributes notebook execution or rendering surfaces.");
+  }
+
+  if (contributionPoints.includes("scm")) {
+    signals.add("Contributes source-control surfaces.");
+  }
+
+  if (contributionPoints.includes("chatParticipants") || contributionPoints.includes("languageModelTools")) {
+    signals.add("Contributes AI chat or language-model tool surfaces.");
   }
 
   if (contributionPoints.includes("configuration")) {
@@ -311,7 +354,59 @@ function extensionAccessSignals(packageJson: Record<string, unknown>, activation
     signals.add("Contributes IDE UI views/panels.");
   }
 
+  if (/\b(shell|terminal|exec|run|install|deploy|delete|ssh|auth|login|token|secret|credential)\b/.test(commandText)) {
+    signals.add("Command labels suggest shell, auth, deployment, or credential operations.");
+  }
+
   return [...signals];
+}
+
+function extensionCapabilityTags(extensionId: string, packageJson: Record<string, unknown>, contributionPoints: string[]) {
+  const tags = new Set<string>();
+  const commandText = commandTitles(packageJson).join(" ").toLowerCase();
+  const text = [extensionId, readString(packageJson.displayName), readString(packageJson.description), commandText].join(" ").toLowerCase();
+
+  tags.add("extension host code");
+
+  if (contributionPoints.includes("commands")) tags.add("commands");
+  if (contributionPoints.includes("configuration")) tags.add("settings");
+  if (contributionPoints.includes("debuggers") || contributionPoints.includes("taskDefinitions")) tags.add("local execution surface");
+  if (contributionPoints.includes("authentication") || /\b(auth|login|token|secret|credential)\b/.test(text)) tags.add("auth/secrets");
+  if (contributionPoints.includes("scm") || /\b(git|github|gitlab|bitbucket|pull request|commit)\b/.test(text)) tags.add("source control");
+  if (contributionPoints.includes("chatParticipants") || contributionPoints.includes("languageModelTools") || /\b(ai|agent|copilot|claude|cursor|cline|codex|gemini|llm|chat)\b/.test(text)) tags.add("AI/agent");
+  if (contributionPoints.includes("views") || contributionPoints.includes("viewsContainers") || contributionPoints.includes("webviews")) tags.add("webview/UI");
+  if (/\b(deploy|release|production|kubernetes|docker|terraform|aws|azure|gcp|vercel)\b/.test(text)) tags.add("deploy/cloud");
+  if (/\b(database|postgres|mysql|mongodb|redis|supabase|neon)\b/.test(text)) tags.add("database");
+  if (/\b(file|workspace|folder|fs|read|write|edit)\b/.test(text)) tags.add("workspace files");
+  if (/\b(shell|terminal|exec|run|script|command)\b/.test(text)) tags.add("terminal/commands");
+
+  return [...tags];
+}
+
+function extensionManifestEvidence(packageJson: Record<string, unknown>, activationEvents: string[], contributionPoints: string[]) {
+  const evidence = [
+    activationEvents.length ? `activationEvents=${activationEvents.slice(0, 6).join(", ")}` : "activationEvents=not declared",
+    contributionPoints.length ? `contributes=${contributionPoints.slice(0, 10).join(", ")}` : "contributes=none declared",
+  ];
+  const commands = commandTitles(packageJson).slice(0, 6);
+  if (commands.length) {
+    evidence.push(`commands=${commands.join(" | ")}`);
+  }
+
+  return evidence;
+}
+
+function extensionAccessLevel(capabilityTags: string[], riskFlags: string[]): GuardExtensionRisk["accessLevel"] {
+  const text = [...capabilityTags, ...riskFlags].join(" ").toLowerCase();
+  if (/\b(deploy|cloud|database|auth|secrets|terminal|commands|local execution|credential|broad activation)\b/.test(text)) {
+    return "high";
+  }
+
+  if (/\b(ai|agent|source control|workspace files|webview|commands|settings)\b/.test(text)) {
+    return "medium";
+  }
+
+  return "low";
 }
 
 function commandTitles(packageJson: Record<string, unknown>) {
@@ -346,6 +441,14 @@ function extensionRiskFlags(
     flags.push("Can define debug/task execution surfaces.");
   }
 
+  if (contributionPoints.includes("authentication")) {
+    flags.push("Can participate in authentication/session flows.");
+  }
+
+  if (contributionPoints.includes("chatParticipants") || contributionPoints.includes("languageModelTools")) {
+    flags.push("Can participate in AI chat or language-model tool flows.");
+  }
+
   const commandText = commandTitles(packageJson).join(" ").toLowerCase();
   if (/\b(shell|terminal|exec|run|install|deploy|delete|secret|token|credential|ssh|auth|login)\b/.test(commandText)) {
     flags.push("Command names suggest shell, auth, deployment, or credential operations.");
@@ -365,6 +468,8 @@ function scanInstalledExtensions(): GuardExtensionRisk[] {
       const activationEvents = readStringArray(packageJson.activationEvents);
       const contributionPoints = extensionContributionPoints(packageJson);
       const publisher = normalizedPublisher(extension.id, packageJson);
+      const capabilityTags = extensionCapabilityTags(extension.id, packageJson, contributionPoints);
+      const riskFlags = extensionRiskFlags(extension.id, packageJson, activationEvents, contributionPoints);
 
       return {
         id: extension.id,
@@ -373,10 +478,13 @@ function scanInstalledExtensions(): GuardExtensionRisk[] {
         version: readString(packageJson.version),
         isActive: Boolean(extension.isActive),
         isBuiltin: Boolean(packageJson.isBuiltin),
+        accessLevel: extensionAccessLevel(capabilityTags, riskFlags),
         activationEvents,
         contributionPoints,
         accessSignals: extensionAccessSignals(packageJson, activationEvents, contributionPoints),
-        riskFlags: extensionRiskFlags(extension.id, packageJson, activationEvents, contributionPoints),
+        capabilityTags,
+        riskFlags,
+        manifestEvidence: extensionManifestEvidence(packageJson, activationEvents, contributionPoints),
       };
     })
     .sort((left, right) => Number(right.riskFlags.length) - Number(left.riskFlags.length) || left.id.localeCompare(right.id));
@@ -648,6 +756,33 @@ function mcpRiskFlags(server: Record<string, unknown>, capabilities: string[]) {
   return flags;
 }
 
+function mcpBlastRadius(capabilities: string[], envKeys: string[]) {
+  const lowerCapabilities = capabilities.join(" ").toLowerCase();
+  const hasSecretEnv = envKeys.some((key) => /token|secret|key|password|credential/i.test(key));
+
+  if (/cloud\/deploy|database|payment\/vendor api/.test(lowerCapabilities)) {
+    return hasSecretEnv
+      ? "High-impact tools with secret-bearing environment variables. Treat as production-capable until reviewed."
+      : "High-impact tools detected. Review before agents can call this server.";
+  }
+
+  if (/command execution|filesystem|source control/.test(lowerCapabilities)) {
+    return hasSecretEnv
+      ? "Can affect local code or repository state and receives secret-like variables."
+      : "Can affect local code, repository state, or command execution surfaces.";
+  }
+
+  if (/message send\/read|browser automation|connected tool gateway/.test(lowerCapabilities)) {
+    return hasSecretEnv
+      ? "Connected external tool gateway with secret-like variables. Review provider-side app scopes and enabled tools."
+      : "Connected external tool surface. Review provider-side app scopes and enabled tools.";
+  }
+
+  return hasSecretEnv
+    ? "Unknown tool capability with secret-like variables."
+    : "Unknown or low-specificity tool capability.";
+}
+
 async function scanMcpServers(): Promise<GuardMcpServer[]> {
   const results: GuardMcpServer[] = [];
   const files = await findMcpConfigFiles();
@@ -673,16 +808,18 @@ async function scanMcpServers(): Promise<GuardMcpServer[]> {
       const args = readStringArray(server.args);
       const capabilities = inferMcpCapabilities(name, server);
       const riskFlags = mcpRiskFlags(server, capabilities);
+      const envKeys = envKeysFor(server);
       results.push({
         configPath: logicalPathForUri(file),
         name,
         command: readString(server.command) || undefined,
         args,
         url: readString(server.url) || undefined,
-        envKeys: envKeysFor(server),
+        envKeys,
         capabilities,
         riskFlags,
         severity: severityFromFlags([...riskFlags, ...capabilities]),
+        blastRadius: mcpBlastRadius(capabilities, envKeys),
       });
     }
   }
@@ -864,6 +1001,24 @@ function makeFinding(params: Omit<GuardFinding, "detail">): GuardFinding {
     ...params,
     detail: `${params.evidence} ${params.recommendation}`.trim(),
   };
+}
+
+function secretTypeText(secrets: GuardSecretFinding[]) {
+  return secrets.map((secret) => secret.type).join(" ").toLowerCase();
+}
+
+function hasDeploySurface(workspaceSurface: GuardWorkspaceSurface) {
+  return workspaceSurface.deploymentFiles.length > 0 ||
+    workspaceSurface.iacFiles.length > 0 ||
+    workspaceSurface.riskyPackageScripts.some((script) => /deploy|cloud|infrastructure|destructive|migration|production/i.test(script.risk));
+}
+
+function hasCommandCapableAgentSurface(extensions: GuardExtensionRisk[], mcpServers: GuardMcpServer[]) {
+  return extensions.some((extension) =>
+    !extension.isBuiltin && extension.capabilityTags.some((tag) => /terminal|commands|local execution/i.test(tag))
+  ) || mcpServers.some((server) =>
+    server.capabilities.some((capability) => /command execution|filesystem|source control/i.test(capability))
+  );
 }
 
 function buildFindings(params: {
@@ -1128,7 +1283,188 @@ function buildFindings(params: {
     }));
   }
 
+  const secretText = secretTypeText(params.secrets);
+  const deploySurface = hasDeploySurface(params.workspaceSurface);
+  const commandCapableSurface = hasCommandCapableAgentSurface(params.extensions, params.mcpServers);
+
+  if (deploySurface && commandCapableSurface && /openai|anthropic|claude|aws|github|gitlab|slack|token|secret|credential|database/.test(secretText)) {
+    findings.push(makeFinding({
+      id: "blast-radius:agent-deploy-secret-combination",
+      category: "blast-radius",
+      severity: "critical",
+      title: "Agent blast radius: secrets plus deployment surface",
+      evidence: "This workspace has secret-like references, deployment or infrastructure surfaces, and agent/tool surfaces that may execute commands or modify files.",
+      recommendation: "Require approval before agent execution, isolate production credentials, and add protected paths before running autonomous coding tools in this workspace.",
+      safeToShare: false,
+      source: "workspace",
+    }));
+  } else if (deploySurface && commandCapableSurface) {
+    findings.push(makeFinding({
+      id: "blast-radius:agent-deploy-combination",
+      category: "blast-radius",
+      severity: "high",
+      title: "Agent blast radius: deployment-capable workspace",
+      evidence: "This workspace has deployment/infrastructure surfaces and agent/tool surfaces that may execute commands or modify files.",
+      recommendation: "Keep deploy, release, migration, and infrastructure commands behind explicit human approval.",
+      safeToShare: true,
+      source: "workspace",
+    }));
+  }
+
   return findings.sort((left, right) => findingPenalty(right.severity) - findingPenalty(left.severity));
+}
+
+function connectionSeverityFromExtension(extension: GuardExtensionRisk): GuardSeverity {
+  if (extension.accessLevel === "high") return "high";
+  if (extension.accessLevel === "medium") return "medium";
+  return "low";
+}
+
+function buildConnectionMap(params: {
+  agentFiles: Array<{ logicalPath: string; category: string }>;
+  extensions: GuardExtensionRisk[];
+  secrets: GuardSecretFinding[];
+  mcpServers: GuardMcpServer[];
+  workspaceSurface: GuardWorkspaceSurface;
+}): GuardConnectionMap {
+  const nodes: GuardConnectionMap["nodes"] = [
+    {
+      id: "ide:vscode",
+      type: "ide",
+      label: "VS Code / Cursor workspace",
+      severity: "info",
+      summary: "DryLake infers access from local IDE manifests, workspace files, and agent/MCP config.",
+      capabilities: ["extension host", "workspace context"],
+    },
+  ];
+  const edges: GuardConnectionMap["edges"] = [];
+  const highRiskPaths: string[] = [];
+
+  for (const extension of params.extensions.filter((item) => !item.isBuiltin).slice(0, 40)) {
+    const severity = connectionSeverityFromExtension(extension);
+    nodes.push({
+      id: `extension:${extension.id}`,
+      type: "extension",
+      label: extension.displayName,
+      severity,
+      summary: `${extension.publisher || "unknown publisher"} / ${extension.accessLevel} inferred access`,
+      capabilities: extension.capabilityTags,
+    });
+    edges.push({
+      from: "ide:vscode",
+      to: `extension:${extension.id}`,
+      label: extension.isActive ? "active extension" : "installed extension",
+      severity,
+    });
+
+    if (severity === "high") {
+      highRiskPaths.push(`${extension.displayName}: ${extension.capabilityTags.join(", ") || "extension host code"}`);
+    }
+  }
+
+  for (const file of params.agentFiles.slice(0, 24)) {
+    nodes.push({
+      id: `agent:${file.logicalPath}`,
+      type: "agent-config",
+      label: file.logicalPath,
+      severity: file.category === "skill" || file.category === "instruction" ? "medium" : "low",
+      summary: `${file.category} visible to coding-agent workflows`,
+      capabilities: [file.category],
+    });
+    edges.push({
+      from: "ide:vscode",
+      to: `agent:${file.logicalPath}`,
+      label: "agent context",
+      severity: "medium",
+    });
+  }
+
+  for (const server of params.mcpServers) {
+    nodes.push({
+      id: `mcp:${server.configPath}:${server.name}`,
+      type: "mcp",
+      label: server.name,
+      severity: server.severity,
+      summary: server.blastRadius,
+      capabilities: server.capabilities,
+    });
+    edges.push({
+      from: "ide:vscode",
+      to: `mcp:${server.configPath}:${server.name}`,
+      label: "MCP tool connection",
+      severity: server.severity,
+    });
+
+    if (server.envKeys.length > 0) {
+      const secretNodeId = `secret:mcp:${server.configPath}:${server.name}`;
+      nodes.push({
+        id: secretNodeId,
+        type: "secret",
+        label: `${server.name} env vars`,
+        severity: server.envKeys.some((key) => /token|secret|key|password|credential/i.test(key)) ? "high" : "medium",
+        summary: `${server.envKeys.length} env var name${server.envKeys.length === 1 ? "" : "s"} passed to MCP server; values not stored.`,
+        capabilities: server.envKeys,
+      });
+      edges.push({
+        from: secretNodeId,
+        to: `mcp:${server.configPath}:${server.name}`,
+        label: "env names passed",
+        severity: "high",
+      });
+    }
+
+    if (server.severity === "high") {
+      highRiskPaths.push(`${server.name}: ${server.blastRadius}`);
+    }
+  }
+
+  const secretPaths = [...new Set(params.secrets.map((secret) => secret.path))].slice(0, 20);
+  for (const secretPath of secretPaths) {
+    const secretsForPath = params.secrets.filter((secret) => secret.path === secretPath);
+    nodes.push({
+      id: `secret:${secretPath}`,
+      type: "secret",
+      label: secretPath,
+      severity: secretsForPath.some((secret) => secret.severity === "critical" || secret.severity === "high") ? "high" : "medium",
+      summary: `${secretsForPath.length} secret-like reference${secretsForPath.length === 1 ? "" : "s"}; values not stored.`,
+      capabilities: [...new Set(secretsForPath.map((secret) => secret.type))],
+    });
+    edges.push({
+      from: "ide:vscode",
+      to: `secret:${secretPath}`,
+      label: "agent-visible file path",
+      severity: "high",
+    });
+  }
+
+  const workspaceSurfaceCount =
+    params.workspaceSurface.deploymentFiles.length +
+    params.workspaceSurface.iacFiles.length +
+    params.workspaceSurface.ciWorkflowFiles.length +
+    params.workspaceSurface.riskyPackageScripts.length;
+  if (workspaceSurfaceCount > 0) {
+    nodes.push({
+      id: "workspace:surface",
+      type: "workspace-surface",
+      label: "Deploy / CI / infrastructure surface",
+      severity: hasDeploySurface(params.workspaceSurface) ? "high" : "medium",
+      summary: `${workspaceSurfaceCount} deploy, CI, IaC, or risky package-script surface${workspaceSurfaceCount === 1 ? "" : "s"} detected.`,
+      capabilities: [
+        params.workspaceSurface.deploymentFiles.length ? "deploy scripts" : "",
+        params.workspaceSurface.iacFiles.length ? "IaC/cloud config" : "",
+        params.workspaceSurface.ciWorkflowFiles.length ? "CI/CD workflows" : "",
+        params.workspaceSurface.riskyPackageScripts.length ? "risky package scripts" : "",
+      ].filter((value): value is string => Boolean(value)),
+    });
+    edges.push({
+      from: "ide:vscode",
+      to: "workspace:surface",
+      label: "workspace files",
+      severity: hasDeploySurface(params.workspaceSurface) ? "high" : "medium",
+    });
+  }
+
+  return { nodes, edges, highRiskPaths };
 }
 
 function summarize(result: Omit<GuardScanResult, "summary">): GuardScanResult["summary"] {
@@ -1148,6 +1484,7 @@ function summarize(result: Omit<GuardScanResult, "summary">): GuardScanResult["s
       result.workspaceSurface.riskyPackageScripts.length +
       result.workspaceSurface.generatedFolders.length,
     mcpServers: result.mcpServers.length,
+    highImpactConnections: result.connectionMap.highRiskPaths.length,
     findings: result.findings.length,
     critical: countSeverity("critical"),
     high: countSeverity("high"),
@@ -1169,16 +1506,18 @@ function categoryScores(findings: GuardFinding[]): GuardScanResult["categoryScor
     secretHygiene: categoryScore(findings, "secret-hygiene"),
     ideBloat: categoryScore(findings, "ide-bloat"),
     tokenWaste: categoryScore(findings, "token-waste"),
+    blastRadius: categoryScore(findings, "blast-radius"),
   };
 }
 
 function overallScore(scores: GuardScanResult["categoryScores"]) {
   return Math.round(
-    (scores.mcpRisk * 0.24) +
-    (scores.agentReliability * 0.2) +
-    (scores.secretHygiene * 0.24) +
-    (scores.ideBloat * 0.16) +
-    (scores.tokenWaste * 0.16),
+    (scores.mcpRisk * 0.2) +
+    (scores.agentReliability * 0.16) +
+    (scores.secretHygiene * 0.22) +
+    (scores.ideBloat * 0.12) +
+    (scores.tokenWaste * 0.12) +
+    (scores.blastRadius * 0.18),
   );
 }
 
@@ -1210,6 +1549,13 @@ export async function runSecurityScan(configuration?: vscode.WorkspaceConfigurat
     mcpServers,
     workspaceSurface,
   });
+  const connectionMap = buildConnectionMap({
+    agentFiles,
+    extensions,
+    secrets,
+    mcpServers,
+    workspaceSurface,
+  });
   const scores = categoryScores(findings);
   const score = overallScore(scores);
   const partial = {
@@ -1224,6 +1570,7 @@ export async function runSecurityScan(configuration?: vscode.WorkspaceConfigurat
     secrets,
     mcpServers,
     workspaceSurface,
+    connectionMap,
     findings,
   };
 
@@ -1238,6 +1585,7 @@ function categoryLabel(category: GuardFindingCategory) {
   if (category === "agent-reliability") return "Agent Reliability";
   if (category === "secret-hygiene") return "Secret Hygiene";
   if (category === "ide-bloat") return "IDE Bloat";
+  if (category === "blast-radius") return "Blast Radius";
   return "Token Waste";
 }
 
@@ -1248,6 +1596,7 @@ function scoreLines(scan: GuardScanResult) {
     `- Secret Hygiene Score: ${scan.categoryScores.secretHygiene}/100`,
     `- IDE Bloat Score: ${scan.categoryScores.ideBloat}/100`,
     `- Token Waste Score: ${scan.categoryScores.tokenWaste}/100`,
+    `- Blast Radius Score: ${scan.categoryScores.blastRadius}/100`,
   ];
 }
 
@@ -1278,6 +1627,8 @@ export function renderSafeDeveloperSummary(scan: GuardScanResult) {
     `Secret Hygiene: ${scan.categoryScores.secretHygiene}/100`,
     `IDE Bloat: ${scan.categoryScores.ideBloat}/100`,
     `Token Waste: ${scan.categoryScores.tokenWaste}/100`,
+    `Blast Radius: ${scan.categoryScores.blastRadius}/100`,
+    `High-impact connections: ${scan.summary.highImpactConnections}`,
     `Findings: ${scan.summary.findings} (${scan.summary.critical} critical, ${scan.summary.high} high, ${scan.summary.medium} medium)`,
   ].join("\n");
 }
@@ -1310,6 +1661,7 @@ export function renderSafeDeveloperReport(scan: GuardScanResult) {
     `- Third-party extensions: ${scan.summary.extensions}`,
     `- Active third-party extensions: ${scan.summary.activeExtensions}`,
     `- MCP servers: ${scan.summary.mcpServers}`,
+    `- High-impact connection paths: ${scan.summary.highImpactConnections}`,
     `- Risky files with secret-like names/patterns: ${scan.summary.riskyFiles}`,
     `- Workspace risk surface items: ${scan.summary.workspaceSurface}`,
     `- Package managers: ${scan.packageManagers.length ? scan.packageManagers.join(", ") : "none detected"}`,
@@ -1347,8 +1699,19 @@ export function renderSafeDeveloperReport(scan: GuardScanResult) {
       `- Command: ${[server.command, ...server.args].filter(Boolean).join(" ") || server.url || "unknown"}`,
       `- Env var names: ${server.envKeys.join(", ") || "none declared"}`,
       `- Capabilities: ${server.capabilities.join(", ")}`,
+      `- Blast radius: ${server.blastRadius}`,
       `- Risk flags: ${server.riskFlags.join(" ") || "none"}`,
     ].join("\n")).join("\n\n") || "No MCP server configs detected.",
+    "",
+    "## Agentic Connection Map",
+    "",
+    `- Nodes: ${scan.connectionMap.nodes.length}`,
+    `- Edges: ${scan.connectionMap.edges.length}`,
+    `- High-risk paths: ${scan.connectionMap.highRiskPaths.length}`,
+    "",
+    scan.connectionMap.highRiskPaths.length
+      ? scan.connectionMap.highRiskPaths.slice(0, 20).map((item) => `- ${item}`).join("\n")
+      : "No high-risk connection paths detected.",
     "",
     "## Workspace Risk Surface",
     "",
@@ -1405,7 +1768,7 @@ function renderAgenticMap(scan: GuardScanResult) {
       secretValuesStored: false,
       envValuesStored: false,
     },
-    ide: {
+      ide: {
       extensions: scan.extensions.map((extension) => ({
         id: extension.id,
         publisher: extension.publisher,
@@ -1415,8 +1778,11 @@ function renderAgenticMap(scan: GuardScanResult) {
         isBuiltin: extension.isBuiltin,
         activationEvents: extension.activationEvents,
         contributionPoints: extension.contributionPoints,
+        accessLevel: extension.accessLevel,
         inferredAccess: extension.accessSignals,
+        capabilityTags: extension.capabilityTags,
         riskFlags: extension.riskFlags,
+        manifestEvidence: extension.manifestEvidence,
       })),
     },
     agents: {
@@ -1433,6 +1799,7 @@ function renderAgenticMap(scan: GuardScanResult) {
         capabilities: server.capabilities,
         riskFlags: server.riskFlags,
         severity: server.severity,
+        blastRadius: server.blastRadius,
       })),
     },
     workspace: {
@@ -1447,6 +1814,7 @@ function renderAgenticMap(scan: GuardScanResult) {
         severity: secret.severity,
       })),
     },
+    connectionMap: scan.connectionMap,
   };
 }
 
@@ -1476,6 +1844,7 @@ export async function writeSecurityScanReports(scan: GuardScanResult, workspaceU
       categoryScores: scan.categoryScores,
       summary: scan.summary,
       workspaceSurface: scan.workspaceSurface,
+      connectionMap: scan.connectionMap,
     }, null, 2)),
     writeText(findings, JSON.stringify(scan.findings.map(safeFinding), null, 2)),
     writeText(agenticMap, JSON.stringify(renderAgenticMap(scan), null, 2)),

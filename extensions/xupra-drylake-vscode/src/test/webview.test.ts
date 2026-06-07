@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createStarterXu } from "../xu/createStarterXu";
 import { ControlRoomProvider } from "../webview/controlRoomProvider";
 import { XU_PHASE_AGENTS } from "../xu/types";
+import type { GuardScanResult } from "../services/securityScanner";
 import type { ApplicationBuildRunbook } from "../xu/types";
 
 type TestMessage = {
@@ -108,6 +109,148 @@ function autopilotRunbook(): ApplicationBuildRunbook {
   return value;
 }
 
+function securityScan(): GuardScanResult {
+  return {
+    scannedAt: "2026-06-08T00:00:00.000Z",
+    score: 62,
+    rank: "Operator",
+    categoryScores: {
+      mcpRisk: 55,
+      agentReliability: 74,
+      secretHygiene: 68,
+      ideBloat: 60,
+      tokenWaste: 81,
+      blastRadius: 42,
+    },
+    summary: {
+      agentFiles: 3,
+      skills: 1,
+      rules: 1,
+      extensions: 7,
+      activeExtensions: 5,
+      riskyFiles: 2,
+      workspaceSurface: 4,
+      mcpServers: 2,
+      highImpactConnections: 2,
+      findings: 2,
+      critical: 1,
+      high: 1,
+      medium: 0,
+    },
+    packageManagers: ["npm"],
+    packageScripts: ["build", "deploy", "test"],
+    agentFiles: [
+      { logicalPath: "AGENTS.md", category: "instruction" },
+      { logicalPath: ".cursor/rules/drylake.mdc", category: "rule" },
+    ],
+    extensions: [
+      {
+        id: "unknown.agent-runner",
+        displayName: "Agent Runner",
+        publisher: "unknown",
+        version: "1.0.0",
+        isActive: true,
+        isBuiltin: false,
+        accessLevel: "high",
+        activationEvents: ["onStartupFinished"],
+        contributionPoints: ["commands", "configuration"],
+        accessSignals: [
+          "Can execute extension-host code after activation; VS Code does not expose a browser-style permission list.",
+          "Command labels suggest shell, auth, deployment, or credential operations.",
+        ],
+        capabilityTags: ["AI/agent", "terminal/commands", "extension host code"],
+        riskFlags: ["Unknown or not-yet-approved publisher.", "Command names suggest shell operations."],
+        manifestEvidence: ["activationEvents=onStartupFinished", "commands=agent.run Run Shell Agent"],
+      },
+    ],
+    secrets: [
+      {
+        path: ".env",
+        line: 1,
+        type: "OpenAI API key variable",
+        variableName: "OPENAI_API_KEY",
+        severity: "high",
+        evidence: "OPENAI_API_KEY=<redacted>",
+      },
+    ],
+    mcpServers: [
+      {
+        configPath: ".cursor/mcp.json",
+        name: "toolGateway",
+        command: "npx",
+        args: ["-y", "@toolhouse/mcp"],
+        envKeys: ["TOOL_GATEWAY_API_KEY"],
+        capabilities: ["connected tool gateway"],
+        riskFlags: ["Unpinned npx MCP server package."],
+        severity: "high",
+        blastRadius: "Connected external tool gateway with secret-like variables. Review provider-side app scopes and enabled tools.",
+      },
+    ],
+    workspaceSurface: {
+      deploymentFiles: [{ path: "scripts/deploy.sh", type: "deployment script" }],
+      iacFiles: [{ path: "Dockerfile", type: "Dockerfile" }],
+      ciWorkflowFiles: [{ path: ".github/workflows/deploy.yml", type: "GitHub Actions workflow" }],
+      credentialLikeFiles: [],
+      riskyPackageScripts: [{ path: "package.json", name: "deploy", risk: "deployment" }],
+      generatedFolders: [],
+    },
+    connectionMap: {
+      nodes: [
+        {
+          id: "ide:vscode",
+          type: "ide",
+          label: "VS Code / Cursor workspace",
+          severity: "info",
+          summary: "DryLake infers access from local IDE manifests.",
+          capabilities: ["extension host"],
+        },
+        {
+          id: "extension:unknown.agent-runner",
+          type: "extension",
+          label: "Agent Runner",
+          severity: "high",
+          summary: "unknown / high inferred access",
+          capabilities: ["AI/agent", "terminal/commands"],
+        },
+      ],
+      edges: [
+        {
+          from: "ide:vscode",
+          to: "extension:unknown.agent-runner",
+          label: "active extension",
+          severity: "high",
+        },
+      ],
+      highRiskPaths: ["Agent Runner: AI/agent, terminal/commands"],
+    },
+    findings: [
+      {
+        id: "blast-radius:agent-deploy-secret-combination",
+        category: "blast-radius",
+        severity: "critical",
+        title: "Agentic blast radius combines secrets, deploy surface, and command-capable tools",
+        evidence: "Secret-like references, deployment surface, and command-capable tools were detected together.",
+        recommendation: "Require explicit approval before agents can run tools in this workspace.",
+        safeToShare: true,
+        detail: "Combined risk",
+        source: "workspace",
+      },
+      {
+        id: "mcp:.cursor/mcp.json:toolGateway",
+        category: "mcp-risk",
+        severity: "high",
+        title: "toolGateway MCP risk",
+        evidence: "Unpinned npx MCP server package.",
+        recommendation: "Pin packages and reduce scopes.",
+        safeToShare: true,
+        detail: "MCP risk",
+        source: "mcp",
+        path: ".cursor/mcp.json",
+      },
+    ],
+  };
+}
+
 beforeEach(() => {
   executed.length = 0;
   messageHandler = undefined;
@@ -211,10 +354,52 @@ describe("Control Room webview", () => {
 
     const html = panel?.webview.html ?? "";
 
-    expect(html).toContain("Safe Developer Rank");
+    expect(html).toContain("Agentic Security Posture");
     expect(html).toContain("DryLake Security Scan");
-    expect(html).toContain("agents, skills, extensions, MCP servers");
+    expect(html).toContain("installed extensions, agent files, skills, MCP servers");
+    expect(html).toContain("connected-tool blast radius");
+    expect(html).toContain("Scan local IDE and workspace metadata");
+    expect(html).toContain("Review inferred extension and MCP access");
     expect(html).toContain("VS Code does not expose a complete runtime permission list");
+    expect(html).not.toContain("Build Plan Chat");
+  });
+
+  it("renders scan results with extension, MCP, secret, and blast-radius drilldowns", async () => {
+    storedView = "security";
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    (provider as unknown as { securityScan: GuardScanResult }).securityScan = securityScan();
+
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain("Safe Developer Rank: Operator - 62/100");
+    expect(html).toContain("High-impact paths");
+    expect(html).toContain("Blast Radius");
+    expect(html).toContain("Agentic Connection Map");
+    expect(html).toContain("Extension Access Review");
+    expect(html).toContain("MCP And Tool Access");
+    expect(html).toContain("Secrets And Env References");
+    expect(html).toContain("Deploy / CI / Workspace Surface");
+    expect(html).toContain("Agent Runner");
+    expect(html).toContain("high access");
+    expect(html).toContain("terminal/commands");
+    expect(html).toContain("toolGateway");
+    expect(html).toContain("Connected external tool gateway with secret-like variables");
+    expect(html).toContain("OPENAI_API_KEY");
+    expect(html).toContain("scripts/deploy.sh");
+    expect(html).toContain("Agentic blast radius combines secrets");
+  });
+
+  it("opens the Control Room directly on the Security tab from the sidebar command", async () => {
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+
+    await provider.openSecurityDashboard(context() as never);
+
+    const html = panel?.webview.html ?? "";
+    expect(storedView).toBe("security");
+    expect(html).toContain(">Security</button>");
+    expect(html).toContain("Agentic Security Posture");
     expect(html).not.toContain("Build Plan Chat");
   });
 

@@ -773,6 +773,10 @@ export async function activate(context: vscode.ExtensionContext) {
     await openControlRoomCommand(runbookDeps, context);
   });
 
+  register("drylake.openSecurityDashboard", async () => {
+    await controlRoom.openSecurityDashboard(context);
+  });
+
   register("drylake.scanAiCodingSetup", async () => {
     const scan = await runSecurityScan(configuration);
     const reports = await writeSecurityScanReports(scan);

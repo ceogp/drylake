@@ -404,10 +404,15 @@ function renderSecurityEmptyState(loading: boolean) {
     <div class="security-hero">
       <div>
         <div class="security-eyebrow">DryLake Guard</div>
-        <h2>Safe Developer Rank</h2>
-        <p>Map this IDE's agentic setup: agents, skills, extensions, MCP servers, env references, and tool connections.</p>
+        <h2>Agentic Security Posture</h2>
+        <p>Map this IDE's agentic setup: installed extensions, agent files, skills, MCP servers, env references, deploy surfaces, and connected-tool blast radius.</p>
       </div>
       <button type="button" data-command="drylake.runSecurityScan"${loading ? " disabled" : ""}>${loading ? "Scanning..." : "DryLake Security Scan"}</button>
+    </div>
+    <div class="security-flow">
+      <div><strong>1</strong><span>Scan local IDE and workspace metadata</span></div>
+      <div><strong>2</strong><span>Review inferred extension and MCP access</span></div>
+      <div><strong>3</strong><span>Open the local report or copy a redacted summary</span></div>
     </div>
     <div class="security-note">Extension access is inferred from installed extension manifests, activation events, commands, contribution points, and local MCP/config files. VS Code does not expose a complete runtime permission list for third-party extensions.</div>
   </section>`;
@@ -437,6 +442,14 @@ function renderFindingRows(scan: GuardScanResult) {
   </div>`).join("");
 }
 
+function renderSecurityScoreMetric(label: string, score: number) {
+  const tone = score < 60 ? "warn" : score < 80 ? "caution" : "good";
+  return `<div class="security-metric ${tone}">
+    <span>${escapeHtml(label)}</span>
+    <strong>${escapeHtml(score)}/100</strong>
+  </div>`;
+}
+
 function renderExtensionRows(scan: GuardScanResult) {
   const extensions = scan.extensions
     .filter((extension) => !extension.isBuiltin)
@@ -450,16 +463,20 @@ function renderExtensionRows(scan: GuardScanResult) {
     const flags = extension.riskFlags.length
       ? extension.riskFlags.map((flag) => `<span>${escapeHtml(flag)}</span>`).join("")
       : "<span>No manifest risk flags.</span>";
-    const access = extension.accessSignals.slice(0, 4).map((signal) => `<li>${escapeHtml(signal)}</li>`).join("");
+    const access = extension.accessSignals.slice(0, 5).map((signal) => `<li>${escapeHtml(signal)}</li>`).join("");
+    const capabilities = extension.capabilityTags.length
+      ? extension.capabilityTags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")
+      : "<span>extension host code</span>";
+    const evidence = extension.manifestEvidence.slice(0, 4).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
 
-    return `<details class="security-extension">
+    return `<details class="security-extension ${escapeHtml(extension.accessLevel)}">
       <summary>
         <span>${escapeHtml(extension.displayName)}</span>
-        <small>${escapeHtml(extension.id)} ${extension.isActive ? "active" : "inactive"}</small>
+        <small>${escapeHtml(extension.accessLevel)} access · ${escapeHtml(extension.id)} · ${extension.isActive ? "active" : "inactive"}</small>
       </summary>
+      <div class="security-tags capability-tags">${capabilities}</div>
       <div class="security-tags">${flags}</div>
-      <ul>${access}</ul>
-      <small>Activation: ${escapeHtml(extension.activationEvents.slice(0, 5).join(", ") || "not declared")}</small>
+      <ul>${access}${evidence}</ul>
     </details>`;
   }).join("");
 }
@@ -473,10 +490,72 @@ function renderMcpRows(scan: GuardScanResult) {
     <div>
       <strong>${escapeHtml(server.name)}</strong>
       <p>${escapeHtml([server.command, ...server.args].filter(Boolean).join(" ") || server.url || "MCP server")}</p>
+      <p>${escapeHtml(server.blastRadius)}</p>
       <small>${escapeHtml(server.configPath)}</small>
     </div>
-    <div class="security-tags">${server.capabilities.map((capability) => `<span>${escapeHtml(capability)}</span>`).join("")}</div>
+    <div>
+      <div class="security-tags">${server.capabilities.map((capability) => `<span>${escapeHtml(capability)}</span>`).join("")}</div>
+      <div class="security-tags">${server.riskFlags.map((flag) => `<span>${escapeHtml(flag)}</span>`).join("") || "<span>No MCP risk flags.</span>"}</div>
+      <small>Env names: ${escapeHtml(server.envKeys.join(", ") || "none declared")}</small>
+    </div>
   </div>`).join("");
+}
+
+function renderSecretRows(scan: GuardScanResult) {
+  if (scan.secrets.length === 0) {
+    return `<div class="security-empty-line">No secret-like workspace references were detected. Values are never stored.</div>`;
+  }
+
+  return scan.secrets.slice(0, 14).map((secret) => `<div class="security-connection-row ${escapeHtml(secret.severity)}">
+    <strong>${escapeHtml(secret.type)}</strong>
+    <span>${escapeHtml(secret.variableName ?? "pattern match")}</span>
+    <small>${escapeHtml(secret.path)}:${escapeHtml(secret.line)}</small>
+  </div>`).join("");
+}
+
+function renderWorkspaceSurfaceRows(scan: GuardScanResult) {
+  const surface = [
+    ...scan.workspaceSurface.deploymentFiles.map((item) => ({ ...item, group: "deploy/migration" })),
+    ...scan.workspaceSurface.iacFiles.map((item) => ({ ...item, group: "IaC/cloud" })),
+    ...scan.workspaceSurface.ciWorkflowFiles.map((item) => ({ ...item, group: "CI/CD" })),
+    ...scan.workspaceSurface.riskyPackageScripts.map((item) => ({
+      path: item.path,
+      type: `${item.name}: ${item.risk}`,
+      group: "package script",
+    })),
+  ].slice(0, 16);
+
+  if (surface.length === 0) {
+    return `<div class="security-empty-line">No deploy, CI, infrastructure, or risky package-script surface was detected.</div>`;
+  }
+
+  return surface.map((item) => `<div class="security-connection-row high">
+    <strong>${escapeHtml(item.group)}</strong>
+    <span>${escapeHtml(item.type)}</span>
+    <small>${escapeHtml(item.path)}</small>
+  </div>`).join("");
+}
+
+function renderConnectionMapRows(scan: GuardScanResult) {
+  const highRisk = scan.connectionMap.highRiskPaths.slice(0, 8);
+  const edges = scan.connectionMap.edges
+    .filter((edge) => edge.severity === "critical" || edge.severity === "high" || edge.severity === "medium")
+    .slice(0, 12);
+
+  if (highRisk.length === 0 && edges.length === 0) {
+    return `<div class="security-empty-line">No high-impact agentic connection paths were detected.</div>`;
+  }
+
+  const riskRows = highRisk.map((item) => `<div class="security-connection-row high">
+    <strong>High-impact path</strong>
+    <span>${escapeHtml(item)}</span>
+  </div>`).join("");
+  const edgeRows = edges.map((edge) => `<div class="security-connection-row ${escapeHtml(edge.severity)}">
+    <strong>${escapeHtml(edge.label)}</strong>
+    <span>${escapeHtml(edge.from)} → ${escapeHtml(edge.to)}</span>
+  </div>`).join("");
+
+  return `${riskRows}${edgeRows}`;
 }
 
 function renderSecurityPanel(scan: GuardScanResult | null, loading: boolean) {
@@ -512,22 +591,28 @@ function renderSecurityPanel(scan: GuardScanResult | null, loading: boolean) {
         ${renderSummaryMetric("Extensions", scan.summary.extensions)}
         ${renderSummaryMetric("Active extensions", scan.summary.activeExtensions)}
         ${renderSummaryMetric("MCP servers", scan.summary.mcpServers)}
+        ${renderSummaryMetric("High-impact paths", scan.summary.highImpactConnections, scan.summary.highImpactConnections ? "warn" : "")}
         ${renderSummaryMetric("Risky files", scan.summary.riskyFiles)}
         ${renderSummaryMetric("Workspace surface", scan.summary.workspaceSurface)}
         ${renderSummaryMetric("Findings", scan.summary.findings, scan.summary.critical || scan.summary.high ? "warn" : "")}
       </div>
     </div>
     <div class="security-category-row">
-      ${renderSummaryMetric("MCP Risk", `${scan.categoryScores.mcpRisk}/100`)}
-      ${renderSummaryMetric("Agent Reliability", `${scan.categoryScores.agentReliability}/100`)}
-      ${renderSummaryMetric("Secret Hygiene", `${scan.categoryScores.secretHygiene}/100`)}
-      ${renderSummaryMetric("IDE Bloat", `${scan.categoryScores.ideBloat}/100`)}
-      ${renderSummaryMetric("Token Waste", `${scan.categoryScores.tokenWaste}/100`)}
+      ${renderSecurityScoreMetric("MCP Risk", scan.categoryScores.mcpRisk)}
+      ${renderSecurityScoreMetric("Agent Reliability", scan.categoryScores.agentReliability)}
+      ${renderSecurityScoreMetric("Secret Hygiene", scan.categoryScores.secretHygiene)}
+      ${renderSecurityScoreMetric("IDE Bloat", scan.categoryScores.ideBloat)}
+      ${renderSecurityScoreMetric("Token Waste", scan.categoryScores.tokenWaste)}
+      ${renderSecurityScoreMetric("Blast Radius", scan.categoryScores.blastRadius)}
     </div>
     <div class="security-grid">
       <section class="security-section">
         <h3>Top Findings</h3>
         ${renderFindingRows({ ...scan, findings: sortedFindings })}
+      </section>
+      <section class="security-section">
+        <h3>Agentic Connection Map</h3>
+        ${renderConnectionMapRows(scan)}
       </section>
       <section class="security-section">
         <h3>Extension Access Review</h3>
@@ -536,6 +621,14 @@ function renderSecurityPanel(scan: GuardScanResult | null, loading: boolean) {
       <section class="security-section">
         <h3>MCP And Tool Access</h3>
         ${renderMcpRows(scan)}
+      </section>
+      <section class="security-section">
+        <h3>Secrets And Env References</h3>
+        ${renderSecretRows(scan)}
+      </section>
+      <section class="security-section">
+        <h3>Deploy / CI / Workspace Surface</h3>
+        ${renderWorkspaceSurfaceRows(scan)}
       </section>
     </div>
   </section>`;
@@ -1121,6 +1214,11 @@ export class ControlRoomProvider {
     this.panel.webview.html = this.renderHtml(runbook, pendingPlanChange, profilesByAgent);
   }
 
+  async openSecurityDashboard(context: vscode.ExtensionContext) {
+    await context.workspaceState?.update(CONTROL_ROOM_VIEW_KEY, "security");
+    await this.createOrShow(context);
+  }
+
   dispose() {
     this.panel?.dispose();
     this.panel = undefined;
@@ -1349,6 +1447,10 @@ export class ControlRoomProvider {
     .security-panel { display: grid; gap: 14px; }
     .security-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
     .security-hero p { max-width: 680px; color: var(--drylake-muted); font-size: 13px; line-height: 1.45; }
+    .security-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .security-flow div { display: flex; align-items: center; gap: 9px; min-height: 48px; padding: 10px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel); }
+    .security-flow strong { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 22px; border-radius: 999px; color: #090a0a; background: var(--drylake-orange); font-size: 12px; }
+    .security-flow span { color: var(--drylake-muted); font-size: 12px; line-height: 1.35; }
     .security-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .security-eyebrow { color: var(--drylake-orange); text-transform: uppercase; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; }
     .security-note { padding: 10px 12px; border: 1px solid rgba(251, 146, 60, 0.35); border-radius: 6px; color: #fed7aa; background: var(--drylake-orange-soft); font-size: 12px; line-height: 1.4; }
@@ -1363,13 +1465,14 @@ export class ControlRoomProvider {
     .security-score.operator small { color: var(--drylake-orange); }
     .security-score.guardian, .security-score.sentinel { border-color: rgba(52, 211, 153, 0.6); }
     .security-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-    .security-category-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .security-category-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
     .security-metric { display: grid; gap: 5px; min-height: 70px; padding: 12px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel); }
     .security-metric strong { color: var(--drylake-text); font-size: 22px; line-height: 1; }
     .security-metric.warn { border-color: rgba(248, 113, 113, 0.55); }
+    .security-metric.caution { border-color: rgba(251, 146, 60, 0.45); }
+    .security-metric.good { border-color: rgba(52, 211, 153, 0.36); }
     .security-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.82fr); gap: 12px; }
     .security-section { display: grid; align-content: start; gap: 8px; padding: 12px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
-    .security-section:nth-child(3) { grid-column: 1 / -1; }
     .security-section h3 { margin: 0 0 2px; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 14px; font-weight: 650; }
     .security-finding, .security-mcp { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; padding: 9px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
     .security-finding p, .security-mcp p, .security-extension li { color: var(--drylake-muted); font-size: 12px; line-height: 1.4; }
@@ -1383,12 +1486,19 @@ export class ControlRoomProvider {
     .security-extension summary small { color: var(--drylake-muted); }
     .security-extension ul { margin: 0; padding: 0 12px 10px 26px; }
     .security-tags { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 9px 9px; }
+    .capability-tags span { color: #a7f3d0; border-color: rgba(52, 211, 153, 0.34); background: rgba(52, 211, 153, 0.08); }
     .security-tags span { padding: 2px 6px; border: 1px solid rgba(251, 146, 60, 0.36); border-radius: 999px; color: #fed7aa; background: rgba(251, 146, 60, 0.08); font-size: 10px; font-weight: 650; }
     .security-mcp { grid-template-columns: minmax(0, 1fr) minmax(160px, 0.45fr); }
     .security-mcp.high { border-color: rgba(248, 113, 113, 0.52); }
+    .security-connection-row { display: grid; gap: 3px; padding: 9px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
+    .security-connection-row strong { color: var(--drylake-text); font-size: 12px; }
+    .security-connection-row span { color: var(--drylake-muted); font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+    .security-connection-row small { color: #71717a; font-size: 11px; overflow-wrap: anywhere; }
+    .security-connection-row.critical, .security-connection-row.high, .security-extension.high { border-color: rgba(248, 113, 113, 0.5); }
+    .security-connection-row.medium, .security-extension.medium { border-color: rgba(251, 146, 60, 0.42); }
     .security-empty-line { padding: 10px; border: 1px dashed #3f3f46; border-radius: 6px; color: var(--drylake-muted); font-size: 12px; }
     @media (max-width: 860px) { header, .nano-banner, .planner-setup-header { align-items: flex-start; flex-direction: column; } .planning-controls { grid-template-columns: 1fr; } .stage-count-label { justify-content: flex-start; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
-    @media (max-width: 860px) { .security-hero { flex-direction: column; } .security-actions { justify-content: flex-start; } .security-score-row, .security-grid { grid-template-columns: 1fr; } .security-metrics, .security-category-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } .security-section:nth-child(3) { grid-column: auto; } }
+    @media (max-width: 860px) { .security-hero { flex-direction: column; } .security-actions { justify-content: flex-start; } .security-flow, .security-score-row, .security-grid { grid-template-columns: 1fr; } .security-metrics, .security-category-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   </style>
 </head>
 <body>

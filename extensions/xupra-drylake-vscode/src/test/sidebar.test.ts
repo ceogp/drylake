@@ -77,7 +77,11 @@ describe("sidebar reshape", () => {
     expect(html).toContain("No active plan");
     expect(html).toContain('data-action="openControlRoom"');
     expect(html).toContain("Open Control Room");
+    expect(html).toContain('data-action="openSecurityDashboard"');
+    expect(html).toContain("Security Scan");
+    expect(html).toContain("Security Dashboard");
     expect(noSessionBranch.indexOf('data-action="openControlRoom"')).toBeGreaterThan(-1);
+    expect(noSessionBranch.indexOf('data-action="openSecurityDashboard"')).toBeGreaterThan(-1);
     expect(html).toContain('data-action="newSession"');
     expect(html).toContain('data-action="archiveCurrentPlan"');
     expect(html).toContain('data-action="deleteCurrentPlan"');
@@ -90,6 +94,7 @@ describe("sidebar reshape", () => {
     expect(html).toContain('data-action="importWorkspace"');
     expect(html).toContain('data-action="installToRuntime"');
     expect(html).toContain('data-action="checkCompatibility"');
+    expect(html).toContain('data-action="openSecurityDashboard"');
     expect(html).toContain('data-action="exportPreview"');
     expect(html).toContain('data-action="pullPackage"');
   });
