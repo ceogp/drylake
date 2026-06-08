@@ -31,7 +31,7 @@ const serverEnvSchema = z.object({
   AWS_S3_PREFIX: z.string().default("xupra-drylake"),
   AWS_SECRETS_PREFIX: z.string().default("xupra-drylake"),
   AWS_KMS_KEY_ID: z.string().optional(),
-  AI_PROVIDER: z.enum(["openai", "kimi", "anthropic", "bedrock_openai", "bedrock_anthropic"]).default("openai"),
+  AI_PROVIDER: z.enum(["openai", "kimi", "anthropic"]).default("openai"),
   ANTHROPIC_API_KEY: z.string().optional(),
   CLAUDE_API_KEY: z.string().optional(),
   claudetoken: z.string().optional(),
@@ -43,20 +43,6 @@ const serverEnvSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default("gpt-5.4"),
   OPENAI_FREE_MODEL: z.string().default("gpt-5.4-nano"),
-  BEDROCK_OPENAI_API_KEY: z.string().optional(),
-  BEDROCK_OPENAI_REGION: z.string().optional(),
-  BEDROCK_OPENAI_BASE_URL: z.string().optional(),
-  BEDROCK_OPENAI_MODEL: z.string().default("openai.gpt-5.4"),
-  BEDROCK_OPENAI_FREE_MODEL: z.string().default("openai.gpt-5.4-nano"),
-  BEDROCK_API_KEY: z.string().optional(),
-  AWS_BEARER_TOKEN_BEDROCK: z.string().optional(),
-  BEDROCK_REGION: z.string().optional(),
-  BEDROCK_MODEL: z.string().optional(),
-  BEDROCK_FREE_MODEL: z.string().optional(),
-  BEDROCK_CODING_MODEL: z.string().optional(),
-  BEDROCK_Model: z.string().optional(),
-  BEDROCK_FREE_Model: z.string().optional(),
-  BEDROCK_CODING_Model: z.string().optional(),
   EXTENSION_PROMPT_CAPTURE_MODE: z.enum(["off", "preview", "full"]).default("preview"),
   SKILLS_SH_API_KEY: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
@@ -80,27 +66,8 @@ if (!parsed.success) {
   throw new Error("Environment validation failed");
 }
 
-const parsedData = parsed.data;
-
-if (parsedData.SECRETS_PROVIDER === "env" && parsedData.APP_ENCRYPTION_KEY.length < 32) {
+if (parsed.data.SECRETS_PROVIDER === "env" && parsed.data.APP_ENCRYPTION_KEY.length < 32) {
   throw new Error("APP_ENCRYPTION_KEY must be at least 32 characters when SECRETS_PROVIDER=env");
 }
 
-export const env = {
-  ...parsedData,
-  BEDROCK_MODEL: (
-    parsedData.BEDROCK_MODEL ??
-    parsedData.BEDROCK_Model ??
-    "anthropic.claude-sonnet-4-6"
-  ).trim(),
-  BEDROCK_FREE_MODEL: (
-    parsedData.BEDROCK_FREE_MODEL ??
-    parsedData.BEDROCK_FREE_Model ??
-    "anthropic.claude-haiku-4-5-20251001-v1:0"
-  ).trim(),
-  BEDROCK_CODING_MODEL: (
-    parsedData.BEDROCK_CODING_MODEL ??
-    parsedData.BEDROCK_CODING_Model ??
-    "anthropic.claude-opus-4-8"
-  ).trim(),
-};
+export const env = parsed.data;

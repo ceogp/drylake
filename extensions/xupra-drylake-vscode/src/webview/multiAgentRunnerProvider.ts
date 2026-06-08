@@ -24,7 +24,7 @@ type RunnerStatus = "idle" | "assignment-review" | "running" | "results";
 type RunnerAgentStatus = "pending" | "running" | "complete" | "failed";
 type RunnerAssignmentSource = "ai" | "manual";
 type RunnerModelTier = "nano" | "foundation";
-const FREE_PLANNING_MODEL_LABEL = "Claude Haiku";
+const FREE_PLANNING_MODEL_LABEL = "GPT-5.4 Nano";
 
 type RunnerAssignment = {
   agentId: XuPhaseAgent;

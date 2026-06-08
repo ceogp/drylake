@@ -19,7 +19,7 @@ import { renderSafeDeveloperSummary, runSecurityScan, writeSecurityScanReports }
 import type { GuardReportPaths, GuardScanResult, GuardSeverity } from "../services/securityScanner";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
 const CONTROL_ROOM_CHAT_COLLAPSED_KEY = "drylake.controlRoomChatCollapsed";
-const FREE_PLANNING_MODEL_LABEL = "Claude Haiku";
+const FREE_PLANNING_MODEL_LABEL = "GPT-5.4 Nano";
 type ControlRoomView = "pipeline" | "kanban" | "security";
 type HandoffProfilesByAgent = Partial<Record<(typeof XU_PHASE_AGENTS)[number], HandoffProfileSelection[]>>;
 
@@ -1613,7 +1613,7 @@ export class ControlRoomProvider {
         if (selectedProviderLocked) {
           note.textContent = "Pro users only. Upgrade to use Xupra AI Frontier Models.";
         } else if (planningProviderSelect?.value === "xupra-nano") {
-          note.textContent = "We are using Claude Haiku for free planning.";
+          note.textContent = "We are using GPT-5.4 Nano for free planning.";
         } else {
           note.textContent = option.textContent?.split(" - ").slice(1).join(" - ") || "";
         }

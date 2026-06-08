@@ -235,7 +235,6 @@ function readEnvFile(filePath) {
 function validateEnvBundle(content, env) {
   const values = parseDotenv(content);
   const required = ["DATABASE_URL", "APP_BASE_URL", "APP_ENCRYPTION_KEY", "AUTH_MODE"];
-  const warnings = [];
 
   if (env === "production" || env === "staging") {
     required.push("ARTIFACT_STORAGE_DRIVER", "AWS_REGION", "AWS_S3_BUCKET");
@@ -249,34 +248,12 @@ function validateEnvBundle(content, env) {
     required.push("OPENAI_API_KEY");
   }
 
-  if (values.AI_PROVIDER === "bedrock_openai") {
-    required.push("BEDROCK_OPENAI_API_KEY");
-    if (!values.BEDROCK_OPENAI_REGION && !values.AWS_REGION && !values.BEDROCK_OPENAI_BASE_URL) {
-      warnings.push("BEDROCK_OPENAI_REGION, AWS_REGION, or BEDROCK_OPENAI_BASE_URL is required for Bedrock OpenAI.");
-    }
-  }
-
-  if (values.AI_PROVIDER === "bedrock_anthropic") {
-    if (!values.BEDROCK_API_KEY && !values.AWS_BEARER_TOKEN_BEDROCK && !values.BEDROCK_OPENAI_API_KEY) {
-      required.push("BEDROCK_API_KEY or AWS_BEARER_TOKEN_BEDROCK");
-    }
-
-    if (!values.BEDROCK_REGION && !values.BEDROCK_OPENAI_REGION && !values.AWS_REGION) {
-      warnings.push("BEDROCK_REGION, BEDROCK_OPENAI_REGION, or AWS_REGION is required for Bedrock Anthropic.");
-    }
-  }
-
   if (values.BILLING_PROVIDER === "stripe" && values.BILLING_ENFORCEMENT_MODE === "strict") {
     required.push("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRO_PRICE_ID");
   }
 
-  const missing = required.filter((key) => {
-    if (key === "BEDROCK_API_KEY or AWS_BEARER_TOKEN_BEDROCK") {
-      return !values.BEDROCK_API_KEY && !values.AWS_BEARER_TOKEN_BEDROCK && !values.BEDROCK_OPENAI_API_KEY;
-    }
-
-    return !values[key];
-  });
+  const missing = required.filter((key) => !values[key]);
+  const warnings = [];
 
   if (values.APP_ENCRYPTION_KEY && values.APP_ENCRYPTION_KEY.length < 32) {
     warnings.push("APP_ENCRYPTION_KEY should be at least 32 characters.");

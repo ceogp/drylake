@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { getBedrockApiKey, getBedrockOpenAiApiKey, getKimiApiKey, getOpenAiApiKey } from "@/lib/security/runtime-secrets";
+import { getKimiApiKey, getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 import { generateAiText } from "@/lib/services/ai-text";
 import { canonicalizationModel } from "@/lib/services/ai-model-selection";
 
@@ -131,12 +131,7 @@ async function normalizeWithResponsesProvider(params: {
     content: string;
   }>;
 }) {
-  const apiKey =
-    env.AI_PROVIDER === "bedrock_openai"
-      ? await getBedrockOpenAiApiKey()
-      : env.AI_PROVIDER === "bedrock_anthropic"
-        ? await getBedrockApiKey()
-        : await getOpenAiApiKey();
+  const apiKey = await getOpenAiApiKey();
   if (!apiKey) {
     return null;
   }

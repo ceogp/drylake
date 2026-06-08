@@ -731,7 +731,7 @@ describe("Control Room webview", () => {
     expect(html).toContain("Cards generated");
   });
 
-  it("renders Claude Haiku planning banner for free users without locking chat", async () => {
+  it("renders GPT-5.4 Nano planning banner for free users without locking chat", async () => {
     const provider = new ControlRoomProvider(
       { readRunbook: async () => null } as never,
       () => ({ id: "xupra-pro-ai", label: "Xupra AI" }),
@@ -742,14 +742,14 @@ describe("Control Room webview", () => {
 
     const html = panel?.webview.html ?? "";
 
-    expect(html).toContain("Claude Haiku");
+    expect(html).toContain("GPT-5.4 Nano");
     expect(html).toContain("Xupra AI - Frontier Models");
-    expect(html).toContain("Free User - Claude Haiku");
-    expect(html).toContain("Free users use Claude Haiku. Choose up to 12 planning steps");
+    expect(html).toContain("Free User - GPT-5.4 Nano");
+    expect(html).toContain("Free users use GPT-5.4 Nano. Choose up to 12 planning steps");
     expect(html).toContain("Pro users only");
-    expect(html).not.toContain("GPT-5.4");
     expect(html).not.toMatch(/GPT\s+5\.5/);
     expect(html).not.toMatch(/Claude\s+Opus/);
+    expect(html).not.toContain("Claude Haiku");
     expect(html).toContain("xupra.openBilling");
     expect(html).toContain('id="chatInput"');
     expect(html).not.toContain("chat-locked");
@@ -777,7 +777,7 @@ describe("Control Room webview", () => {
     const html = panel?.webview.html ?? "";
 
     expect(html).not.toContain('class="nano-banner"');
-    expect(html).not.toContain("We are using <strong>Claude Haiku</strong>");
+    expect(html).not.toContain("We are using <strong>GPT-5.4 Nano</strong>");
     expect(html).not.toContain("Free planning model");
     expect(html).toContain("Xupra AI - Frontier Models");
   });
