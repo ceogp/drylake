@@ -2,7 +2,7 @@
 
 DryLake is Xupra's planning and agent handoff platform for AI coding workflows.
 
-The current product is a VS Code extension that turns tickets, bugs, feature requests, and product specs into phased implementation cards. Each phase can be assigned to a coding agent such as Claude Code, Codex, Cursor, Gemini, Hermes, Copilot, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, or Auggie, then handed off with focused prompts and saved artifacts.
+The current product is a VS Code extension that turns tickets, bugs, feature requests, and product specs into phased implementation cards. Each phase can be assigned to a coding agent such as Claude Code, Codex, Cursor, Gemini, Hermes, Copilot, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, or Auggie, then handed off with focused prompts and saved artifacts. DryLake Guard now adds a local-first security posture scan for agent files, MCP configs, installed extensions, risky env references, token bloat, and workspace blast radius.
 
 DryLake's goal is to reduce wasted AI tokens and engineering time by turning large, messy work into focused, auditable agent handoffs.
 
@@ -17,6 +17,8 @@ DryLake's goal is to reduce wasted AI tokens and engineering time by turning lar
 - Local CLI launch support when supported agents are installed.
 - Explicit phase completion and approval/autopilot flow between cards.
 - Workspace-scoped extension authentication and usage tracking.
+- DryLake Guard Safe Developer Rank and local report generation.
+- Optional, consented Guard baseline upload for future Active Guard / Watchdog drift detection.
 
 ## Where DryLake Is Going
 

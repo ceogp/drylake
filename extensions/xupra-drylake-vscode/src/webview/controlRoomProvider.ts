@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import * as vscode from "vscode";
 
 import {
@@ -15,13 +17,16 @@ import type { DryLakeProviderId } from "../ai/DryLakeAiProvider";
 import type { ConnectionState } from "../types/package";
 import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../xu/types";
 import type { PendingPlanChangeSet } from "../xu/pendingPlanChanges";
-import { renderSafeDeveloperSummary, runSecurityScan, writeSecurityScanReports } from "../services/securityScanner";
+import { collectGuardUploadArtifacts, renderSafeDeveloperSummary, runSecurityScan, writeSecurityScanReports } from "../services/securityScanner";
 import type { GuardReportPaths, GuardScanResult, GuardSeverity } from "../services/securityScanner";
+import type { ApiClient, GuardScanUploadArtifact, GuardScanUploadPayload } from "../services/apiClient";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
 const CONTROL_ROOM_CHAT_COLLAPSED_KEY = "drylake.controlRoomChatCollapsed";
 const FREE_PLANNING_MODEL_LABEL = "Claude Haiku";
 type ControlRoomView = "pipeline" | "kanban" | "security";
 type HandoffProfilesByAgent = Partial<Record<(typeof XU_PHASE_AGENTS)[number], HandoffProfileSelection[]>>;
+type GuardUploadStatus = "idle" | "recording" | "uploading" | "uploaded" | "local" | "failed";
+type RegistrationEnsurer = () => Promise<boolean>;
 
 const MODE_CARDS: Array<[string, XuMode, string]> = [
   ["Build", "build-app", "Turn an app idea into purpose, architecture, steps, and a ship plan."],
@@ -124,6 +129,45 @@ function hasFoundationPlanningAccess(connection: ConnectionState) {
 
 function hasRegisteredConnection(connection: ConnectionState) {
   return Boolean(connection.userEmail || connection.organizationId);
+}
+
+function workspaceHash() {
+  const roots = (vscode.workspace.workspaceFolders ?? [])
+    .map((folder) => folder.uri.fsPath)
+    .sort()
+    .join("|");
+
+  if (!roots) {
+    return undefined;
+  }
+
+  return createHash("sha256").update(roots).digest("hex");
+}
+
+function guardScanUploadPayload(
+  scan: GuardScanResult,
+  consentMode: GuardScanUploadPayload["consentMode"],
+  artifacts: GuardScanUploadArtifact[] = [],
+): GuardScanUploadPayload {
+  return {
+    workspaceHash: workspaceHash(),
+    sourceClient: "vscode",
+    consentMode,
+    scan: {
+      scannedAt: scan.scannedAt,
+      score: scan.score,
+      rank: scan.rank,
+      summary: { ...scan.summary },
+      categoryScores: { ...scan.categoryScores },
+      findings: scan.findings.map((finding) => ({ ...finding })),
+      connectionMap: scan.connectionMap as unknown as Record<string, unknown>,
+    },
+    artifacts,
+  };
+}
+
+function hasPaidGuardAccess(connection: ConnectionState) {
+  return hasFoundationPlanningAccess(connection);
 }
 
 function autopilotEnabled(runbook: ApplicationBuildRunbook | null) {
@@ -399,7 +443,57 @@ function severityWeight(severity: GuardSeverity) {
   return 1;
 }
 
-function renderSecurityEmptyState(loading: boolean) {
+function renderGuardPaidUpsell(visible: boolean) {
+  if (!visible) {
+    return "";
+  }
+
+  const paidFeatures = [
+    "Fix with AI",
+    "Active Guard / Watchdog",
+    "Deep Cloud Analysis",
+    "Team Baseline",
+    "Continuous Watch",
+    "Suspicious Artifact / malware scan",
+  ];
+
+  return `<section class="security-upsell" aria-label="DryLake Guard paid features">
+    <div>
+      <div class="security-eyebrow">Paid</div>
+      <h3>AWS-backed Active Guard</h3>
+      <p>Upgrade to use DryLake Guard as an active security layer for agentic IDE setups.</p>
+    </div>
+    <ul>${paidFeatures.map((feature) => `<li>${escapeHtml(feature)}</li>`).join("")}</ul>
+    <button type="button" data-command="xupra.openBilling">Upgrade for Guard</button>
+  </section>`;
+}
+
+function renderGuardUploadConsent(status: GuardUploadStatus, error?: string) {
+  if (status === "uploaded") {
+    return `<section class="security-note good">Guard baseline uploaded. DryLake can compare future scans against this MCP, skill, and agent-rule baseline.</section>`;
+  }
+
+  if (status === "local") {
+    return `<section class="security-note">Scan kept local. You can still upload a Guard baseline later to enable drift detection.</section>`;
+  }
+
+  if (status === "failed") {
+    return `<section class="security-note warn">Guard baseline upload failed${error ? `: ${escapeHtml(error)}` : "."}</section>`;
+  }
+
+  return `<section class="security-consent" aria-label="DryLake Guard upload consent">
+    <div>
+      <strong>Upload skills and MCP settings?</strong>
+      <p>Do you want to upload your skills and MCP settings? If you do, DryLake can detect agent skill and MCP drift over time and provide Live Watchdog protection, but it is not required.</p>
+    </div>
+    <div class="security-actions">
+      <button type="button" data-command="drylake.uploadGuardBaseline"${status === "uploading" ? " disabled" : ""}>${status === "uploading" ? "Uploading..." : "Upload Guard Baseline"}</button>
+      <button type="button" class="secondary" data-command="drylake.keepGuardLocal">Keep Scan Local</button>
+    </div>
+  </section>`;
+}
+
+function renderSecurityEmptyState(loading: boolean, paidUpsellVisible: boolean) {
   return `<section class="security-panel" aria-label="DryLake Guard security scan">
     <div class="security-hero">
       <div>
@@ -407,10 +501,14 @@ function renderSecurityEmptyState(loading: boolean) {
         <h2>Agentic Security Posture</h2>
         <p>Map this IDE's agentic setup: installed extensions, agent files, skills, MCP servers, env references, deploy surfaces, and connected-tool blast radius.</p>
       </div>
-      <button type="button" data-command="drylake.runSecurityScan"${loading ? " disabled" : ""}>${loading ? "Scanning..." : "DryLake Security Scan"}</button>
+      <div class="security-actions">
+        <button type="button" data-command="drylake.runSecurityScan"${loading ? " disabled" : ""}>${loading ? "Scanning..." : "Run Guard Scan"}</button>
+        <button type="button" class="secondary" data-command="drylake.guardFixWithAi">Fix with AI</button>
+      </div>
     </div>
+    ${renderGuardPaidUpsell(paidUpsellVisible)}
     <div class="security-flow">
-      <div><strong>1</strong><span>Scan local IDE and workspace metadata</span></div>
+      <div><strong>1</strong><span>Register, then scan local IDE and workspace metadata</span></div>
       <div><strong>2</strong><span>Review inferred extension and MCP access</span></div>
       <div><strong>3</strong><span>Open the local report or copy a redacted summary</span></div>
     </div>
@@ -558,9 +656,17 @@ function renderConnectionMapRows(scan: GuardScanResult) {
   return `${riskRows}${edgeRows}`;
 }
 
-function renderSecurityPanel(scan: GuardScanResult | null, loading: boolean) {
+function renderSecurityPanel(
+  scan: GuardScanResult | null,
+  loading: boolean,
+  options: {
+    uploadStatus: GuardUploadStatus;
+    uploadError?: string;
+    paidUpsellVisible: boolean;
+  },
+) {
   if (!scan) {
-    return renderSecurityEmptyState(loading);
+    return renderSecurityEmptyState(loading, options.paidUpsellVisible);
   }
 
   const sortedFindings = [...scan.findings].sort((left, right) => severityWeight(right.severity) - severityWeight(left.severity));
@@ -574,11 +680,14 @@ function renderSecurityPanel(scan: GuardScanResult | null, loading: boolean) {
         <p>${topFinding ? escapeHtml(topFinding.title) : "No critical findings in the local scan."}</p>
       </div>
       <div class="security-actions">
-        <button type="button" data-command="drylake.runSecurityScan"${loading ? " disabled" : ""}>${loading ? "Scanning..." : "DryLake Security Scan"}</button>
+        <button type="button" data-command="drylake.runSecurityScan"${loading ? " disabled" : ""}>${loading ? "Scanning..." : "Run Guard Scan"}</button>
         <button type="button" class="secondary" data-command="drylake.openSecurityReport">Open Report</button>
         <button type="button" class="secondary" data-command="drylake.copySecuritySummary">Copy Summary</button>
+        <button type="button" class="secondary paid" data-command="drylake.guardFixWithAi">Fix with AI</button>
       </div>
     </div>
+    ${renderGuardPaidUpsell(options.paidUpsellVisible)}
+    ${renderGuardUploadConsent(options.uploadStatus, options.uploadError)}
     <div class="security-note">Scanned ${escapeHtml(new Date(scan.scannedAt).toLocaleString())}. Extension access is inferred from manifests/configs; runtime behavior still requires review.</div>
     <div class="security-score-row">
       <div class="security-score ${escapeHtml(scan.rank.toLowerCase().replace(/[^a-z]+/g, "-"))}">
@@ -1003,6 +1112,9 @@ export class ControlRoomProvider {
   private securityScan: GuardScanResult | null = null;
   private securityScanLoading = false;
   private securityReportPaths: GuardReportPaths | null = null;
+  private guardUploadStatus: GuardUploadStatus = "idle";
+  private guardUploadError: string | undefined;
+  private guardPaidUpsellVisible = false;
 
   constructor(
     private readonly sessionStore: XuSessionStore,
@@ -1011,6 +1123,8 @@ export class ControlRoomProvider {
     private readonly readLastModelTier: LastModelTierReader = () => null,
     private readonly readPlanningLoading: PlanningLoadingReader = () => false,
     private readonly readConnection: ConnectionReader = () => ({}),
+    private readonly apiClient?: Pick<ApiClient, "recordGuardScan">,
+    private readonly ensureRegistered: RegistrationEnsurer = async () => true,
   ) {}
 
   async createOrShow(context: vscode.ExtensionContext) {
@@ -1048,12 +1162,24 @@ export class ControlRoomProvider {
       }
 
       if (message.command === "drylake.runSecurityScan") {
+        if (!await this.ensureRegistered()) {
+          await this.refresh();
+          return;
+        }
+
         this.securityScanLoading = true;
+        this.guardUploadStatus = "recording";
+        this.guardUploadError = undefined;
+        this.guardPaidUpsellVisible = false;
         await this.refresh();
         try {
           this.securityScan = await runSecurityScan(vscode.workspace.getConfiguration("xupra"));
           this.securityReportPaths = await writeSecurityScanReports(this.securityScan);
+          await this.recordGuardScanMetadata();
+          this.guardUploadStatus = "idle";
         } catch (error) {
+          this.guardUploadStatus = "failed";
+          this.guardUploadError = error instanceof Error ? error.message : String(error);
           void vscode.window.showErrorMessage(`DryLake Guard scan failed: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
           this.securityScanLoading = false;
@@ -1062,9 +1188,61 @@ export class ControlRoomProvider {
         return;
       }
 
+      if (message.command === "drylake.uploadGuardBaseline") {
+        if (!this.securityScan) {
+          void vscode.window.showWarningMessage("Run DryLake Guard Scan before uploading a Guard baseline.");
+          return;
+        }
+
+        if (!await this.ensureRegistered()) {
+          await this.refresh();
+          return;
+        }
+
+        if (!this.apiClient) {
+          void vscode.window.showErrorMessage("DryLake Guard upload is unavailable because the backend client is not configured.");
+          return;
+        }
+
+        this.guardUploadStatus = "uploading";
+        this.guardUploadError = undefined;
+        await this.refresh();
+
+        try {
+          const artifacts = await collectGuardUploadArtifacts(this.securityScan, vscode.workspace.getConfiguration("xupra"));
+          await this.apiClient.recordGuardScan(guardScanUploadPayload(this.securityScan, "baseline_upload", artifacts));
+          this.guardUploadStatus = "uploaded";
+          void vscode.window.showInformationMessage(`Uploaded ${artifacts.length} DryLake Guard baseline artifacts.`);
+        } catch (error) {
+          this.guardUploadStatus = "failed";
+          this.guardUploadError = error instanceof Error ? error.message : String(error);
+          void vscode.window.showErrorMessage(`DryLake Guard baseline upload failed: ${this.guardUploadError}`);
+        }
+
+        await this.refresh();
+        return;
+      }
+
+      if (message.command === "drylake.keepGuardLocal") {
+        this.guardUploadStatus = "local";
+        this.guardUploadError = undefined;
+        await this.refresh();
+        return;
+      }
+
+      if (message.command === "drylake.guardFixWithAi") {
+        if (hasPaidGuardAccess(this.readConnection())) {
+          void vscode.window.showInformationMessage("DryLake Guard Fix with AI will use the paid hardening workflow in the next Guard backend release.");
+        } else {
+          this.guardPaidUpsellVisible = true;
+          await this.refresh();
+        }
+        return;
+      }
+
       if (message.command === "drylake.openSecurityReport") {
         if (!this.securityReportPaths?.report) {
-          void vscode.window.showWarningMessage("Run DryLake Security Scan before opening the report.");
+          void vscode.window.showWarningMessage("Run DryLake Guard Scan before opening the report.");
           return;
         }
 
@@ -1075,7 +1253,7 @@ export class ControlRoomProvider {
 
       if (message.command === "drylake.copySecuritySummary") {
         if (!this.securityScan) {
-          void vscode.window.showWarningMessage("Run DryLake Security Scan before copying the summary.");
+          void vscode.window.showWarningMessage("Run DryLake Guard Scan before copying the summary.");
           return;
         }
 
@@ -1245,6 +1423,22 @@ export class ControlRoomProvider {
     return controlRoomViewFrom(this.context?.workspaceState?.get(CONTROL_ROOM_VIEW_KEY));
   }
 
+  private async recordGuardScanMetadata() {
+    if (!this.securityScan || !this.apiClient) {
+      return;
+    }
+
+    try {
+      await this.apiClient.recordGuardScan(guardScanUploadPayload(this.securityScan, "local"));
+    } catch (error) {
+      void vscode.window.showWarningMessage(
+        `DryLake Guard completed locally, but backend scan history was not recorded: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
   private chatCollapsed(): boolean {
     return Boolean(this.context?.workspaceState?.get(CONTROL_ROOM_CHAT_COLLAPSED_KEY));
   }
@@ -1264,7 +1458,11 @@ export class ControlRoomProvider {
     const banner = isSecurityView ? "" : renderPlanningModelBanner(modelTier, hasPlan, connection);
     const chatPanel = isSecurityView ? "" : renderChatPanel(chatState, planningProvider, hasPlan, this.chatCollapsed(), modelTier, connection);
     const body = isSecurityView
-      ? renderSecurityPanel(this.securityScan, this.securityScanLoading)
+      ? renderSecurityPanel(this.securityScan, this.securityScanLoading, {
+        uploadStatus: this.guardUploadStatus,
+        uploadError: this.guardUploadError,
+        paidUpsellVisible: this.guardPaidUpsellVisible,
+      })
       : runbook
       ? (view === "kanban"
         ? renderKanban(runbook, pendingPlanChange, profilesByAgent)
@@ -1274,6 +1472,18 @@ export class ControlRoomProvider {
         : renderKanbanEmptyState();
     const executionToggle = renderExecutionModeToggle(runbook);
     const runNextButton = runbook?.phases.length ? '<button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>' : "";
+    const headerTitle = isSecurityView ? "DryLake Guard" : "DryLake Control Room";
+    const headerSubtitle = isSecurityView ? "Agentic IDE security posture" : "DryLake Control Room";
+    const controlRoomActions = isSecurityView
+      ? '<span class="guard-header-pill">AWS-backed Active Guard</span>'
+      : `<div class="toggle-group compact" role="group" aria-label="Control Room view">
+          <button class="toggle-btn${view === "pipeline" ? " active" : ""}" data-view="pipeline">Pipeline</button>
+          <button class="toggle-btn${view === "kanban" ? " active" : ""}" data-view="kanban">Kanban</button>
+        </div>
+        <button class="secondary" data-command="drylake.openSessions">Sessions</button>
+        <button class="secondary" data-command="drylake.newSession">New Plan</button>
+        ${executionToggle}
+        ${runNextButton}`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -1298,6 +1508,14 @@ export class ControlRoomProvider {
     .eyebrow, .planning-banner-eyebrow, .chat-eyebrow, .phase-id { color: var(--drylake-green); text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
     .muted, .objective, .agent-label, .step-count, .drop-zone, .planning-banner-reason, .chat-empty, .chat-meta { color: var(--drylake-muted); line-height: 1.45; }
     .actions, .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .product-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: min(520px, 100%); }
+    .product-tab { display: grid; gap: 2px; min-height: 54px; padding: 9px 12px; color: var(--drylake-text); background: var(--drylake-bg); border-color: #3f3f46; text-align: left; }
+    .product-tab strong { color: var(--drylake-text); font-size: 13px; line-height: 1.2; }
+    .product-tab span { color: var(--drylake-muted); font-size: 11px; line-height: 1.25; }
+    .product-tab.active { border-color: var(--drylake-green); background: var(--drylake-green-soft); }
+    .product-tab.active strong { color: #a7f3d0; }
+    .toggle-group.compact { align-items: center; }
+    .guard-header-pill { align-self: center; padding: 7px 10px; border: 1px solid rgba(251, 146, 60, 0.4); border-radius: 999px; color: #fed7aa; background: rgba(251, 146, 60, 0.08); font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.08em; }
     .toggle-btn.active { color: #090a0a; background: var(--drylake-green); border-color: var(--drylake-green); }
     .execution-mode-toggle { display: grid; gap: 2px; min-width: 190px; padding: 7px 10px; text-align: left; border-radius: 6px; }
     .execution-mode-toggle strong { color: var(--drylake-text); font-size: 12px; line-height: 1.15; }
@@ -1454,6 +1672,14 @@ export class ControlRoomProvider {
     .security-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .security-eyebrow { color: var(--drylake-orange); text-transform: uppercase; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; }
     .security-note { padding: 10px 12px; border: 1px solid rgba(251, 146, 60, 0.35); border-radius: 6px; color: #fed7aa; background: var(--drylake-orange-soft); font-size: 12px; line-height: 1.4; }
+    .security-note.good { color: #a7f3d0; border-color: rgba(52, 211, 153, 0.45); background: rgba(52, 211, 153, 0.08); }
+    .security-note.warn { color: #fecaca; border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.08); }
+    .security-consent, .security-upsell { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px; border: 1px solid rgba(251, 146, 60, 0.45); border-radius: 8px; background: rgba(251, 146, 60, 0.08); }
+    .security-consent strong, .security-upsell h3 { color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 15px; font-weight: 650; }
+    .security-consent p, .security-upsell p { max-width: 720px; color: var(--drylake-muted); font-size: 12px; line-height: 1.45; }
+    .security-upsell { align-items: flex-start; border-color: rgba(52, 211, 153, 0.45); background: rgba(52, 211, 153, 0.07); }
+    .security-upsell ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; margin: 0; padding: 0; list-style: none; color: #a7f3d0; font-size: 12px; }
+    .security-upsell li::before { content: "- "; color: var(--drylake-orange); }
     .security-score-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; }
     .security-score { display: grid; align-content: center; gap: 4px; min-height: 150px; padding: 16px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
     .security-score span, .security-metric span { color: var(--drylake-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
@@ -1497,27 +1723,29 @@ export class ControlRoomProvider {
     .security-connection-row.critical, .security-connection-row.high, .security-extension.high { border-color: rgba(248, 113, 113, 0.5); }
     .security-connection-row.medium, .security-extension.medium { border-color: rgba(251, 146, 60, 0.42); }
     .security-empty-line { padding: 10px; border: 1px dashed #3f3f46; border-radius: 6px; color: var(--drylake-muted); font-size: 12px; }
-    @media (max-width: 860px) { header, .nano-banner, .planner-setup-header { align-items: flex-start; flex-direction: column; } .planning-controls { grid-template-columns: 1fr; } .stage-count-label { justify-content: flex-start; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
-    @media (max-width: 860px) { .security-hero { flex-direction: column; } .security-actions { justify-content: flex-start; } .security-flow, .security-score-row, .security-grid { grid-template-columns: 1fr; } .security-metrics, .security-category-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 860px) { header, .nano-banner, .planner-setup-header, .security-consent, .security-upsell { align-items: flex-start; flex-direction: column; } .product-tabs, .planning-controls { grid-template-columns: 1fr; } .stage-count-label { justify-content: flex-start; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) { .security-hero { flex-direction: column; } .security-actions { justify-content: flex-start; } .security-flow, .security-score-row, .security-grid, .security-upsell ul { grid-template-columns: 1fr; } .security-metrics, .security-category-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   </style>
 </head>
 <body>
   <main>
     <header>
       <div>
-        <div class="eyebrow">DryLake Control Room</div>
-        <h1>DryLake Control Room</h1>
+        <div class="eyebrow">${escapeHtml(headerSubtitle)}</div>
+        <h1>${escapeHtml(headerTitle)}</h1>
+      </div>
+      <div class="product-tabs" role="tablist" aria-label="DryLake product surface">
+        <button class="product-tab${isSecurityView ? "" : " active"}" data-product-view="control-room" type="button">
+          <strong>Control Room</strong>
+          <span>Plan and run agent handoffs</span>
+        </button>
+        <button class="product-tab${isSecurityView ? " active" : ""}" data-product-view="guard" type="button">
+          <strong>DryLake Guard</strong>
+          <span>Scan agent, MCP, extension, and IDE risk</span>
+        </button>
       </div>
       <div class="actions">
-        <div class="toggle-group" role="group" aria-label="Control Room view">
-          <button class="toggle-btn${view === "pipeline" ? " active" : ""}" data-view="pipeline">Pipeline</button>
-          <button class="toggle-btn${view === "kanban" ? " active" : ""}" data-view="kanban">Kanban</button>
-          <button class="toggle-btn${view === "security" ? " active" : ""}" data-view="security">Security</button>
-        </div>
-        <button class="secondary" data-command="drylake.openSessions">Sessions</button>
-        <button class="secondary" data-command="drylake.newSession">New Plan</button>
-        ${executionToggle}
-        ${runNextButton}
+        ${controlRoomActions}
       </div>
     </header>
     ${banner}
@@ -1747,6 +1975,16 @@ export class ControlRoomProvider {
     }
 
     document.addEventListener("click", (event) => {
+      const productViewButton = event.target.closest("[data-product-view]");
+      if (productViewButton) {
+        const productView = productViewButton.dataset.productView || "control-room";
+        vscode.postMessage({
+          command: "drylake.setControlRoomView",
+          view: productView === "guard" ? "security" : "pipeline"
+        });
+        return;
+      }
+
       const viewButton = event.target.closest("[data-view]");
       if (viewButton) {
         vscode.postMessage({ command: "drylake.setControlRoomView", view: viewButton.dataset.view });

@@ -132,6 +132,12 @@ export type GuardScanResult = {
 };
 
 type ScannedAgentFile = { logicalPath: string; category: string; content?: string };
+export type GuardUploadArtifact = {
+  kind: "mcp-config" | "skill" | "agent-rule" | "instruction" | "guard-report";
+  logicalPath: string;
+  content: string;
+  mimeType?: string;
+};
 
 type PackageContext = {
   packageManagers: string[];
@@ -657,6 +663,37 @@ function logicalPathForUri(uri: vscode.Uri) {
   }
 
   return uri.fsPath.replace(os.homedir(), "~").replace(/\\/g, "/");
+}
+
+function guardArtifactKindForAgentFile(file: { logicalPath: string; category: string }): GuardUploadArtifact["kind"] {
+  const normalized = file.logicalPath.replace(/\\/g, "/").toLowerCase();
+
+  if (
+    /(^|\/)(mcp\.json|claude_desktop_config\.json)$/i.test(normalized) ||
+    /(^|\/)\.vscode\/mcp\.json$/i.test(normalized) ||
+    /(^|\/)\.cursor\/mcp\.json$/i.test(normalized)
+  ) {
+    return "mcp-config";
+  }
+
+  if (file.category === "skill") {
+    return "skill";
+  }
+
+  if (file.category === "rule" || file.category === "agent_config" || file.category === "subagent") {
+    return "agent-rule";
+  }
+
+  return "instruction";
+}
+
+function mimeTypeForGuardArtifact(logicalPath: string) {
+  const normalized = logicalPath.toLowerCase();
+  if (normalized.endsWith(".json")) return "application/json";
+  if (normalized.endsWith(".yaml") || normalized.endsWith(".yml")) return "application/yaml";
+  if (normalized.endsWith(".toml")) return "application/toml";
+  if (normalized.endsWith(".md") || normalized.endsWith(".mdc")) return "text/markdown";
+  return "text/plain";
 }
 
 function parseJsonObject(text: string): Record<string, unknown> | null {
@@ -1578,6 +1615,75 @@ export async function runSecurityScan(configuration?: vscode.WorkspaceConfigurat
     ...partial,
     summary: summarize(partial),
   };
+}
+
+export async function collectGuardUploadArtifacts(
+  scan: GuardScanResult,
+  configuration?: vscode.WorkspaceConfiguration,
+): Promise<GuardUploadArtifact[]> {
+  const artifacts: GuardUploadArtifact[] = [];
+  const seen = new Set<string>();
+
+  function addArtifact(artifact: GuardUploadArtifact) {
+    const key = `${artifact.kind}:${artifact.logicalPath}`;
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    artifacts.push(artifact);
+  }
+
+  const mcpConfigFiles = await findMcpConfigFiles();
+  for (const file of mcpConfigFiles) {
+    try {
+      const content = await readTextFile(file);
+      if (!content) {
+        continue;
+      }
+
+      const logicalPath = logicalPathForUri(file);
+      addArtifact({
+        kind: "mcp-config",
+        logicalPath,
+        content,
+        mimeType: mimeTypeForGuardArtifact(logicalPath),
+      });
+    } catch {
+      // Local scan artifacts are best effort; unreadable files remain represented by scan findings.
+    }
+  }
+
+  const agentFiles = await scanWorkspaceFiles(configuration);
+  for (const file of agentFiles) {
+    if (!file.content || file.category === "source") {
+      continue;
+    }
+
+    addArtifact({
+      kind: guardArtifactKindForAgentFile(file),
+      logicalPath: file.logicalPath,
+      content: file.content,
+      mimeType: mimeTypeForGuardArtifact(file.logicalPath),
+    });
+  }
+
+  addArtifact({
+    kind: "guard-report",
+    logicalPath: ".drylake/reports/guard-scan-summary.json",
+    content: JSON.stringify({
+      scannedAt: scan.scannedAt,
+      score: scan.score,
+      rank: scan.rank,
+      summary: scan.summary,
+      categoryScores: scan.categoryScores,
+      findings: scan.findings,
+      connectionMap: scan.connectionMap,
+    }, null, 2),
+    mimeType: "application/json",
+  });
+
+  return artifacts;
 }
 
 function categoryLabel(category: GuardFindingCategory) {

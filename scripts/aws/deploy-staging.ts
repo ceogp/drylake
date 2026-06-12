@@ -130,6 +130,7 @@ async function writeStagingEnv(manifest: Manifest) {
     AWS_DEFAULT_REGION: process.env.AWS_DEFAULT_REGION || process.env.AWS_REGION || "ap-northeast-1",
     AWS_S3_PREFIX: process.env.AWS_S3_PREFIX || "xupra-drylake",
     AWS_SECRETS_PREFIX: process.env.AWS_SECRETS_PREFIX || "xupra-drylake",
+    DRYLAKE_GUARD_BUCKET: process.env.DRYLAKE_GUARD_BUCKET || "",
     AI_PROVIDER: process.env.AI_PROVIDER || "openai",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
     CLAUDE_API_KEY: process.env.CLAUDE_API_KEY || "",

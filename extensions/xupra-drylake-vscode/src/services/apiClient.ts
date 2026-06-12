@@ -31,6 +31,29 @@ export type ExtensionUsageEventPayload = {
   metadata?: Record<string, unknown>;
 };
 
+export type GuardScanUploadArtifact = {
+  kind: "mcp-config" | "skill" | "agent-rule" | "instruction" | "guard-report";
+  logicalPath: string;
+  content: string;
+  mimeType?: string;
+};
+
+export type GuardScanUploadPayload = {
+  workspaceHash?: string;
+  sourceClient?: string;
+  consentMode: "local" | "baseline_upload" | "active_guard";
+  scan: {
+    scannedAt: string;
+    score: number;
+    rank: string;
+    summary: Record<string, unknown>;
+    categoryScores: Record<string, unknown>;
+    findings: Array<Record<string, unknown>>;
+    connectionMap?: Record<string, unknown>;
+  };
+  artifacts?: GuardScanUploadArtifact[];
+};
+
 type BrowserConnectSessionPayload = {
   token: {
     token: string;
@@ -352,6 +375,18 @@ export class ApiClient {
 
   async recordUsageEvent(params: ExtensionUsageEventPayload) {
     return this.request<{ event: { id: string; createdAt: string } }>("/api/v1/extension/usage-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
+  async recordGuardScan(params: GuardScanUploadPayload) {
+    return this.request<{
+      guardScan: { id: string; createdAt: string };
+      artifacts: Array<{ id: string; kind: string; logicalPath: string; sizeBytes: number; redacted: boolean }>;
+      uploadedArtifactCount: number;
+    }>("/api/v1/guard/scans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),

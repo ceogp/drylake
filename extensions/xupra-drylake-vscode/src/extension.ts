@@ -392,6 +392,8 @@ export async function activate(context: vscode.ExtensionContext) {
     () => stateStore.getLastModelTier(),
     () => stateStore.getPlanningLoading(),
     () => stateStore.getConnection(),
+    apiClient,
+    async () => requireRegisteredUser(stateStore, apiClient),
   );
   const browserConnect = new BrowserConnectCoordinator(context, apiClient, stateStore);
   const workspaceSidebar = new WorkspaceSidebarProvider(stateStore, apiClient);
@@ -691,6 +693,7 @@ export async function activate(context: vscode.ExtensionContext) {
     "drylake.toggleStep",
     "drylake.handoffPhase",
     "drylake.checkAgentSetup",
+    "drylake.scanAiCodingSetup",
     "drylake.approvePlanChange",
     "drylake.rejectPlanChange",
     "drylake.chatSendMessage",

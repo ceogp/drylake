@@ -991,7 +991,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       let html = '<div class="section"><div class="section-header"><span class="section-label">DRYLAKE PLAN</span></div>';
 
       if (!runbook.path && !runbook.sessionName) {
-        html += '<div class="session-card"><div class="session-name">No active plan</div><div class="session-meta">Open the Control Room to run planning or security scans from one place.</div><div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button><button class="action-btn" data-action="openSecurityDashboard">Security Scan</button></div></div></div>';
+        html += '<div class="session-card"><div class="session-name">No active plan</div><div class="session-meta">Open the Control Room for planning or DryLake Guard for agent security posture.</div><div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button><button class="action-btn" data-action="openSecurityDashboard">Open DryLake Guard</button></div></div></div>';
         return html;
       }
 
@@ -1003,7 +1003,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
       html += '<div class="session-meta">' + escapeHtml(status) + ' · Local plan file: ' + escapeHtml(runbook.path || 'drylake.xu') + ' · ' + escapeHtml(runbook.providerStatus || 'Xupra AI') + '</div>';
       html += '<div class="phase-row"><span>Active phase: ' + escapeHtml(phaseLabel) + '</span><span class="phase-agent">' + escapeHtml(runbook.activePhaseAgent || 'session default') + '</span></div>';
       html += '<div class="plan-note">Existing local plan found. Continue it, archive it, or delete it before starting over.</div>';
-      html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button><button class="action-btn" data-action="openSecurityDashboard">Security Scan</button><button class="action-btn" data-action="newSession">New Plan</button><button class="action-btn" data-action="archiveCurrentPlan">Archive</button><button class="action-btn danger" data-action="deleteCurrentPlan">Delete</button></div>';
+      html += '<div class="action-row"><button class="action-btn primary" data-action="openControlRoom">Open Control Room</button><button class="action-btn" data-action="openSecurityDashboard">Open DryLake Guard</button><button class="action-btn" data-action="newSession">New Plan</button><button class="action-btn" data-action="archiveCurrentPlan">Archive</button><button class="action-btn danger" data-action="deleteCurrentPlan">Delete</button></div>';
       html += '</div></div>';
       return html;
     }
@@ -1197,7 +1197,7 @@ export class WorkspaceSidebarProvider implements vscode.WebviewViewProvider {
         + '<button class="big-action" data-action="importDefaultLocations">Import Default Agent Configs</button>'
         + '<button class="big-action" data-action="importFolder">Import Agent Configs From Folder</button>'
         + '<button class="big-action" data-action="checkCompatibility">Validate Agent Configs</button>'
-        + '<button class="big-action" data-action="openSecurityDashboard">Security Dashboard</button>'
+        + '<button class="big-action" data-action="openSecurityDashboard">DryLake Guard</button>'
         + '<button class="' + exportClass + '" data-action="exportPreview">Preview Agent Config Changes' + (isPro ? "" : lockSuffix) + '</button>'
         + '<button class="' + exportClass + '" data-action="installToRuntime">Sync Agent Configs' + (isPro ? "" : lockSuffix) + '</button>'
         + '<button class="big-action" data-action="pullPackage">Pull Generated Agent Files</button>'

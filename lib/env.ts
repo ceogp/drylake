@@ -31,6 +31,7 @@ const serverEnvSchema = z.object({
   AWS_S3_PREFIX: z.string().default("xupra-drylake"),
   AWS_SECRETS_PREFIX: z.string().default("xupra-drylake"),
   AWS_KMS_KEY_ID: z.string().optional(),
+  DRYLAKE_GUARD_BUCKET: z.string().optional(),
   AI_PROVIDER: z.enum(["openai", "kimi", "anthropic"]).default("openai"),
   ANTHROPIC_API_KEY: z.string().optional(),
   CLAUDE_API_KEY: z.string().optional(),

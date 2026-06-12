@@ -15,6 +15,8 @@ DryLake turns tickets, bugs, and product specs into visual planning cards. Pick 
 - **Free AI planning:** Start with free planning, then upgrade when you want Xupra AI Frontier Models.
 - **Save tokens and time:** Visual planning cards allow you to use smaller models with better results.
 - **All agents, one planning workflow:** Plan work for Claude Code, Codex, Cursor, Gemini, Hermes, Copilot, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, Auggie, and more.
+- **DryLake Guard:** Scan your agentic IDE setup for MCP risk, skills/rules drift, extension access, secret references, token bloat, and deployment blast radius.
+- **No third-party security API keys required:** DryLake Guard scans agent security out of the box. No Cisco AI Defense key. No VirusTotal key.
 - **Phased implementation plans:** Split large tasks into safe stages with acceptance criteria and focused handoff prompts.
 - **Skills for every handoff:** Attach reusable skills/profiles for architecture, implementation, review, testing, and debugging.
 - **Bring your own API/model:** Use direct OpenAI, Claude/Anthropic, Databricks, or Hermes planning providers today, with broader OpenAI-compatible provider support planned.
@@ -25,6 +27,7 @@ DryLake turns tickets, bugs, and product specs into visual planning cards. Pick 
 ## What DryLake does
 - Converts tickets into phased implementation plans.
 - Lets you assign each phase to Claude Code, Codex, Cursor, Gemini, Blackbox, Goose, OpenCode, Qwen, Continue, Cline, Aider, Kilo, Auggie, etc.
+- Runs DryLake Guard scans for agent files, MCP configs, installed extensions, risky env references, and workspace blast radius.
 - Runs focused handoffs from a visual Kanban or pipeline.
 - Launches supported local CLIs when they are installed and configured.
 - Attaches skills/profiles to phase prompts.
@@ -101,7 +104,7 @@ The Cursor plugin/MCP scaffold is being prepared for DryLake Agent Preflight, th
 
 <img src="https://drylake.xupracorp.com/marketplace/extension/media/readme-planning-models.png" alt="DryLake planning model dropdown" width="620">
 
-Free users can generate starter plans with GPT-5.4 Nano. Pro users can select **Xupra AI - Frontier Models** from the same planning-model dropdown. Direct API users can bring their own OpenAI, Claude, Databricks, or Hermes Agent setup.
+Free users can generate starter plans with Claude Haiku. Pro users can select **Xupra AI - Frontier Models** from the same planning-model dropdown. Direct API users can bring their own OpenAI, Claude, Databricks, or Hermes Agent setup.
 
 Use the stages dropdown to request up to 12 planning stages, or type naturally in chat: `I want 3 planning stages`.
 

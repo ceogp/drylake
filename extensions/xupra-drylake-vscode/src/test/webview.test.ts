@@ -343,11 +343,11 @@ describe("Control Room webview", () => {
     expect(html).toContain('data-info-toggle="stage-count"');
     expect(html).toContain('data-info-panel="stage-count"');
     expect(html).toContain("This plan keeps the planning step count chosen when the session started.");
-    expect(html).toContain('data-view="security"');
-    expect(html).toContain(">Security</button>");
+    expect(html).toContain('data-product-view="guard"');
+    expect(html).toContain("<strong>DryLake Guard</strong>");
   });
 
-  it("renders the Security tab as an IDE firewall scan surface", async () => {
+  it("renders DryLake Guard as an IDE firewall scan surface", async () => {
     storedView = "security";
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
     await provider.createOrShow(context() as never);
@@ -355,10 +355,11 @@ describe("Control Room webview", () => {
     const html = panel?.webview.html ?? "";
 
     expect(html).toContain("Agentic Security Posture");
-    expect(html).toContain("DryLake Security Scan");
+    expect(html).toContain("Run Guard Scan");
+    expect(html).toContain("Fix with AI");
     expect(html).toContain("installed extensions, agent files, skills, MCP servers");
     expect(html).toContain("connected-tool blast radius");
-    expect(html).toContain("Scan local IDE and workspace metadata");
+    expect(html).toContain("Register, then scan local IDE and workspace metadata");
     expect(html).toContain("Review inferred extension and MCP access");
     expect(html).toContain("VS Code does not expose a complete runtime permission list");
     expect(html).not.toContain("Build Plan Chat");
@@ -374,6 +375,9 @@ describe("Control Room webview", () => {
     const html = panel?.webview.html ?? "";
 
     expect(html).toContain("Safe Developer Rank: Operator - 62/100");
+    expect(html).toContain("Upload skills and MCP settings?");
+    expect(html).toContain("Upload Guard Baseline");
+    expect(html).toContain("Keep Scan Local");
     expect(html).toContain("High-impact paths");
     expect(html).toContain("Blast Radius");
     expect(html).toContain("Agentic Connection Map");
@@ -391,14 +395,14 @@ describe("Control Room webview", () => {
     expect(html).toContain("Agentic blast radius combines secrets");
   });
 
-  it("opens the Control Room directly on the Security tab from the sidebar command", async () => {
+  it("opens the Control Room directly on DryLake Guard from the sidebar command", async () => {
     const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
 
     await provider.openSecurityDashboard(context() as never);
 
     const html = panel?.webview.html ?? "";
     expect(storedView).toBe("security");
-    expect(html).toContain(">Security</button>");
+    expect(html).toContain("<strong>DryLake Guard</strong>");
     expect(html).toContain("Agentic Security Posture");
     expect(html).not.toContain("Build Plan Chat");
   });

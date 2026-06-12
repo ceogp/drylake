@@ -29,6 +29,7 @@
     "aws:deploy-staging": "tsx scripts/aws/deploy-staging.ts",
     "aws:provision-edge": "tsx scripts/aws/provision-edge.ts",
     "aws:provision-admin-internal": "tsx scripts/aws/provision-admin-internal.ts",
+    "aws:provision-guard": "tsx scripts/aws/provision-guard.ts",
     "aws:setup-ses-domain": "tsx scripts/aws/setup-ses-domain.ts",
     "aws:refresh-nonprod-db": "tsx scripts/aws/refresh-nonprod-db.ts",
     "aws:tunnel-dev-db": "tsx scripts/aws/tunnel-dev-db.ts",

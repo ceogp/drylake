@@ -161,6 +161,33 @@ export async function saveArtifactText(params: {
   });
 }
 
+export async function saveGuardArtifactText(params: {
+  guardScanId: string;
+  logicalPath: string;
+  text: string;
+  mimeType?: string;
+}) {
+  const normalizedPath = toRelativeLogicalPath(params.logicalPath);
+  const storageKey = path.posix.join("guard", "scans", params.guardScanId, "artifacts", normalizedPath);
+  const buffer = Buffer.from(params.text, "utf8");
+  const mimeType = params.mimeType ?? inferMimeType(params.logicalPath, "text/plain");
+
+  if (env.ARTIFACT_STORAGE_DRIVER === "s3") {
+    await saveToS3(storageKey, buffer, mimeType);
+  } else {
+    const fullPath = storagePathFromKey(storageKey);
+    await mkdir(path.dirname(fullPath), { recursive: true });
+    await writeFile(fullPath, buffer);
+  }
+
+  return {
+    storageKey,
+    sizeBytes: buffer.byteLength,
+    checksumSha256: checksum(buffer),
+    mimeType,
+  };
+}
+
 export async function readArtifactText(storageKey: string) {
   const file =
     env.ARTIFACT_STORAGE_DRIVER === "s3"
