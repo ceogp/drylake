@@ -54,6 +54,41 @@ export type GuardScanUploadPayload = {
   artifacts?: GuardScanUploadArtifact[];
 };
 
+export type GuardFixPlanAction = {
+  title: string;
+  priority: "critical" | "high" | "medium" | "low";
+  category: string;
+  why: string;
+  recommendation: string;
+  files: string[];
+  approvalRequired: boolean;
+};
+
+export type GuardFixPlan = {
+  summary: string;
+  actions: GuardFixPlanAction[];
+  cautions: string[];
+  nextSteps: string[];
+};
+
+export type GuardFixPlanPayload = {
+  workspaceHash?: string;
+  sourceClient?: string;
+  scan: {
+    scannedAt: string;
+    score: number;
+    rank: string;
+    summary: Record<string, unknown>;
+    categoryScores: Record<string, unknown>;
+    findings: Array<Record<string, unknown>>;
+    extensions: Array<Record<string, unknown>>;
+    secrets: Array<Record<string, unknown>>;
+    mcpServers: Array<Record<string, unknown>>;
+    workspaceSurface: Record<string, unknown>;
+    connectionMap: Record<string, unknown>;
+  };
+};
+
 type BrowserConnectSessionPayload = {
   token: {
     token: string;
@@ -387,6 +422,18 @@ export class ApiClient {
       artifacts: Array<{ id: string; kind: string; logicalPath: string; sizeBytes: number; redacted: boolean }>;
       uploadedArtifactCount: number;
     }>("/api/v1/guard/scans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
+  async generateGuardFixPlan(params: GuardFixPlanPayload) {
+    return this.request<{
+      plan: GuardFixPlan;
+      modelTier: "nano";
+      model: string;
+    }>("/api/v1/guard/fix-plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),

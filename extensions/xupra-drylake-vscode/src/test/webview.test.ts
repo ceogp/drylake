@@ -4,6 +4,7 @@ import { createStarterXu } from "../xu/createStarterXu";
 import { ControlRoomProvider } from "../webview/controlRoomProvider";
 import { XU_PHASE_AGENTS } from "../xu/types";
 import type { GuardScanResult } from "../services/securityScanner";
+import type { GuardFixPlanPayload } from "../services/apiClient";
 import type { ApplicationBuildRunbook } from "../xu/types";
 
 type TestMessage = {
@@ -57,6 +58,12 @@ vi.mock("vscode", () => ({
       return panel;
     }),
     showInformationMessage: vi.fn(),
+    showWarningMessage: vi.fn(),
+    showErrorMessage: vi.fn(),
+  },
+  workspace: {
+    workspaceFolders: [],
+    getConfiguration: vi.fn(() => ({})),
   },
   commands: {
     executeCommand: vi.fn(async (command: string, ...args: unknown[]) => {
@@ -427,6 +434,102 @@ describe("Control Room webview", () => {
     expect(html.indexOf("Deploy / CI / Workspace Surface")).toBeLessThan(
       html.indexOf("After reviewing this report, create an Active Guard baseline?"),
     );
+  });
+
+  it("generates and renders a Guard Fix with AI plan for paid users", async () => {
+    storedView = "security";
+    const generateGuardFixPlan = vi.fn(async (_params: GuardFixPlanPayload) => ({
+      plan: {
+        summary: "Prioritize approval gates, pinned MCP packages, and secret isolation.",
+        actions: [
+          {
+            title: "Pin the MCP server package",
+            priority: "high" as const,
+            category: "mcp-risk",
+            why: "The MCP server uses npx without a pinned package version.",
+            recommendation: "Pin the package and review env variable access before enabling Active Guard.",
+            files: [".cursor/mcp.json"],
+            approvalRequired: true,
+          },
+        ],
+        cautions: ["Do not paste secret values into prompts."],
+        nextSteps: ["Re-run DryLake Guard after remediation."],
+      },
+      modelTier: "nano" as const,
+      model: "claude-haiku-4-5-20251001",
+    }));
+    const apiClient = {
+      recordGuardScan: vi.fn(),
+      generateGuardFixPlan,
+    };
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => ({ runbook: runbook() }) } as never,
+      () => null,
+      () => ({ messages: [] }),
+      () => null,
+      () => false,
+      () => ({
+        organizationTier: "pro",
+        entitlements: {
+          xupra_pro_ai: true,
+          session_cloud_sync: true,
+          pr_summary_generation: true,
+        },
+      }),
+      apiClient,
+    );
+    (provider as unknown as { securityScan: GuardScanResult }).securityScan = securityScan();
+
+    await provider.createOrShow(context() as never);
+    await messageHandler?.({ command: "drylake.guardFixWithAi" });
+
+    const html = panel?.webview.html ?? "";
+    const payload = generateGuardFixPlan.mock.calls[0]?.[0];
+    expect(generateGuardFixPlan).toHaveBeenCalledOnce();
+    expect(payload?.scan.secrets[0]).toEqual({
+      path: ".env",
+      line: 1,
+      type: "OpenAI API key variable",
+      variableName: "OPENAI_API_KEY",
+      severity: "high",
+    });
+    expect(payload?.scan.secrets[0]).not.toHaveProperty("evidence");
+    expect(html).toContain("Guard remediation plan");
+    expect(html).toContain("Pin the MCP server package");
+    expect(html).toContain("Re-run DryLake Guard after remediation.");
+    expect(html).toContain("Regenerate Fix Plan");
+  });
+
+  it("opens billing instead of running Fix with AI for free users", async () => {
+    storedView = "security";
+    const apiClient = {
+      recordGuardScan: vi.fn(),
+      generateGuardFixPlan: vi.fn(),
+    };
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => ({ runbook: runbook() }) } as never,
+      () => null,
+      () => ({ messages: [] }),
+      () => null,
+      () => false,
+      () => ({
+        organizationTier: "free",
+        entitlements: {
+          xupra_pro_ai: false,
+          session_cloud_sync: false,
+          pr_summary_generation: false,
+        },
+      }),
+      apiClient,
+    );
+    (provider as unknown as { securityScan: GuardScanResult }).securityScan = securityScan();
+
+    await provider.createOrShow(context() as never);
+    await messageHandler?.({ command: "drylake.guardFixWithAi" });
+
+    expect(apiClient.generateGuardFixPlan).not.toHaveBeenCalled();
+    expect(executed).toContainEqual({ command: "xupra.openBilling", args: [] });
+    expect(panel?.webview.html ?? "").toContain("AWS-backed Active Guard");
   });
 
   it("opens the Control Room directly on DryLake Guard from the sidebar command", async () => {

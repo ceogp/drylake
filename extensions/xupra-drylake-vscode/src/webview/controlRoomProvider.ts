@@ -19,13 +19,14 @@ import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../
 import type { PendingPlanChangeSet } from "../xu/pendingPlanChanges";
 import { collectGuardUploadArtifacts, renderSafeDeveloperSummary, runSecurityScan, writeSecurityScanReports } from "../services/securityScanner";
 import type { GuardReportPaths, GuardScanResult, GuardSeverity } from "../services/securityScanner";
-import type { ApiClient, GuardScanUploadArtifact, GuardScanUploadPayload } from "../services/apiClient";
+import type { ApiClient, GuardFixPlan, GuardFixPlanPayload, GuardScanUploadArtifact, GuardScanUploadPayload } from "../services/apiClient";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
 const CONTROL_ROOM_CHAT_COLLAPSED_KEY = "drylake.controlRoomChatCollapsed";
 const FREE_PLANNING_MODEL_LABEL = "Claude Haiku";
 type ControlRoomView = "pipeline" | "kanban" | "security";
 type HandoffProfilesByAgent = Partial<Record<(typeof XU_PHASE_AGENTS)[number], HandoffProfileSelection[]>>;
 type GuardUploadStatus = "idle" | "recording" | "uploading" | "uploaded" | "local" | "failed";
+type GuardFixStatus = "idle" | "generating" | "ready" | "failed";
 type RegistrationEnsurer = () => Promise<boolean>;
 
 const MODE_CARDS: Array<[string, XuMode, string]> = [
@@ -241,6 +242,85 @@ function guardScanUploadPayload(
       connectionMap: scan.connectionMap as unknown as Record<string, unknown>,
     },
     artifacts,
+  };
+}
+
+function limited<T>(items: readonly T[], count: number) {
+  return items.slice(0, count);
+}
+
+function guardFixPlanPayload(scan: GuardScanResult): GuardFixPlanPayload {
+  const sortedFindings = [...scan.findings].sort((left, right) => severityWeight(right.severity) - severityWeight(left.severity));
+
+  return {
+    workspaceHash: workspaceHash(),
+    sourceClient: "vscode",
+    scan: {
+      scannedAt: scan.scannedAt,
+      score: scan.score,
+      rank: scan.rank,
+      summary: { ...scan.summary },
+      categoryScores: { ...scan.categoryScores },
+      findings: limited(sortedFindings, 60).map((finding) => ({
+        id: finding.id,
+        category: finding.category,
+        severity: finding.severity,
+        title: finding.title,
+        evidence: finding.evidence,
+        recommendation: finding.recommendation,
+        source: finding.source,
+        path: finding.path,
+        line: finding.line,
+      })),
+      extensions: limited(scan.extensions, 40).map((extension) => ({
+        id: extension.id,
+        displayName: extension.displayName,
+        publisher: extension.publisher,
+        isActive: extension.isActive,
+        accessLevel: extension.accessLevel,
+        capabilityTags: limited(extension.capabilityTags, 16),
+        riskFlags: limited(extension.riskFlags, 16),
+        accessSignals: limited(extension.accessSignals, 12),
+      })),
+      secrets: limited(scan.secrets, 80).map((secret) => ({
+        path: secret.path,
+        line: secret.line,
+        type: secret.type,
+        variableName: secret.variableName,
+        severity: secret.severity,
+      })),
+      mcpServers: limited(scan.mcpServers, 30).map((server) => ({
+        configPath: server.configPath,
+        name: server.name,
+        command: server.command,
+        envKeys: limited(server.envKeys, 20),
+        capabilities: limited(server.capabilities, 20),
+        riskFlags: limited(server.riskFlags, 20),
+        severity: server.severity,
+        blastRadius: server.blastRadius,
+      })),
+      workspaceSurface: {
+        deploymentFiles: limited(scan.workspaceSurface.deploymentFiles, 40),
+        iacFiles: limited(scan.workspaceSurface.iacFiles, 40),
+        ciWorkflowFiles: limited(scan.workspaceSurface.ciWorkflowFiles, 40),
+        credentialLikeFiles: limited(scan.workspaceSurface.credentialLikeFiles, 40),
+        riskyPackageScripts: limited(scan.workspaceSurface.riskyPackageScripts, 60).map((script) => ({
+          path: script.path,
+          name: script.name,
+          risk: script.risk,
+        })),
+        generatedFolders: limited(scan.workspaceSurface.generatedFolders, 25),
+      },
+      connectionMap: {
+        highRiskPaths: limited(scan.connectionMap.highRiskPaths, 40),
+        edges: limited(scan.connectionMap.edges, 60).map((edge) => ({
+          from: edge.from,
+          to: edge.to,
+          label: edge.label,
+          severity: edge.severity,
+        })),
+      },
+    },
   };
 }
 
@@ -572,6 +652,105 @@ function renderGuardUploadConsent(status: GuardUploadStatus, error?: string) {
   </section>`;
 }
 
+function renderGuardFixPlanMarkdown(plan: GuardFixPlan) {
+  const actions = plan.actions.map((action, index) => [
+    `${index + 1}. ${action.title} (${action.priority})`,
+    `   Category: ${action.category}`,
+    `   Why: ${action.why}`,
+    `   Recommendation: ${action.recommendation}`,
+    action.files.length ? `   Files: ${action.files.join(", ")}` : "   Files: Workspace policy or configuration review",
+    `   Approval required: ${action.approvalRequired ? "yes" : "no"}`,
+  ].join("\n")).join("\n\n");
+  const cautions = plan.cautions.map((item) => `- ${item}`).join("\n");
+  const nextSteps = plan.nextSteps.map((item) => `- ${item}`).join("\n");
+
+  return [
+    "# DryLake Guard Fix with AI",
+    "",
+    plan.summary,
+    "",
+    "## Recommended Actions",
+    actions || "- No actions generated.",
+    "",
+    "## Cautions",
+    cautions || "- Review all proposed changes before applying them.",
+    "",
+    "## Next Steps",
+    nextSteps || "- Re-run DryLake Guard after remediation.",
+  ].join("\n");
+}
+
+function renderGuardFixPlan(status: GuardFixStatus, plan: GuardFixPlan | null, error?: string) {
+  if (status === "idle" && !plan && !error) {
+    return "";
+  }
+
+  if (status === "generating") {
+    return `<section class="security-fix-plan" aria-live="polite" aria-busy="true">
+      <div>
+        <div class="security-eyebrow">Fix with AI</div>
+        <h3>Claude Haiku is preparing a remediation plan</h3>
+        <p>DryLake is using the redacted scan report, file paths, risk categories, MCP metadata, extension access signals, and workspace surface. It is not sending secret values and it will not write files automatically.</p>
+      </div>
+    </section>`;
+  }
+
+  if (status === "failed") {
+    return `<section class="security-fix-plan failed" aria-live="polite">
+      <div>
+        <div class="security-eyebrow">Fix with AI</div>
+        <h3>Fix plan failed</h3>
+        <p>${escapeHtml(error ?? "DryLake could not generate a Guard fix plan.")}</p>
+      </div>
+      <button type="button" data-command="drylake.guardFixWithAi">Retry</button>
+    </section>`;
+  }
+
+  if (!plan) {
+    return "";
+  }
+
+  const actionRows = plan.actions.map((action) => `<article class="security-fix-action ${escapeHtml(action.priority)}">
+    <span class="security-severity">${escapeHtml(action.priority)}</span>
+    <div>
+      <strong>${escapeHtml(action.title)}</strong>
+      <small>${escapeHtml(action.category)}${action.files.length ? ` - ${escapeHtml(action.files.slice(0, 6).join(", "))}` : ""}</small>
+      <p>${escapeHtml(action.why)}</p>
+      <p>${escapeHtml(action.recommendation)}</p>
+      <small>${action.approvalRequired ? "Approval required before applying." : "Can be handled as a low-risk cleanup after review."}</small>
+    </div>
+  </article>`).join("");
+  const cautionRows = plan.cautions.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const nextStepRows = plan.nextSteps.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const markdown = escapeHtml(renderGuardFixPlanMarkdown(plan));
+
+  return `<section class="security-fix-plan ready" aria-live="polite">
+    <div class="security-fix-header">
+      <div>
+        <div class="security-eyebrow">Fix with AI</div>
+        <h3>Guard remediation plan</h3>
+        <p>${escapeHtml(plan.summary)}</p>
+      </div>
+      <div class="security-actions">
+        <button type="button" class="secondary" data-command="drylake.copyGuardFixPlan">Copy Plan</button>
+        <button type="button" data-command="drylake.guardFixWithAi">Regenerate</button>
+      </div>
+    </div>
+    <div class="security-fix-actions">${actionRows || '<div class="security-empty-line">No remediation actions were generated.</div>'}</div>
+    <div class="security-fix-meta">
+      <div>
+        <strong>Cautions</strong>
+        <ul>${cautionRows || "<li>Review each recommendation before applying it.</li>"}</ul>
+      </div>
+      <div>
+        <strong>Next Steps</strong>
+        <ul>${nextStepRows || "<li>Re-run DryLake Guard after remediation.</li>"}</ul>
+      </div>
+    </div>
+    <textarea class="copy-buffer" readonly hidden>${markdown}</textarea>
+  </section>`;
+}
+
 function renderSecurityEmptyState(loading: boolean, paidUpsellVisible: boolean) {
   return `<section class="security-panel" aria-label="DryLake Guard security scan">
     <div class="security-hero">
@@ -742,6 +921,9 @@ function renderSecurityPanel(
     uploadStatus: GuardUploadStatus;
     uploadError?: string;
     paidUpsellVisible: boolean;
+    fixStatus: GuardFixStatus;
+    fixPlan: GuardFixPlan | null;
+    fixError?: string;
   },
 ) {
   if (!scan) {
@@ -750,6 +932,12 @@ function renderSecurityPanel(
 
   const sortedFindings = [...scan.findings].sort((left, right) => severityWeight(right.severity) - severityWeight(left.severity));
   const topFinding = sortedFindings[0];
+  const fixButtonLabel = options.fixStatus === "generating"
+    ? "Generating..."
+    : options.fixPlan
+      ? "Regenerate Fix Plan"
+      : "Fix with AI";
+  const fixButtonDisabled = options.fixStatus === "generating" ? " disabled" : "";
 
   return `<section class="security-panel" aria-label="DryLake Guard security scan">
     <div class="security-hero">
@@ -762,7 +950,7 @@ function renderSecurityPanel(
         <button type="button" data-command="drylake.runSecurityScan"${loading ? " disabled" : ""}>${loading ? "Scanning..." : "Run Guard Scan"}</button>
         <button type="button" class="secondary" data-command="drylake.openSecurityReport">Open Report</button>
         <button type="button" class="secondary" data-command="drylake.copySecuritySummary">Copy Summary</button>
-        <button type="button" class="secondary paid" data-command="drylake.guardFixWithAi">Fix with AI</button>
+        <button type="button" class="secondary paid" data-command="drylake.guardFixWithAi"${fixButtonDisabled}>${escapeHtml(fixButtonLabel)}</button>
       </div>
     </div>
     ${renderGuardPaidUpsell(options.paidUpsellVisible)}
@@ -818,6 +1006,7 @@ function renderSecurityPanel(
         ${renderWorkspaceSurfaceRows(scan)}
       </section>
     </div>
+    ${renderGuardFixPlan(options.fixStatus, options.fixPlan, options.fixError)}
     ${renderGuardUploadConsent(options.uploadStatus, options.uploadError)}
   </section>`;
 }
@@ -1194,6 +1383,9 @@ export class ControlRoomProvider {
   private guardUploadStatus: GuardUploadStatus = "idle";
   private guardUploadError: string | undefined;
   private guardPaidUpsellVisible = false;
+  private guardFixStatus: GuardFixStatus = "idle";
+  private guardFixPlan: GuardFixPlan | null = null;
+  private guardFixError: string | undefined;
 
   constructor(
     private readonly sessionStore: XuSessionStore,
@@ -1202,7 +1394,7 @@ export class ControlRoomProvider {
     private readonly readLastModelTier: LastModelTierReader = () => null,
     private readonly readPlanningLoading: PlanningLoadingReader = () => false,
     private readonly readConnection: ConnectionReader = () => ({}),
-    private readonly apiClient?: Pick<ApiClient, "recordGuardScan">,
+    private readonly apiClient?: Pick<ApiClient, "recordGuardScan" | "generateGuardFixPlan">,
     private readonly ensureRegistered: RegistrationEnsurer = async () => true,
   ) {}
 
@@ -1251,6 +1443,9 @@ export class ControlRoomProvider {
         this.guardUploadStatus = "recording";
         this.guardUploadError = undefined;
         this.guardPaidUpsellVisible = false;
+        this.guardFixStatus = "idle";
+        this.guardFixPlan = null;
+        this.guardFixError = undefined;
         this.securityReportPaths = null;
         await this.refresh();
         try {
@@ -1312,12 +1507,60 @@ export class ControlRoomProvider {
       }
 
       if (message.command === "drylake.guardFixWithAi") {
-        if (hasPaidGuardAccess(this.readConnection())) {
-          void vscode.window.showInformationMessage("DryLake Guard Fix with AI will use the paid hardening workflow in the next Guard backend release.");
-        } else {
+        if (!this.securityScan) {
+          void vscode.window.showWarningMessage("Run DryLake Guard Scan before using Fix with AI.");
+          return;
+        }
+
+        if (!await this.ensureRegistered()) {
+          await this.refresh();
+          return;
+        }
+
+        if (!hasPaidGuardAccess(this.readConnection())) {
           this.guardPaidUpsellVisible = true;
           await this.refresh();
+          await vscode.commands.executeCommand("xupra.openBilling");
+          return;
         }
+
+        if (!this.apiClient?.generateGuardFixPlan) {
+          void vscode.window.showErrorMessage("DryLake Guard Fix with AI is unavailable because the backend client is not configured.");
+          return;
+        }
+
+        this.guardFixStatus = "generating";
+        this.guardFixPlan = null;
+        this.guardFixError = undefined;
+        this.guardPaidUpsellVisible = false;
+        await this.refresh();
+
+        try {
+          const result = await this.apiClient.generateGuardFixPlan(guardFixPlanPayload(this.securityScan));
+          this.guardFixPlan = result.plan;
+          this.guardFixStatus = "ready";
+          void vscode.window.showInformationMessage(`DryLake Guard Fix with AI generated a remediation plan with ${result.model}.`);
+        } catch (error) {
+          this.guardFixStatus = "failed";
+          this.guardFixError = error instanceof Error ? error.message : String(error);
+          if (/paid|upgrade|billing|subscription/i.test(this.guardFixError)) {
+            this.guardPaidUpsellVisible = true;
+            await vscode.commands.executeCommand("xupra.openBilling");
+          }
+          void vscode.window.showErrorMessage(`DryLake Guard Fix with AI failed: ${this.guardFixError}`);
+        }
+        await this.refresh();
+        return;
+      }
+
+      if (message.command === "drylake.copyGuardFixPlan") {
+        if (!this.guardFixPlan) {
+          void vscode.window.showWarningMessage("Generate a Guard fix plan before copying it.");
+          return;
+        }
+
+        await vscode.env.clipboard.writeText(renderGuardFixPlanMarkdown(this.guardFixPlan));
+        void vscode.window.showInformationMessage("Copied DryLake Guard fix plan.");
         return;
       }
 
@@ -1543,6 +1786,9 @@ export class ControlRoomProvider {
         uploadStatus: this.guardUploadStatus,
         uploadError: this.guardUploadError,
         paidUpsellVisible: this.guardPaidUpsellVisible,
+        fixStatus: this.guardFixStatus,
+        fixPlan: this.guardFixPlan,
+        fixError: this.guardFixError,
       })
       : runbook
       ? (view === "kanban"
@@ -1781,6 +2027,22 @@ export class ControlRoomProvider {
     .security-upsell { align-items: flex-start; border-color: rgba(52, 211, 153, 0.45); background: rgba(52, 211, 153, 0.07); }
     .security-upsell ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; margin: 0; padding: 0; list-style: none; color: #a7f3d0; font-size: 12px; }
     .security-upsell li::before { content: "- "; color: var(--drylake-orange); }
+    .security-fix-plan { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(52, 211, 153, 0.42); border-radius: 8px; background: rgba(52, 211, 153, 0.07); }
+    .security-fix-plan.failed { border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.08); }
+    .security-fix-plan h3 { margin: 2px 0 5px; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 16px; font-weight: 650; }
+    .security-fix-plan p { color: var(--drylake-muted); font-size: 12px; line-height: 1.45; }
+    .security-fix-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .security-fix-actions { display: grid; gap: 8px; }
+    .security-fix-action { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; padding: 10px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel-2); }
+    .security-fix-action.critical, .security-fix-action.high { border-color: rgba(248, 113, 113, 0.5); }
+    .security-fix-action.medium { border-color: rgba(251, 146, 60, 0.42); }
+    .security-fix-action strong { display: block; margin-bottom: 2px; color: var(--drylake-text); font-size: 13px; }
+    .security-fix-action small { display: block; margin-bottom: 6px; color: #71717a; font-size: 11px; overflow-wrap: anywhere; }
+    .security-fix-action p + p { margin-top: 5px; color: #d4d4d8; }
+    .security-fix-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .security-fix-meta div { padding: 10px; border: 1px solid var(--drylake-line); border-radius: 6px; background: rgba(9, 10, 10, 0.42); }
+    .security-fix-meta strong { color: var(--drylake-text); font-size: 12px; }
+    .security-fix-meta ul { margin: 7px 0 0; padding-left: 18px; color: var(--drylake-muted); font-size: 12px; line-height: 1.4; }
     .security-score-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; }
     .security-score { display: grid; align-content: center; gap: 4px; min-height: 150px; padding: 16px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
     .security-score span, .security-metric span { color: var(--drylake-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
@@ -1824,8 +2086,8 @@ export class ControlRoomProvider {
     .security-connection-row.critical, .security-connection-row.high, .security-extension.high { border-color: rgba(248, 113, 113, 0.5); }
     .security-connection-row.medium, .security-extension.medium { border-color: rgba(251, 146, 60, 0.42); }
     .security-empty-line { padding: 10px; border: 1px dashed #3f3f46; border-radius: 6px; color: var(--drylake-muted); font-size: 12px; }
-    @media (max-width: 860px) { .header-brand-row, .nano-banner, .planner-setup-header, .security-consent, .security-upsell { align-items: flex-start; flex-direction: column; } .product-tabs, .planning-controls { grid-template-columns: 1fr; } .secondary-tabs { justify-content: flex-start; } .stage-count-label { justify-content: flex-start; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
-    @media (max-width: 860px) { .security-hero { flex-direction: column; } .security-actions { justify-content: flex-start; } .security-flow, .security-score-row, .security-grid, .security-upsell ul { grid-template-columns: 1fr; } .security-metrics, .security-category-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 860px) { .header-brand-row, .nano-banner, .planner-setup-header, .security-consent, .security-upsell, .security-fix-header { align-items: flex-start; flex-direction: column; } .product-tabs, .planning-controls { grid-template-columns: 1fr; } .secondary-tabs { justify-content: flex-start; } .stage-count-label { justify-content: flex-start; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) { .security-hero { flex-direction: column; } .security-actions { justify-content: flex-start; } .security-flow, .security-score-row, .security-grid, .security-upsell ul, .security-fix-meta { grid-template-columns: 1fr; } .security-metrics, .security-category-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   </style>
 </head>
 <body>
