@@ -248,6 +248,12 @@ function validateEnvBundle(content, env) {
     required.push("OPENAI_API_KEY");
   }
 
+  if (values.AI_PROVIDER === "anthropic") {
+    if (!values.ANTHROPIC_API_KEY && !values.CLAUDE_API_KEY) {
+      required.push("ANTHROPIC_API_KEY");
+    }
+  }
+
   if (values.BILLING_PROVIDER === "stripe" && values.BILLING_ENFORCEMENT_MODE === "strict") {
     required.push("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRO_PRICE_ID");
   }

@@ -456,7 +456,7 @@ export class ClaudeApiProvider extends DirectApiPlanningProvider {
       apiKeyEnvKey: "claude.apiKeyEnvVar",
       defaultApiKeyEnvVar: "ANTHROPIC_API_KEY",
       modelKey: "claude.model",
-      defaultModel: "claude-sonnet-4-20250514",
+      defaultModel: "claude-sonnet-4-6",
       baseUrlKey: "claude.baseUrl",
       defaultBaseUrl: "https://api.anthropic.com/v1",
       maxTokensKey: "claude.maxOutputTokens",

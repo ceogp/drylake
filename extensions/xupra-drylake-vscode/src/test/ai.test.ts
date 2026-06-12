@@ -456,7 +456,7 @@ describe("AI providers", () => {
           aiProvider: "claude-api",
           "claude.apiKeyEnvVar": "DRYLAKE_TEST_ANTHROPIC_KEY",
           "claude.baseUrl": "https://api.anthropic.com/v1",
-          "claude.model": "claude-sonnet-4-20250514",
+          "claude.model": "claude-sonnet-4-6",
         }) as never,
         readConnection: () => ({}),
         readAccessToken: async () => undefined,

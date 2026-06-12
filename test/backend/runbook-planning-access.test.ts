@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
     AI_PROVIDER: "openai",
     OPENAI_MODEL: "gpt-5.5",
     OPENAI_FREE_MODEL: "gpt-5.4-nano",
+    ANTHROPIC_MODEL: "claude-sonnet-4-6",
+    ANTHROPIC_FREE_MODEL: "claude-haiku-4-5-20251001",
   },
   getEntitlementsForOrganization: vi.fn(),
   findOrganization: vi.fn(),
@@ -96,6 +98,25 @@ describe("resolveRunbookPlanningAccess", () => {
     await expect(resolveRunbookPlanningAccess("org-free")).resolves.toEqual({
       tier: "nano",
       model: "gpt-5.4-nano",
+    });
+  });
+
+  it("uses Haiku for free planning and Sonnet for paid planning when Anthropic is active", async () => {
+    mocks.env.AI_PROVIDER = "anthropic";
+
+    await expect(resolveRunbookPlanningAccess("org-free")).resolves.toEqual({
+      tier: "nano",
+      model: "claude-haiku-4-5-20251001",
+    });
+
+    mocks.getEntitlementsForOrganization.mockResolvedValueOnce({
+      subscription: { tier: "pro" },
+      entitlements: { xupra_pro_ai: true },
+    });
+
+    await expect(resolveRunbookPlanningAccess("org-pro")).resolves.toEqual({
+      tier: "foundation",
+      model: "claude-sonnet-4-6",
     });
   });
 });

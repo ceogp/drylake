@@ -135,6 +135,7 @@ async function writeStagingEnv(manifest: Manifest) {
     CLAUDE_API_KEY: process.env.CLAUDE_API_KEY || "",
     ANTHROPIC_BASE_URL: process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com",
     ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
+    ANTHROPIC_FREE_MODEL: process.env.ANTHROPIC_FREE_MODEL || "claude-haiku-4-5-20251001",
     KIMI_API_KEY: process.env.KIMI_API_KEY || "",
     KIMI_BASE_URL: process.env.KIMI_BASE_URL || "https://api.moonshot.ai/v1",
     KIMI_MODEL: process.env.KIMI_MODEL || "kimi-k2.6",

@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { getKimiApiKey, getOpenAiApiKey } from "@/lib/security/runtime-secrets";
+import { getAnthropicApiKey, getKimiApiKey, getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 import { generateAiText } from "@/lib/services/ai-text";
 import { canonicalizationModel } from "@/lib/services/ai-model-selection";
 
@@ -131,7 +131,9 @@ async function normalizeWithResponsesProvider(params: {
     content: string;
   }>;
 }) {
-  const apiKey = await getOpenAiApiKey();
+  const apiKey = env.AI_PROVIDER === "anthropic"
+    ? await getAnthropicApiKey()
+    : await getOpenAiApiKey();
   if (!apiKey) {
     return null;
   }

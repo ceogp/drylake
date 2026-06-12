@@ -37,6 +37,7 @@ const serverEnvSchema = z.object({
   claudetoken: z.string().optional(),
   ANTHROPIC_BASE_URL: z.url().default("https://api.anthropic.com"),
   ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-6"),
+  ANTHROPIC_FREE_MODEL: z.string().default("claude-haiku-4-5-20251001"),
   KIMI_API_KEY: z.string().optional(),
   KIMI_BASE_URL: z.url().default("https://api.moonshot.ai/v1"),
   KIMI_MODEL: z.string().default("kimi-k2.6"),
