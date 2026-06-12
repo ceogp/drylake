@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "Drylake - Agent MCP Security and Agentic Control Plane for Agents and Skills - codex claude cursor",
   "description": "Free local security scan for AI coding setups. Scan MCP servers, agent skills, IDE extensions, secrets, prompt injection risk, supply chain risk, and agent-control drift.",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
