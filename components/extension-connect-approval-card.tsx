@@ -32,6 +32,7 @@ export function ExtensionConnectApprovalCard({
   state: string | null;
   workspaceHref: string;
 }) {
+  const editorLabel = editor === "cursor" ? "Cursor" : "VS Code";
   const [status, setStatus] = useState<ApprovalStatus>(initialStatus);
   const [approvedAt, setApprovedAt] = useState(initialApprovedAt);
   const [error, setError] = useState("");
@@ -84,13 +85,13 @@ export function ExtensionConnectApprovalCard({
       </p>
       <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
         {isReady
-          ? `Your ${editor === "cursor" ? "Cursor" : "VS Code"} connection is approved`
-          : `Approve this ${editor === "cursor" ? "Cursor" : "VS Code"} connection`}
+          ? `Your ${editorLabel} connection is approved`
+          : `Approve and connect ${editorLabel}`}
       </h2>
       <p className="mt-3 text-sm leading-7 text-stone-700">
         {isReady
-          ? "The editor is polling in the background and should finish connecting automatically. Switch back to the editor first."
-          : "Approve this request for the account and workspace currently shown in your browser session."}
+          ? `The extension is polling in the background and should update automatically. Use the button below if ${editorLabel} does not come forward.`
+          : "Approve this request for the account and workspace currently shown in your browser session. The extension will update as soon as approval is received."}
       </p>
 
       <div className="mt-6 flex flex-wrap gap-3">
@@ -100,14 +101,14 @@ export function ExtensionConnectApprovalCard({
           onClick={approveConnection}
           type="button"
         >
-          {isReady ? "Approved" : isPending ? "Approving..." : "Approve Connection"}
+          {isReady ? "Approved" : isPending ? "Approving..." : `Approve and Connect ${editorLabel}`}
         </button>
-        {returnUrl && !isReady ? (
+        {returnUrl && isReady ? (
           <a
-            className="tape-button bg-white px-5 py-3 text-sm text-black"
+            className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300"
             href={returnUrl}
           >
-            Return To Editor
+            Return to {editorLabel}
           </a>
         ) : null}
         <a
@@ -120,11 +121,8 @@ export function ExtensionConnectApprovalCard({
 
       {returnUrl && isReady ? (
         <p className="mt-4 text-xs leading-6 text-stone-500">
-          Browser handoff is optional after approval. If the editor does not complete on its own,
-          <a className="ml-1 underline decoration-stone-400 underline-offset-4" href={returnUrl}>
-            try the browser handoff
-          </a>
-          .
+          The browser handoff is optional after approval. The editor should already be finishing
+          the connection through the polling request it opened.
         </p>
       ) : null}
 

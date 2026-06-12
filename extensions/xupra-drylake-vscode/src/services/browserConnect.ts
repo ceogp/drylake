@@ -49,7 +49,7 @@ type PendingRequest = {
   timeout: NodeJS.Timeout;
 };
 
-const CONNECT_TIMEOUT_MS = 1000 * 60 * 3;
+const CONNECT_TIMEOUT_MS = 1000 * 60 * 15;
 const CONNECT_POLL_INTERVAL_MS = 1500;
 const SUPPORTED_INSTALL_TARGETS = new Set(["codex", "claude_code", "claude_agents", "cursor"]);
 const ALL_INSTALL_TARGETS = ["codex", "claude_code", "claude_agents", "cursor"];
@@ -160,7 +160,13 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
     void vscode.window.showInformationMessage(
       `Connected to Xupra DryLake as ${exchanged.user.email} (${tierLabel} plan).`,
     );
-    void vscode.commands.executeCommand("xupra.refreshProjects");
+    try {
+      await vscode.commands.executeCommand("xupra.refreshProjects");
+    } catch (error) {
+      logConnectStage("refresh_after_callback_failed", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private async pollPendingRequest(pendingRequest: PendingRequest) {

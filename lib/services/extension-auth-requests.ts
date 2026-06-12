@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { createExtensionAccessToken } from "@/lib/services/extension-tokens";
 
-const EXTENSION_AUTH_REQUEST_TTL_MS = 1000 * 60 * 5;
+const EXTENSION_AUTH_REQUEST_TTL_MS = 1000 * 60 * 15;
 const POLL_TOKEN_HEADER_BYTES = 32;
 
 export const EXTENSION_AUTH_REQUEST_STATUS = {

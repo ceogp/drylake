@@ -49,9 +49,11 @@ export default async function SignUpPage({
     >
       <SignUp
         appearance={clerkTapeAppearance}
+        forceRedirectUrl={redirectUrl}
         fallbackRedirectUrl={redirectUrl}
         path={authSetup.signUpUrl}
         routing="path"
+        signInForceRedirectUrl={redirectUrl}
         signInFallbackRedirectUrl={redirectUrl}
         signInUrl={authPathWithRedirect(authSetup.signInUrl, redirectUrl)}
       />

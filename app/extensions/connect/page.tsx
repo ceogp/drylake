@@ -18,11 +18,11 @@ export const revalidate = 0;
 const allowedCallbackProtocols = new Set(["vscode:", "vscode-insiders:", "cursor:"]);
 
 const steps = [
-  "Click Connect in VS Code or Cursor.",
+  "Click Register or Connect in VS Code or Cursor.",
   "The extension opens this approval request in your browser.",
   "Sign up or sign in if needed.",
-  "Approve the editor connection for your current account and workspace.",
-  "The editor finishes connecting even if the browser cannot hand control back.",
+  "Approve and connect the editor to your current account and workspace.",
+  "The extension updates from the polling request; use Return to Editor only if the editor does not come forward.",
 ];
 
 function normalizeSearchValue(value: string | string[] | undefined) {
