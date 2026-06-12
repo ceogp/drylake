@@ -4,6 +4,7 @@ import { runSecurityScan } from "../services/securityScanner";
 import { scanWorkspaceFiles } from "../services/workspaceScanner";
 
 const envUri = { fsPath: "/workspace/.env", path: "/workspace/.env" };
+const blockedPemUri = { fsPath: "/workspace/suspicious.pem", path: "/workspace/suspicious.pem" };
 const mcpUri = { fsPath: "/workspace/.cursor/mcp.json", path: "/workspace/.cursor/mcp.json" };
 const packageUri = { fsPath: "/workspace/package.json", path: "/workspace/package.json" };
 const workflowUri = { fsPath: "/workspace/.github/workflows/deploy.yml", path: "/workspace/.github/workflows/deploy.yml" };
@@ -56,6 +57,10 @@ vi.mock("vscode", () => ({
         return [envUri];
       }
 
+      if (pattern.includes("*.pem")) {
+        return [blockedPemUri];
+      }
+
       if (pattern.includes("mcp.json")) {
         return [mcpUri];
       }
@@ -76,7 +81,7 @@ vi.mock("vscode", () => ({
     }),
     fs: {
       stat: vi.fn(async (uri: { fsPath: string }) => {
-        if ([envUri.fsPath, mcpUri.fsPath, packageUri.fsPath, workflowUri.fsPath, dockerUri.fsPath].includes(uri.fsPath)) {
+        if ([envUri.fsPath, blockedPemUri.fsPath, mcpUri.fsPath, packageUri.fsPath, workflowUri.fsPath, dockerUri.fsPath].includes(uri.fsPath)) {
           return { size: 2048 };
         }
 
@@ -85,6 +90,10 @@ vi.mock("vscode", () => ({
       readFile: vi.fn(async (uri: { fsPath: string }) => {
         if (uri.fsPath === envUri.fsPath) {
           return new TextEncoder().encode('OPENAI_API_KEY="sk-test123456789012345678901234567890"');
+        }
+
+        if (uri.fsPath === blockedPemUri.fsPath) {
+          throw new Error("EINVAL: operation blocked by local protection");
         }
 
         if (uri.fsPath === mcpUri.fsPath) {
@@ -136,10 +145,17 @@ describe("security scanner", () => {
     expect(scan.summary.agentFiles).toBe(2);
     expect(scan.summary.extensions).toBe(1);
     expect(scan.summary.mcpServers).toBe(1);
-    expect(scan.summary.riskyFiles).toBe(1);
+    expect(scan.summary.riskyFiles).toBe(2);
     expect(scan.summary.workspaceSurface).toBeGreaterThanOrEqual(4);
     expect(scan.secrets[0]).toMatchObject({ type: "OpenAI API key variable", path: ".env", variableName: "OPENAI_API_KEY" });
     expect(scan.secrets[0].evidence).not.toContain("sk-test");
+    expect(scan.secrets).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "Unreadable risky file",
+        path: "suspicious.pem",
+        evidence: expect.stringContaining("endpoint protection"),
+      }),
+    ]));
     expect(scan.mcpServers[0].capabilities).toContain("connected tool gateway");
     expect(scan.mcpServers[0].riskFlags).toContain("Unpinned npx MCP server package.");
     expect(scan.mcpServers[0].blastRadius).toContain("secret-like variables");

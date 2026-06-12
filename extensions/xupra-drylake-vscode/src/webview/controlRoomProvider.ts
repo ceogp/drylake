@@ -87,6 +87,84 @@ const STATUS_LABELS: Record<XuStepStatus, string> = {
   complete: "complete",
 };
 
+type SecurityScanTarget = {
+  area: string;
+  pathHint: string;
+  detail: string;
+};
+
+const SECURITY_SCAN_TARGETS: readonly SecurityScanTarget[] = [
+  {
+    area: "MCP config files",
+    pathHint: ".vscode/mcp.json, .cursor/mcp.json, claude_desktop_config.json",
+    detail: "Tooling endpoints, auth variables, and capability declarations.",
+  },
+  {
+    area: "Agent instructions and skills",
+    pathHint: "AGENTS.md, CLAUDE.md, .claude/, .agents/, SKILL.md",
+    detail: "Agent files and skill rules used by your autonomous workflows.",
+  },
+  {
+    area: "Extensions and manifests",
+    pathHint: ".vscode/extensions + package.json manifests",
+    detail: "Commands, activation events, settings, and manifest access signals.",
+  },
+  {
+    area: "Secrets and environment references",
+    pathHint: ".env, .env.*, .vscode/tasks.json, scripts/**",
+    detail: "Names and references that increase blast-radius risk.",
+  },
+  {
+    area: "Deploy / CI / workspace surface",
+    pathHint: ".github/workflows, docker/docker-compose, terraform, k8s, package scripts",
+    detail: "Cloud, deployment, and infrastructure command paths.",
+  },
+];
+
+const SECURITY_UPLOAD_TARGETS: readonly SecurityScanTarget[] = [
+  {
+    area: "MCP configuration",
+    pathHint: "MCP server definitions and env variable names",
+    detail: "Used to detect unpinned packages, broad tool gateways, and MCP drift.",
+  },
+  {
+    area: "Agent skills and instructions",
+    pathHint: "Skill, rule, and instruction files found by the local scan",
+    detail: "Used to compare future scans against the reviewed baseline.",
+  },
+  {
+    area: "Redacted Guard report",
+    pathHint: "Findings, scores, paths, and secret variable names",
+    detail: "Secret values are not stored or uploaded by the scan.",
+  },
+];
+
+function renderSecurityScanInProgress() {
+  return `<section class="security-progress" aria-label="DryLake Guard scan progress">
+    <h3>What is being scanned locally</h3>
+    <p>Guard checks all relevant workspace metadata first, then builds risk findings from local evidence.</p>
+    <div class="security-progress-list">
+      ${SECURITY_SCAN_TARGETS.map((target) => `<article class="security-progress-item">
+        <strong>${escapeHtml(target.area)}</strong>
+        <small>${escapeHtml(target.pathHint)}</small>
+        <span>${escapeHtml(target.detail)}</span>
+      </article>`).join("")}
+    </div>
+    <div class="security-note">No workspace files are exfiltrated during local scan. Values are never stored.</div>
+  </section>`;
+}
+
+function renderGuardUploadDisclosure() {
+  return `<div class="security-upload-detail" aria-label="Active Guard upload details">
+    <span class="security-upload-title">What may be uploaded after approval</span>
+    ${SECURITY_UPLOAD_TARGETS.map((target) => `<div class="security-upload-row">
+      <strong>${escapeHtml(target.area)}</strong>
+      <small>${escapeHtml(target.pathHint)}</small>
+      <span>${escapeHtml(target.detail)}</span>
+    </div>`).join("")}
+  </div>`;
+}
+
 function escapeHtml(value: unknown) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -483,8 +561,9 @@ function renderGuardUploadConsent(status: GuardUploadStatus, error?: string) {
 
   return `<section class="security-consent" aria-label="DryLake Guard upload consent">
     <div>
-      <strong>Upload skills and MCP settings?</strong>
-      <p>Do you want to upload your skills and MCP settings? If you do, DryLake can detect agent skill and MCP drift over time and provide Live Watchdog protection, but it is not required.</p>
+      <strong>After reviewing this report, create an Active Guard baseline?</strong>
+      <p>Optional. Keep this scan local, or approve a redacted baseline upload so DryLake can detect MCP and skill drift over time, provide Watchdog protection, and scan consented Guard artifacts. It is not required.</p>
+      ${renderGuardUploadDisclosure()}
     </div>
     <div class="security-actions">
       <button type="button" data-command="drylake.uploadGuardBaseline"${status === "uploading" ? " disabled" : ""}>${status === "uploading" ? "Uploading..." : "Upload Guard Baseline"}</button>
@@ -503,10 +582,10 @@ function renderSecurityEmptyState(loading: boolean, paidUpsellVisible: boolean) 
       </div>
       <div class="security-actions">
         <button type="button" data-command="drylake.runSecurityScan"${loading ? " disabled" : ""}>${loading ? "Scanning..." : "Run Guard Scan"}</button>
-        <button type="button" class="secondary" data-command="drylake.guardFixWithAi">Fix with AI</button>
       </div>
     </div>
     ${renderGuardPaidUpsell(paidUpsellVisible)}
+    ${loading ? renderSecurityScanInProgress() : ""}
     <div class="security-flow">
       <div><strong>1</strong><span>Register, then scan local IDE and workspace metadata</span></div>
       <div><strong>2</strong><span>Review inferred extension and MCP access</span></div>
@@ -607,7 +686,7 @@ function renderSecretRows(scan: GuardScanResult) {
   return scan.secrets.slice(0, 14).map((secret) => `<div class="security-connection-row ${escapeHtml(secret.severity)}">
     <strong>${escapeHtml(secret.type)}</strong>
     <span>${escapeHtml(secret.variableName ?? "pattern match")}</span>
-    <small>${escapeHtml(secret.path)}:${escapeHtml(secret.line)}</small>
+    <small>${escapeHtml(secret.path)}${secret.line ? `:${escapeHtml(secret.line)}` : ""}</small>
   </div>`).join("");
 }
 
@@ -687,7 +766,6 @@ function renderSecurityPanel(
       </div>
     </div>
     ${renderGuardPaidUpsell(options.paidUpsellVisible)}
-    ${renderGuardUploadConsent(options.uploadStatus, options.uploadError)}
     <div class="security-note">Scanned ${escapeHtml(new Date(scan.scannedAt).toLocaleString())}. Extension access is inferred from manifests/configs; runtime behavior still requires review.</div>
     <div class="security-score-row">
       <div class="security-score ${escapeHtml(scan.rank.toLowerCase().replace(/[^a-z]+/g, "-"))}">
@@ -740,6 +818,7 @@ function renderSecurityPanel(
         ${renderWorkspaceSurfaceRows(scan)}
       </section>
     </div>
+    ${renderGuardUploadConsent(options.uploadStatus, options.uploadError)}
   </section>`;
 }
 
@@ -1138,7 +1217,7 @@ export class ControlRoomProvider {
 
     this.panel = vscode.window.createWebviewPanel(
       "drylake.controlRoom",
-      "DryLake Control Room",
+      "DryLake Control Plane",
       vscode.ViewColumn.One,
       { enableScripts: true, retainContextWhenHidden: true },
     );
@@ -1168,9 +1247,11 @@ export class ControlRoomProvider {
         }
 
         this.securityScanLoading = true;
+        this.securityScan = null;
         this.guardUploadStatus = "recording";
         this.guardUploadError = undefined;
         this.guardPaidUpsellVisible = false;
+        this.securityReportPaths = null;
         await this.refresh();
         try {
           this.securityScan = await runSecurityScan(vscode.workspace.getConfiguration("xupra"));
@@ -1472,11 +1553,15 @@ export class ControlRoomProvider {
         : renderKanbanEmptyState();
     const executionToggle = renderExecutionModeToggle(runbook);
     const runNextButton = runbook?.phases.length ? '<button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>' : "";
-    const headerTitle = isSecurityView ? "DryLake Guard" : "DryLake Control Room";
-    const headerSubtitle = isSecurityView ? "Agentic IDE security posture" : "DryLake Control Room";
+    const headerTitle = isSecurityView ? "Security" : "Agent Control";
+    const headerSubtitle = "DryLake Control Plane";
     const controlRoomActions = isSecurityView
-      ? '<span class="guard-header-pill">AWS-backed Active Guard</span>'
-      : `<div class="toggle-group compact" role="group" aria-label="Control Room view">
+      ? `<div class="toggle-group compact" role="group" aria-label="Security view">
+          <button class="toggle-btn active" type="button" aria-current="page">Guard Scan</button>
+          <button class="secondary" data-command="drylake.guardFixWithAi">Active Guard</button>
+          <button class="secondary" data-command="drylake.openSecurityReport">Reports</button>
+        </div>`
+      : `<div class="toggle-group compact" role="group" aria-label="Agent Control view">
           <button class="toggle-btn${view === "pipeline" ? " active" : ""}" data-view="pipeline">Pipeline</button>
           <button class="toggle-btn${view === "kanban" ? " active" : ""}" data-view="kanban">Kanban</button>
         </div>
@@ -1495,7 +1580,8 @@ export class ControlRoomProvider {
     :root { --drylake-bg: #090a0a; --drylake-panel: #111414; --drylake-panel-2: #0d0f0f; --drylake-line: #27272a; --drylake-muted: #a1a1aa; --drylake-text: #f4f4f5; --drylake-green: #34d399; --drylake-green-soft: #17251d; --drylake-orange: #fb923c; --drylake-orange-soft: #2a1710; --drylake-red: #f87171; --drylake-paper: #090a0a; --drylake-ink: #f4f4f5; --drylake-yellow: #34d399; --drylake-blue: #fb923c; --drylake-pink: #fb923c; --drylake-white: #111414; --drylake-font: "Helvetica Neue", Helvetica, system-ui, sans-serif; --drylake-brand-font: "Bricolage Grotesque", "Helvetica Neue", Helvetica, system-ui, sans-serif; }
     body { margin: 0; color: var(--drylake-text); background: var(--drylake-bg); font-family: var(--drylake-font); font-weight: 400; letter-spacing: 0; color-scheme: dark; }
     main { max-width: 1180px; margin: 0 auto; padding: 24px; }
-    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; padding: 12px 16px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
+    header { display: grid; gap: 12px; margin-bottom: 14px; padding: 14px 16px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
+    .header-brand-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     h1 { margin: 0; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 24px; font-weight: 650; letter-spacing: 0; }
     h2 { margin: 8px 0; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 20px; font-weight: 600; letter-spacing: 0; }
     h3, p { margin: 0; }
@@ -1508,12 +1594,13 @@ export class ControlRoomProvider {
     .eyebrow, .planning-banner-eyebrow, .chat-eyebrow, .phase-id { color: var(--drylake-green); text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
     .muted, .objective, .agent-label, .step-count, .drop-zone, .planning-banner-reason, .chat-empty, .chat-meta { color: var(--drylake-muted); line-height: 1.45; }
     .actions, .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
-    .product-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: min(520px, 100%); }
-    .product-tab { display: grid; gap: 2px; min-height: 54px; padding: 9px 12px; color: var(--drylake-text); background: var(--drylake-bg); border-color: #3f3f46; text-align: left; }
-    .product-tab strong { color: var(--drylake-text); font-size: 13px; line-height: 1.2; }
+    .product-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; }
+    .product-tab { display: grid; gap: 2px; min-height: 58px; padding: 11px 14px; color: var(--drylake-text); background: var(--drylake-bg); border-color: #3f3f46; text-align: left; }
+    .product-tab strong { color: var(--drylake-text); font-size: 15px; line-height: 1.2; }
     .product-tab span { color: var(--drylake-muted); font-size: 11px; line-height: 1.25; }
     .product-tab.active { border-color: var(--drylake-green); background: var(--drylake-green-soft); }
     .product-tab.active strong { color: #a7f3d0; }
+    .secondary-tabs { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 2px; }
     .toggle-group.compact { align-items: center; }
     .guard-header-pill { align-self: center; padding: 7px 10px; border: 1px solid rgba(251, 146, 60, 0.4); border-radius: 999px; color: #fed7aa; background: rgba(251, 146, 60, 0.08); font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.08em; }
     .toggle-btn.active { color: #090a0a; background: var(--drylake-green); border-color: var(--drylake-green); }
@@ -1669,6 +1756,14 @@ export class ControlRoomProvider {
     .security-flow div { display: flex; align-items: center; gap: 9px; min-height: 48px; padding: 10px; border: 1px solid var(--drylake-line); border-radius: 6px; background: var(--drylake-panel); }
     .security-flow strong { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 22px; border-radius: 999px; color: #090a0a; background: var(--drylake-orange); font-size: 12px; }
     .security-flow span { color: var(--drylake-muted); font-size: 12px; line-height: 1.35; }
+    .security-progress { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--drylake-line); border-radius: 8px; background: var(--drylake-panel); }
+    .security-progress h3 { margin: 0; color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 14px; font-weight: 650; }
+    .security-progress p { margin: 0; color: var(--drylake-muted); font-size: 12px; line-height: 1.4; }
+    .security-progress-list { margin-top: 8px; display: grid; gap: 6px; }
+    .security-progress-item { display: grid; gap: 2px; padding: 8px; border: 1px dashed #303734; border-radius: 6px; background: rgba(255, 255, 255, 0.02); }
+    .security-progress-item strong { color: var(--drylake-text); font-size: 12px; }
+    .security-progress-item small { color: #94a09a; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .security-progress-item span { color: var(--drylake-muted); font-size: 11px; line-height: 1.35; }
     .security-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .security-eyebrow { color: var(--drylake-orange); text-transform: uppercase; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; }
     .security-note { padding: 10px 12px; border: 1px solid rgba(251, 146, 60, 0.35); border-radius: 6px; color: #fed7aa; background: var(--drylake-orange-soft); font-size: 12px; line-height: 1.4; }
@@ -1677,6 +1772,12 @@ export class ControlRoomProvider {
     .security-consent, .security-upsell { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px; border: 1px solid rgba(251, 146, 60, 0.45); border-radius: 8px; background: rgba(251, 146, 60, 0.08); }
     .security-consent strong, .security-upsell h3 { color: var(--drylake-text); font-family: var(--drylake-brand-font); font-size: 15px; font-weight: 650; }
     .security-consent p, .security-upsell p { max-width: 720px; color: var(--drylake-muted); font-size: 12px; line-height: 1.45; }
+    .security-upload-detail { display: grid; gap: 6px; margin-top: 10px; max-width: 780px; }
+    .security-upload-title { color: #fed7aa; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+    .security-upload-row { display: grid; gap: 2px; padding: 7px 8px; border: 1px solid rgba(251, 146, 60, 0.28); border-radius: 6px; background: rgba(9, 10, 10, 0.38); }
+    .security-upload-row strong { font-size: 12px; }
+    .security-upload-row small { color: #b0aaa4; font-size: 11px; line-height: 1.3; }
+    .security-upload-row span { color: var(--drylake-muted); font-size: 11px; line-height: 1.35; }
     .security-upsell { align-items: flex-start; border-color: rgba(52, 211, 153, 0.45); background: rgba(52, 211, 153, 0.07); }
     .security-upsell ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; margin: 0; padding: 0; list-style: none; color: #a7f3d0; font-size: 12px; }
     .security-upsell li::before { content: "- "; color: var(--drylake-orange); }
@@ -1723,28 +1824,31 @@ export class ControlRoomProvider {
     .security-connection-row.critical, .security-connection-row.high, .security-extension.high { border-color: rgba(248, 113, 113, 0.5); }
     .security-connection-row.medium, .security-extension.medium { border-color: rgba(251, 146, 60, 0.42); }
     .security-empty-line { padding: 10px; border: 1px dashed #3f3f46; border-radius: 6px; color: var(--drylake-muted); font-size: 12px; }
-    @media (max-width: 860px) { header, .nano-banner, .planner-setup-header, .security-consent, .security-upsell { align-items: flex-start; flex-direction: column; } .product-tabs, .planning-controls { grid-template-columns: 1fr; } .stage-count-label { justify-content: flex-start; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) { .header-brand-row, .nano-banner, .planner-setup-header, .security-consent, .security-upsell { align-items: flex-start; flex-direction: column; } .product-tabs, .planning-controls { grid-template-columns: 1fr; } .secondary-tabs { justify-content: flex-start; } .stage-count-label { justify-content: flex-start; } .planner-setup-status { max-width: none; text-align: left; } .kanban { grid-template-columns: 1fr; } }
     @media (max-width: 860px) { .security-hero { flex-direction: column; } .security-actions { justify-content: flex-start; } .security-flow, .security-score-row, .security-grid, .security-upsell ul { grid-template-columns: 1fr; } .security-metrics, .security-category-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   </style>
 </head>
 <body>
   <main>
     <header>
-      <div>
+      <div class="header-brand-row">
+        <div>
         <div class="eyebrow">${escapeHtml(headerSubtitle)}</div>
         <h1>${escapeHtml(headerTitle)}</h1>
+        </div>
+        ${isSecurityView ? '<span class="guard-header-pill">AWS-backed Active Guard</span>' : ""}
       </div>
       <div class="product-tabs" role="tablist" aria-label="DryLake product surface">
         <button class="product-tab${isSecurityView ? "" : " active"}" data-product-view="control-room" type="button">
-          <strong>Control Room</strong>
+          <strong>Agent Control</strong>
           <span>Plan and run agent handoffs</span>
         </button>
         <button class="product-tab${isSecurityView ? " active" : ""}" data-product-view="guard" type="button">
-          <strong>DryLake Guard</strong>
-          <span>Scan agent, MCP, extension, and IDE risk</span>
+          <strong>Security</strong>
+          <span>Guard agentic posture</span>
         </button>
       </div>
-      <div class="actions">
+      <div class="secondary-tabs">
         ${controlRoomActions}
       </div>
     </header>

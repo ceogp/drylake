@@ -46,7 +46,7 @@ export type GuardExtensionRisk = {
 
 export type GuardSecretFinding = {
   path: string;
-  line: number;
+  line?: number;
   type: string;
   variableName?: string;
   severity: GuardSeverity;
@@ -530,6 +530,16 @@ async function readTextFile(uri: vscode.Uri) {
   return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
 }
 
+function readBlockedEvidence(logicalPath: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+  const protectionHint = /access|permission|denied|blocked|operation not permitted|invalid argument|eacces|eperm|einval|virus|malware|quarantine/.test(normalized)
+    ? " Local OS, endpoint protection, or file permissions may have blocked the read."
+    : "";
+
+  return `${logicalPath} matched a risky-file pattern, but DryLake could not read it.${protectionHint} File contents were not stored.`;
+}
+
 async function findWorkspaceFiles(patterns: string[], limit: number) {
   const seen = new Set<string>();
   const uris: vscode.Uri[] = [];
@@ -566,7 +576,13 @@ async function scanRiskyFiles(): Promise<GuardSecretFinding[]> {
     let text: string | null;
     try {
       text = await readTextFile(file);
-    } catch {
+    } catch (error) {
+      findings.push({
+        path: logicalPath,
+        type: "Unreadable risky file",
+        severity: "medium",
+        evidence: readBlockedEvidence(logicalPath, error),
+      });
       continue;
     }
 

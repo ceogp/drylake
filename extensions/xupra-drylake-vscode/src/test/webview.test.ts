@@ -344,7 +344,9 @@ describe("Control Room webview", () => {
     expect(html).toContain('data-info-panel="stage-count"');
     expect(html).toContain("This plan keeps the planning step count chosen when the session started.");
     expect(html).toContain('data-product-view="guard"');
-    expect(html).toContain("<strong>DryLake Guard</strong>");
+    expect(html).toContain("<strong>Agent Control</strong>");
+    expect(html).toContain("<strong>Security</strong>");
+    expect(html).toContain("Guard agentic posture");
   });
 
   it("renders DryLake Guard as an IDE firewall scan surface", async () => {
@@ -356,13 +358,35 @@ describe("Control Room webview", () => {
 
     expect(html).toContain("Agentic Security Posture");
     expect(html).toContain("Run Guard Scan");
-    expect(html).toContain("Fix with AI");
+    expect(html).toContain('aria-label="Security view"');
+    expect(html).toContain('aria-current="page">Guard Scan</button>');
+    expect(html).not.toContain('class="toggle-btn active" data-command="drylake.runSecurityScan"');
+    expect(html).toContain(">Active Guard</button>");
+    expect(html).toContain(">Reports</button>");
     expect(html).toContain("installed extensions, agent files, skills, MCP servers");
     expect(html).toContain("connected-tool blast radius");
     expect(html).toContain("Register, then scan local IDE and workspace metadata");
     expect(html).toContain("Review inferred extension and MCP access");
     expect(html).toContain("VS Code does not expose a complete runtime permission list");
     expect(html).not.toContain("Build Plan Chat");
+  });
+
+  it("shows local scan targets while Guard scan is running", async () => {
+    storedView = "security";
+    const provider = new ControlRoomProvider({ readRunbook: async () => ({ runbook: runbook() }) } as never);
+    (provider as unknown as { securityScanLoading: boolean }).securityScanLoading = true;
+
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+
+    expect(html).toContain("What is being scanned locally");
+    expect(html).toContain("MCP config files");
+    expect(html).toContain("Agent instructions and skills");
+    expect(html).toContain("Extensions and manifests");
+    expect(html).toContain("Secrets and environment references");
+    expect(html).toContain("Deploy / CI / workspace surface");
+    expect(html).toContain("No workspace files are exfiltrated during local scan. Values are never stored.");
   });
 
   it("renders scan results with extension, MCP, secret, and blast-radius drilldowns", async () => {
@@ -375,7 +399,14 @@ describe("Control Room webview", () => {
     const html = panel?.webview.html ?? "";
 
     expect(html).toContain("Safe Developer Rank: Operator - 62/100");
-    expect(html).toContain("Upload skills and MCP settings?");
+    expect(html).toContain("After reviewing this report, create an Active Guard baseline?");
+    expect(html).toContain("approve a redacted baseline upload");
+    expect(html).toContain("scan consented Guard artifacts");
+    expect(html).toContain("What may be uploaded after approval");
+    expect(html).toContain("MCP configuration");
+    expect(html).toContain("Agent skills and instructions");
+    expect(html).toContain("Redacted Guard report");
+    expect(html).toContain("Secret values are not stored or uploaded by the scan.");
     expect(html).toContain("Upload Guard Baseline");
     expect(html).toContain("Keep Scan Local");
     expect(html).toContain("High-impact paths");
@@ -393,6 +424,9 @@ describe("Control Room webview", () => {
     expect(html).toContain("OPENAI_API_KEY");
     expect(html).toContain("scripts/deploy.sh");
     expect(html).toContain("Agentic blast radius combines secrets");
+    expect(html.indexOf("Deploy / CI / Workspace Surface")).toBeLessThan(
+      html.indexOf("After reviewing this report, create an Active Guard baseline?"),
+    );
   });
 
   it("opens the Control Room directly on DryLake Guard from the sidebar command", async () => {
@@ -402,7 +436,7 @@ describe("Control Room webview", () => {
 
     const html = panel?.webview.html ?? "";
     expect(storedView).toBe("security");
-    expect(html).toContain("<strong>DryLake Guard</strong>");
+    expect(html).toContain("<strong>Security</strong>");
     expect(html).toContain("Agentic Security Posture");
     expect(html).not.toContain("Build Plan Chat");
   });
