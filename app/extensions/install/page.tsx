@@ -7,19 +7,33 @@ const trustLinks = [
   { label: "GitLab", href: "https://gitlab.com/" },
 ];
 
+const installSteps = [
+  "Install the DryLake extension from the VS Code Marketplace or from a local VSIX build.",
+  "Run DryLake: Connect so the browser can attach the editor to your account and workspace.",
+  "Start with a free local Guard scan inside the editor and review the report locally.",
+  "Save a report or approve redacted upload only when you want paid remediation and deeper analysis.",
+  "Move into Team Security later for shared reports, baselines, policy, and Continuous Watch.",
+];
+
+const flowCards = [
+  ["In the editor", "Install, connect, scan locally, review findings, and decide whether the workflow should stay local or move into paid Guard features."],
+  ["In the browser", "Manage the account, upgrade plans, reopen saved reports, and review shared team security state once the workflow leaves the local-only boundary."],
+];
+
 export default function ExtensionInstallPage() {
   return (
     <main className="min-h-screen bg-[#090a0a] text-zinc-100">
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-5 py-12 md:px-8 lg:py-16">
+      <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-5 py-12 md:px-8 lg:py-16">
         <div className="space-y-4">
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
             Extension Install
           </p>
           <h1 className="max-w-4xl text-4xl font-semibold leading-tight text-zinc-50 sm:text-5xl">
-            Install DryLake Visual Planner in VS Code.
+            Install DryLake in VS Code and start with Guard.
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-zinc-300">
-            Use DryLake to plan agent work as phases, assign agents, launch handoffs, and validate the resulting workspace.
+            The extension is where the workflow begins: connect the editor, run a free local Guard scan,
+            review findings, then choose whether you need paid remediation or team-level security state.
           </p>
           <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.16em] text-zinc-500">
             <span>Backed by</span>
@@ -36,6 +50,20 @@ export default function ExtensionInstallPage() {
             ))}
           </div>
         </div>
+
+        <article className="rounded-lg border border-zinc-800 bg-[#111414] p-7">
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">
+            Workflow
+          </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-5">
+            {installSteps.map((step, index) => (
+              <div key={step} className="rounded border border-zinc-800 bg-zinc-950 px-4 py-4 text-sm leading-7 text-zinc-300">
+                <p className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-500">Step {index + 1}</p>
+                <p className="mt-3">{step}</p>
+              </div>
+            ))}
+          </div>
+        </article>
 
         <article className="rounded-lg border border-zinc-800 bg-[#111414] p-7">
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">
@@ -82,24 +110,23 @@ export default function ExtensionInstallPage() {
               </div>
             </div>
           </div>
-
-          <div className="mt-8 rounded border border-zinc-800 bg-zinc-950 p-4 text-sm leading-7 text-zinc-400">
-            Need the browser handoff page after install?
-            <Link
-              className="mt-3 block font-medium text-orange-300 underline underline-offset-4 hover:text-orange-200"
-              href="/extensions/connect"
-            >
-              Open the extension connect page
-            </Link>
-          </div>
         </article>
+
+        <section className="grid gap-6 lg:grid-cols-2">
+          {flowCards.map(([title, body]) => (
+            <article key={title} className="rounded-lg border border-zinc-800 bg-zinc-950 p-6">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">{title}</p>
+              <p className="mt-4 text-base leading-8 text-zinc-300">{body}</p>
+            </article>
+          ))}
+        </section>
 
         <article className="rounded-lg border border-zinc-800 bg-[#111414] p-7">
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
             Security and infrastructure
           </p>
           <h2 className="mt-3 text-3xl font-semibold text-zinc-50">
-            AWS Cloud infrastructure with GitLab delivery.
+            Local-first Guard on top of AWS infrastructure.
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-400">
             DryLake is backed by 99VC and AWS Startups. Credentials and extension tokens are encrypted
@@ -118,6 +145,15 @@ export default function ExtensionInstallPage() {
                 {item.label}
               </a>
             ))}
+          </div>
+          <div className="mt-6 rounded border border-zinc-800 bg-zinc-950 p-4 text-sm leading-7 text-zinc-400">
+            Need the browser handoff page after install?
+            <Link
+              className="mt-3 block font-medium text-orange-300 underline underline-offset-4 hover:text-orange-200"
+              href="/extensions/connect"
+            >
+              Open the extension connect page
+            </Link>
           </div>
         </article>
       </section>

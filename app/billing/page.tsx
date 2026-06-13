@@ -4,23 +4,39 @@ import { PricingTable } from "@clerk/nextjs";
 import { createCheckoutAction, openBillingPortalAction } from "@/app/actions";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
-import { getIsPlatformAdmin } from "@/lib/services/access";
 import { syncSubscriptionFromClerk, syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
 import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/services/entitlements";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
-import { getSetupStatus } from "@/lib/services/setup";
 
 const BILLING_SUBTITLE =
-  "Use Free for local Guard scans, Pro for hosted planning, and Security Pro for paid remediation.";
+  "Billing is where you upgrade, open the customer portal, and confirm what your current plan unlocks. Use Pricing for the full public comparison.";
 
 const PLAN_TIERS = ["free", "pro", "security_pro", "team_security", "enterprise"] as const;
+const ALLOWED_EDITOR_RETURN_PROTOCOLS = new Set(["vscode:", "vscode-insiders:", "cursor:"]);
 
 type BillingPlan = "pro" | "security_pro" | "team_security" | "enterprise";
+type EditorTarget = "vscode" | "cursor";
+type BillingResult = "success" | "canceled" | "unavailable" | null;
 
 function normalizeRequiredPlan(value: string | string[] | undefined) {
   const normalized = normalizeSearchValue(value).toLowerCase();
 
   if (normalized === "pro" || normalized === "security_pro" || normalized === "team_security" || normalized === "enterprise") {
+    return normalized;
+  }
+
+  return null;
+}
+
+function normalizeEditorTarget(value: string | string[] | undefined): EditorTarget | null {
+  const normalized = normalizeSearchValue(value).toLowerCase();
+  return normalized === "cursor" ? "cursor" : normalized === "vscode" ? "vscode" : null;
+}
+
+function normalizeBillingResult(value: string | string[] | undefined): BillingResult {
+  const normalized = normalizeSearchValue(value).toLowerCase();
+
+  if (normalized === "success" || normalized === "canceled" || normalized === "unavailable") {
     return normalized;
   }
 
@@ -86,6 +102,26 @@ function getSafeReturnPath(value: string | string[] | undefined) {
   }
 }
 
+function getSafeEditorReturnUrl(value: string | string[] | undefined) {
+  const rawValue = normalizeSearchValue(value).trim();
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(rawValue);
+
+    if (!ALLOWED_EDITOR_RETURN_PROTOCOLS.has(parsed.protocol)) {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 function getPublicTierLabel(tier: string | null | undefined) {
   const normalized = (tier ?? "free").toLowerCase();
 
@@ -104,6 +140,49 @@ function getPublicTierLabel(tier: string | null | undefined) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function buildBillingContinuationPath(args: {
+  requiredPlan: string | null;
+  returnPath: string;
+  editor: EditorTarget | null;
+  editorReturnUrl: string;
+}) {
+  const params = new URLSearchParams({
+    source: "extension",
+    returnPath: args.returnPath,
+    editorReturnUrl: args.editorReturnUrl,
+  });
+
+  if (args.requiredPlan) {
+    params.set("required", args.requiredPlan);
+  }
+
+  if (args.editor) {
+    params.set("editor", args.editor);
+  }
+
+  return `/billing?${params.toString()}`;
+}
+
+function editorReturnLabel(editor: EditorTarget | null) {
+  return editor === "cursor" ? "Return to Cursor" : "Return to VS Code";
+}
+
+function billingResultCopy(result: BillingResult) {
+  if (result === "success") {
+    return "Checkout completed. Return to the editor to refresh plan access immediately.";
+  }
+
+  if (result === "canceled") {
+    return "Checkout was canceled. You can still return to the editor or try again.";
+  }
+
+  if (result === "unavailable") {
+    return "Billing is not available right now. You can return to the editor and try again later.";
+  }
+
+  return null;
+}
+
 export default async function BillingPage({
   searchParams,
 }: {
@@ -113,9 +192,20 @@ export default async function BillingPage({
   const returnPath = getSafeReturnPath(resolvedSearchParams.returnPath);
   const source = normalizeSearchValue(resolvedSearchParams.source);
   const requiredPlan = normalizeRequiredPlan(resolvedSearchParams.required);
+  const editor = normalizeEditorTarget(resolvedSearchParams.editor);
+  const editorReturnUrl = getSafeEditorReturnUrl(resolvedSearchParams.editorReturnUrl);
+  const billingResult = normalizeBillingResult(resolvedSearchParams.billing);
   const fallbackReturnPath = source === "extension" ? "/app" : "/billing?checkout=success";
-  const checkoutReturnPath = returnPath ?? fallbackReturnPath;
-  const isPlatformAdmin = await getIsPlatformAdmin();
+  const appReturnPath = returnPath ?? fallbackReturnPath;
+  const checkoutReturnPath =
+    source === "extension" && editorReturnUrl
+      ? buildBillingContinuationPath({
+          requiredPlan,
+          returnPath: appReturnPath,
+          editor,
+          editorReturnUrl,
+        })
+      : appReturnPath;
   const context = await requireCurrentAppContextForPage();
   const organizationId = context.organization.id;
 
@@ -130,10 +220,12 @@ export default async function BillingPage({
   });
   const { entitlements } = await getEntitlementsForOrganization(organizationId);
   const organizationTier = subscription?.tier ?? context.organization.tier ?? "free";
-  const setup = await getSetupStatus();
   const hasSubscription = Boolean(subscription?.stripeCustomerId);
   const userCanManageBilling = context.activeMembership.role === "owner" || context.activeMembership.role === "admin";
   const requiredSatisfied = planRank(organizationTier) >= planRank(requiredPlan);
+  const showEditorReturn =
+    source === "extension" && Boolean(editorReturnUrl) && (requiredSatisfied || billingResult === "success");
+  const statusCopy = billingResultCopy(billingResult);
 
   if (env.BILLING_PROVIDER === "clerk") {
     return (
@@ -142,41 +234,43 @@ export default async function BillingPage({
           <div className="space-y-4">
             <p className="tape-eyebrow">Billing</p>
             <h1 className="font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950">
-              Choose your plan with Clerk Billing.
+              Manage plan access.
             </h1>
             {requiredPlan && source === "extension" ? (
               <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
                 This browser flow is requesting the <strong>{getPublicTierLabel(requiredPlan)}</strong> tier or above.
                 {!requiredSatisfied
-                  ? " Choose one of the recommended tiers to unlock this feature."
-                  : "You already have a qualifying plan for this feature."}
+                  ? " Choose one of the qualifying plans to unlock this feature."
+                  : " You already have a qualifying plan for this feature."}
               </p>
             ) : null}
-            <p className="max-w-3xl text-lg leading-8 text-stone-700">
-              {BILLING_SUBTITLE}
-            </p>
+            <p className="max-w-3xl text-lg leading-8 text-stone-700">{BILLING_SUBTITLE}</p>
           </div>
 
           <section className="tape-panel bg-white p-6">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Plans</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Plans</p>
+                <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+                  Choose or confirm your current tier.
+                </h2>
+              </div>
+              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/pricing">
+                Compare Plans
+              </Link>
+            </div>
             <div className="mt-5">
               <PricingTable
                 for="user"
                 newSubscriptionRedirectUrl={returnPath ?? "/billing"}
               />
             </div>
-
-            {returnPath ? (
-              <div className="mt-6">
-                <Link
-                  className="tape-button inline-block bg-white px-5 py-3 text-sm text-black"
-                  href={returnPath}
-                >
+            <div className="mt-5 flex flex-wrap gap-3">
+              {returnPath ? (
+                <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href={returnPath}>
                   Continue With Free
                 </Link>
-              </div>
-            ) : null}
-            <div className="mt-5 flex flex-wrap gap-3">
+              ) : null}
               <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/account">
                 Account
               </Link>
@@ -186,16 +280,14 @@ export default async function BillingPage({
             </div>
           </section>
 
-            <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-          <article className="tape-panel bg-white p-6">
+          <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+            <article className="tape-panel bg-white p-6">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current local mirror</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
                 {getPublicTierLabel(subscription?.tier)}
               </h2>
               <p className="mt-2 text-sm leading-7 text-stone-700">Status: {subscription?.status ?? "trial"}</p>
-              <p className="text-sm leading-7 text-stone-700">
-                Provider: {subscription?.provider ?? "local"}
-              </p>
+              <p className="text-sm leading-7 text-stone-700">Provider: {subscription?.provider ?? "local"}</p>
             </article>
 
             <article className="tape-panel bg-white p-6">
@@ -205,12 +297,12 @@ export default async function BillingPage({
                   const value = Boolean(entitlements[key]);
 
                   return (
-                  <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
-                      <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
+                    <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
+                        <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
+                      </div>
                     </div>
-                  </div>
                   );
                 })}
               </div>
@@ -227,25 +319,46 @@ export default async function BillingPage({
         <div className="space-y-4">
           <p className="tape-eyebrow">Billing</p>
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950">
-            Choose your plan.
+            Manage billing and Guard access.
           </h1>
-          <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            {BILLING_SUBTITLE}
-          </p>
+          {requiredPlan && source === "extension" ? (
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
+              This browser flow is requesting the <strong>{getPublicTierLabel(requiredPlan)}</strong> tier or above.
+              {!requiredSatisfied
+                ? " Choose one of the qualifying plans to unlock this feature."
+                : " You already have a qualifying plan for this feature."}
+            </p>
+          ) : null}
+          <p className="max-w-3xl text-lg leading-8 text-stone-700">{BILLING_SUBTITLE}</p>
         </div>
 
         <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
           <article className="tape-panel bg-white p-6">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current plan</p>
-            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-                {getPublicTierLabel(organizationTier)}
-              </h2>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current plan</p>
+                <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+                  {getPublicTierLabel(organizationTier)}
+                </h2>
+              </div>
+              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/pricing">
+                Compare Plans
+              </Link>
+            </div>
             <p className="mt-2 text-sm leading-7 text-stone-700">Status: {subscription?.status ?? "trial"}</p>
-            <p className="text-sm leading-7 text-stone-700">
-              Provider: {subscription?.provider ?? "local"}
-            </p>
+            <p className="text-sm leading-7 text-stone-700">Provider: {subscription?.provider ?? "local"}</p>
+            {statusCopy ? (
+              <div className="mt-5 rounded border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm leading-7 text-stone-800">
+                {statusCopy}
+              </div>
+            ) : null}
             <div className="mt-6 flex flex-wrap gap-3">
-              {shouldShowUpgradeOption(requiredPlan, "pro") ? (
+              {!userCanManageBilling ? (
+                <p className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400">
+                  Ask an organization owner or admin to manage billing.
+                </p>
+              ) : null}
+              {userCanManageBilling && shouldShowUpgradeOption(requiredPlan, "pro") ? (
                 <form action={createCheckoutAction}>
                   <input name="organizationId" type="hidden" value={organizationId} />
                   <input name="plan" type="hidden" value="pro" />
@@ -255,7 +368,7 @@ export default async function BillingPage({
                   </button>
                 </form>
               ) : null}
-              {shouldShowUpgradeOption(requiredPlan, "security_pro") ? (
+              {userCanManageBilling && shouldShowUpgradeOption(requiredPlan, "security_pro") ? (
                 <form action={createCheckoutAction}>
                   <input name="organizationId" type="hidden" value={organizationId} />
                   <input name="plan" type="hidden" value="security_pro" />
@@ -265,7 +378,7 @@ export default async function BillingPage({
                   </button>
                 </form>
               ) : null}
-              {shouldShowUpgradeOption(requiredPlan, "team_security") && userCanManageBilling ? (
+              {userCanManageBilling && shouldShowUpgradeOption(requiredPlan, "team_security") ? (
                 <form action={createCheckoutAction}>
                   <input name="organizationId" type="hidden" value={organizationId} />
                   <input name="plan" type="hidden" value="team_security" />
@@ -284,19 +397,26 @@ export default async function BillingPage({
                   </button>
                 </form>
               ) : null}
+              {showEditorReturn ? (
+                <a className="tape-button bg-white px-5 py-3 text-sm text-black" href={editorReturnUrl ?? undefined}>
+                  {editorReturnLabel(editor)}
+                </a>
+              ) : null}
               {requiredPlan && requiredSatisfied && source === "extension" ? (
-                <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href={checkoutReturnPath}>
+                <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href={appReturnPath}>
                   Open DryLake Web App
                 </Link>
               ) : null}
             </div>
-            {source === "extension" && (
+            {source === "extension" ? (
               <p className="mt-4 text-sm leading-7 text-stone-700">
-                {requiredPlan
-                  ? `After upgrading to ${getPublicTierLabel(requiredPlan)}, return to VS Code or Cursor to continue. The browser button only opens the DryLake web app.`
-                  : "After upgrading, return to VS Code or Cursor to continue. The browser button only opens the DryLake web app."}
+                {showEditorReturn
+                  ? `After checkout, use ${editorReturnLabel(editor)} to refresh plan access in the editor immediately. You can still open the web app separately if needed.`
+                  : requiredPlan
+                    ? `After upgrading to ${getPublicTierLabel(requiredPlan)}, return to VS Code or Cursor to continue. If the direct editor return is unavailable, open the DryLake web app and then reopen the editor.`
+                    : "After upgrading, return to VS Code or Cursor to continue. If the direct editor return is unavailable, open the DryLake web app and then reopen the editor."}
               </p>
-            )}
+            ) : null}
             <div className="mt-5 flex flex-wrap gap-3">
               <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/account">
                 Account
@@ -314,49 +434,18 @@ export default async function BillingPage({
                 const value = Boolean(entitlements[key]);
 
                 return (
-                <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
-                    <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
+                  <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
+                      <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
+                    </div>
                   </div>
-                </div>
                 );
               })}
             </div>
-          </article>
-        </section>
-
-        <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-          {isPlatformAdmin && (
-            <article className="tape-panel bg-white p-6">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Stripe Readiness</p>
-              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-                {setup.billing.configured ? "Billing is wired." : "Billing still needs live Stripe keys."}
-              </h2>
-              <div className="mt-4 space-y-2 text-sm leading-7 text-stone-700">
-                <p>Webhook path: {setup.billing.webhookPath}</p>
-                <p>Portal ready: {setup.billing.portalReady ? "yes" : "no"}</p>
-                {setup.billing.missing.length > 0 ? <p>Missing: {setup.billing.missing.join(", ")}</p> : null}
-              </div>
-            </article>
-          )}
-
-          <article className="tape-panel p-6">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Tier Model</p>
-            <div className="mt-4 grid gap-3">
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
-                Free: scan workspace, import existing runbooks, view + copy + download phase prompts, hand off to your installed coding agents.
-              </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
-                Pro ($10/month): hosted planning, Control Plane planning, saved plans, and handoff flows.
-              </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
-                Security Pro ($40/month): Fix with AI, approved upload, Deep Cloud Analysis, local Watchdog, and personal report history.
-              </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
-                Team Security: shared reports, Team Baseline, team policy, allowlists/denylists, and Continuous Watch.
-              </div>
-            </div>
+            <p className="mt-5 text-sm leading-7 text-stone-700">
+              Team Security and Enterprise details live on Pricing. Billing is intentionally the transactional page.
+            </p>
           </article>
         </section>
       </div>

@@ -169,7 +169,10 @@ export async function getOrganizationSubscription(organizationId: string) {
   });
 }
 
-export async function getEntitlementsForOrganization(organizationId: string) {
+export async function getEntitlementsForOrganization(
+  organizationId: string,
+  options?: { userId?: string },
+) {
   const subscription = await getOrganizationSubscription(organizationId);
   const organization = await prisma.organization?.findUnique?.({
     where: { id: organizationId },
@@ -188,10 +191,11 @@ export async function getEntitlementsForOrganization(organizationId: string) {
     subscription?.updatedAt?.getTime() ?? 0,
     organization?.updatedAt?.getTime() ?? 0,
   );
+  const isTeamScopedPlan = plan === "team_security" || plan === "enterprise";
   const resolved: ResolvedEntitlements = {
     plan,
-    subjectType: plan === "team_security" || plan === "enterprise" ? "team" : "user",
-    subjectId: organizationId,
+    subjectType: isTeamScopedPlan ? "team" : "user",
+    subjectId: isTeamScopedPlan ? organizationId : options?.userId ?? organizationId,
     entitlementVersion,
     canUseHostedPlanning: Boolean(entitlements.canUseHostedPlanning),
     canUseFixWithAI: Boolean(entitlements.canUseFixWithAI),

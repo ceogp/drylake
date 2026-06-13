@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { createCheckoutAction, openBillingPortalAction } from "@/app/actions";
+import { openBillingPortalAction } from "@/app/actions";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/services/entitlements";
@@ -17,16 +17,43 @@ const ENTITLEMENT_ITEMS: Array<{ key: EntitlementKey; label: string; description
     description: "Paid Guard remediation plans generated from redacted local scan findings.",
   },
   {
+    key: "canUseApprovedUpload",
+    label: "Approved upload",
+    description: "Approved redacted upload path for saved reports and cloud-backed analysis.",
+  },
+  {
+    key: "canUseDeepCloudAnalysis",
+    label: "Deep Cloud Analysis",
+    description: "Cloud-backed review from approved metadata and saved Guard reports.",
+  },
+  {
+    key: "canUseLocalWatchdog",
+    label: "Local Watchdog",
+    description: "Local follow-up monitoring tied to the Guard workflow.",
+  },
+  {
     key: "canUseTeamBaseline",
     label: "Team Baseline",
     description: "Shared baseline and drift comparison for Team Security workspaces.",
   },
+  {
+    key: "canUseContinuousWatch",
+    label: "Continuous Watch",
+    description: "Recurring team-level watch history and drift events.",
+  },
+  {
+    key: "canManageTeamPolicy",
+    label: "Team policy",
+    description: "Allowlist and denylist management for shared team Guard workflows.",
+  },
 ];
 
 const ACCOUNT_LINKS = [
-  { label: "Open workspace", href: "/workspace", detail: "Go back to your active project and imported agent files." },
+  { label: "Open workspace", href: "/workspace", detail: "Go back to your active project and day-to-day workflow." },
+  { label: "Security reports", href: "/security/reports", detail: "Review personal or shared Guard report history." },
+  { label: "Team security", href: "/team/security", detail: "Open baselines, policy, and Continuous Watch state." },
   { label: "Connect extension", href: "/extensions/connect", detail: "Approve VS Code or Cursor connection for this account." },
-  { label: "Install extension", href: "/extensions/install", detail: "Open Marketplace install steps and manual fallback." },
+  { label: "Billing", href: "/billing", detail: "Upgrade, confirm plan access, and open the billing portal." },
   { label: "Settings", href: "/settings", detail: "Review profile, organization, roles, and workspace links." },
 ];
 
@@ -102,7 +129,7 @@ function EntitlementCard({
       <div className="flex items-center justify-between gap-3">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
         <span className={enabled ? "text-sm font-semibold text-emerald-300" : "text-sm font-semibold text-zinc-500"}>
-          {enabled ? "Enabled" : "Free locked"}
+          {enabled ? "Enabled" : "Locked"}
         </span>
       </div>
       <p className="mt-3 text-sm leading-6 text-zinc-400">{description}</p>
@@ -134,8 +161,8 @@ export default async function AccountPage() {
               Manage DryLake access for {context.organization.name}.
             </h1>
             <p className="max-w-3xl text-lg leading-8 text-zinc-300">
-              Check your Free or Pro status, connect the extension, manage billing, and review what
-              your current plan unlocks.
+              Check your current plan, review Guard access, manage billing, and jump into the extension,
+              saved reports, or team security surfaces from one place.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -144,6 +171,9 @@ export default async function AccountPage() {
             </Link>
             <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/pricing">
               Pricing
+            </Link>
+            <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/security/reports">
+              Security Reports
             </Link>
           </div>
         </div>
@@ -161,40 +191,30 @@ export default async function AccountPage() {
             </div>
             <p className="mt-5 text-sm leading-7 text-zinc-400">
               {paid
-                ? "Paid access is active. The exact planning, Guard, and team capabilities are listed below."
-                : "Free access is active. Local Guard scan and local reports are available without paid security remediation."}
+                ? "Paid access is active. Use billing to manage checkout, the portal, and the full plan comparison."
+                : "Free access is active. Local Guard scan and local report review are available without a paid security plan."}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {userCanManageBilling ? (
-                paid && subscription?.stripeCustomerId ? (
-                  <form action={openBillingPortalAction}>
-                    <input name="organizationId" type="hidden" value={context.organization.id} />
-                    <input name="returnPath" type="hidden" value="/account" />
-                    <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
-                      Open Billing Portal
-                    </button>
-                  </form>
-                ) : paid ? (
-                  <Link className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" href="/billing">
-                    Manage Billing
-                  </Link>
-                ) : (
-                  <form action={createCheckoutAction}>
-                    <input name="organizationId" type="hidden" value={context.organization.id} />
-                    <input name="plan" type="hidden" value="pro" />
-                    <input name="returnPath" type="hidden" value="/account" />
-                    <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
-                      Upgrade to Pro
-                    </button>
-                  </form>
-                )
+                <Link className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" href="/billing">
+                  Manage Billing
+                </Link>
               ) : (
                 <p className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400">
                   Ask an organization owner or admin to manage billing.
                 </p>
               )}
-              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/billing">
-                Billing Details
+              {paid && subscription?.stripeCustomerId ? (
+                <form action={openBillingPortalAction}>
+                  <input name="organizationId" type="hidden" value={context.organization.id} />
+                  <input name="returnPath" type="hidden" value="/account" />
+                  <button className="tape-button bg-white px-5 py-3 text-sm text-black" type="submit">
+                    Open Billing Portal
+                  </button>
+                </form>
+              ) : null}
+              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/pricing">
+                Compare Plans
               </Link>
             </div>
           </article>
@@ -251,7 +271,7 @@ export default async function AccountPage() {
           <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-zinc-50">
             Current entitlements.
           </h2>
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {ENTITLEMENT_ITEMS.map(({ key, label, description }) => {
               const enabled = Boolean(entitlements[key]);
 

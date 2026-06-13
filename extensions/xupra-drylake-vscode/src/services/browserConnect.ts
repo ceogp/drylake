@@ -247,6 +247,11 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       return;
     }
 
+    if (uri.path === "/billing-return") {
+      await this.handleBillingReturn(uri);
+      return;
+    }
+
     if (uri.path === "/install") {
       await this.handleInstallUri(uri);
       return;
@@ -334,6 +339,39 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
         "Xupra DryLake received the browser callback, but could not finish connecting. Use the manual token fallback.",
       );
     }
+  }
+
+  private async handleBillingReturn(uri: vscode.Uri) {
+    const query = new URLSearchParams(uri.query);
+    const returnPath = query.get("returnPath")?.trim() || "/app";
+    const storedToken = await this.stateStore.getAccessToken();
+
+    await vscode.commands.executeCommand("xupra.projects.focus");
+
+    if (storedToken) {
+      try {
+        const result = await this.apiClient.connect(undefined, undefined, storedToken);
+        await this.stateStore.setConnection(connectionStateFromExtensionConnection(result));
+      } catch (error) {
+        logConnectStage("billing_return_refresh_failed", {
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    await this.stateStore.setAwaitingPlanRefreshUntil(null);
+
+    try {
+      await vscode.commands.executeCommand("xupra.refreshProjects");
+    } catch (error) {
+      logConnectStage("billing_return_project_refresh_failed", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    void vscode.window.showInformationMessage(
+      `Billing updated. DryLake refreshed plan access in the editor and returned you to ${returnPath}.`,
+    );
   }
 
   private async handleInstallUri(uri: vscode.Uri) {

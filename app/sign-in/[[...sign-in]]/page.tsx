@@ -59,8 +59,8 @@ export default async function SignInPage({
   return (
     <DryLakeAuthShell
       eyebrow="Sign in"
-      title="Open your DryLake planning workspace."
-      body="Use the same workspace that keeps phases, handoffs, and agent targets organized."
+      title="Open your DryLake workspace and Guard reports."
+      body="Use the same account for extension approval, billing, saved reports, and team security review."
     >
       <SignIn
         appearance={clerkTapeAppearance}

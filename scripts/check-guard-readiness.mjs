@@ -14,6 +14,11 @@ const requiredFiles = [
     requiredForRelease: process.env.REQUIRE_GUARD_SECURITY_GIF === "true",
     description: "DryLake Guard security workflow GIF",
   },
+  {
+    name: "guard-paid-features.gif",
+    requiredForRelease: true,
+    description: "DryLake Guard paid security workflow GIF",
+  },
 ];
 const failures = [];
 const warnings = [];

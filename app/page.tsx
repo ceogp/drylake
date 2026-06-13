@@ -10,41 +10,43 @@ import {
   normalizeHost,
 } from "@/lib/site-hosts";
 
-const proofPoints = [
-  ["Free local Guard scan", "Rank your AI coding setup before agents touch your repo."],
-  ["Agent MCP risk map", "Scan MCP servers, skills, rules, IDE extensions, secrets, prompt-injection risk, and blast radius."],
-  ["Agent control plane", "Plan work, assign phases to Claude Code, Codex, Cursor, Cline, Continue, Kilo, and run focused handoffs."],
+const pillarCards = [
+  [
+    "Agent Control",
+    "Break work into phases, assign the right coding agent, attach skills, and run focused handoffs without losing validation context.",
+  ],
+  [
+    "Guard",
+    "Run a local-first scan for MCP servers, extensions, secrets, prompt-injection risk, and blast radius before agents touch the repo.",
+  ],
+  [
+    "Team Security",
+    "Share saved reports, compare against a Team Baseline, manage policy, and review Continuous Watch drift history across the organization.",
+  ],
 ];
 
-const trustLinks = [
-  { label: "Open source GitHub", href: "https://github.com/gmkdigitalmedia/drylake" },
-  { label: "99VC", href: "https://ninetynine.vc/" },
-  { label: "AWS Startups", href: "https://aws.amazon.com/startups/" },
-  { label: "AWS Cloud", href: "https://aws.amazon.com/" },
-  { label: "GitLab", href: "https://gitlab.com/" },
+const guardJourney = [
+  [
+    "Free local scan",
+    "Install the extension, connect your workspace, and review local Guard results without requiring a paid security plan.",
+  ],
+  [
+    "Security Pro",
+    "Approve redacted upload when you want Fix with AI, Deep Cloud Analysis, saved report history, and paid remediation workflows.",
+  ],
+  [
+    "Team Security",
+    "Move from individual reports to shared baselines, team policy, recurring watch checks, and organization-wide drift visibility.",
+  ],
 ];
 
 const securityPoints = [
   ["Workspace isolation", "Agent handoffs run from the user workspace with workspace-scoped auth and no shared customer filesystem."],
+  ["Approved upload", "Deep Cloud Analysis only runs from approved redacted metadata. Raw secrets, private keys, and full source files are not uploaded by default."],
   ["Encrypted credentials", "Credentials and extension tokens are encrypted with AES-256-GCM before storage."],
-  ["Encrypted in transit", "All information Encrypted from your IDE to inference and back."],
-  ["AWS security controls", "Runtime secrets can use AWS Secrets Manager, and S3 artifacts support AWS KMS encryption."],
-  ["GitLab CI/CD", "Production deploys run through GitLab validation, HTTPS checks, audit logs, and environment isolation guards."],
-];
-
-const backingPartners = [
-  {
-    label: "99VC",
-    href: "https://ninetynine.vc/",
-    mark: "99VC",
-    detail: "venture backing",
-  },
-  {
-    label: "AWS Startups",
-    href: "https://aws.amazon.com/startups/",
-    mark: "aws",
-    detail: "startups",
-  },
+  ["AWS controls", "Runtime secrets can use AWS Secrets Manager, and S3 artifacts support AWS KMS encryption."],
+  ["GitLab delivery", "Production deploys run through GitLab validation, HTTPS checks, audit logs, and environment isolation guards."],
+  ["Operator review", "Guard reports are meant to be reviewed by engineers before they approve remediation or team policy changes."],
 ];
 
 const supportedAgents = [
@@ -65,10 +67,27 @@ const supportedAgents = [
   "Auggie CLI",
 ];
 
-const accountPaths = [
-  ["Free users", "Use visual planning cards, local agent handoffs, prompt export, and extension connection without a paid plan."],
-  ["Pro users", "Manage hosted Xupra AI planning, billing status, entitlements, and the Stripe customer portal from one account surface."],
-  ["Teams later", "Organization switching, roles, and admin controls stay separate from the customer account page."],
+const trustLinks = [
+  { label: "Open source GitHub", href: "https://github.com/gmkdigitalmedia/drylake" },
+  { label: "99VC", href: "https://ninetynine.vc/" },
+  { label: "AWS Startups", href: "https://aws.amazon.com/startups/" },
+  { label: "AWS Cloud", href: "https://aws.amazon.com/" },
+  { label: "GitLab", href: "https://gitlab.com/" },
+];
+
+const backingPartners = [
+  {
+    label: "99VC",
+    href: "https://ninetynine.vc/",
+    mark: "99VC",
+    detail: "venture backing",
+  },
+  {
+    label: "AWS Startups",
+    href: "https://aws.amazon.com/startups/",
+    mark: "aws",
+    detail: "startups",
+  },
 ];
 
 function StatusPill({ children }: { children: string }) {
@@ -146,14 +165,14 @@ function WorkflowGifPreview() {
             VS Code + Cursor workflow
           </p>
           <p className="mt-1 text-sm text-zinc-400">
-            Scan agent security first, then plan and route coding handoffs.
+            Local Guard first, paid remediation second, agent execution after review.
           </p>
         </div>
         <span className="rounded border border-orange-400/40 bg-orange-400/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-200">
           Guard + control
         </span>
       </div>
-      <div className="grid gap-px bg-zinc-800 lg:grid-cols-2">
+      <div className="grid gap-px bg-zinc-800 lg:grid-cols-2 xl:grid-cols-3">
         <Image
           src="/marketplace/extension/media/guard-security.gif"
           alt="DryLake Guard security workflow showing local scan progress, report sections, approved upload, Team Baseline, and Continuous Watch"
@@ -162,6 +181,16 @@ function WorkflowGifPreview() {
           priority
           unoptimized
           sizes="(min-width: 1024px) 27vw, 100vw"
+          className="aspect-video w-full bg-[#080b0a] object-cover object-top"
+        />
+        <Image
+          src="/marketplace/extension/media/guard-paid-features.gif"
+          alt="DryLake paid security workflow showing Fix with AI, Deep Cloud Analysis, saved reports, team policy, baseline drift, Continuous Watch, and local Watchdog"
+          width={1280}
+          height={720}
+          priority
+          unoptimized
+          sizes="(min-width: 1280px) 27vw, (min-width: 1024px) 40vw, 100vw"
           className="aspect-video w-full bg-[#080b0a] object-cover object-top"
         />
         <Image
@@ -177,8 +206,8 @@ function WorkflowGifPreview() {
       </div>
       <div className="grid gap-2 border-t border-zinc-800 bg-zinc-950/80 p-4 text-sm text-zinc-300 sm:grid-cols-3">
         <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Free local Guard scan</span>
-        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">AWS-backed Active Guard</span>
-        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Agent planning and handoffs</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Security Pro remediation and cloud analysis</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Team Security baselines and watch history</span>
       </div>
     </section>
   );
@@ -189,7 +218,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
     marketing ? getConfiguredAppUrlForPath(pathname, search) : pathname;
   const primaryHref = marketing ? getConfiguredAppUrlForPath("/sign-up", "redirect_url=/workspace") : "/workspace";
   const pricingHref = appHref("/pricing");
-  const accountHref = appHref("/account");
+  const guardHref = appHref("/guard");
   const installHref = appHref("/extensions/install");
 
   return (
@@ -213,14 +242,16 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
             <DryLakeLogo className="mb-8 h-20 w-auto sm:h-24" priority />
             <div className="mb-6 flex flex-wrap gap-2">
               <StatusPill>Free local Guard scan</StatusPill>
-              <StatusPill>Agent MCP control plane</StatusPill>
+              <StatusPill>Agent control</StatusPill>
+              <StatusPill>Team Security</StatusPill>
             </div>
             <h1 className="max-w-4xl text-5xl font-semibold leading-[1.02] text-zinc-50 sm:text-6xl lg:text-7xl">
-              DryLake secures and controls AI coding agents before they touch your repo.
+              DryLake helps teams control AI coding work and secure agent behavior before execution.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-              Run a free local Guard scan for MCP servers, skills, IDE extensions, secrets, and blast radius.
-              Then plan coding work, assign agents, attach skills, and run focused handoffs from VS Code.
+              Start with a free local Guard scan for MCP servers, extensions, secrets, prompt-injection risk,
+              and blast radius. Then plan coding work, assign agents, approve deeper analysis when needed,
+              and move into shared team baselines and Continuous Watch as the workflow matures.
             </p>
             <BackingLogos />
             <div className="mt-8 flex flex-wrap gap-3">
@@ -228,8 +259,8 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
               <ActionLink href={installHref} variant="secondary">
                 Install extension
               </ActionLink>
-              <ActionLink href={accountHref} variant="secondary">
-                Manage account
+              <ActionLink href={guardHref} variant="secondary">
+                Learn Guard
               </ActionLink>
               <ActionLink href={pricingHref} variant="secondary">
                 View pricing
@@ -241,16 +272,20 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
         </div>
       </section>
 
-      <section id="workflow" className="border-b border-zinc-800 bg-[#0d0f0f] px-5 py-16 sm:px-8 lg:px-10">
+      <section className="border-b border-zinc-800 bg-[#0d0f0f] px-5 py-16 sm:px-8 lg:px-10">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr]">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Workflow</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Product pillars</p>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              Built for engineers who need security visibility and planning control before execution.
+              Agent control and Guard security belong in the same workflow.
             </h2>
+            <p className="mt-4 max-w-xl text-base leading-7 text-zinc-400">
+              DryLake is not just another planning board and not just another scanner. It is the surface where
+              teams decide what agents should do, what they can touch, and what risk is acceptable before execution starts.
+            </p>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            {proofPoints.map(([title, body]) => (
+            {pillarCards.map(([title, body]) => (
               <article key={title} className="rounded-lg border border-zinc-800 bg-[#111414] p-5">
                 <h3 className="text-base font-semibold text-zinc-100">{title}</h3>
                 <p className="mt-3 text-sm leading-6 text-zinc-400">{body}</p>
@@ -260,24 +295,24 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
         </div>
       </section>
 
-      <section id="account" className="border-b border-zinc-800 bg-[#090a0a] px-5 py-16 sm:px-8 lg:px-10">
+      <section className="border-b border-zinc-800 bg-[#090a0a] px-5 py-16 sm:px-8 lg:px-10">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.85fr_1.15fr]">
           <div className="grid content-start gap-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-300">Account management</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-300">Guard pathway</p>
             <h2 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              One page for plan status, billing, extension connection, and settings.
+              Move from local visibility to paid remediation only when you need it.
             </h2>
             <p className="text-base leading-7 text-zinc-400">
-              Free users should never feel blocked from using the visual planner. Paid users should
-              see exactly what Pro unlocks and where to manage billing.
+              Free is intentionally useful on its own. Paid security starts when you want approved upload,
+              saved reports, cloud-backed analysis, or shared team enforcement beyond the local scan.
             </p>
             <div className="flex flex-wrap gap-3">
-              <ActionLink href={accountHref}>Open account</ActionLink>
+              <ActionLink href={guardHref}>Explore Guard</ActionLink>
               <ActionLink href={pricingHref} variant="secondary">Compare plans</ActionLink>
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            {accountPaths.map(([title, body]) => (
+            {guardJourney.map(([title, body]) => (
               <article key={title} className="rounded-lg border border-zinc-800 bg-[#111414] p-5">
                 <h3 className="text-base font-semibold text-zinc-100">{title}</h3>
                 <p className="mt-3 text-sm leading-6 text-zinc-400">{body}</p>
@@ -287,7 +322,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
         </div>
       </section>
 
-      <section id="agents" className="bg-[#090a0a] px-5 py-16 sm:px-8 lg:px-10">
+      <section className="bg-[#090a0a] px-5 py-16 sm:px-8 lg:px-10">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2">
           <div className="relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
             <Image
@@ -300,14 +335,13 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
             />
           </div>
           <div className="grid content-center gap-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-300">Validation first</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-300">Agent coverage</p>
             <h2 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              Route phases to the agents your users already have.
+              Route phases to the agents your team already uses.
             </h2>
             <p className="text-base leading-7 text-zinc-400">
-              DryLake creates focused handoff files and terminal launches. It does not pretend to own
-              every agent runtime; it gives Claude Code, Codex, Cline, Continue, Kilo, and other tools
-              the exact phase context they need.
+              DryLake creates focused handoff files and terminal launches. It does not pretend to own every runtime.
+              It prepares the work, preserves the plan, and keeps the security state visible before the agent runs.
             </p>
             <div className="flex flex-wrap gap-2">
               {supportedAgents.map((agent) => (
@@ -323,15 +357,16 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
         </div>
       </section>
 
-      <section id="security" className="border-t border-zinc-800 bg-[#0d0f0f] px-5 py-16 sm:px-8 lg:px-10">
+      <section className="border-t border-zinc-800 bg-[#0d0f0f] px-5 py-16 sm:px-8 lg:px-10">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr]">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Security and infrastructure</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Trust and infrastructure</p>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              Built on AWS Cloud. Shipped through GitLab.
+              Local-first Guard on top of AWS infrastructure and GitLab delivery.
             </h2>
             <p className="mt-5 text-base leading-7 text-zinc-400">
-              DryLake is backed by 99VC and AWS Startups. Infrastructure runs on AWS Cloud with GitLab CI/CD for validation and deployment.
+              DryLake is backed by 99VC and AWS Startups. The website, account flow, and team-security path need to feel operational,
+              not vague. The trust boundary is part of the product surface.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {trustLinks.map((item) => (

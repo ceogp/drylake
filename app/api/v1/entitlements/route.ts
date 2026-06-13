@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const context = await requireCurrentAppContext();
-    const { resolved } = await getEntitlementsForOrganization(context.organization.id);
+    const { resolved } = await getEntitlementsForOrganization(context.organization.id, {
+      userId: context.user.id,
+    });
 
     return ok({
       userId: context.user.id,

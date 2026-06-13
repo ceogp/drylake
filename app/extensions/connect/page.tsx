@@ -21,7 +21,7 @@ const steps = [
   "Click Register or Connect in VS Code or Cursor.",
   "The extension opens this approval request in your browser.",
   "Sign up or sign in if needed.",
-  "Approve and connect the editor to your current account and workspace.",
+  "Approve and connect the editor to your current account, workspace, and Guard report history.",
   "The extension updates from the polling request; use Return to Editor only if the editor does not come forward.",
 ];
 
@@ -144,24 +144,19 @@ export default async function ExtensionConnectPage({
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16 md:px-10 lg:py-24">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-4">
-            <p className="tape-eyebrow">
-              Extension Connection
-            </p>
+            <p className="tape-eyebrow">Extension Connection</p>
             <h1 className="font-[family-name:var(--font-heading)] text-4xl font-black leading-tight text-stone-950 sm:text-5xl">
               {context
                 ? `Return ${context.organization.name} to VS Code or Cursor`
                 : "Connect DryLake back to the editor"}
             </h1>
             <p className="max-w-3xl text-lg leading-8 text-stone-700">
-              The editor opens the browser for identity, DryLake creates the starter workspace on
+              The editor opens the browser for identity, DryLake creates the starter workspace and Guard account surface on
               first sign-in, and the browser hands control back to VS Code or Cursor.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link
-              className="tape-button bg-white px-5 py-3 text-sm text-black"
-              href={workspaceHref}
-            >
+            <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href={workspaceHref}>
               Open Dashboard
             </Link>
           </div>
@@ -170,9 +165,7 @@ export default async function ExtensionConnectPage({
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           {requestId ? !context ? (
             <section className="tape-panel p-7">
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
-                Sign In To Approve
-              </p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">Sign In To Approve</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
                 Finish account setup, then approve this editor connection
               </h2>
@@ -187,9 +180,7 @@ export default async function ExtensionConnectPage({
             </section>
           ) : !connectRequest ? (
             <section className="tape-panel border border-red-500/30 bg-red-950/30 p-7">
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-red-700">
-                Request Missing
-              </p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-red-700">Request Missing</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
                 This editor connection request no longer exists
               </h2>
@@ -199,9 +190,7 @@ export default async function ExtensionConnectPage({
             </section>
           ) : requestOwnedByDifferentSession ? (
             <section className="tape-panel border border-orange-400/30 bg-orange-400/10 p-7">
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-amber-700">
-                Switch Account
-              </p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-amber-700">Switch Account</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
                 This browser session does not match the editor approval request
               </h2>
@@ -210,16 +199,10 @@ export default async function ExtensionConnectPage({
                 connection, or start a new connect request from the editor.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  className="tape-button bg-white px-5 py-3 text-sm text-black"
-                  href={workspaceHref}
-                >
+                <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href={workspaceHref}>
                   Open Dashboard
                 </Link>
-                <Link
-                  className="tape-button bg-white px-5 py-3 text-sm text-black"
-                  href={manualFallbackPath}
-                >
+                <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href={manualFallbackPath}>
                   Manual Fallback
                 </Link>
               </div>
@@ -243,15 +226,13 @@ export default async function ExtensionConnectPage({
             />
           ) : callback && !manualMode ? (
             <section className="tape-panel p-7">
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
-                Sign In To Continue
-              </p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">Sign In To Continue</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
                 Finish account setup, then go right back to the editor
               </h2>
               <p className="mt-3 text-sm leading-7 text-stone-700">
-                Use any email. DryLake creates your starter workspace automatically, then brings you
-                back here so you can approve the editor connection.
+                Use any email. DryLake creates your starter workspace and personal Guard report area automatically,
+                then brings you back here so you can approve the editor connection.
               </p>
               <ExtensionConnectAuthButtons reconnectPath={reconnectPath} />
               <p className="mt-4 text-xs leading-6 text-stone-500">
@@ -260,9 +241,7 @@ export default async function ExtensionConnectPage({
             </section>
           ) : !context ? (
             <section className="tape-panel p-7">
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">
-                Sign In Required
-              </p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-orange-700">Sign In Required</p>
               <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
                 Sign in first, then generate a fallback token
               </h2>
@@ -308,21 +287,20 @@ export default async function ExtensionConnectPage({
             </div>
 
             <div className="mt-6 rounded-lg border border-dashed border-zinc-700 bg-zinc-950/70 p-4 text-sm leading-7 text-zinc-300">
-              Upload, import, and compatibility checks are available on free. Compatibility only
-              checks whether a target is ready. Upgrade later from <span className="font-mono text-xs">/billing</span>{" "}
-              when you want export preview, credential vault, or deployment workflow.
+              Free includes extension connection, local Guard scan, and local report review. Upgrade later from
+              <span className="font-mono text-xs"> /pricing</span> or <span className="font-mono text-xs">/billing</span>
+              when you want Fix with AI, approved upload, Deep Cloud Analysis, saved website reports, or Team Security workflows.
             </div>
 
             <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/70 p-4 text-sm leading-7 text-zinc-300">
               If your repo does not keep skills, rules, or agent files in the default directories,
-              add patterns in extension settings under{" "}
-              <span className="font-mono text-xs">xupra.additionalScanPatterns</span>.
+              add patterns in extension settings under <span className="font-mono text-xs">xupra.additionalScanPatterns</span>.
             </div>
 
             {!requestId && (!callback || manualMode) ? (
               <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/70 p-4 text-sm leading-7 text-zinc-300">
-                This screen is the fallback path. The normal customer flow starts inside the
-                extension and the editor completes auth once browser approval is granted.
+                This screen is the fallback path. The normal customer flow starts inside the extension and the editor
+                completes auth once browser approval is granted.
               </div>
             ) : null}
           </article>

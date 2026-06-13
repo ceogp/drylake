@@ -83,6 +83,8 @@ type OpenBillingArgs = {
   required?: BillingPlan;
   source?: string;
   returnPath?: string;
+  editor?: "vscode" | "cursor";
+  editorReturnUrl?: string;
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -120,6 +122,14 @@ function buildOpenBillingPath(args?: OpenBillingArgs) {
     query.set("returnPath", args.returnPath);
   }
 
+  if (args?.editor) {
+    query.set("editor", args.editor);
+  }
+
+  if (args?.editorReturnUrl) {
+    query.set("editorReturnUrl", args.editorReturnUrl);
+  }
+
   const queryString = query.toString();
   return `/billing${queryString ? `?${queryString}` : ""}`;
 }
@@ -155,6 +165,22 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function commandArgsForBillingReturnPath(value?: string): string | undefined {
   return normalizeBillingPath(value) || "/app";
+}
+
+function currentBillingEditor(): "vscode" | "cursor" {
+  return vscode.env.uriScheme === "cursor" ? "cursor" : "vscode";
+}
+
+function buildEditorBillingReturnUrl(extensionId: string, returnPath?: string) {
+  const query = new URLSearchParams();
+  const normalizedReturnPath = commandArgsForBillingReturnPath(returnPath);
+
+  if (normalizedReturnPath) {
+    query.set("returnPath", normalizedReturnPath);
+  }
+
+  const queryString = query.toString();
+  return `${vscode.env.uriScheme}://${extensionId}/billing-return${queryString ? `?${queryString}` : ""}`;
 }
 
 function formatTierLabel(tier: string | undefined): string {
@@ -1569,9 +1595,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
   register("xupra.openBilling", async (...rawArgs: unknown[]) => {
     const args = parseOpenBillingArgs(rawArgs);
+    const returnPath = commandArgsForBillingReturnPath(args.returnPath);
     const openBillingPath = buildOpenBillingPath({
       ...args,
-      returnPath: commandArgsForBillingReturnPath(args.returnPath),
+      returnPath,
+      editor: currentBillingEditor(),
+      editorReturnUrl: buildEditorBillingReturnUrl(context.extension.id, returnPath),
     });
     await vscode.env.openExternal(apiClient.openWebUrl(openBillingPath));
     await stateStore.setAwaitingPlanRefreshUntil(new Date(Date.now() + 120_000).toISOString());

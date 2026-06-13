@@ -33,6 +33,14 @@ Paid Guard features include:
 
 Active Guard uses AWS-backed storage and malware-scanning infrastructure for consented Guard artifacts. AWS service terms for GuardDuty Malware Protection apply: [AWS Service Terms - Amazon GuardDuty](https://aws.amazon.com/service-terms/#87._Amazon_GuardDuty).
 
+![DryLake Guard paid security workflow](https://drylake.xupracorp.com/marketplace/extension/media/guard-paid-features.gif)
+
+- **Fix with AI:** Turn selected redacted findings into a review-ready remediation plan instead of a generic summary.
+- **Deep Cloud Analysis:** Approve upload of redacted findings, MCP metadata, extension metadata, package scripts, and file path inventory for a richer cloud-side review.
+- **Saved reports:** Keep personal and team report history in the website, then reopen linked reports directly from the extension.
+- **Team Baseline and policy:** Mark clean reports as baselines, diff later scans against them, and enforce MCP or extension denylists.
+- **Continuous Watch and local Watchdog:** Continuous Watch records scheduled team drift and policy events, while local Watchdog stays on-device and watches for risky local changes.
+
 ## Also included: Coding Agent Control Plane
 
 DryLake still includes visual planning and handoff orchestration for coding agents. Turn tickets, bugs, and product specs into phase cards, assign each phase to your preferred coding agent, attach a skill, and run focused handoffs.
