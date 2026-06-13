@@ -244,6 +244,14 @@ if ! command -v node >/dev/null 2>&1; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
 fi
+if systemctl list-unit-files amazon-ssm-agent.service >/dev/null 2>&1; then
+  systemctl enable amazon-ssm-agent
+  systemctl start amazon-ssm-agent
+elif command -v snap >/dev/null 2>&1; then
+  snap install amazon-ssm-agent --classic || true
+  systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service || true
+  systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service || true
+fi
 id -u xupra >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash xupra
 mkdir -p /srv/xupra-drylake
 chown -R xupra:xupra /srv/xupra-drylake

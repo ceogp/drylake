@@ -60,15 +60,8 @@ export async function getSetupStatus() {
       env.STRIPE_WEBHOOK_SECRET &&
       env.STRIPE_PRO_PRICE_ID,
   );
-  const clerkConfigured = Boolean(
-    auth.mode === "clerk" &&
-      auth.configured &&
-      env.CLERK_SECRET_KEY &&
-      env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-      env.CLERK_WEBHOOK_SIGNING_SECRET,
-  );
   const cognito = getCognitoConfig();
-  const billingConfigured = env.BILLING_PROVIDER === "clerk" ? clerkConfigured : stripeConfigured;
+  const billingConfigured = stripeConfigured;
 
   return {
     auth,
@@ -80,26 +73,16 @@ export async function getSetupStatus() {
       missing: cognito.missing,
     },
     billing: {
-      provider: env.BILLING_PROVIDER,
+      provider: "stripe",
       configured: billingConfigured,
-      portalReady:
-        env.BILLING_PROVIDER === "clerk"
-          ? clerkConfigured
-          : Boolean(env.STRIPE_SECRET_KEY && subscription?.stripeCustomerId),
+      portalReady: Boolean(env.STRIPE_SECRET_KEY && subscription?.stripeCustomerId),
       activeTier: subscription?.tier ?? "free",
-      webhookPath: env.BILLING_PROVIDER === "clerk" ? "/api/clerk/webhook" : "/api/v1/billing/webhook",
-      missing:
-        env.BILLING_PROVIDER === "clerk"
-          ? [
-              !env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" : null,
-              !env.CLERK_SECRET_KEY ? "CLERK_SECRET_KEY" : null,
-              !env.CLERK_WEBHOOK_SIGNING_SECRET ? "CLERK_WEBHOOK_SIGNING_SECRET" : null,
-            ].filter(Boolean)
-          : [
-              !env.STRIPE_SECRET_KEY ? "STRIPE_SECRET_KEY" : null,
-              !env.STRIPE_WEBHOOK_SECRET ? "STRIPE_WEBHOOK_SECRET" : null,
-              !env.STRIPE_PRO_PRICE_ID ? "STRIPE_PRO_PRICE_ID" : null,
-            ].filter(Boolean),
+      webhookPath: "/api/v1/billing/webhook",
+      missing: [
+        !env.STRIPE_SECRET_KEY ? "STRIPE_SECRET_KEY" : null,
+        !env.STRIPE_WEBHOOK_SECRET ? "STRIPE_WEBHOOK_SECRET" : null,
+        !env.STRIPE_PRO_PRICE_ID ? "STRIPE_PRO_PRICE_ID" : null,
+      ].filter(Boolean),
     },
     openai: {
       configured: aiConfigured,

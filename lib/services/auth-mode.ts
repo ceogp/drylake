@@ -1,20 +1,6 @@
 import { env } from "@/lib/env";
 
-export type AuthMode = "dev" | "clerk" | "cognito";
-
-export function missingClerkKeys() {
-  const missing: string[] = [];
-
-  if (!env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    missing.push("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY");
-  }
-
-  if (!env.CLERK_SECRET_KEY) {
-    missing.push("CLERK_SECRET_KEY");
-  }
-
-  return missing;
-}
+export type AuthMode = "dev" | "cognito";
 
 function hasCognitoRuntimeConfig() {
   return Boolean(
@@ -26,23 +12,19 @@ function hasCognitoRuntimeConfig() {
 }
 
 export function getEffectiveAuthMode(): AuthMode {
+  if (env.NODE_ENV === "production") {
+    return "cognito";
+  }
+
   if (env.AUTH_MODE === "cognito") {
     return "cognito";
   }
 
-  if (env.AUTH_MODE === "clerk") {
-    return "clerk";
-  }
-
-  if (env.NODE_ENV === "production" && hasCognitoRuntimeConfig()) {
+  if (hasCognitoRuntimeConfig()) {
     return "cognito";
   }
 
-  return missingClerkKeys().length === 0 ? "clerk" : "dev";
-}
-
-export function shouldUseClerkRuntime() {
-  return getEffectiveAuthMode() === "clerk";
+  return "dev";
 }
 
 export function shouldUseCognitoRuntime() {

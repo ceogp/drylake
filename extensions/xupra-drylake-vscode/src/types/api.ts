@@ -120,7 +120,7 @@ export type GeneratedAgent = {
 export type ExtensionConnection = {
   editor: "vscode" | "cursor";
   auth: {
-    mode: "dev" | "clerk" | "cognito";
+    mode: "dev" | "cognito";
     provider: string;
     configured: boolean;
     pendingKeys: string[];

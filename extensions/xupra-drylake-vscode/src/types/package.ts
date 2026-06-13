@@ -36,7 +36,7 @@ export type ConnectionState = {
   awaitingPlanRefreshUntil?: string | null;
   userEmail?: string;
   userAvatarUrl?: string | null;
-  authMode?: "dev" | "clerk" | "cognito";
+  authMode?: "dev" | "cognito";
 };
 
 export type DetectedWorkspaceFile = {

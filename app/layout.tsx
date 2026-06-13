@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ClerkProvider } from "@clerk/nextjs";
 import { headers } from "next/headers";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { setActiveOrganizationAction } from "@/app/actions";
 import { DryLakeLogo } from "@/components/drylake-logo";
-import { clerkTapeAppearance } from "@/components/drylake-auth-shell";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
@@ -62,7 +60,6 @@ export default async function RootLayout({
   const adminInternalHostRequest = isConfiguredAdminInternalHost(requestHost);
   const authSetup = getAuthSetup();
   const allowDevFallback = authSetup.mode === "dev";
-  const useClerkUi = !adminInternalHostRequest && authSetup.mode === "clerk" && authSetup.configured;
   const appContext = marketingHostRequest || adminInternalHostRequest
     ? null
     : await getCurrentAppContext({ allowDevFallback });
@@ -172,15 +169,12 @@ export default async function RootLayout({
                 redirectTo="/upload"
               />
             ) : null}
-            {useClerkUi ? (
-              <HeaderAuthControls authMode="clerk" configured={authSetup.configured} />
-            ) : authSetup.mode === "cognito" ? (
+            {authSetup.mode === "cognito" ? (
               <HeaderAuthControls
-                accountLabel={appContext?.user.profile?.displayName ?? appContext?.user.email}
-                authMode="cognito"
                 configured={authSetup.configured}
-                logoutHref="/api/auth/cognito/logout?returnTo=/"
                 signedIn={Boolean(appContext)}
+                accountLabel={appContext?.user.profile?.displayName ?? appContext?.user.email}
+                logoutHref="/api/auth/cognito/logout?returnTo=/"
               />
             ) : (
               <div className="rounded border border-orange-400/40 bg-orange-400/10 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-200">
@@ -199,9 +193,7 @@ export default async function RootLayout({
       lang="en"
       className={`${headingFont.variable} ${monoFont.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        {useClerkUi ? <ClerkProvider appearance={clerkTapeAppearance}>{shell}</ClerkProvider> : shell}
-      </body>
+      <body className="min-h-full flex flex-col">{shell}</body>
     </html>
   );
 }

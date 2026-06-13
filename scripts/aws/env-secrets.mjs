@@ -240,10 +240,6 @@ function validateEnvBundle(content, env) {
     required.push("ARTIFACT_STORAGE_DRIVER", "AWS_REGION", "AWS_S3_BUCKET");
   }
 
-  if (values.AUTH_MODE === "clerk") {
-    required.push("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY", "CLERK_WEBHOOK_SIGNING_SECRET");
-  }
-
   if (values.AUTH_MODE === "cognito") {
     required.push(
       "AWS_COGNITO_REGION",
@@ -257,6 +253,10 @@ function validateEnvBundle(content, env) {
     );
   }
 
+  if ((env === "production" || env === "staging") && values.AUTH_MODE !== "cognito") {
+    required.push("AUTH_MODE=cognito");
+  }
+
   if (values.AI_PROVIDER === "openai" || !values.AI_PROVIDER) {
     required.push("OPENAI_API_KEY");
   }
@@ -267,7 +267,7 @@ function validateEnvBundle(content, env) {
     }
   }
 
-  if (values.BILLING_PROVIDER === "stripe" && values.BILLING_ENFORCEMENT_MODE === "strict") {
+  if (values.BILLING_ENFORCEMENT_MODE === "strict") {
     required.push("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRO_PRICE_ID");
   }
 

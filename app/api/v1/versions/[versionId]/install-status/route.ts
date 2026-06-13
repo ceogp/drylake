@@ -1,5 +1,4 @@
 import { forbidden, internalError, ok, unauthorized } from "@/lib/api/http";
-import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { requireVersionAccess } from "@/lib/services/access";
 import { getCanonicalizationResult } from "@/lib/services/canonicalize";
@@ -49,7 +48,7 @@ export async function GET(_: Request, context: Context) {
     return ok({
       versionId,
       organizationId: access.context.organization.id,
-      billingProvider: env.BILLING_PROVIDER,
+      billingProvider: "stripe",
       isPro,
       hasSourceFiles: sourceFileCount > 0,
       sourceFileCount,

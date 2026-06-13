@@ -115,8 +115,15 @@ if [ "${NODE_ENV:-}" = "production" ]; then
   missing_vars=()
 
   # Auth
-  [ -z "${CLERK_SECRET_KEY:-}" ] && missing_vars+=("CLERK_SECRET_KEY")
-  [ -z "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}" ] && missing_vars+=("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")
+  [ "${AUTH_MODE:-}" != "cognito" ] && missing_vars+=("AUTH_MODE=cognito")
+  [ -z "${AWS_COGNITO_REGION:-}" ] && missing_vars+=("AWS_COGNITO_REGION")
+  [ -z "${AWS_COGNITO_USER_POOL_ID:-}" ] && missing_vars+=("AWS_COGNITO_USER_POOL_ID")
+  [ -z "${AWS_COGNITO_CLIENT_ID:-}" ] && missing_vars+=("AWS_COGNITO_CLIENT_ID")
+  [ -z "${AWS_COGNITO_CLIENT_SECRET:-}" ] && missing_vars+=("AWS_COGNITO_CLIENT_SECRET")
+  [ -z "${AWS_COGNITO_DOMAIN:-}" ] && missing_vars+=("AWS_COGNITO_DOMAIN")
+  [ -z "${AWS_COGNITO_ISSUER:-}" ] && missing_vars+=("AWS_COGNITO_ISSUER")
+  [ -z "${AWS_COGNITO_CALLBACK_URL:-}" ] && missing_vars+=("AWS_COGNITO_CALLBACK_URL")
+  [ -z "${AWS_COGNITO_LOGOUT_REDIRECT_URL:-}" ] && missing_vars+=("AWS_COGNITO_LOGOUT_REDIRECT_URL")
 
   # Billing
   [ -z "${STRIPE_SECRET_KEY:-}" ] && missing_vars+=("STRIPE_SECRET_KEY")

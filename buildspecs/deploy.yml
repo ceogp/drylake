@@ -1,0 +1,12 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - if ! command -v ssh >/dev/null 2>&1; then apt-get update && apt-get install -y openssh-client; fi
+      - npm ci --include=dev --prefer-offline --no-audit --fund=false
+  build:
+    commands:
+      - npx tsx scripts/aws/deploy-via-ssh.ts

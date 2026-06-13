@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { PricingTable } from "@clerk/nextjs";
 
 import { createCheckoutAction, openBillingPortalAction } from "@/app/actions";
-import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
-import { syncSubscriptionFromClerk, syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
+import { syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
 import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/services/entitlements";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 
@@ -67,11 +65,6 @@ const ENTITLEMENT_ITEMS: Array<{ key: EntitlementKey; label: string }> = [
 ];
 
 async function syncSafely(organizationId: string) {
-  try {
-    await syncSubscriptionFromClerk(organizationId);
-  } catch (error) {
-    console.warn("[billing] clerk sync failed", { organizationId, error });
-  }
   try {
     await syncSubscriptionFromStripe(organizationId);
   } catch (error) {
@@ -226,92 +219,6 @@ export default async function BillingPage({
   const showEditorReturn =
     source === "extension" && Boolean(editorReturnUrl) && (requiredSatisfied || billingResult === "success");
   const statusCopy = billingResultCopy(billingResult);
-
-  if (env.BILLING_PROVIDER === "clerk") {
-    return (
-      <main className="tape-page min-h-screen">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16 md:px-10">
-          <div className="space-y-4">
-            <p className="tape-eyebrow">Billing</p>
-            <h1 className="font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950">
-              Manage plan access.
-            </h1>
-            {requiredPlan && source === "extension" ? (
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
-                This browser flow is requesting the <strong>{getPublicTierLabel(requiredPlan)}</strong> tier or above.
-                {!requiredSatisfied
-                  ? " Choose one of the qualifying plans to unlock this feature."
-                  : " You already have a qualifying plan for this feature."}
-              </p>
-            ) : null}
-            <p className="max-w-3xl text-lg leading-8 text-stone-700">{BILLING_SUBTITLE}</p>
-          </div>
-
-          <section className="tape-panel bg-white p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Plans</p>
-                <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-                  Choose or confirm your current tier.
-                </h2>
-              </div>
-              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/pricing">
-                Compare Plans
-              </Link>
-            </div>
-            <div className="mt-5">
-              <PricingTable
-                for="user"
-                newSubscriptionRedirectUrl={returnPath ?? "/billing"}
-              />
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              {returnPath ? (
-                <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href={returnPath}>
-                  Continue With Free
-                </Link>
-              ) : null}
-              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/account">
-                Account
-              </Link>
-              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/workspace">
-                Continue to Workspace
-              </Link>
-            </div>
-          </section>
-
-          <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-            <article className="tape-panel bg-white p-6">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current local mirror</p>
-              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-                {getPublicTierLabel(subscription?.tier)}
-              </h2>
-              <p className="mt-2 text-sm leading-7 text-stone-700">Status: {subscription?.status ?? "trial"}</p>
-              <p className="text-sm leading-7 text-stone-700">Provider: {subscription?.provider ?? "local"}</p>
-            </article>
-
-            <article className="tape-panel bg-white p-6">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Entitlements</p>
-              <div className="mt-5 grid gap-3">
-                {ENTITLEMENT_ITEMS.map(({ key, label }) => {
-                  const value = Boolean(entitlements[key]);
-
-                  return (
-                    <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-300">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">{label}</span>
-                        <span className={value ? "text-emerald-700" : "text-stone-500"}>{value ? "enabled" : "disabled"}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </article>
-          </section>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="tape-page min-h-screen">

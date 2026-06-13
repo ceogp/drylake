@@ -1,0 +1,11 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - if ! command -v curl >/dev/null 2>&1; then apt-get update && apt-get install -y curl; fi
+  build:
+    commands:
+      - bash scripts/deploy/verify-deploy.sh

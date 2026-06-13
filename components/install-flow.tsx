@@ -8,7 +8,7 @@ type Destination = "all" | "cursor" | "codex" | "claude" | "other";
 type EditorScheme = "vscode" | "cursor";
 type TargetPlatform = "cursor" | "codex" | "claude_agents";
 type InstallTarget = TargetPlatform | "all";
-type BillingProvider = "stripe" | "clerk";
+type BillingProvider = "stripe";
 
 type InstallStatus = {
   ok: boolean;
@@ -284,12 +284,6 @@ export function InstallFlow({ versionId }: { versionId: string }) {
     }
 
     setIsUpgrading(true);
-
-    if (status.billingProvider === "clerk") {
-      setMessage("Opening billing...");
-      window.location.href = "/billing?returnPath=/install";
-      return;
-    }
 
     setMessage("Opening checkout...");
 

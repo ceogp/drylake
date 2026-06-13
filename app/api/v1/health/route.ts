@@ -10,18 +10,12 @@ export async function GET() {
   const openAiConfigured = await getOpenAiApiKey().then(Boolean).catch(() => false);
   const auth = getAuthSetup();
   const cognito = getCognitoConfig();
-  const clerkConfigured = Boolean(
-    env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-      env.CLERK_SECRET_KEY &&
-      env.CLERK_WEBHOOK_SIGNING_SECRET,
-  );
   const stripeConfigured = Boolean(
     env.STRIPE_SECRET_KEY &&
       env.STRIPE_WEBHOOK_SECRET &&
       env.STRIPE_PRO_PRICE_ID,
   );
-  const billingProvider = env.BILLING_PROVIDER;
-  const billingConfigured = billingProvider === "clerk" ? clerkConfigured : stripeConfigured;
+  const billingConfigured = stripeConfigured;
 
   return ok({
     service: "xupra-drylake",
@@ -40,9 +34,8 @@ export async function GET() {
       authConfigured: auth.configured,
       cognitoConfigured: cognito.configured,
       artifactStorage: env.ARTIFACT_STORAGE_DRIVER,
-      billingProvider,
+      billingProvider: "stripe",
       billingConfigured,
-      clerkConfigured,
       stripeConfigured,
       openaiConfigured: openAiConfigured,
       storageConfigured:

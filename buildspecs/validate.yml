@@ -1,0 +1,53 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - npm ci --include=dev --prefer-offline --no-audit --fund=false
+      - docker run --name drylake-postgres -e POSTGRES_DB="$POSTGRES_DB" -e POSTGRES_USER="$POSTGRES_USER" -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" -p 5432:5432 -d postgres:16
+      - |
+        node <<'NODE'
+        const { Client } = require("pg");
+
+        const connectionString = process.env.DATABASE_URL;
+        const maxAttempts = 30;
+
+        async function waitForPostgres() {
+          for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            const client = new Client({ connectionString });
+
+            try {
+              await client.connect();
+              await client.query("SELECT 1");
+              await client.end();
+              console.log("Postgres is ready.");
+              return;
+            } catch (error) {
+              await client.end().catch(() => {});
+
+              if (attempt === maxAttempts) {
+                throw error;
+              }
+
+              console.log(`Waiting for Postgres (${attempt}/${maxAttempts})...`);
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+            }
+          }
+        }
+
+        waitForPostgres().catch((error) => {
+          console.error(error);
+          process.exit(1);
+        });
+        NODE
+  build:
+    commands:
+      - npx prisma generate
+      - npx prisma migrate deploy
+      - npx tsx prisma/seed.ts
+      - npm run typecheck
+      - npm run lint
+      - npm run guard:readiness
+      - npm run build

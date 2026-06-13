@@ -32,8 +32,8 @@ describe("connection entitlements", () => {
     expect(connectionStateFromExtensionConnection({
       editor: "vscode",
       auth: {
-        mode: "clerk",
-        provider: "clerk",
+        mode: "cognito",
+        provider: "aws-cognito",
         configured: true,
         pendingKeys: [],
         session: {

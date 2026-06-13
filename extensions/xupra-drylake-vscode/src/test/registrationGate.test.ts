@@ -35,8 +35,8 @@ function makeApiClient() {
 const connectedPayload = {
   editor: "vscode",
   auth: {
-    mode: "clerk",
-    provider: "clerk",
+    mode: "cognito",
+    provider: "aws-cognito",
     configured: true,
     pendingKeys: [],
     session: {

@@ -1,5 +1,4 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
-import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import {
   ADMIN_PATH_PREFIX,
@@ -55,25 +54,15 @@ function handleProxyRequest(request: NextRequest) {
   );
 }
 
-export function proxy(request: NextRequest, event: NextFetchEvent) {
+export function proxy(request: NextRequest) {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const pathname = request.nextUrl.pathname;
 
   if (isConfiguredAdminInternalHost(host) || isAdminPagePath(pathname) || isAdminApiPath(pathname)) {
     return handleProxyRequest(request);
   }
-
-  const clerkConfigured = Boolean(
-    process.env.AUTH_MODE === "clerk" &&
-      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-      process.env.CLERK_SECRET_KEY,
-  );
-
-  if (!clerkConfigured) {
-    return handleProxyRequest(request);
-  }
-
-  return clerkMiddleware((_auth, clerkRequest) => handleProxyRequest(clerkRequest))(request, event);
+  
+  return handleProxyRequest(request);
 }
 
 export const config = {

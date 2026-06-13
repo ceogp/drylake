@@ -1,5 +1,5 @@
 import { internalError, ok, unauthorized } from "@/lib/api/http";
-import { syncSubscriptionFromClerk, syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
+import { syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
 
@@ -12,13 +12,6 @@ export async function POST() {
     }
 
     const organizationId = context.organization.id;
-
-    let clerkResult: Awaited<ReturnType<typeof syncSubscriptionFromClerk>> | null = null;
-    try {
-      clerkResult = await syncSubscriptionFromClerk(organizationId);
-    } catch (error) {
-      console.warn("[billing/sync] clerk sync failed", error);
-    }
 
     let stripeResult: Awaited<ReturnType<typeof syncSubscriptionFromStripe>> | null = null;
     try {
@@ -33,7 +26,6 @@ export async function POST() {
       ok: true,
       tier: subscription?.tier ?? "free",
       status: subscription?.status ?? "none",
-      clerk: clerkResult,
       stripe: stripeResult,
       entitlements,
       subscription: { status: subscription?.status ?? "none" },

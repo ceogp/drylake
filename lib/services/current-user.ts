@@ -1,4 +1,3 @@
-import { auth, clerkClient } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -7,8 +6,7 @@ import type { Organization, Profile, User } from "@prisma/client";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getAppSessionContext } from "@/lib/services/app-session";
-import { shouldUseClerkRuntime, shouldUseCognitoRuntime } from "@/lib/services/auth-mode";
-import { ensureAppSession } from "@/lib/services/dev-session";
+import { shouldUseCognitoRuntime } from "@/lib/services/auth-mode";
 import {
   EXTENSION_TOKEN_HEADER,
   verifyExtensionAccessToken,
@@ -58,43 +56,6 @@ async function loadUserById(userId: string) {
       profile: true,
     },
   }) as Promise<SessionUser | null>;
-}
-
-async function getClerkBackedUser() {
-  if (!shouldUseClerkRuntime()) {
-    return null;
-  }
-
-  const { userId } = await auth();
-
-  if (!userId) {
-    return null;
-  }
-
-  const client = await clerkClient();
-  const clerkUser = await client.users.getUser(userId);
-  const primaryEmail =
-    clerkUser.primaryEmailAddress?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress;
-
-  if (!primaryEmail) {
-    throw new Error("Signed-in Clerk user does not have an email address.");
-  }
-
-  const displayName =
-    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim() ||
-    clerkUser.username ||
-    primaryEmail.split("@")[0] ||
-    env.DEFAULT_DEV_USER_NAME;
-
-  const session = await ensureAppSession({
-    email: primaryEmail,
-    displayName,
-    avatarUrl: clerkUser.imageUrl || null,
-    authProvider: "clerk",
-    authSubject: userId,
-  });
-
-  return session.user;
 }
 
 async function getCognitoBackedUser() {
@@ -164,19 +125,16 @@ export async function getCurrentUser(options?: {
     return cognitoUser;
   }
 
-  const clerkUser = await getClerkBackedUser();
-
-  if (clerkUser) {
-    return clerkUser;
-  }
-
   const extensionUser = await getExtensionBackedUser();
 
   if (extensionUser) {
     return extensionUser;
   }
 
-  if (options?.allowDevFallback ?? (!shouldUseClerkRuntime() && !shouldUseCognitoRuntime())) {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    (options?.allowDevFallback ?? !shouldUseCognitoRuntime())
+  ) {
     return getDevFallbackUser();
   }
 
