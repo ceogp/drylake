@@ -187,10 +187,33 @@ export async function getAdminUsersListData(page: number = 1, search?: string) {
       where,
       include: {
         profile: true,
+        appSessions: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+        authEvents: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
         _count: {
           select: {
             memberships: true,
+            appSessions: true,
+            authEvents: true,
           },
+        },
+        memberships: {
+          include: {
+            organization: {
+              include: {
+                subscriptions: {
+                  orderBy: { updatedAt: "desc" },
+                  take: 1,
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: "asc" },
         },
       },
       orderBy: { createdAt: "desc" },

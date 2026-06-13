@@ -20,6 +20,20 @@ function redirectToPath(pathname: string) {
   return NextResponse.redirect(getConfiguredAppUrlForPath(pathname));
 }
 
+function onboardingPath(returnTo: string) {
+  const params = new URLSearchParams({ returnTo });
+  return `/onboarding/profile?${params.toString()}`;
+}
+
+function needsOnboarding(profile: {
+  phoneNumber?: string | null;
+  country?: string | null;
+  addressLine1?: string | null;
+  onboardingCompletedAt?: Date | null;
+} | null) {
+  return !profile?.onboardingCompletedAt || !profile.phoneNumber || !profile.country || !profile.addressLine1;
+}
+
 export async function GET(request: NextRequest) {
   let email: string | null = null;
   let authSubject: string | null = null;
@@ -80,6 +94,10 @@ export async function GET(request: NextRequest) {
         returnTo,
       },
     });
+
+    if (mode === "sign-up" || needsOnboarding(sessionUser.user.profile)) {
+      return redirectToPath(onboardingPath(returnTo));
+    }
 
     return redirectToPath(returnTo);
   } catch (error) {

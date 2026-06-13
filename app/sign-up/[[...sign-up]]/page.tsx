@@ -81,7 +81,7 @@ export default async function SignUpPage({
             I already have an account
           </Link>
           <p className="mt-5 text-xs leading-6 text-zinc-500">
-            Email verification is handled by Cognito. DryLake stores the app session after callback.
+            Email verification is handled by Cognito. After verification, DryLake asks for contact details and Free/Paid intent.
           </p>
         </aside>
       </section>

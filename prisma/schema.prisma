@@ -52,6 +52,8 @@ model Profile {
   city        String?
   region      String?
   postalCode  String?
+  signupPlanIntent String?
+  onboardingCompletedAt DateTime?
   timezone    String   @default("UTC")
   locale      String   @default("en-US")
   createdAt   DateTime @default(now())

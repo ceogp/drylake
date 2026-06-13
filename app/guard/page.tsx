@@ -100,23 +100,71 @@ export default function GuardPage() {
             </div>
           </div>
 
-          <div className="grid gap-px overflow-hidden rounded-lg border border-zinc-800 bg-zinc-800 md:grid-cols-2">
-            <Image
-              src="/marketplace/extension/media/guard-security.gif"
-              alt="DryLake Guard workflow overview"
-              width={1120}
-              height={630}
-              unoptimized
-              className="aspect-video w-full bg-[#080b0a] object-cover object-top"
-            />
-            <Image
-              src="/marketplace/extension/media/guard-paid-features.gif"
-              alt="DryLake Guard paid features overview"
-              width={1280}
-              height={720}
-              unoptimized
-              className="aspect-video w-full bg-[#080b0a] object-cover object-top"
-            />
+          <div className="grid gap-4">
+            <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/30">
+              <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
+                <div>
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                    Local Guard scan
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    Free workspace security report inside the VS Code extension.
+                  </p>
+                </div>
+                <span className="rounded border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                  Free
+                </span>
+              </div>
+              <Image
+                src="/marketplace/extension/media/guard-security.gif"
+                alt="DryLake Guard workflow overview"
+                width={1120}
+                height={630}
+                priority
+                unoptimized
+                className="aspect-video w-full bg-[#080b0a] object-cover object-top"
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+                <div className="border-b border-zinc-800 px-4 py-3">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-300">
+                    Paid Guard
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    Fix with AI, Deep Cloud Analysis, saved reports, and Watchdog.
+                  </p>
+                </div>
+                <Image
+                  src="/marketplace/extension/media/guard-paid-features.gif"
+                  alt="DryLake Guard paid features overview"
+                  width={1280}
+                  height={720}
+                  unoptimized
+                  className="aspect-video w-full bg-[#080b0a] object-cover object-top"
+                />
+              </div>
+
+              <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+                <div className="border-b border-zinc-800 px-4 py-3">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-300">
+                    Agent Control
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    Guard sits beside planning, phase handoffs, and agent execution.
+                  </p>
+                </div>
+                <Image
+                  src="/marketplace/extension/media/agent-control.gif"
+                  alt="DryLake Agent Control workflow overview"
+                  width={1120}
+                  height={630}
+                  unoptimized
+                  className="aspect-video w-full bg-[#080b0a] object-cover object-top"
+                />
+              </div>
+            </div>
           </div>
         </section>
 

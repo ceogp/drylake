@@ -79,6 +79,34 @@ export default async function AdminUserPage({
               <dt className="font-mono text-xs uppercase tracking-[0.12em] text-stone-500">Created</dt>
               <dd className="mt-1">{formatDate(user.createdAt)}</dd>
             </div>
+            <div>
+              <dt className="font-mono text-xs uppercase tracking-[0.12em] text-stone-500">Phone</dt>
+              <dd className="mt-1 text-stone-950">{user.profile?.phoneNumber ?? "n/a"}</dd>
+            </div>
+            <div>
+              <dt className="font-mono text-xs uppercase tracking-[0.12em] text-stone-500">Signup intent</dt>
+              <dd className="mt-1 text-stone-950">{user.profile?.signupPlanIntent ?? "unknown"}</dd>
+            </div>
+            <div>
+              <dt className="font-mono text-xs uppercase tracking-[0.12em] text-stone-500">Onboarding completed</dt>
+              <dd className="mt-1 text-stone-950">{user.profile?.onboardingCompletedAt ? formatDate(user.profile.onboardingCompletedAt) : "no"}</dd>
+            </div>
+            <div>
+              <dt className="font-mono text-xs uppercase tracking-[0.12em] text-stone-500">Country</dt>
+              <dd className="mt-1 text-stone-950">{user.profile?.country ?? "n/a"}</dd>
+            </div>
+            <div>
+              <dt className="font-mono text-xs uppercase tracking-[0.12em] text-stone-500">Address</dt>
+              <dd className="mt-1 text-stone-950">
+                {[
+                  user.profile?.addressLine1,
+                  user.profile?.addressLine2,
+                  user.profile?.city,
+                  user.profile?.region,
+                  user.profile?.postalCode,
+                ].filter(Boolean).join(", ") || "n/a"}
+              </dd>
+            </div>
           </dl>
         </Panel>
 

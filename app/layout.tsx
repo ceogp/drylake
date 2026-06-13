@@ -70,16 +70,21 @@ export default async function RootLayout({
       <div className="sticky top-0 z-50 border-b border-zinc-800 bg-[#090a0a]/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <a className="flex items-center gap-4" href={xupraHomepage}>
-            <DryLakeLogo className="h-11 w-auto" priority />
+            <div className="font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-zinc-50">
+              Xupra
+            </div>
             <div className="min-w-0">
               <div className="hidden text-xs text-zinc-500 sm:block">
-                Agent Control and Guard in one workflow.
+                Company overview and product portfolio.
               </div>
             </div>
           </a>
           <nav className="hidden items-center gap-3 text-sm font-semibold text-zinc-300 md:flex">
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              Products
+            </span>
             <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={dryLakeOrigin}>
-              Product
+              DryLake product
             </a>
             <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/guard`}>
               Guard
@@ -134,20 +139,26 @@ export default async function RootLayout({
       <div className="sticky top-0 z-50 border-b border-zinc-800 bg-[#090a0a]/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <div className="flex items-center gap-4">
-            <a className="flex items-center gap-4" href={xupraHomepage}>
+            <a className="flex items-center gap-4" href={dryLakeOrigin}>
               <DryLakeLogo className="h-11 w-auto" priority />
               <div className="min-w-0">
+                <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  DryLake
+                </div>
                 <div className="hidden text-xs text-zinc-500 lg:block">
-                  Agent Control and Guard in one workflow.
+                  Product site: Agent Control + Guard.
                 </div>
               </div>
             </a>
             <nav className="hidden items-center gap-3 text-sm font-semibold text-zinc-300 md:flex">
+              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/">
+                Product home
+              </Link>
               <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/workspace">
                 Agent Control
               </Link>
               <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/guard">
-                Guard
+                Learn about Guard
               </Link>
               <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/extensions/install">
                 Install

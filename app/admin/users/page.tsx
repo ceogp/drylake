@@ -14,6 +14,29 @@ function getPageHref(page: number, search?: string) {
   return `?page=${page}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
 }
 
+type UserProfileSummary = {
+  phoneNumber?: string | null;
+  country?: string | null;
+  city?: string | null;
+  region?: string | null;
+  postalCode?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+} | null | undefined;
+
+function compactText(parts: Array<string | null | undefined>, fallback = "n/a") {
+  const text = parts.map((part) => part?.trim()).filter(Boolean).join(", ");
+  return text || fallback;
+}
+
+function formatProfileLocation(profile: UserProfileSummary) {
+  return compactText([profile?.city, profile?.region, profile?.postalCode, profile?.country]);
+}
+
+function formatProfileAddress(profile: UserProfileSummary) {
+  return compactText([profile?.addressLine1, profile?.addressLine2], "");
+}
+
 export default async function AdminUsersPage({
   searchParams,
 }: {
@@ -34,10 +57,10 @@ export default async function AdminUsersPage({
   } = await getAdminUsersListData(page, search);
 
   return (
-    <AdminShell title="Users" subtitle="All registered accounts — paginated and searchable by email.">
+    <AdminShell title="Users" subtitle="Signed-up accounts, profile capture, auth activity, sessions, and plan state.">
       <div className="flex flex-wrap items-center gap-3">
         <Link className="text-sm font-medium text-stone-700 hover:text-stone-950" href="/admin">
-          ← Overview
+          Back to overview
         </Link>
         <Link
           className="rounded-md border border-stone-300 bg-stone-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
@@ -60,7 +83,7 @@ export default async function AdminUsersPage({
             className="mt-2 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-stone-500 focus:ring-2 focus:ring-stone-200"
             defaultValue={search ?? ""}
             name="search"
-            placeholder="Filter by email…"
+            placeholder="Filter by email..."
             type="text"
           />
         </label>
@@ -82,29 +105,79 @@ export default async function AdminUsersPage({
               <thead className="border-b border-stone-200 font-mono text-xs uppercase tracking-[0.12em] text-stone-500">
                 <tr>
                   <th className="px-3 py-3">User</th>
-                  <th className="px-3 py-3">Auth Provider</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3">Memberships</th>
+                  <th className="px-3 py-3">Contact</th>
+                  <th className="px-3 py-3">Auth Tracking</th>
+                  <th className="px-3 py-3">Plan</th>
+                  <th className="px-3 py-3">Activity</th>
                   <th className="px-3 py-3">Created</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
-                  <tr className="border-b border-stone-100 align-top" key={user.id}>
-                    <td className="px-3 py-4">
-                      <Link className="font-medium text-stone-950 hover:underline" href={`/admin/users/${user.id}`}>
-                        {user.profile?.displayName ?? user.email}
-                      </Link>
-                      <div className="text-xs text-stone-500">{user.email}</div>
-                    </td>
-                    <td className="px-3 py-4">{user.authProvider}</td>
-                    <td className="px-3 py-4">
-                      <StatusBadge value={user.status} />
-                    </td>
-                    <td className="px-3 py-4">{user._count.memberships}</td>
-                    <td className="px-3 py-4 text-xs text-stone-500">{formatDate(user.createdAt)}</td>
-                  </tr>
-                ))}
+                {users.map((user) => {
+                  const latestAuthEvent = user.authEvents[0];
+                  const latestSession = user.appSessions[0];
+                  const primaryMembership = user.memberships[0];
+                  const organization = primaryMembership?.organization;
+                  const subscription = organization?.subscriptions[0];
+                  const plan = subscription?.tier ?? organization?.tier ?? "free";
+                  const subscriptionStatus = subscription?.status ?? (organization ? "free" : "none");
+
+                  return (
+                    <tr className="border-b border-stone-100 align-top" key={user.id}>
+                      <td className="px-3 py-4">
+                        <Link className="font-medium text-stone-950 hover:underline" href={`/admin/users/${user.id}`}>
+                          {user.profile?.displayName ?? user.email}
+                        </Link>
+                        <div className="text-xs text-stone-500">{user.email}</div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <StatusBadge value={user.status} />
+                          <span className="inline-flex rounded-md border border-stone-200 bg-stone-50 px-2 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-stone-600">
+                            {user.authProvider}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 text-xs leading-6 text-stone-600">
+                        <div>Phone: {user.profile?.phoneNumber ?? "n/a"}</div>
+                        <div>Location: {formatProfileLocation(user.profile)}</div>
+                        <div>Intent: {user.profile?.signupPlanIntent ?? "unknown"}</div>
+                        <div>Onboarded: {user.profile?.onboardingCompletedAt ? formatDate(user.profile.onboardingCompletedAt) : "no"}</div>
+                        {formatProfileAddress(user.profile) ? (
+                          <div>Address: {formatProfileAddress(user.profile)}</div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-4 text-xs leading-6 text-stone-600">
+                        {latestAuthEvent ? (
+                          <>
+                            <div className="font-medium text-stone-950">{latestAuthEvent.eventName}</div>
+                            <div>{latestAuthEvent.authProvider ?? user.authProvider}</div>
+                            <StatusBadge value={latestAuthEvent.success ? "success" : "failed"} />
+                            {latestAuthEvent.failureReason ? (
+                              <div className="mt-1 text-red-700">{latestAuthEvent.failureReason}</div>
+                            ) : null}
+                            <div className="text-stone-500">{formatDate(latestAuthEvent.createdAt)}</div>
+                          </>
+                        ) : (
+                          <span className="text-stone-500">No auth events</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-4 text-xs leading-6 text-stone-600">
+                        <div className="font-medium text-stone-950">{organization?.name ?? "No organization"}</div>
+                        <div>Role: {primaryMembership?.role ?? "n/a"}</div>
+                        <div>Tier: {plan}</div>
+                        <div>Status: {subscriptionStatus}</div>
+                      </td>
+                      <td className="px-3 py-4 text-xs leading-6 text-stone-600">
+                        <div>Memberships: {user._count.memberships}</div>
+                        <div>Sessions: {user._count.appSessions}</div>
+                        <div>Auth events: {user._count.authEvents}</div>
+                        {latestSession ? (
+                          <div>Last session: {formatDate(latestSession.lastSeenAt)}</div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-4 text-xs text-stone-500">{formatDate(user.createdAt)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -125,7 +198,7 @@ export default async function AdminUsersPage({
               </span>
             )}
             <div className="text-stone-600">
-              Page {currentPage} · {totalCount} total
+              Page {currentPage} - {totalCount} total
             </div>
             {hasNextPage ? (
               <Link

@@ -78,7 +78,7 @@ export default function AboutPage() {
                 Open DryLake
               </a>
               <a className="rounded border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-orange-400 hover:text-orange-200" href={guardHref}>
-                Learn Guard
+                Learn about Guard
               </a>
               <a className="rounded border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-orange-400 hover:text-orange-200" href={pricingHref}>
                 View pricing

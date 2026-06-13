@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 
-import { isConfiguredAdminInternalHost } from "@/lib/site-hosts";
+import { isConfiguredAdminInternalHost, isConfiguredAppHost } from "@/lib/site-hosts";
 
 export const ADMIN_PATH_PREFIX = "/admin";
 export const ADMIN_API_PATH_PREFIX = "/api/v1/admin";
@@ -77,7 +77,7 @@ export function hasValidBasicAuthHeader(
 export function getAdminRequestAuthResult(headers: Headers): AdminAuthResult {
   const host = headers.get("x-forwarded-host") ?? headers.get("host");
 
-  if (!isConfiguredAdminInternalHost(host)) {
+  if (!isConfiguredAdminInternalHost(host) && !isConfiguredAppHost(host)) {
     return {
       ok: false,
       status: 404,

@@ -526,6 +526,71 @@ export async function updateProfileAction(formData: FormData) {
   redirect("/account?profile=updated");
 }
 
+export async function completeOnboardingProfileAction(formData: FormData) {
+  const context = await requireCurrentAppContextForPage();
+  const displayName =
+    cleanProfileText(formData, "displayName", 160) ??
+    context.user.profile?.displayName ??
+    context.user.email.split("@")[0] ??
+    context.user.email;
+  const planIntent = String(formData.get("planIntent") ?? "free").trim() === "paid" ? "paid" : "free";
+  const organizationName = cleanProfileText(formData, "organizationName", 160);
+  const returnPath = getSafeReturnPath(formData.get("returnTo")) ?? "/workspace";
+  const completedAt = new Date();
+
+  await prisma.$transaction([
+    prisma.profile.upsert({
+      where: { userId: context.user.id },
+      update: {
+        displayName,
+        phoneNumber: cleanProfileText(formData, "phoneNumber", 64),
+        country: cleanProfileText(formData, "country", 96),
+        addressLine1: cleanProfileText(formData, "addressLine1", 180),
+        addressLine2: cleanProfileText(formData, "addressLine2", 180),
+        city: cleanProfileText(formData, "city", 96),
+        region: cleanProfileText(formData, "region", 96),
+        postalCode: cleanProfileText(formData, "postalCode", 32),
+        timezone: cleanProfileText(formData, "timezone", 64) ?? context.user.profile?.timezone ?? "UTC",
+        locale: cleanProfileText(formData, "locale", 32) ?? context.user.profile?.locale ?? "en-US",
+        signupPlanIntent: planIntent,
+        onboardingCompletedAt: completedAt,
+      },
+      create: {
+        userId: context.user.id,
+        displayName,
+        phoneNumber: cleanProfileText(formData, "phoneNumber", 64),
+        country: cleanProfileText(formData, "country", 96),
+        addressLine1: cleanProfileText(formData, "addressLine1", 180),
+        addressLine2: cleanProfileText(formData, "addressLine2", 180),
+        city: cleanProfileText(formData, "city", 96),
+        region: cleanProfileText(formData, "region", 96),
+        postalCode: cleanProfileText(formData, "postalCode", 32),
+        timezone: cleanProfileText(formData, "timezone", 64) ?? "UTC",
+        locale: cleanProfileText(formData, "locale", 32) ?? "en-US",
+        signupPlanIntent: planIntent,
+        onboardingCompletedAt: completedAt,
+      },
+    }),
+    ...(organizationName
+      ? [
+          prisma.organization.update({
+            where: { id: context.organization.id },
+            data: { name: organizationName },
+          }),
+        ]
+      : []),
+  ]);
+
+  revalidatePath("/account");
+  revalidatePath("/admin/users");
+
+  if (planIntent === "paid") {
+    redirect("/billing?welcome=1");
+  }
+
+  redirect(returnPath);
+}
+
 function formList(value: FormDataEntryValue | null) {
   return String(value ?? "")
     .split(/\r?\n|,/)

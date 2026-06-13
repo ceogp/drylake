@@ -38,7 +38,7 @@ const plans = [
     body: "Upgrade when you want approved upload, Fix with AI, Deep Cloud Analysis, saved reports, and local Watchdog while you work.",
     ctaLabel: "Upgrade to Paid",
     ctaHref: getConfiguredAppUrlForPath("/billing", "required=security_pro"),
-    secondaryLabel: "Learn Guard",
+    secondaryLabel: "Learn about Guard",
     secondaryHref: getConfiguredAppUrlForPath("/guard"),
     tone: "featured",
     bullets: [
@@ -104,7 +104,7 @@ export default function PricingPage() {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <ActionLink href={installHref} label="Install extension" />
-              <ActionLink href={guardHref} label="See Guard" variant="secondary" />
+              <ActionLink href={guardHref} label="Learn about Guard" variant="secondary" />
             </div>
           </div>
         </section>

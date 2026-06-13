@@ -258,7 +258,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
                 Install extension
               </ActionLink>
               <ActionLink href={guardHref} variant="secondary">
-                Learn Guard
+                Learn about Guard
               </ActionLink>
               <ActionLink href={pricingHref} variant="secondary">
                 View pricing
@@ -394,11 +394,114 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
   );
 }
 
+function XupraCorporateHome() {
+  const dryLakeHref = getConfiguredAppUrlForPath("/");
+  const dryLakePricingHref = getConfiguredAppUrlForPath("/pricing");
+  const dryLakeInstallHref = getConfiguredAppUrlForPath("/extensions/install");
+
+  return (
+    <main className="min-h-screen bg-[#080909] text-zinc-100">
+      <section className="relative overflow-hidden border-b border-zinc-800 px-5 py-20 sm:px-8 lg:px-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(16,185,129,0.18),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(249,115,22,0.16),transparent_28%),linear-gradient(135deg,#080909_0%,#111414_52%,#080909_100%)]" />
+        <div className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+          <section className="max-w-3xl">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
+              Xupra
+            </p>
+            <h1 className="mt-5 font-[family-name:var(--font-heading)] text-5xl font-semibold leading-[1.02] text-zinc-50 sm:text-6xl lg:text-7xl">
+              Agentic developer products, starting with DryLake.
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
+              Xupra builds focused tools for teams adopting AI coding agents. DryLake is the first product:
+              Agent Control and Guard security in one workflow.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <ActionLink href={dryLakeHref}>Open DryLake</ActionLink>
+              <ActionLink href={dryLakePricingHref} variant="secondary">
+                DryLake pricing
+              </ActionLink>
+              <ActionLink href={dryLakeInstallHref} variant="secondary">
+                Install extension
+              </ActionLink>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-zinc-800 bg-[#111414]/95 p-5 shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+              <div>
+                <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">
+                  Product portfolio
+                </p>
+                <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-zinc-50">
+                  Current product
+                </h2>
+              </div>
+              <span className="rounded border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                Live
+              </span>
+            </div>
+
+            <article className="mt-5 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+              <Image
+                src="/marketplace/extension/media/guard-paid-features.gif"
+                alt="DryLake Guard paid security workflow inside VS Code"
+                width={1280}
+                height={720}
+                priority
+                unoptimized
+                sizes="(min-width: 1024px) 42vw, 100vw"
+                className="aspect-video w-full bg-[#080b0a] object-cover object-top"
+              />
+              <div className="p-5">
+                <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                  DryLake
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold text-zinc-50">
+                  Agent Control plus Guard security.
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-zinc-400">
+                  Plan agent work, run local Guard scans, approve cloud analysis, and manage paid remediation from
+                  the website and VS Code extension.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                <ActionLink href={dryLakeHref}>Open DryLake product</ActionLink>
+                  <ActionLink href={dryLakePricingHref} variant="secondary">
+                    Compare Free and Paid
+                  </ActionLink>
+                </div>
+              </div>
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <section className="border-b border-zinc-800 bg-[#0d0f0f] px-5 py-16 sm:px-8 lg:px-10">
+        <div className="mx-auto grid max-w-7xl gap-6 md:grid-cols-3">
+          {[
+            ["Company", "Xupra is the company and product studio."],
+            ["DryLake", "DryLake is the current product for AI coding workflows."],
+            ["More products", "Future products should live beside DryLake, not underneath it."],
+          ].map(([title, body]) => (
+            <article className="rounded-lg border border-zinc-800 bg-[#111414] p-5" key={title}>
+              <h2 className="text-lg font-semibold text-zinc-50">{title}</h2>
+              <p className="mt-3 text-sm leading-7 text-zinc-400">{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default async function Home() {
   const requestHeaders = await headers();
   const requestHost = normalizeHost(
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
   );
 
-  return <HomeExperience marketing={isConfiguredMarketingHost(requestHost)} />;
+  if (isConfiguredMarketingHost(requestHost)) {
+    return <XupraCorporateHome />;
+  }
+
+  return <HomeExperience marketing={false} />;
 }

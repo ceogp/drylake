@@ -8,15 +8,20 @@ import {
 } from "./lib/admin-auth";
 import {
   getConfiguredAppUrlForPath,
+  isConfiguredAppHost,
   isConfiguredAdminInternalHost,
   isConfiguredMarketingHost,
 } from "./lib/site-hosts";
+
+function isAdminAllowedHost(host: string | null) {
+  return isConfiguredAdminInternalHost(host) || isConfiguredAppHost(host);
+}
 
 function handleProxyRequest(request: NextRequest) {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const pathname = request.nextUrl.pathname;
 
-  if (isConfiguredAdminInternalHost(host)) {
+  if (isAdminAllowedHost(host) && (isConfiguredAdminInternalHost(host) || isAdminPagePath(pathname) || isAdminApiPath(pathname))) {
     if (pathname === "/") {
       return NextResponse.redirect(new URL(`${ADMIN_PATH_PREFIX}${request.nextUrl.search}`, request.url));
     }
@@ -58,7 +63,7 @@ export function proxy(request: NextRequest) {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const pathname = request.nextUrl.pathname;
 
-  if (isConfiguredAdminInternalHost(host) || isAdminPagePath(pathname) || isAdminApiPath(pathname)) {
+  if (isAdminAllowedHost(host) || isAdminPagePath(pathname) || isAdminApiPath(pathname)) {
     return handleProxyRequest(request);
   }
   
