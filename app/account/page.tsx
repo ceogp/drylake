@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { openBillingPortalAction } from "@/app/actions";
+import { openBillingPortalAction, updateProfileAction } from "@/app/actions";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/services/entitlements";
@@ -115,6 +115,33 @@ function DetailCard({
   );
 }
 
+function ProfileInput({
+  label,
+  name,
+  value,
+  autoComplete,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  value?: string | null;
+  autoComplete?: string;
+  placeholder?: string;
+}) {
+  return (
+    <label className="grid gap-2 text-sm">
+      <span className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</span>
+      <input
+        autoComplete={autoComplete}
+        className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3 text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-emerald-400"
+        defaultValue={value ?? ""}
+        name={name}
+        placeholder={placeholder}
+      />
+    </label>
+  );
+}
+
 function EntitlementCard({
   enabled,
   label,
@@ -226,11 +253,42 @@ export default async function AccountPage() {
             </h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <DetailCard label="Email" value={context.user.email} />
+              <DetailCard label="Phone" value={profile?.phoneNumber ?? "Not set"} />
+              <DetailCard label="Country" value={profile?.country ?? "Not set"} />
               <DetailCard label="Timezone" value={profile?.timezone ?? "UTC"} />
               <DetailCard label="Locale" value={profile?.locale ?? "en-US"} />
               <DetailCard label="Role" value={context.activeMembership.role} />
             </div>
           </article>
+        </section>
+
+        <section className="tape-panel p-6">
+          <div className="max-w-3xl">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Profile and contact details</p>
+            <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-zinc-50">
+              Add the basics for billing, account recovery, and support.
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-zinc-400">
+              These details are saved to your DryLake profile after sign-in. They are not used to block signup.
+            </p>
+          </div>
+          <form action={updateProfileAction} className="mt-6 grid gap-4 md:grid-cols-2">
+            <ProfileInput autoComplete="name" label="Full name" name="displayName" placeholder="Jane Developer" value={profile?.displayName ?? ""} />
+            <ProfileInput autoComplete="tel" label="Phone number" name="phoneNumber" placeholder="+1 555 0100" value={profile?.phoneNumber} />
+            <ProfileInput autoComplete="country-name" label="Country" name="country" placeholder="United States" value={profile?.country} />
+            <ProfileInput autoComplete="address-line1" label="Address line 1" name="addressLine1" placeholder="123 Market Street" value={profile?.addressLine1} />
+            <ProfileInput autoComplete="address-line2" label="Address line 2" name="addressLine2" placeholder="Suite, floor, building" value={profile?.addressLine2} />
+            <ProfileInput autoComplete="address-level2" label="City" name="city" placeholder="San Francisco" value={profile?.city} />
+            <ProfileInput autoComplete="address-level1" label="State / region" name="region" placeholder="CA" value={profile?.region} />
+            <ProfileInput autoComplete="postal-code" label="Postal code" name="postalCode" placeholder="94105" value={profile?.postalCode} />
+            <ProfileInput autoComplete="off" label="Timezone" name="timezone" placeholder="America/Los_Angeles" value={profile?.timezone ?? "UTC"} />
+            <ProfileInput autoComplete="language" label="Locale" name="locale" placeholder="en-US" value={profile?.locale ?? "en-US"} />
+            <div className="md:col-span-2">
+              <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
+                Save profile
+              </button>
+            </div>
+          </form>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">

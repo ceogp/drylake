@@ -19,7 +19,7 @@ import {
   requireVersionAccess,
 } from "@/lib/services/access";
 import { createCredential, verifyCredential } from "@/lib/services/credentials";
-import { setActiveOrganizationCookie } from "@/lib/services/current-user";
+import { requireCurrentAppContextForPage, setActiveOrganizationCookie } from "@/lib/services/current-user";
 import { createDeploymentTarget } from "@/lib/services/deployments";
 import { createIntegration, sendTestIntegrationMessage, verifyIntegration } from "@/lib/services/integrations";
 import { toSlug } from "@/lib/utils/slug";
@@ -477,6 +477,53 @@ export async function openBillingPortalAction(formData: FormData) {
   }
 
   revalidatePath("/billing");
+}
+
+function cleanProfileText(formData: FormData, key: string, maxLength: number) {
+  const value = String(formData.get(key) ?? "").trim();
+  return value ? value.slice(0, maxLength) : null;
+}
+
+export async function updateProfileAction(formData: FormData) {
+  const context = await requireCurrentAppContextForPage();
+  const displayName =
+    cleanProfileText(formData, "displayName", 160) ??
+    context.user.profile?.displayName ??
+    context.user.email.split("@")[0] ??
+    context.user.email;
+
+  await prisma.profile.upsert({
+    where: { userId: context.user.id },
+    update: {
+      displayName,
+      phoneNumber: cleanProfileText(formData, "phoneNumber", 64),
+      country: cleanProfileText(formData, "country", 96),
+      addressLine1: cleanProfileText(formData, "addressLine1", 180),
+      addressLine2: cleanProfileText(formData, "addressLine2", 180),
+      city: cleanProfileText(formData, "city", 96),
+      region: cleanProfileText(formData, "region", 96),
+      postalCode: cleanProfileText(formData, "postalCode", 32),
+      timezone: cleanProfileText(formData, "timezone", 64) ?? context.user.profile?.timezone ?? "UTC",
+      locale: cleanProfileText(formData, "locale", 32) ?? context.user.profile?.locale ?? "en-US",
+    },
+    create: {
+      userId: context.user.id,
+      displayName,
+      phoneNumber: cleanProfileText(formData, "phoneNumber", 64),
+      country: cleanProfileText(formData, "country", 96),
+      addressLine1: cleanProfileText(formData, "addressLine1", 180),
+      addressLine2: cleanProfileText(formData, "addressLine2", 180),
+      city: cleanProfileText(formData, "city", 96),
+      region: cleanProfileText(formData, "region", 96),
+      postalCode: cleanProfileText(formData, "postalCode", 32),
+      timezone: cleanProfileText(formData, "timezone", 64) ?? "UTC",
+      locale: cleanProfileText(formData, "locale", 32) ?? "en-US",
+    },
+  });
+
+  revalidatePath("/account");
+  revalidatePath("/settings");
+  redirect("/account?profile=updated");
 }
 
 function formList(value: FormDataEntryValue | null) {

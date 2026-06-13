@@ -45,6 +45,13 @@ model Profile {
   displayName String
   avatarUrl   String?
   jobTitle    String?
+  phoneNumber String?
+  country     String?
+  addressLine1 String?
+  addressLine2 String?
+  city        String?
+  region      String?
+  postalCode  String?
   timezone    String   @default("UTC")
   locale      String   @default("en-US")
   createdAt   DateTime @default(now())

@@ -64,6 +64,20 @@ export default async function SettingsPage() {
             </h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <DetailCard label="Email" value={appContext.user.email} />
+              <DetailCard label="Phone" value={profile?.phoneNumber ?? "Not set"} />
+              <DetailCard label="Country" value={profile?.country ?? "Not set"} />
+              <DetailCard
+                label="Address"
+                value={
+                  [
+                    profile?.addressLine1,
+                    profile?.addressLine2,
+                    profile?.city,
+                    profile?.region,
+                    profile?.postalCode,
+                  ].filter(Boolean).join(", ") || "Not set"
+                }
+              />
               <DetailCard label="Locale" value={profile?.locale ?? "en-US"} />
               <DetailCard label="Timezone" value={profile?.timezone ?? "UTC"} />
               <DetailCard label="Job Title" value={profile?.jobTitle ?? "Not set"} />
