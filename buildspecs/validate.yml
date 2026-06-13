@@ -6,7 +6,7 @@ phases:
       nodejs: 22
     commands:
       - npm ci --include=dev --prefer-offline --no-audit --fund=false
-      - docker run --name drylake-postgres -e POSTGRES_DB="$POSTGRES_DB" -e POSTGRES_USER="$POSTGRES_USER" -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" -p 5432:5432 -d postgres:16
+      - docker run --name drylake-postgres -e POSTGRES_DB="$POSTGRES_DB" -e POSTGRES_USER="$POSTGRES_USER" -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" -p 5432:5432 -d public.ecr.aws/docker/library/postgres:16
       - |
         node <<'NODE'
         const { Client } = require("pg");
