@@ -24,6 +24,7 @@ function connectionStateFromExtensionConnection(result: ExtensionConnection): Co
     organizationName: result.organization?.name,
     organizationSlug: result.organization?.slug,
     organizationTier: result.organization?.tier,
+    organizationRole: result.organizationRole,
     entitlements,
     subscriptionStatus: result.subscription?.status,
     userEmail: result.user?.email ?? result.auth.session.user?.email,

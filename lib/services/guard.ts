@@ -44,6 +44,11 @@ export const guardScanUploadSchema = z.object({
     categoryScores: jsonObjectSchema,
     findings: z.array(guardFindingSchema).max(500),
     connectionMap: jsonObjectSchema.optional(),
+    extensions: z.array(jsonObjectSchema).max(1000).default([]),
+    mcpServers: z.array(jsonObjectSchema).max(500).default([]),
+    workspaceSurface: jsonObjectSchema.optional(),
+    packageManagers: z.array(z.string().trim().min(1).max(80)).max(50).default([]),
+    packageScripts: z.array(z.string().trim().min(1).max(200)).max(500).default([]),
   }),
   artifacts: z.array(guardArtifactSchema).max(120).default([]),
 }).strict();
@@ -95,6 +100,11 @@ export async function recordGuardScanUpload(input: {
       categoryScoresJson: toJson(input.payload.scan.categoryScores),
       findingsJson: toJson(input.payload.scan.findings),
       connectionMapJson: input.payload.scan.connectionMap ? toJson(input.payload.scan.connectionMap) : undefined,
+      extensionsJson: toJson(input.payload.scan.extensions),
+      mcpServersJson: toJson(input.payload.scan.mcpServers),
+      workspaceSurfaceJson: input.payload.scan.workspaceSurface ? toJson(input.payload.scan.workspaceSurface) : undefined,
+      packageManagersJson: toJson(input.payload.scan.packageManagers),
+      packageScriptsJson: toJson(input.payload.scan.packageScripts),
     },
     select: {
       id: true,

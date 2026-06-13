@@ -31,6 +31,8 @@ model User {
   guardScans            GuardScan[]              @relation("GuardScanActor")
   guardArtifacts        GuardArtifact[]          @relation("GuardArtifactActor")
   guardWatchEvents      GuardWatchEvent[]        @relation("GuardWatchEventActor")
+  guardBaselines        GuardBaseline[]          @relation("GuardBaselineCreator")
+  cloudAnalysisJobs     CloudAnalysisJob[]       @relation("CloudAnalysisJobActor")
   appSessions           AppSession[]
   authEvents            AuthEvent[]              @relation("AuthEventActor")
 
@@ -73,6 +75,9 @@ model Organization {
   guardScans            GuardScan[]
   guardArtifacts        GuardArtifact[]
   guardWatchEvents      GuardWatchEvent[]
+  guardBaselines        GuardBaseline[]
+  teamPolicies          TeamPolicy[]
+  cloudAnalysisJobs     CloudAnalysisJob[]
   appSessions           AppSession[]
   authEvents            AuthEvent[]
   invitations           OrganizationInvitation[]
@@ -540,10 +545,17 @@ model GuardScan {
   categoryScoresJson    Json
   findingsJson          Json
   connectionMapJson     Json?
+  extensionsJson        Json?
+  mcpServersJson        Json?
+  workspaceSurfaceJson  Json?
+  packageManagersJson   Json?
+  packageScriptsJson    Json?
   organization          Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   actorUser             User              @relation("GuardScanActor", fields: [actorUserId], references: [id], onDelete: Cascade)
   artifacts             GuardArtifact[]
   watchEvents           GuardWatchEvent[]
+  baselines             GuardBaseline[]
+  cloudAnalysisJobs     CloudAnalysisJob[]
 
   @@index([organizationId, createdAt])
   @@index([organizationId, workspaceHash, createdAt])
@@ -572,6 +584,62 @@ model GuardArtifact {
   @@index([organizationId, createdAt])
   @@index([organizationId, logicalPath])
   @@index([contentHash])
+}
+
+model GuardBaseline {
+  id              String       @id @default(cuid())
+  organizationId  String
+  workspaceHash   String       @default("default")
+  guardScanId     String
+  createdByUserId String
+  metadataJson    Json?
+  createdAt       DateTime     @default(now())
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  guardScan       GuardScan    @relation(fields: [guardScanId], references: [id], onDelete: Cascade)
+  createdByUser   User         @relation("GuardBaselineCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, workspaceHash])
+  @@index([organizationId, createdAt])
+  @@index([guardScanId])
+}
+
+model TeamPolicy {
+  id                     String       @id @default(cuid())
+  organizationId         String
+  mcpAllowlistJson       Json?
+  mcpDenylistJson        Json?
+  extensionAllowlistJson Json?
+  extensionDenylistJson  Json?
+  uploadPolicyJson       Json?
+  redactionPolicyJson    Json?
+  retentionDays          Int          @default(90)
+  baselineComparisonJson Json?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId])
+}
+
+model CloudAnalysisJob {
+  id                  String       @id @default(cuid())
+  organizationId      String
+  actorUserId         String
+  guardScanId         String?
+  status              String       @default("queued")
+  approvedPayloadJson Json
+  resultJson          Json?
+  errorMessage        String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser           User         @relation("CloudAnalysisJobActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  guardScan           GuardScan?   @relation(fields: [guardScanId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([guardScanId])
+  @@index([status, createdAt])
 }
 
 model GuardWatchEvent {

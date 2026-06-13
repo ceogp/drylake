@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       return unauthorized("The browser callback code is invalid, expired, or already used.");
     }
 
-    const { subscription, entitlements } = await getEntitlementsForOrganization(session.organization.id);
+    const { subscription, entitlements, resolved } = await getEntitlementsForOrganization(session.organization.id);
     await recordAuthEvent({
       eventName: "auth.extension.browser_code_exchanged",
       organizationId: session.organization.id,
@@ -51,8 +51,11 @@ export async function POST(request: Request) {
         tier: session.organization.tier,
       },
       entitlements,
+      entitlementVersion: resolved.entitlementVersion,
+      plan: resolved.plan,
       subscription: {
         status: subscription?.status ?? "none",
+        currentPeriodEnd: resolved.currentPeriodEnd,
       },
       editor: session.editor,
     });

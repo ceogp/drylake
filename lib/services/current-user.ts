@@ -7,6 +7,7 @@ import type { Organization, Profile, User } from "@prisma/client";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getAppSessionContext } from "@/lib/services/app-session";
+import { shouldUseClerkRuntime, shouldUseCognitoRuntime } from "@/lib/services/auth-mode";
 import { ensureAppSession } from "@/lib/services/dev-session";
 import {
   EXTENSION_TOKEN_HEADER,
@@ -30,19 +31,6 @@ export type AppContext = {
   activeMembership: SessionUser["memberships"][number];
   organization: Organization;
 };
-
-function shouldUseClerk() {
-  return Boolean(
-    env.AUTH_MODE === "clerk" ||
-      (env.AUTH_MODE !== "cognito" &&
-        env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-        env.CLERK_SECRET_KEY),
-  );
-}
-
-function shouldUseCognito() {
-  return env.AUTH_MODE === "cognito";
-}
 
 async function loadUserByEmail(email: string) {
   return prisma.user.findUnique({
@@ -73,7 +61,7 @@ async function loadUserById(userId: string) {
 }
 
 async function getClerkBackedUser() {
-  if (!shouldUseClerk()) {
+  if (!shouldUseClerkRuntime()) {
     return null;
   }
 
@@ -110,7 +98,7 @@ async function getClerkBackedUser() {
 }
 
 async function getCognitoBackedUser() {
-  if (!shouldUseCognito()) {
+  if (!shouldUseCognitoRuntime()) {
     return null;
   }
 
@@ -188,7 +176,7 @@ export async function getCurrentUser(options?: {
     return extensionUser;
   }
 
-  if (options?.allowDevFallback ?? (!shouldUseClerk() && !shouldUseCognito())) {
+  if (options?.allowDevFallback ?? (!shouldUseClerkRuntime() && !shouldUseCognitoRuntime())) {
     return getDevFallbackUser();
   }
 
@@ -217,7 +205,7 @@ export async function getCurrentAppContext(options?: {
   }
 
   const extensionSession = await getExtensionTokenSession();
-  const appSession = shouldUseCognito() ? await getAppSessionContext() : null;
+  const appSession = shouldUseCognitoRuntime() ? await getAppSessionContext() : null;
   const activeMembership = await pickActiveMembership(
     user,
     extensionSession?.organizationId ?? appSession?.organizationId,

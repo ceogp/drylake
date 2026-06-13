@@ -1,36 +1,9 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 
 import { env } from "@/lib/env";
+import { getEffectiveAuthMode, missingClerkKeys, type AuthMode } from "@/lib/services/auth-mode";
 import { getCognitoConfig } from "@/lib/services/cognito-auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
-
-type AuthMode = "dev" | "clerk" | "cognito";
-
-function missingClerkKeys() {
-  const missing: string[] = [];
-
-  if (!env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    missing.push("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY");
-  }
-
-  if (!env.CLERK_SECRET_KEY) {
-    missing.push("CLERK_SECRET_KEY");
-  }
-
-  return missing;
-}
-
-function getEffectiveAuthMode(): AuthMode {
-  if (env.AUTH_MODE === "cognito") {
-    return "cognito";
-  }
-
-  if (env.AUTH_MODE === "clerk") {
-    return "clerk";
-  }
-
-  return missingClerkKeys().length === 0 ? "clerk" : "dev";
-}
 
 export function getAuthSetup() {
   const mode = getEffectiveAuthMode();

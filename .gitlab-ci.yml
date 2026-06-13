@@ -83,6 +83,7 @@ validate:
     - npx tsx prisma/seed.ts
     - npm run typecheck
     - npm run lint
+    - npm run guard:readiness
     - npm run build
   rules:
     - if: $CI_COMMIT_BRANCH
@@ -663,3 +664,14 @@ verify_production:
       when: never
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: on_success
+
+continuous_watch_scheduler:
+  stage: verify
+  image: node:22-bookworm
+  script:
+    - ': "${APP_BASE_URL:?APP_BASE_URL is required}"'
+    - ': "${CONTINUOUS_WATCH_CRON_SECRET:?CONTINUOUS_WATCH_CRON_SECRET is required}"'
+    - npm ci --include=dev --prefer-offline --no-audit --fund=false
+    - npm run guard:continuous-watch
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $RUN_CONTINUOUS_WATCH == "true"'

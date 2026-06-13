@@ -1,0 +1,118 @@
+<svg width="1400" height="960" viewBox="0 0 1400 960" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DryLake refined lowercase d product mark">
+  <rect width="1400" height="960" fill="#090a0a"/>
+  <style>
+    .label { font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace; font-size: 22px; font-weight: 700; letter-spacing: 0; fill: #f7f4ea; }
+    .note { font-family: Helvetica, "Helvetica Neue", sans-serif; font-size: 18px; font-weight: 400; letter-spacing: 0; fill: #a6aca5; }
+    .word { font-family: "Cascadia Mono", "IBM Plex Mono", Consolas, monospace; font-size: 82px; font-weight: 800; letter-spacing: 0; fill: #f7f4ea; }
+    .dFont { font-family: "Cascadia Mono", "IBM Plex Mono", Consolas, monospace; font-size: 292px; font-weight: 800; letter-spacing: 0; }
+    .panel { fill: #111414; stroke: #28302b; stroke-width: 2; }
+    .cream { fill: #f7f4ea; }
+    .black { fill: #090a0a; }
+    .orange { fill: #ff5a1f; }
+    .green { fill: #80d99a; }
+    .crackDark { fill: none; stroke: #151008; stroke-width: 5; stroke-linecap: square; stroke-linejoin: miter; }
+    .crackLight { fill: none; stroke: #090a0a; stroke-width: 5; stroke-linecap: square; stroke-linejoin: miter; }
+    .crackCut { fill: none; stroke: #090a0a; stroke-width: 7; stroke-linecap: square; stroke-linejoin: miter; }
+    .lStroke { fill: none; stroke: #ff5a1f; stroke-width: 22; stroke-linecap: square; stroke-linejoin: miter; }
+    .monoStroke { fill: none; stroke-width: 22; stroke-linecap: square; stroke-linejoin: miter; }
+  </style>
+
+  <text x="72" y="95" class="word">drylake</text>
+  <rect x="76" y="130" width="438" height="18" class="orange"/>
+  <text x="72" y="190" class="note">Refined product mark: lowercase d from the DryLake mono direction, orange l-stem, cracked lakebed texture.</text>
+
+  <defs>
+    <clipPath id="dClipColor">
+      <text x="73" y="278" class="dFont">d</text>
+    </clipPath>
+    <clipPath id="dClipMonoLight">
+      <text x="73" y="278" class="dFont">d</text>
+    </clipPath>
+    <clipPath id="dClipMonoDark">
+      <text x="73" y="278" class="dFont">d</text>
+    </clipPath>
+  </defs>
+
+  <g transform="translate(70 250)">
+    <rect class="panel" x="0" y="0" width="390" height="540" rx="8"/>
+    <text class="label" x="34" y="54">A. Product Color</text>
+    <text class="note" x="34" y="86">Marketplace icon / website mark</text>
+    <g transform="translate(55 124)">
+      <rect x="0" y="0" width="280" height="280" rx="32" fill="#151008" stroke="#ff5a1f" stroke-width="12"/>
+      <text x="73" y="278" class="dFont cream">d</text>
+      <g clip-path="url(#dClipColor)">
+        <path class="crackDark" d="M98 116l42 28 35-14 36 24"/>
+        <path class="crackDark" d="M130 144l-18 42 34 30-6 46"/>
+        <path class="crackDark" d="M174 130l6 47 42 22"/>
+        <path class="crackDark" d="M104 198l44-4 36 38 44-10"/>
+        <path class="crackDark" d="M162 82l-12 48"/>
+        <path class="crackDark" d="M218 158l-22 34 18 52"/>
+      </g>
+      <path class="lStroke" d="M210 40v206M190 40h48M210 246h58"/>
+      <rect x="82" y="214" width="42" height="42" rx="5" fill="#80d99a"/>
+      <path d="M87 222l31 22M118 222l-24 28" stroke="#151008" stroke-width="4" stroke-linecap="square"/>
+    </g>
+    <text x="34" y="464" class="word" style="font-size:48px">drylake</text>
+    <rect x="36" y="490" width="242" height="12" class="orange"/>
+  </g>
+
+  <g transform="translate(505 250)">
+    <rect class="panel" x="0" y="0" width="390" height="540" rx="8"/>
+    <text class="label" x="34" y="54">B. Extension Mono</text>
+    <text class="note" x="34" y="86">White icon for VS Code surfaces</text>
+    <g transform="translate(55 124)">
+      <rect x="0" y="0" width="280" height="280" rx="32" fill="#090a0a" stroke="#2b332e" stroke-width="10"/>
+      <text x="73" y="278" class="dFont cream">d</text>
+      <g clip-path="url(#dClipMonoLight)">
+        <path class="crackCut" d="M98 116l42 28 35-14 36 24"/>
+        <path class="crackCut" d="M130 144l-18 42 34 30-6 46"/>
+        <path class="crackCut" d="M174 130l6 47 42 22"/>
+        <path class="crackCut" d="M104 198l44-4 36 38 44-10"/>
+        <path class="crackCut" d="M162 82l-12 48"/>
+      </g>
+      <path class="monoStroke" stroke="#f7f4ea" d="M210 40v206M190 40h48M210 246h58"/>
+    </g>
+    <text x="34" y="464" class="word" style="font-size:48px">drylake</text>
+    <rect x="36" y="490" width="242" height="12" class="cream"/>
+  </g>
+
+  <g transform="translate(940 250)">
+    <rect class="panel" x="0" y="0" width="390" height="540" rx="8"/>
+    <text class="label" x="34" y="54">C. One-Color Reverse</text>
+    <text class="note" x="34" y="86">Black mark for light backgrounds</text>
+    <g transform="translate(55 124)">
+      <rect x="0" y="0" width="280" height="280" rx="32" fill="#f7f4ea" stroke="#090a0a" stroke-width="10"/>
+      <text x="73" y="278" class="dFont black">d</text>
+      <g clip-path="url(#dClipMonoDark)">
+        <path class="crackLight" stroke="#f7f4ea" d="M98 116l42 28 35-14 36 24"/>
+        <path class="crackLight" stroke="#f7f4ea" d="M130 144l-18 42 34 30-6 46"/>
+        <path class="crackLight" stroke="#f7f4ea" d="M174 130l6 47 42 22"/>
+        <path class="crackLight" stroke="#f7f4ea" d="M104 198l44-4 36 38 44-10"/>
+        <path class="crackLight" stroke="#f7f4ea" d="M162 82l-12 48"/>
+      </g>
+      <path class="monoStroke" stroke="#090a0a" d="M210 40v206M190 40h48M210 246h58"/>
+    </g>
+    <text x="34" y="464" class="word" style="font-size:48px">drylake</text>
+    <rect x="36" y="490" width="242" height="12" class="orange"/>
+  </g>
+
+  <g transform="translate(92 845)">
+    <text class="label" x="0" y="0">Small-size read:</text>
+    <g transform="translate(220 -64) scale(.32)">
+      <rect x="0" y="0" width="280" height="280" rx="32" fill="#151008" stroke="#ff5a1f" stroke-width="12"/>
+      <text x="73" y="278" class="dFont cream">d</text>
+      <path class="lStroke" d="M210 40v206M190 40h48M210 246h58"/>
+    </g>
+    <g transform="translate(350 -48) scale(.23)">
+      <rect x="0" y="0" width="280" height="280" rx="32" fill="#151008" stroke="#ff5a1f" stroke-width="12"/>
+      <text x="73" y="278" class="dFont cream">d</text>
+      <path class="lStroke" d="M210 40v206M190 40h48M210 246h58"/>
+    </g>
+    <g transform="translate(456 -36) scale(.16)">
+      <rect x="0" y="0" width="280" height="280" rx="32" fill="#151008" stroke="#ff5a1f" stroke-width="12"/>
+      <text x="73" y="278" class="dFont cream">d</text>
+      <path class="lStroke" d="M210 40v206M190 40h48M210 246h58"/>
+    </g>
+    <text class="note" x="550" y="0">Cracks stay in large artwork. Tiny icons keep the d + l structure clean.</text>
+  </g>
+</svg>

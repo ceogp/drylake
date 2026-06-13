@@ -5,9 +5,13 @@ import { requireOrganizationRole } from "@/lib/services/access";
 import { createCheckoutSession } from "@/lib/services/billing";
 
 const checkoutSchema = z.object({
-  organizationId: z.string().min(1),
-  plan: z.enum(["pro", "enterprise"]),
+  organizationId: z.string().min(1).optional(),
+  plan: z.enum(["pro", "security_pro", "team_security", "enterprise"]),
+  billingContext: z.enum(["user", "team"]).default("user"),
+  teamId: z.string().min(1).optional(),
   returnPath: z.string().optional(),
+  returnTo: z.string().optional(),
+  extensionReturnUri: z.string().optional(),
 });
 
 function getSafeReturnPath(value: string | undefined) {
@@ -40,12 +44,17 @@ export async function POST(request: Request) {
       return fromZodError(parsed.error);
     }
 
-    const context = await requireOrganizationRole(["owner", "admin"], parsed.data.organizationId);
-    const returnPath = getSafeReturnPath(parsed.data.returnPath);
+    const requestedOrganizationId = parsed.data.teamId ?? parsed.data.organizationId;
+    const context = await requireOrganizationRole(["owner", "admin"], requestedOrganizationId);
+    const returnPath = getSafeReturnPath(parsed.data.returnTo ?? parsed.data.returnPath);
     const session = await createCheckoutSession({
       organizationId: context.organization.id,
+      userId: context.user.id,
       userEmail: context.user.email,
       priceLookup: parsed.data.plan,
+      billingContext: parsed.data.billingContext,
+      returnTo: returnPath,
+      extensionReturnUri: parsed.data.extensionReturnUri,
       successUrl: returnPath
         ? `${new URL(request.url).origin}${withQueryValue(returnPath, "billing", "success")}`
         : undefined,

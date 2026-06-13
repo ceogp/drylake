@@ -41,6 +41,7 @@ import { BrowserConnectCoordinator } from "./services/browserConnect";
 import { connectionStateFromExtensionConnection } from "./services/connectionState";
 import { requireXupraProAiEntitlement } from "./services/featureGates";
 import { ImportedSkillEditorManager } from "./services/importedSkillEditor";
+import { LocalWatchdog } from "./services/localWatchdog";
 import { requireRegisteredUser } from "./services/registrationGate";
 import {
   collectRepoContext,
@@ -74,6 +75,75 @@ const LEGACY_BASE_URL_HOSTS = new Set(["52.196.86.96"]);
 const SOURCE_PLATFORM_ALIASES: Record<string, string> = {
   claude: "claude_code",
 };
+const BILLING_PLANS = ["pro", "security_pro", "team_security", "enterprise"] as const;
+
+type BillingPlan = (typeof BILLING_PLANS)[number];
+
+type OpenBillingArgs = {
+  required?: BillingPlan;
+  source?: string;
+  returnPath?: string;
+};
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeBillingPath(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed || !trimmed.startsWith("/") || trimmed.startsWith("//")) {
+    return undefined;
+  }
+
+  return trimmed;
+}
+
+function normalizeBillingPlan(value: unknown): BillingPlan | undefined {
+  return typeof value === "string" && BILLING_PLANS.includes(value as BillingPlan) ? (value as BillingPlan) : undefined;
+}
+
+function buildOpenBillingPath(args?: OpenBillingArgs) {
+  const query = new URLSearchParams({
+    source: args?.source || "extension",
+  });
+
+  if (args?.required) {
+    query.set("required", args.required);
+  }
+
+  if (args?.returnPath) {
+    query.set("returnPath", args.returnPath);
+  }
+
+  const queryString = query.toString();
+  return `/billing${queryString ? `?${queryString}` : ""}`;
+}
+
+function parseOpenBillingArgs(args: unknown[]) {
+  if (!Array.isArray(args) || args.length === 0) {
+    return {} as OpenBillingArgs;
+  }
+
+  if (isPlainObject(args[0])) {
+    const options = args[0] as Record<string, unknown>;
+    return {
+      required: normalizeBillingPlan(options.required),
+      source: typeof options.source === "string" ? options.source.trim() : undefined,
+      returnPath: normalizeBillingPath(options.returnPath),
+    } satisfies OpenBillingArgs;
+  }
+
+  return {
+    required: normalizeBillingPlan(args[0]),
+    source: typeof args[1] === "string" && args[1].trim() ? args[1].trim() : "extension",
+    returnPath: normalizeBillingPath(args[2]),
+  };
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -81,6 +151,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   }
 
   return value as Record<string, unknown>;
+}
+
+function commandArgsForBillingReturnPath(value?: string): string | undefined {
+  return normalizeBillingPath(value) || "/app";
 }
 
 function formatTierLabel(tier: string | undefined): string {
@@ -400,6 +474,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const importedSkillEditor = new ImportedSkillEditorManager(context, apiClient, async () => {
     await syncWorkspaceView();
   });
+  const localWatchdog = new LocalWatchdog(stateStore);
   const optimizationContentProvider = new OptimizationContentProvider();
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(
@@ -428,6 +503,7 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
       const result = await apiClient.connect(undefined, undefined, storedAccessToken);
       await stateStore.setConnection(connectionStateFromExtensionConnection(result));
+      localWatchdog.syncFromEntitlements();
     } catch (error) {
       apiClient.setAccessToken(undefined);
       await stateStore.clearAccessToken();
@@ -580,6 +656,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   context.subscriptions.push(statusBar);
+  context.subscriptions.push(localWatchdog);
   context.subscriptions.push(browserConnect.register());
   context.subscriptions.push(importedSkillEditor);
   context.subscriptions.push(vscode.window.registerWebviewViewProvider("xupra.projects", workspaceSidebar, {
@@ -589,6 +666,11 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.window.registerTreeDataProvider("xupra.help", helpView));
 
   let isRefreshingPlan = false;
+
+  const isPaidTier = (rawTier?: string) => {
+    const tier = rawTier?.toLowerCase();
+    return tier === "pro" || tier === "security_pro" || tier === "team_security" || tier === "enterprise";
+  };
 
   context.subscriptions.push(
     vscode.window.onDidChangeWindowState(async (windowState) => {
@@ -618,7 +700,7 @@ export async function activate(context: vscode.ExtensionContext) {
             await stateStore.setConnection(newConnection);
             const tier = newConnection.organizationTier?.toLowerCase();
 
-            if (tier === "pro" || tier === "enterprise") {
+            if (isPaidTier(tier)) {
               await stateStore.setAwaitingPlanRefreshUntil(null);
               await syncWorkspaceView();
               return;
@@ -636,7 +718,7 @@ export async function activate(context: vscode.ExtensionContext) {
               await stateStore.setConnection(newConnection);
               const tier = newConnection.organizationTier?.toLowerCase();
 
-              if (tier === "pro" || tier === "enterprise") {
+              if (isPaidTier(tier)) {
                 await stateStore.setAwaitingPlanRefreshUntil(null);
                 await syncWorkspaceView();
                 return;
@@ -919,8 +1001,11 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   register("drylake.upgradeToPro", async () => {
-    await vscode.env.openExternal(apiClient.openWebUrl("/billing?source=extension"));
-    await stateStore.setAwaitingPlanRefreshUntil(new Date(Date.now() + 120_000).toISOString());
+    await vscode.commands.executeCommand("xupra.openBilling", {
+      required: "pro",
+      source: "extension",
+      returnPath: "/app",
+    });
   });
 
   register("xupra.connect", async () => {
@@ -931,6 +1016,7 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
+    localWatchdog.syncFromEntitlements();
     const files = await scanWorkspaceFiles(configuration);
     await stateStore.setDetectedFiles(files.map(({ logicalPath, category }) => ({ logicalPath, category })));
     const projects = await refreshProjectsSafely("connect");
@@ -1028,12 +1114,13 @@ export async function activate(context: vscode.ExtensionContext) {
     const result = await apiClient.connect(undefined, undefined, storedToken);
     const newConnection = connectionStateFromExtensionConnection(result);
     await stateStore.setConnection(newConnection);
-    const tier = newConnection.organizationTier?.toLowerCase();
+    const tier = (newConnection.plan ?? newConnection.organizationTier)?.toLowerCase();
 
-    if (tier === "pro" || tier === "enterprise") {
+    if (tier === "pro" || tier === "security_pro" || tier === "team_security" || tier === "enterprise") {
       await stateStore.setAwaitingPlanRefreshUntil(null);
     }
 
+    localWatchdog.syncFromEntitlements();
     await syncWorkspaceView();
   });
 
@@ -1046,6 +1133,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const signedOut = await signOutCommand(apiClient, stateStore);
 
     if (signedOut) {
+      localWatchdog.syncFromEntitlements();
       controlRoom.dispose();
       await syncWorkspaceView([]);
     }
@@ -1479,8 +1567,13 @@ export async function activate(context: vscode.ExtensionContext) {
     await vscode.env.openExternal(apiClient.openWebUrl("/settings"));
   });
 
-  register("xupra.openBilling", async () => {
-    await vscode.env.openExternal(apiClient.openWebUrl("/billing?source=extension"));
+  register("xupra.openBilling", async (...rawArgs: unknown[]) => {
+    const args = parseOpenBillingArgs(rawArgs);
+    const openBillingPath = buildOpenBillingPath({
+      ...args,
+      returnPath: commandArgsForBillingReturnPath(args.returnPath),
+    });
+    await vscode.env.openExternal(apiClient.openWebUrl(openBillingPath));
     await stateStore.setAwaitingPlanRefreshUntil(new Date(Date.now() + 120_000).toISOString());
   });
 

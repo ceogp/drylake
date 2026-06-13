@@ -50,6 +50,11 @@ export type GuardScanUploadPayload = {
     categoryScores: Record<string, unknown>;
     findings: Array<Record<string, unknown>>;
     connectionMap?: Record<string, unknown>;
+    extensions?: Array<Record<string, unknown>>;
+    mcpServers?: Array<Record<string, unknown>>;
+    workspaceSurface?: Record<string, unknown>;
+    packageManagers?: string[];
+    packageScripts?: string[];
   };
   artifacts?: GuardScanUploadArtifact[];
 };
@@ -89,6 +94,34 @@ export type GuardFixPlanPayload = {
   };
 };
 
+export type CloudAnalysisPayload = {
+  guardScanId?: string;
+  approvedPayload: {
+    scanManifest?: Record<string, unknown>;
+    redactedFindings?: Array<Record<string, unknown>>;
+    dependencyMetadata?: Record<string, unknown>;
+    mcpMetadata?: Record<string, unknown>;
+    extensionMetadata?: Record<string, unknown>;
+    filePathInventory?: string[];
+    selectedPromptFiles?: Array<{ path: string; content: string }>;
+  };
+};
+
+export type GuardScanComparisonResponse = {
+  personalComparison?: Record<string, unknown> | null;
+  baselineComparison?: Record<string, unknown> | null;
+};
+
+export type ContinuousWatchEventPayload = {
+  action?: "record" | "evaluate";
+  guardScanId?: string;
+  workspaceHash?: string;
+  eventType?: "scheduled_scan" | "extension_check_in" | "baseline_drift" | "policy_violation";
+  severity?: "critical" | "high" | "medium" | "low" | "info";
+  logicalPath?: string;
+  metadata?: Record<string, unknown>;
+};
+
 type BrowserConnectSessionPayload = {
   token: {
     token: string;
@@ -106,8 +139,11 @@ type BrowserConnectSessionPayload = {
     tier: string;
   };
   entitlements?: Record<string, boolean>;
+  entitlementVersion?: number;
+  plan?: string;
   subscription?: {
     status: string;
+    currentPeriodEnd?: string;
   };
   editor: "vscode" | "cursor";
 };
@@ -233,6 +269,15 @@ export class ApiClient {
 
   async getAuthSession() {
     return this.request<{ auth: ExtensionConnection["auth"] }>("/api/v1/auth/session");
+  }
+
+  async getEntitlements() {
+    return this.request<{
+      plan: string;
+      entitlementVersion: number;
+      capabilities: Record<string, boolean>;
+      billing: { status: string; currentPeriodEnd?: string };
+    }>("/api/v1/entitlements");
   }
 
   async listProjects() {
@@ -437,6 +482,103 @@ export class ApiClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
+    });
+  }
+
+  async startCloudAnalysis(params: CloudAnalysisPayload) {
+    return this.request<{
+      job: {
+        id: string;
+        guardScanId?: string | null;
+        status: string;
+        resultJson?: Record<string, unknown>;
+        createdAt: string;
+      };
+    }>("/api/v1/guard/cloud-analysis", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
+  async listCloudAnalysisJobs() {
+    return this.request<{
+      jobs: Array<{
+        id: string;
+        guardScanId?: string | null;
+        status: string;
+        resultJson?: Record<string, unknown>;
+        errorMessage?: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    }>("/api/v1/guard/cloud-analysis");
+  }
+
+  async getCloudAnalysisJob(jobId: string) {
+    return this.request<{
+      job: {
+        id: string;
+        guardScanId?: string | null;
+        status: string;
+        result?: Record<string, unknown>;
+        errorMessage?: string | null;
+        createdAt: string;
+        updatedAt: string;
+      };
+    }>(`/api/v1/guard/cloud-analysis/${encodeURIComponent(jobId)}`);
+  }
+
+  async getGuardScanComparison(guardScanId: string) {
+    return this.request<GuardScanComparisonResponse>(
+      `/api/v1/guard/scans/${encodeURIComponent(guardScanId)}/comparison`,
+    );
+  }
+
+  async markGuardScanBaseline(guardScanId: string) {
+    return this.request<{
+      baseline: {
+        id: string;
+        guardScanId: string;
+        workspaceHash: string;
+        createdAt: string;
+      };
+    }>("/api/v1/team/security/baseline", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ guardScanId }),
+    });
+  }
+
+  async recordContinuousWatchEvent(params: ContinuousWatchEventPayload) {
+    return this.request<{
+      evaluatedScanCount?: number;
+      eventsCreated?: number;
+      events?: Array<{
+        id: string;
+        eventType: string;
+        severity: string;
+        logicalPath: string;
+        createdAt: string;
+      }>;
+      event?: {
+        id: string;
+        eventType: string;
+        severity: string;
+        logicalPath: string;
+        createdAt: string;
+      };
+    }>("/api/v1/team/security/continuous-watch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
+  async runContinuousWatchEvaluation(params: Omit<ContinuousWatchEventPayload, "action" | "eventType" | "severity" | "logicalPath"> = {}) {
+    return this.recordContinuousWatchEvent({
+      ...params,
+      action: "evaluate",
     });
   }
 

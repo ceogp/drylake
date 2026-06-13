@@ -11,9 +11,9 @@ import {
 } from "@/lib/site-hosts";
 
 const proofPoints = [
-  ["Visual phase planning", "Turn a ticket, bug, feature request, or pasted AI prompt into cards your team can scan."],
-  ["Agent and skill routing", "Assign each phase to Claude Code, Codex, Cline, Continue, Kilo, Gemini, Cursor, or another local agent."],
-  ["Token control", "Use smaller focused handoffs instead of one oversized prompt that burns context and hides risk."],
+  ["Free local Guard scan", "Rank your AI coding setup before agents touch your repo."],
+  ["Agent MCP risk map", "Scan MCP servers, skills, rules, IDE extensions, secrets, prompt-injection risk, and blast radius."],
+  ["Agent control plane", "Plan work, assign phases to Claude Code, Codex, Cursor, Cline, Continue, Kilo, and run focused handoffs."],
 ];
 
 const trustLinks = [
@@ -143,30 +143,42 @@ function WorkflowGifPreview() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
         <div>
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
-            VS Code workflow
+            VS Code + Cursor workflow
           </p>
           <p className="mt-1 text-sm text-zinc-400">
-            Rearrange cards, assign agents, attach skills, launch handoffs.
+            Scan agent security first, then plan and route coding handoffs.
           </p>
         </div>
         <span className="rounded border border-orange-400/40 bg-orange-400/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-200">
-          6 phases
+          Guard + control
         </span>
       </div>
-      <Image
-        src="/marketplace/extension/media/drylake-workflow-6phase-handoffs.gif"
-        alt="DryLake workflow showing planning cards, agent selection, skill selection, and terminal handoffs"
-        width={1120}
-        height={630}
-        priority
-        unoptimized
-        sizes="(min-width: 1024px) 54vw, 100vw"
-        className="aspect-video w-full object-cover object-top"
-      />
+      <div className="grid gap-px bg-zinc-800 lg:grid-cols-2">
+        <Image
+          src="/marketplace/extension/media/guard-security.gif"
+          alt="DryLake Guard security workflow showing local scan progress, report sections, approved upload, Team Baseline, and Continuous Watch"
+          width={1120}
+          height={630}
+          priority
+          unoptimized
+          sizes="(min-width: 1024px) 27vw, 100vw"
+          className="aspect-video w-full bg-[#080b0a] object-cover object-top"
+        />
+        <Image
+          src="/marketplace/extension/media/agent-control.gif"
+          alt="DryLake agent control workflow showing phase cards, agent selection, skills, terminal handoffs, and completed outcomes"
+          width={1120}
+          height={630}
+          priority
+          unoptimized
+          sizes="(min-width: 1024px) 27vw, 100vw"
+          className="aspect-video w-full bg-[#080b0a] object-cover object-top"
+        />
+      </div>
       <div className="grid gap-2 border-t border-zinc-800 bg-zinc-950/80 p-4 text-sm text-zinc-300 sm:grid-cols-3">
-        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Claude Haiku free planning</span>
-        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Bring local coding agents</span>
-        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Upgrade for Frontier planning</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Free local Guard scan</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">AWS-backed Active Guard</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Agent planning and handoffs</span>
       </div>
     </section>
   );
@@ -200,15 +212,15 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
           <section className="max-w-3xl">
             <DryLakeLogo className="mb-8 h-20 w-auto sm:h-24" priority />
             <div className="mb-6 flex flex-wrap gap-2">
-              <StatusPill>VS Code control room</StatusPill>
-              <StatusPill>Multi-agent handoffs</StatusPill>
+              <StatusPill>Free local Guard scan</StatusPill>
+              <StatusPill>Agent MCP control plane</StatusPill>
             </div>
             <h1 className="max-w-4xl text-5xl font-semibold leading-[1.02] text-zinc-50 sm:text-6xl lg:text-7xl">
-              DryLake plans AI coding work before agents burn tokens.
+              DryLake secures and controls AI coding agents before they touch your repo.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-              Turn tickets, bugs, product specs, and messy prompts into visual phase cards. Assign each
-              card to your coding agent, attach the right skill, and run focused handoffs from VS Code.
+              Run a free local Guard scan for MCP servers, skills, IDE extensions, secrets, and blast radius.
+              Then plan coding work, assign agents, attach skills, and run focused handoffs from VS Code.
             </p>
             <BackingLogos />
             <div className="mt-8 flex flex-wrap gap-3">
@@ -234,7 +246,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Workflow</p>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              Built for engineers who want planning control before execution.
+              Built for engineers who need security visibility and planning control before execution.
             </h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">

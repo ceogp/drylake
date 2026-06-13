@@ -7,19 +7,19 @@ import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/servi
 
 const ENTITLEMENT_ITEMS: Array<{ key: EntitlementKey; label: string; description: string }> = [
   {
-    key: "xupra_pro_ai",
-    label: "Xupra AI planning",
+    key: "canUseHostedPlanning",
+    label: "Hosted planning",
     description: "Hosted planning chat and AI-generated phase plans.",
   },
   {
-    key: "session_cloud_sync",
-    label: "Session cloud sync",
-    description: "Cloud-backed planning sessions tied to this account.",
+    key: "canUseFixWithAI",
+    label: "Fix with AI",
+    description: "Paid Guard remediation plans generated from redacted local scan findings.",
   },
   {
-    key: "pr_summary_generation",
-    label: "PR summaries",
-    description: "AI-assisted implementation summaries for review workflows.",
+    key: "canUseTeamBaseline",
+    label: "Team Baseline",
+    description: "Shared baseline and drift comparison for Team Security workspaces.",
   },
 ];
 
@@ -33,7 +33,13 @@ const ACCOUNT_LINKS = [
 function publicTierLabel(value: string | null | undefined) {
   const normalized = (value ?? "free").toLowerCase();
   if (normalized === "enterprise") {
-    return "Pro";
+    return "Enterprise";
+  }
+  if (normalized === "security_pro") {
+    return "Security Pro";
+  }
+  if (normalized === "team_security") {
+    return "Team Security";
   }
 
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
@@ -47,8 +53,12 @@ function billingStatusLabel(value: string | null | undefined) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : "Free";
 }
 
+function isPaidTierLabel(value: string) {
+  return value === "Pro" || value === "Security Pro" || value === "Team Security" || value === "Enterprise";
+}
+
 function PlanBadge({ tier }: { tier: string }) {
-  const paid = tier === "Pro" || tier === "Enterprise";
+  const paid = isPaidTierLabel(tier);
 
   return (
     <span
@@ -111,7 +121,7 @@ export default async function AccountPage() {
   const profile = context.user.profile;
   const displayName = profile?.displayName ?? context.user.email;
   const tier = publicTierLabel(subscription?.tier ?? context.organization.tier);
-  const paid = tier === "Pro" || tier === "Enterprise";
+  const paid = isPaidTierLabel(tier);
   const userCanManageBilling = canManageBilling(context.activeMembership.role);
 
   return (
@@ -151,14 +161,15 @@ export default async function AccountPage() {
             </div>
             <p className="mt-5 text-sm leading-7 text-zinc-400">
               {paid
-                ? "Pro access is active for hosted Xupra AI planning and account-backed workflow features."
-                : "Free access is active. You can use visual planning cards, local agent handoffs, and extension connection now."}
+                ? "Paid access is active. The exact planning, Guard, and team capabilities are listed below."
+                : "Free access is active. Local Guard scan and local reports are available without paid security remediation."}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {userCanManageBilling ? (
                 paid && subscription?.stripeCustomerId ? (
                   <form action={openBillingPortalAction}>
                     <input name="organizationId" type="hidden" value={context.organization.id} />
+                    <input name="returnPath" type="hidden" value="/account" />
                     <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
                       Open Billing Portal
                     </button>

@@ -4,7 +4,19 @@ export type SelectedContext = {
   versionId?: string;
 };
 
+export type OrganizationRole = "owner" | "admin" | "member" | "viewer";
+
 export type EntitlementKey =
+  | "canUseHostedPlanning"
+  | "canUseFixWithAI"
+  | "canUseApprovedUpload"
+  | "canUseDeepCloudAnalysis"
+  | "canUseSuspiciousArtifactScan"
+  | "canUseLocalWatchdog"
+  | "canCreateTeam"
+  | "canUseTeamBaseline"
+  | "canUseContinuousWatch"
+  | "canManageTeamPolicy"
   | "xupra_pro_ai"
   | "session_cloud_sync"
   | "pr_summary_generation";
@@ -16,12 +28,15 @@ export type ConnectionState = {
   organizationName?: string;
   organizationSlug?: string;
   organizationTier?: string;
+  organizationRole?: OrganizationRole;
+  plan?: string;
+  entitlementVersion?: number;
   entitlements?: EntitlementMap;
   subscriptionStatus?: string;
   awaitingPlanRefreshUntil?: string | null;
   userEmail?: string;
   userAvatarUrl?: string | null;
-  authMode?: "dev" | "clerk";
+  authMode?: "dev" | "clerk" | "cognito";
 };
 
 export type DetectedWorkspaceFile = {

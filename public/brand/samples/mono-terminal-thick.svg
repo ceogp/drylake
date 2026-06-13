@@ -1,0 +1,33 @@
+<svg width="1400" height="520" viewBox="0 0 1400 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Thick mono terminal Xupra and drylake wordmark sample">
+  <style>
+    .mono {
+      font-family: "Cascadia Mono", "IBM Plex Mono", Consolas, monospace;
+      font-weight: 700;
+      fill: #f7f4ea;
+    }
+    .label {
+      font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      fill: #a1a1aa;
+    }
+    .note {
+      font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      fill: #71717a;
+    }
+  </style>
+  <rect width="1400" height="520" rx="24" fill="#090a0a"/>
+  <rect x="58" y="58" width="1284" height="404" rx="18" fill="#111414" stroke="#27272a"/>
+  <text x="92" y="112" class="label">MONO TERMINAL / THICK</text>
+  <path d="M94 132H286" stroke="#36b979" stroke-width="6" stroke-linecap="square"/>
+  <text x="92" y="242" class="mono" font-size="104" letter-spacing="2">Xupra</text>
+  <path d="M96 286H514" stroke="#ff5a1f" stroke-width="9" stroke-linecap="square"/>
+  <text x="94" y="340" class="note">Company: capital X, heavier mono, still technical.</text>
+  <text x="700" y="242" class="mono" font-size="104" letter-spacing="2">drylake</text>
+  <path d="M704 286H1302" stroke="#ff5a1f" stroke-width="9" stroke-linecap="square"/>
+  <text x="702" y="340" class="note">Product: lowercase, terminal-native, easier to use in CLI/docs.</text>
+</svg>

@@ -3,6 +3,20 @@ import Stripe from "stripe";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { recordAuditEvent } from "@/lib/services/audit";
+import { type PlanTier } from "@/lib/services/entitlements";
+
+function getSafeReturnPath(value: string | null | undefined) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(value, "http://localhost");
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return null;
+  }
+}
 
 function getStripeClient() {
   if (!env.STRIPE_SECRET_KEY) {
@@ -16,18 +30,80 @@ export function entitlementsForTier(tier: string) {
   switch (tier) {
     case "pro":
       return {
+        canUseHostedPlanning: true,
+        canUseFixWithAI: false,
+        canUseApprovedUpload: false,
+        canUseDeepCloudAnalysis: false,
+        canUseSuspiciousArtifactScan: true,
+        canUseLocalWatchdog: false,
+        canCreateTeam: false,
+        canUseTeamBaseline: false,
+        canUseContinuousWatch: false,
+        canManageTeamPolicy: false,
+        xupra_pro_ai: true,
+        session_cloud_sync: true,
+        pr_summary_generation: true,
+      };
+    case "security_pro":
+      return {
+        canUseHostedPlanning: true,
+        canUseFixWithAI: true,
+        canUseApprovedUpload: true,
+        canUseDeepCloudAnalysis: true,
+        canUseSuspiciousArtifactScan: true,
+        canUseLocalWatchdog: true,
+        canCreateTeam: false,
+        canUseTeamBaseline: false,
+        canUseContinuousWatch: false,
+        canManageTeamPolicy: false,
+        xupra_pro_ai: true,
+        session_cloud_sync: true,
+        pr_summary_generation: true,
+      };
+    case "team_security":
+      return {
+        canUseHostedPlanning: true,
+        canUseFixWithAI: true,
+        canUseApprovedUpload: true,
+        canUseDeepCloudAnalysis: true,
+        canUseSuspiciousArtifactScan: true,
+        canUseLocalWatchdog: true,
+        canCreateTeam: true,
+        canUseTeamBaseline: true,
+        canUseContinuousWatch: true,
+        canManageTeamPolicy: true,
         xupra_pro_ai: true,
         session_cloud_sync: true,
         pr_summary_generation: true,
       };
     case "enterprise":
       return {
+        canUseHostedPlanning: true,
+        canUseFixWithAI: true,
+        canUseApprovedUpload: true,
+        canUseDeepCloudAnalysis: true,
+        canUseSuspiciousArtifactScan: true,
+        canUseLocalWatchdog: true,
+        canCreateTeam: true,
+        canUseTeamBaseline: true,
+        canUseContinuousWatch: true,
+        canManageTeamPolicy: true,
         xupra_pro_ai: true,
         session_cloud_sync: true,
         pr_summary_generation: true,
       };
     default:
       return {
+        canUseHostedPlanning: false,
+        canUseFixWithAI: false,
+        canUseApprovedUpload: false,
+        canUseDeepCloudAnalysis: false,
+        canUseSuspiciousArtifactScan: true,
+        canUseLocalWatchdog: false,
+        canCreateTeam: false,
+        canUseTeamBaseline: false,
+        canUseContinuousWatch: false,
+        canManageTeamPolicy: false,
         xupra_pro_ai: false,
         session_cloud_sync: false,
         pr_summary_generation: false,
@@ -59,12 +135,7 @@ async function upsertSubscriptionFromStripe(params: {
     return null;
   }
 
-  const tier =
-    params.stripePriceId && params.stripePriceId === env.STRIPE_ENTERPRISE_PRICE_ID
-      ? "enterprise"
-      : params.stripePriceId && params.stripePriceId === env.STRIPE_PRO_PRICE_ID
-        ? "pro"
-        : "free";
+  const tier = tierForStripePriceId(params.stripePriceId);
 
   return prisma.subscription.upsert({
     where: { organizationId: organization.id },
@@ -104,12 +175,7 @@ async function upsertSubscriptionForOrganization(params: {
   currentPeriodEndsAt?: Date | null;
   cancelAtPeriodEnd?: boolean;
 }) {
-  const tier =
-    params.stripePriceId && params.stripePriceId === env.STRIPE_ENTERPRISE_PRICE_ID
-      ? "enterprise"
-      : params.stripePriceId && params.stripePriceId === env.STRIPE_PRO_PRICE_ID
-        ? "pro"
-        : "free";
+  const tier = tierForStripePriceId(params.stripePriceId);
 
   return prisma.subscription.upsert({
     where: { organizationId: params.organizationId },
@@ -143,7 +209,11 @@ async function upsertSubscriptionForOrganization(params: {
 export async function createCheckoutSession(params: {
   organizationId: string;
   userEmail: string;
-  priceLookup: "pro" | "enterprise";
+  userId?: string;
+  priceLookup: "pro" | "security_pro" | "team_security" | "enterprise";
+  billingContext?: "user" | "team";
+  returnTo?: string | null;
+  extensionReturnUri?: string | null;
   successUrl?: string;
   cancelUrl?: string;
 }) {
@@ -153,8 +223,7 @@ export async function createCheckoutSession(params: {
     return { configured: false as const };
   }
 
-  const priceId =
-    params.priceLookup === "enterprise" ? env.STRIPE_ENTERPRISE_PRICE_ID : env.STRIPE_PRO_PRICE_ID;
+  const priceId = priceIdForTier(params.priceLookup);
 
   if (!priceId) {
     return { configured: false as const };
@@ -177,6 +246,12 @@ export async function createCheckoutSession(params: {
     cancel_url: params.cancelUrl ?? `${env.APP_BASE_URL}/billing?canceled=1`,
     metadata: {
       organizationId: params.organizationId,
+      drylake_user_id: params.userId ?? "",
+      drylake_team_id: params.billingContext === "team" ? params.organizationId : "",
+      plan: params.priceLookup,
+      billing_context: params.billingContext ?? "user",
+      return_to: params.returnTo ?? "",
+      extension_return_uri: params.extensionReturnUri ?? "",
     },
     customer: subscription?.stripeCustomerId ?? undefined,
   });
@@ -187,8 +262,40 @@ export async function createCheckoutSession(params: {
   };
 }
 
+function priceIdForTier(tier: PlanTier) {
+  switch (tier) {
+    case "pro":
+      return env.STRIPE_PRO_PRICE_ID;
+    case "security_pro":
+      return env.STRIPE_SECURITY_PRO_PRICE_ID;
+    case "team_security":
+      return env.STRIPE_TEAM_SECURITY_PRICE_ID;
+    case "enterprise":
+      return env.STRIPE_ENTERPRISE_PRICE_ID;
+    default:
+      return null;
+  }
+}
+
+function tierForStripePriceId(priceId: string | null | undefined): PlanTier {
+  if (priceId && env.STRIPE_ENTERPRISE_PRICE_ID && priceId === env.STRIPE_ENTERPRISE_PRICE_ID) {
+    return "enterprise";
+  }
+  if (priceId && env.STRIPE_TEAM_SECURITY_PRICE_ID && priceId === env.STRIPE_TEAM_SECURITY_PRICE_ID) {
+    return "team_security";
+  }
+  if (priceId && env.STRIPE_SECURITY_PRO_PRICE_ID && priceId === env.STRIPE_SECURITY_PRO_PRICE_ID) {
+    return "security_pro";
+  }
+  if (priceId && env.STRIPE_PRO_PRICE_ID && priceId === env.STRIPE_PRO_PRICE_ID) {
+    return "pro";
+  }
+  return "free";
+}
+
 export async function createBillingPortalSession(params: {
   organizationId: string;
+  returnPath?: string | null;
 }) {
   const stripe = getStripeClient();
 
@@ -204,9 +311,11 @@ export async function createBillingPortalSession(params: {
     return { configured: false as const };
   }
 
+  const returnPath = getSafeReturnPath(params.returnPath);
+
   const session = await stripe.billingPortal.sessions.create({
     customer: subscription.stripeCustomerId,
-    return_url: `${env.APP_BASE_URL}/billing`,
+    return_url: `${env.APP_BASE_URL}${returnPath || "/billing"}`,
   });
 
   return {
@@ -227,7 +336,7 @@ export async function handleStripeWebhook(rawBody: string, signature: string) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const organizationId = session.metadata?.organizationId;
+      const organizationId = session.metadata?.drylake_team_id || session.metadata?.organizationId;
 
       if (organizationId && session.customer) {
         const stripeCustomerId = String(session.customer);
@@ -287,6 +396,35 @@ export async function handleStripeWebhook(rawBody: string, signature: string) {
             status: synced.status,
             stripeSubscriptionId: synced.stripeSubscriptionId,
           },
+        });
+      }
+      break;
+    }
+    case "invoice.payment_succeeded":
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as Stripe.Invoice;
+      const invoiceLike = invoice as Stripe.Invoice & {
+        subscription?: string | Stripe.Subscription | null;
+        parent?: { subscription_details?: { subscription?: string | Stripe.Subscription | null } | null } | null;
+      };
+      const rawSubscription =
+        invoiceLike.parent?.subscription_details?.subscription ?? invoiceLike.subscription ?? null;
+      const subscriptionId =
+        typeof rawSubscription === "string" ? rawSubscription : rawSubscription?.id ?? null;
+
+      if (subscriptionId) {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const priceId = subscription.items.data[0]?.price?.id ?? null;
+
+        await upsertSubscriptionFromStripe({
+          stripeCustomerId: typeof subscription.customer === "string" ? subscription.customer : null,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId,
+          status: subscription.status,
+          currentPeriodEndsAt: subscription.items.data[0]?.current_period_end
+            ? new Date(subscription.items.data[0].current_period_end * 1000)
+            : null,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
         });
       }
       break;

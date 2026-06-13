@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { createBillingPortalSession, createCheckoutSession } from "@/lib/services/billing";
+import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
+import { evaluateContinuousWatch, markGuardScanAsBaseline, updateTeamPolicy } from "@/lib/services/team-security";
 import {
   requireCredentialAccess,
   requireIntegrationAccess,
@@ -423,7 +425,7 @@ export async function createCheckoutAction(formData: FormData) {
     requestedOrganizationId || undefined,
   );
   const organizationId = requestedOrganizationId || context.organization.id;
-  const plan = String(formData.get("plan") ?? "pro").trim() as "pro" | "enterprise";
+  const plan = String(formData.get("plan") ?? "pro").trim() as "pro" | "security_pro" | "team_security" | "enterprise";
   const returnPath = getSafeReturnPath(formData.get("returnPath"));
 
   if (!organizationId) {
@@ -432,8 +434,11 @@ export async function createCheckoutAction(formData: FormData) {
 
   const session = await createCheckoutSession({
     organizationId,
+    userId: context.user.id,
     userEmail: context.user.email,
     priceLookup: plan,
+    billingContext: plan === "team_security" ? "team" : "user",
+    returnTo: returnPath,
     successUrl: returnPath ? `${env.APP_BASE_URL}${withQueryValue(returnPath, "billing", "success")}` : undefined,
     cancelUrl: returnPath ? `${env.APP_BASE_URL}${withQueryValue(returnPath, "billing", "canceled")}` : undefined,
   });
@@ -456,6 +461,7 @@ export async function openBillingPortalAction(formData: FormData) {
     requestedOrganizationId || undefined,
   );
   const organizationId = requestedOrganizationId || context.organization.id;
+  const returnPath = getSafeReturnPath(formData.get("returnPath"));
 
   if (!organizationId) {
     return;
@@ -463,6 +469,7 @@ export async function openBillingPortalAction(formData: FormData) {
 
   const session = await createBillingPortalSession({
     organizationId,
+    returnPath,
   });
 
   if (session.configured && session.url) {
@@ -470,4 +477,276 @@ export async function openBillingPortalAction(formData: FormData) {
   }
 
   revalidatePath("/billing");
+}
+
+function formList(value: FormDataEntryValue | null) {
+  return String(value ?? "")
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function asInputJson(value: unknown): Prisma.InputJsonValue {
+  return value as Prisma.InputJsonValue;
+}
+
+function asRecordArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object") : [];
+}
+
+function asStringArrayFromJson(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function redactGuardCloudValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value
+      .replace(/-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi, "[REDACTED PRIVATE KEY]")
+      .replace(/\b(AKIA|ASIA)[A-Z0-9]{16}\b/g, "[REDACTED AWS ACCESS KEY]")
+      .replace(/\b(?:sk|rk|pk|xox[baprs]|gh[pousr])_[A-Za-z0-9_-]{16,}\b/g, "[REDACTED TOKEN]")
+      .replace(/\bsk-[A-Za-z0-9_-]{16,}\b/g, "[REDACTED TOKEN]")
+      .replace(/\b([A-Z0-9_]*(?:API[_-]?KEY|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*\s*=\s*)[^\s"'`]+/gi, "$1[REDACTED]");
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(redactGuardCloudValue);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, redactGuardCloudValue(item)]));
+  }
+
+  return value;
+}
+
+function workspaceFilePathInventory(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  const workspace = value as Record<string, unknown>;
+  return [
+    ...asRecordArray(workspace.deploymentFiles).map((item) => item.path),
+    ...asRecordArray(workspace.iacFiles).map((item) => item.path),
+    ...asRecordArray(workspace.ciWorkflowFiles).map((item) => item.path),
+    ...asRecordArray(workspace.credentialLikeFiles).map((item) => item.path),
+  ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function cloudAnalysisResultFromSavedReport(input: {
+  findings: Record<string, unknown>[];
+  mcpServers: Record<string, unknown>[];
+  extensions: Record<string, unknown>[];
+  filePathInventory: string[];
+  packageManagers: string[];
+  packageScripts: string[];
+}) {
+  const severityCounts = input.findings.reduce<Record<string, number>>((counts, finding) => {
+    const severity = typeof finding.severity === "string" ? finding.severity : "unknown";
+    counts[severity] = (counts[severity] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  const categoryCounts = input.findings.reduce<Record<string, number>>((counts, finding) => {
+    const category = typeof finding.category === "string" ? finding.category : "unknown";
+    counts[category] = (counts[category] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  return {
+    summary: "Deep Cloud Analysis completed from an approved saved Guard report.",
+    uploadAssurance: {
+      rawSecretsAllowed: false,
+      fullSourceTreeAllowed: false,
+      source: "saved_guard_report",
+    },
+    riskCorrelation: {
+      findingCount: input.findings.length,
+      severityCounts,
+      categoryCounts,
+      mcpServerCount: input.mcpServers.length,
+      extensionCount: input.extensions.length,
+    },
+    supplyChainReview: {
+      packageSignals: [
+        ...input.packageManagers.map((item) => `package-manager:${item}`),
+        ...input.packageScripts.map((item) => `script:${item}`),
+      ],
+      recommendation: input.packageScripts.length
+        ? "Review saved package scripts for deploy, install-hook, and unpinned tool execution risk."
+        : "No package script metadata was available on the saved report.",
+    },
+    agentToolGraph: {
+      mcpTools: input.mcpServers.slice(0, 50),
+      extensions: input.extensions.slice(0, 50),
+      recommendation: "Reduce agent tool blast radius with MCP and extension allowlists/denylists.",
+    },
+    blastRadiusGraph: {
+      filePathInventoryCount: input.filePathInventory.length,
+      sensitivePathSignals: input.filePathInventory.filter((path) =>
+        /(^|\/)(\.env|\.github|terraform|docker|k8s|kubernetes|deploy|scripts)(\/|$)/i.test(path),
+      ),
+    },
+    remediationPlan: {
+      executiveSummary: "Prioritize critical/high Guard findings, then reduce tool and deploy surface.",
+      quickFixes: [
+        "Pin MCP and package-launch versions.",
+        "Move secrets out of agent-readable files.",
+        "Apply team MCP and extension policy.",
+        "Re-run Guard after remediation.",
+      ],
+    },
+  };
+}
+
+export async function markTeamBaselineAction(formData: FormData) {
+  const requestedOrganizationId = String(formData.get("organizationId") ?? "").trim();
+  const guardScanId = String(formData.get("guardScanId") ?? "").trim();
+  const context = await requireOrganizationRole(["owner", "admin"], requestedOrganizationId || undefined);
+  const { resolved } = await getEntitlementsForOrganization(context.organization.id);
+
+  if (!resolved.canUseTeamBaseline) {
+    throw new Error("Team Baseline requires Team Security.");
+  }
+
+  if (!guardScanId) {
+    throw new Error("guardScanId is required.");
+  }
+
+  await markGuardScanAsBaseline({
+    organizationId: context.organization.id,
+    actorUserId: context.user.id,
+    guardScanId,
+  });
+
+  revalidatePath("/team/security/baseline");
+  revalidatePath("/team/security");
+}
+
+export async function updateTeamPolicyAction(formData: FormData) {
+  const requestedOrganizationId = String(formData.get("organizationId") ?? "").trim();
+  const context = await requireOrganizationRole(["owner", "admin"], requestedOrganizationId || undefined);
+  const { resolved } = await getEntitlementsForOrganization(context.organization.id);
+
+  if (!resolved.canManageTeamPolicy) {
+    throw new Error("Team policy management requires Team Security.");
+  }
+
+  await updateTeamPolicy({
+    organizationId: context.organization.id,
+    mcpAllowlist: formList(formData.get("mcpAllowlist")),
+    mcpDenylist: formList(formData.get("mcpDenylist")),
+    extensionAllowlist: formList(formData.get("extensionAllowlist")),
+    extensionDenylist: formList(formData.get("extensionDenylist")),
+    retentionDays: Number(formData.get("retentionDays") ?? 90),
+  });
+
+  revalidatePath("/team/security/policy");
+}
+
+export async function runContinuousWatchAction(formData: FormData) {
+  const requestedOrganizationId = String(formData.get("organizationId") ?? "").trim();
+  const guardScanId = String(formData.get("guardScanId") ?? "").trim();
+  const context = await requireOrganizationRole(["owner", "admin"], requestedOrganizationId || undefined);
+  const { resolved } = await getEntitlementsForOrganization(context.organization.id);
+
+  if (!resolved.canUseContinuousWatch) {
+    throw new Error("Continuous Watch requires Team Security.");
+  }
+
+  await evaluateContinuousWatch({
+    organizationId: context.organization.id,
+    actorUserId: context.user.id,
+    guardScanId: guardScanId || undefined,
+  });
+
+  revalidatePath("/team/security");
+  revalidatePath("/team/security/baseline");
+}
+
+export async function startCloudAnalysisForReportAction(formData: FormData) {
+  const requestedOrganizationId = String(formData.get("organizationId") ?? "").trim();
+  const guardScanId = String(formData.get("guardScanId") ?? "").trim();
+  const context = await requireOrganizationRole(["owner", "admin", "member"], requestedOrganizationId || undefined);
+  const { resolved } = await getEntitlementsForOrganization(context.organization.id);
+
+  if (!resolved.canUseApprovedUpload || !resolved.canUseDeepCloudAnalysis) {
+    throw new Error("Deep Cloud Analysis requires Security Pro.");
+  }
+
+  if (!guardScanId) {
+    throw new Error("guardScanId is required.");
+  }
+
+  const scan = await prisma.guardScan.findFirst({
+    where: {
+      id: guardScanId,
+      organizationId: context.organization.id,
+    },
+    select: {
+      id: true,
+      score: true,
+      rank: true,
+      scannedAt: true,
+      summaryJson: true,
+      categoryScoresJson: true,
+      findingsJson: true,
+      extensionsJson: true,
+      mcpServersJson: true,
+      workspaceSurfaceJson: true,
+      packageManagersJson: true,
+      packageScriptsJson: true,
+    },
+  });
+
+  if (!scan) {
+    throw new Error("Guard scan not found.");
+  }
+
+  const findings = asRecordArray(redactGuardCloudValue(scan.findingsJson));
+  const mcpServers = asRecordArray(redactGuardCloudValue(scan.mcpServersJson));
+  const extensions = asRecordArray(redactGuardCloudValue(scan.extensionsJson));
+  const packageManagers = asStringArrayFromJson(scan.packageManagersJson);
+  const packageScripts = asStringArrayFromJson(scan.packageScriptsJson);
+  const filePathInventory = workspaceFilePathInventory(scan.workspaceSurfaceJson);
+  const approvedPayload = {
+    scanManifest: {
+      scannedAt: scan.scannedAt.toISOString(),
+      score: scan.score,
+      rank: scan.rank,
+      summary: scan.summaryJson,
+      categoryScores: scan.categoryScoresJson,
+    },
+    redactedFindings: findings,
+    dependencyMetadata: {
+      packageManagers,
+      packageScripts,
+      riskyPackageScripts: asRecordArray((scan.workspaceSurfaceJson as Record<string, unknown> | null)?.riskyPackageScripts),
+    },
+    mcpMetadata: { servers: mcpServers },
+    extensionMetadata: { extensions },
+    filePathInventory,
+    selectedPromptFiles: [],
+  };
+
+  await prisma.cloudAnalysisJob.create({
+    data: {
+      organizationId: context.organization.id,
+      actorUserId: context.user.id,
+      guardScanId: scan.id,
+      status: "succeeded",
+      approvedPayloadJson: asInputJson(approvedPayload),
+      resultJson: asInputJson(cloudAnalysisResultFromSavedReport({
+        findings,
+        mcpServers,
+        extensions,
+        filePathInventory,
+        packageManagers,
+        packageScripts,
+      })),
+    },
+  });
+
+  revalidatePath(`/security/reports/${guardScanId}`);
+  revalidatePath("/security/reports");
 }

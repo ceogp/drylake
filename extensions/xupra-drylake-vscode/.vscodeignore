@@ -4,6 +4,7 @@
 development-vsix/**
 *.vsix
 media/icon-dl-box-v1.png
+media/awsscan.jpg
 src/**
 tsconfig.json
 esbuild.mjs

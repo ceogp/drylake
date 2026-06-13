@@ -1,4 +1,5 @@
 export type Id = string;
+export type OrganizationRole = "owner" | "admin" | "member" | "viewer";
 
 export type ProjectSummary = {
   id: Id;
@@ -119,7 +120,7 @@ export type GeneratedAgent = {
 export type ExtensionConnection = {
   editor: "vscode" | "cursor";
   auth: {
-    mode: "dev" | "clerk";
+    mode: "dev" | "clerk" | "cognito";
     provider: string;
     configured: boolean;
     pendingKeys: string[];
@@ -151,8 +152,12 @@ export type ExtensionConnection = {
         tier?: string;
       }
     | null;
+  organizationRole?: OrganizationRole;
   entitlements?: Record<string, boolean>;
+  entitlementVersion?: number;
+  plan?: string;
   subscription?: {
     status: string;
+    currentPeriodEnd?: string;
   };
 };

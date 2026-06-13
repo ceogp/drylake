@@ -1,0 +1,110 @@
+<svg width="1400" height="960" viewBox="0 0 1400 960" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DryLake tight dl product mark">
+  <rect width="1400" height="960" fill="#090a0a"/>
+  <style>
+    .label { font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace; font-size: 22px; font-weight: 700; letter-spacing: 0; fill: #f7f4ea; }
+    .note { font-family: Helvetica, "Helvetica Neue", sans-serif; font-size: 18px; font-weight: 400; letter-spacing: 0; fill: #a6aca5; }
+    .word { font-family: "Cascadia Mono", "IBM Plex Mono", Consolas, monospace; font-size: 82px; font-weight: 800; letter-spacing: 0; fill: #f7f4ea; }
+    .mark { font-family: "Cascadia Mono", "IBM Plex Mono", Consolas, monospace; font-size: 230px; font-weight: 800; letter-spacing: -18px; }
+    .markSmall { font-family: "Cascadia Mono", "IBM Plex Mono", Consolas, monospace; font-size: 230px; font-weight: 800; letter-spacing: -34px; }
+    .panel { fill: #111414; stroke: #28302b; stroke-width: 2; }
+    .cream { fill: #f7f4ea; }
+    .black { fill: #090a0a; }
+    .orange { fill: #ff5a1f; }
+    .crackDark { fill: none; stroke: #151008; stroke-width: 5; stroke-linecap: square; stroke-linejoin: miter; }
+    .crackCream { fill: none; stroke: #f7f4ea; stroke-width: 5; stroke-linecap: square; stroke-linejoin: miter; }
+  </style>
+
+  <text x="72" y="95" class="word">drylake</text>
+  <rect x="76" y="130" width="438" height="18" fill="#ff5a1f"/>
+  <text x="72" y="190" class="note">Tighter product mark: actual mono d + l forms, lowercase d, orange l, cracked dry lakebed inside the d only.</text>
+
+  <defs>
+    <clipPath id="tightDClipA">
+      <text x="44" y="226" class="mark">d</text>
+    </clipPath>
+    <clipPath id="tightDClipB">
+      <text x="34" y="226" class="markSmall">d</text>
+    </clipPath>
+    <clipPath id="tightDClipC">
+      <text x="44" y="226" class="mark">d</text>
+    </clipPath>
+  </defs>
+
+  <g transform="translate(70 250)">
+    <rect class="panel" x="0" y="0" width="390" height="540" rx="8"/>
+    <text class="label" x="34" y="54">A. Balanced dl</text>
+    <text class="note" x="34" y="86">Best first choice</text>
+    <g transform="translate(63 135)">
+      <rect x="0" y="0" width="264" height="264" rx="30" fill="#151008" stroke="#ff5a1f" stroke-width="12"/>
+      <text class="mark" x="44" y="226">
+        <tspan fill="#f7f4ea">d</tspan><tspan fill="#ff5a1f" dx="-28">l</tspan>
+      </text>
+      <g clip-path="url(#tightDClipA)">
+        <path class="crackDark" d="M82 84l36 30 38-10 36 24"/>
+        <path class="crackDark" d="M118 114l-20 46 30 26-10 42"/>
+        <path class="crackDark" d="M158 104l12 43 36 22"/>
+        <path class="crackDark" d="M92 172l46-4 34 32 38-8"/>
+        <path class="crackDark" d="M146 68l-14 44"/>
+      </g>
+      <rect x="78" y="176" width="38" height="38" rx="5" fill="#80d99a"/>
+      <path d="M83 184l28 22M111 184l-22 25" stroke="#151008" stroke-width="4"/>
+    </g>
+    <text x="34" y="464" class="word" style="font-size:48px">drylake</text>
+    <rect x="36" y="490" width="242" height="12" fill="#ff5a1f"/>
+  </g>
+
+  <g transform="translate(505 250)">
+    <rect class="panel" x="0" y="0" width="390" height="540" rx="8"/>
+    <text class="label" x="34" y="54">B. Closer Lockup</text>
+    <text class="note" x="34" y="86">More compact at icon size</text>
+    <g transform="translate(63 135)">
+      <rect x="0" y="0" width="264" height="264" rx="30" fill="#151008" stroke="#ff5a1f" stroke-width="12"/>
+      <text class="markSmall" x="34" y="226">
+        <tspan fill="#f7f4ea">d</tspan><tspan fill="#ff5a1f" dx="-40">l</tspan>
+      </text>
+      <g clip-path="url(#tightDClipB)">
+        <path class="crackDark" d="M72 84l38 28 36-12 38 26"/>
+        <path class="crackDark" d="M110 112l-18 44 32 28-8 44"/>
+        <path class="crackDark" d="M150 102l10 43 38 23"/>
+        <path class="crackDark" d="M84 172l46-4 34 32 38-8"/>
+      </g>
+    </g>
+    <text x="34" y="464" class="word" style="font-size:48px">drylake</text>
+    <rect x="36" y="490" width="242" height="12" fill="#ff5a1f"/>
+  </g>
+
+  <g transform="translate(940 250)">
+    <rect class="panel" x="0" y="0" width="390" height="540" rx="8"/>
+    <text class="label" x="34" y="54">C. Mono Extension</text>
+    <text class="note" x="34" y="86">Same mark as pure black/white</text>
+    <g transform="translate(63 135)">
+      <rect x="0" y="0" width="264" height="264" rx="30" fill="#090a0a" stroke="#2b332e" stroke-width="10"/>
+      <text class="mark" x="44" y="226" fill="#f7f4ea">dl</text>
+      <g clip-path="url(#tightDClipC)">
+        <path class="crackDark" d="M82 84l36 30 38-10 36 24"/>
+        <path class="crackDark" d="M118 114l-20 46 30 26-10 42"/>
+        <path class="crackDark" d="M158 104l12 43 36 22"/>
+        <path class="crackDark" d="M92 172l46-4 34 32 38-8"/>
+      </g>
+    </g>
+    <text x="34" y="464" class="word" style="font-size:48px">drylake</text>
+    <rect x="36" y="490" width="242" height="12" fill="#f7f4ea"/>
+  </g>
+
+  <g transform="translate(92 845)">
+    <text class="label" x="0" y="0">Small-size read:</text>
+    <g transform="translate(220 -62) scale(.32)">
+      <rect x="0" y="0" width="264" height="264" rx="30" fill="#151008" stroke="#ff5a1f" stroke-width="12"/>
+      <text class="mark" x="44" y="226"><tspan fill="#f7f4ea">d</tspan><tspan fill="#ff5a1f" dx="-28">l</tspan></text>
+    </g>
+    <g transform="translate(342 -47) scale(.24)">
+      <rect x="0" y="0" width="264" height="264" rx="30" fill="#151008" stroke="#ff5a1f" stroke-width="12"/>
+      <text class="mark" x="44" y="226"><tspan fill="#f7f4ea">d</tspan><tspan fill="#ff5a1f" dx="-28">l</tspan></text>
+    </g>
+    <g transform="translate(444 -36) scale(.17)">
+      <rect x="0" y="0" width="264" height="264" rx="30" fill="#151008" stroke="#ff5a1f" stroke-width="12"/>
+      <text class="mark" x="44" y="226"><tspan fill="#f7f4ea">d</tspan><tspan fill="#ff5a1f" dx="-28">l</tspan></text>
+    </g>
+    <text class="note" x="540" y="0">Use color for Marketplace/website. Use mono for Activity Bar and strict icon surfaces.</text>
+  </g>
+</svg>

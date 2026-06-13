@@ -57,3 +57,26 @@ next-env.d.ts
 /.next-dev-*.log
 /.next-start*.log
 /.next-start*.pid
+
+# local drylake scratch / generated review artifacts
+/.drylake/gif-work/*.gif
+/.drylake/gif-work/*.jpg
+/.drylake/gif-work/*.jpeg
+/.drylake/gif-work/*.png
+/.drylake/gif-work/generator/node_modules/
+/.drylake/gif-work/keyframes/
+/.drylake/handoffs/
+/.drylake/reports/
+/.drylake/review/
+/.drylake/sessions/*/
+/.drylake/*.txt
+/.drylake/*.out
+/.drylake/*.err
+
+# local verification captures
+*.body.html
+*.headers.txt
+debug.log
+thumbnail.jpg
+tmp-lh-desktop.json
+/reports/*.xlsx

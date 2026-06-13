@@ -64,6 +64,7 @@ vi.mock("vscode", () => ({
   workspace: {
     workspaceFolders: [],
     getConfiguration: vi.fn(() => ({})),
+    findFiles: vi.fn(async () => []),
   },
   commands: {
     executeCommand: vi.fn(async (command: string, ...args: unknown[]) => {
@@ -461,6 +462,12 @@ describe("Control Room webview", () => {
     const apiClient = {
       recordGuardScan: vi.fn(),
       generateGuardFixPlan,
+      getEntitlements: vi.fn(async () => ({
+        plan: "security_pro",
+        entitlementVersion: 1,
+        capabilities: { canUseFixWithAI: true },
+        billing: { status: "active" },
+      })),
     };
     const provider = new ControlRoomProvider(
       { readRunbook: async () => ({ runbook: runbook() }) } as never,
@@ -474,6 +481,7 @@ describe("Control Room webview", () => {
           xupra_pro_ai: true,
           session_cloud_sync: true,
           pr_summary_generation: true,
+          canUseFixWithAI: true,
         },
       }),
       apiClient,
@@ -498,6 +506,190 @@ describe("Control Room webview", () => {
     expect(html).toContain("Pin the MCP server package");
     expect(html).toContain("Re-run DryLake Guard after remediation.");
     expect(html).toContain("Regenerate Fix Plan");
+  });
+
+  it("requires explicit approval before starting Deep Cloud Analysis", async () => {
+    const vscode = await import("vscode");
+    storedView = "security";
+    const recordGuardScan = vi.fn(async () => ({
+      guardScan: { id: "scan-123", createdAt: "2026-06-13T00:00:00.000Z" },
+      artifacts: [],
+      uploadedArtifactCount: 0,
+    }));
+    const startCloudAnalysis = vi.fn(async () => ({
+      job: {
+        id: "cloud-job-123",
+        guardScanId: "scan-123",
+        status: "succeeded",
+        resultJson: {},
+        createdAt: "2026-06-13T00:00:00.000Z",
+      },
+    }));
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => ({ runbook: runbook() }) } as never,
+      () => null,
+      () => ({ messages: [] }),
+      () => null,
+      () => false,
+      () => ({
+        organizationTier: "security_pro",
+        entitlements: {
+          canUseApprovedUpload: true,
+          canUseDeepCloudAnalysis: true,
+          canUseFixWithAI: true,
+        },
+      }),
+      {
+        recordGuardScan,
+        generateGuardFixPlan: vi.fn(),
+        startCloudAnalysis,
+        getEntitlements: vi.fn(async () => ({
+          plan: "security_pro",
+          entitlementVersion: 1,
+          capabilities: {
+            canUseApprovedUpload: true,
+            canUseDeepCloudAnalysis: true,
+            canUseFixWithAI: true,
+          },
+          billing: { status: "active" },
+        })),
+      },
+    );
+    (provider as unknown as { securityScan: GuardScanResult }).securityScan = securityScan();
+    (vscode.window.showWarningMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce("Cancel");
+
+    await provider.createOrShow(context() as never);
+    await messageHandler?.({ command: "drylake.deepCloudAnalysis" });
+
+    expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+      "Approve Deep Cloud Analysis upload?",
+      expect.objectContaining({
+        modal: true,
+        detail: expect.stringContaining("Package managers:"),
+      }),
+      "Approve Upload",
+      "Cancel",
+    );
+    expect(startCloudAnalysis).not.toHaveBeenCalled();
+
+    (provider as unknown as { lastGuardScanId: string }).lastGuardScanId = "scan-123";
+    (vscode.window.showWarningMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce("Approve Upload");
+    await messageHandler?.({ command: "drylake.deepCloudAnalysis" });
+
+    expect(startCloudAnalysis).toHaveBeenCalledWith(expect.objectContaining({
+      guardScanId: "scan-123",
+      approvedPayload: expect.objectContaining({
+        redactedFindings: expect.any(Array),
+        dependencyMetadata: expect.objectContaining({
+          packageManagers: expect.any(Array),
+          packageScripts: expect.any(Array),
+        }),
+      }),
+    }));
+  });
+
+  it("marks an uploaded Guard scan as Team Baseline for entitled admins", async () => {
+    const vscode = await import("vscode");
+    storedView = "security";
+    const recordGuardScan = vi.fn(async () => ({
+      guardScan: { id: "scan-baseline-123", createdAt: "2026-06-13T00:00:00.000Z" },
+      artifacts: [],
+      uploadedArtifactCount: 0,
+    }));
+    const markGuardScanBaseline = vi.fn(async () => ({
+      baseline: {
+        id: "baseline-123",
+        guardScanId: "scan-baseline-123",
+        workspaceHash: "workspace-123",
+        createdAt: "2026-06-13T00:00:00.000Z",
+      },
+    }));
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => ({ runbook: runbook() }) } as never,
+      () => null,
+      () => ({ messages: [] }),
+      () => null,
+      () => false,
+      () => ({
+        organizationTier: "team_security",
+        organizationRole: "admin",
+        entitlements: {
+          canUseTeamBaseline: true,
+        },
+      }),
+      {
+        recordGuardScan,
+        markGuardScanBaseline,
+        getEntitlements: vi.fn(async () => ({
+          plan: "team_security",
+          entitlementVersion: 1,
+          capabilities: { canUseTeamBaseline: true },
+          billing: { status: "active" },
+        })),
+      },
+    );
+    (provider as unknown as { securityScan: GuardScanResult }).securityScan = securityScan();
+    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+      get: vi.fn((_key: string, fallback: unknown) => fallback),
+    });
+
+    await provider.createOrShow(context() as never);
+    await messageHandler?.({ command: "drylake.uploadGuardBaseline" });
+
+    expect(recordGuardScan).toHaveBeenCalledWith(expect.objectContaining({
+      consentMode: "baseline_upload",
+    }));
+    expect(markGuardScanBaseline).toHaveBeenCalledWith("scan-baseline-123");
+  });
+
+  it("blocks Guard baseline upload for non-admin team members before the API call", async () => {
+    const vscode = await import("vscode");
+    storedView = "security";
+    const recordGuardScan = vi.fn(async () => ({
+      guardScan: { id: "scan-baseline-123", createdAt: "2026-06-13T00:00:00.000Z" },
+      artifacts: [],
+      uploadedArtifactCount: 0,
+    }));
+    const markGuardScanBaseline = vi.fn();
+    const provider = new ControlRoomProvider(
+      { readRunbook: async () => ({ runbook: runbook() }) } as never,
+      () => null,
+      () => ({ messages: [] }),
+      () => null,
+      () => false,
+      () => ({
+        organizationTier: "team_security",
+        organizationRole: "member",
+        entitlements: {
+          canUseTeamBaseline: true,
+        },
+      }),
+      {
+        recordGuardScan,
+        markGuardScanBaseline,
+        getEntitlements: vi.fn(async () => ({
+          plan: "team_security",
+          entitlementVersion: 1,
+          capabilities: { canUseTeamBaseline: true },
+          billing: { status: "active" },
+        })),
+      },
+    );
+    (provider as unknown as { securityScan: GuardScanResult }).securityScan = securityScan();
+
+    await provider.createOrShow(context() as never);
+
+    const html = panel?.webview.html ?? "";
+    expect(html).toContain("Only team owners and admins can create a Guard baseline for this workspace.");
+    expect(html).toContain('data-command="drylake.uploadGuardBaseline" disabled');
+
+    await messageHandler?.({ command: "drylake.uploadGuardBaseline" });
+
+    expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+      "Only team owners and admins can create a Guard baseline for this workspace.",
+    );
+    expect(recordGuardScan).not.toHaveBeenCalled();
+    expect(markGuardScanBaseline).not.toHaveBeenCalled();
   });
 
   it("opens billing instead of running Fix with AI for free users", async () => {
@@ -528,7 +720,14 @@ describe("Control Room webview", () => {
     await messageHandler?.({ command: "drylake.guardFixWithAi" });
 
     expect(apiClient.generateGuardFixPlan).not.toHaveBeenCalled();
-    expect(executed).toContainEqual({ command: "xupra.openBilling", args: [] });
+    expect(executed).toContainEqual({
+      command: "xupra.openBilling",
+      args: [{
+        required: "security_pro",
+        source: "extension",
+        returnPath: "/app",
+      }],
+    });
     expect(panel?.webview.html ?? "").toContain("AWS-backed Active Guard");
   });
 

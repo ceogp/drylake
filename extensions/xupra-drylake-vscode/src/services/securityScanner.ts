@@ -7,12 +7,17 @@ import { scanWorkspaceFiles } from "./workspaceScanner";
 export type GuardSeverity = "critical" | "high" | "medium" | "low" | "info";
 export type SafeDeveloperRank = "Scout" | "Builder" | "Operator" | "Guardian" | "Sentinel";
 export type GuardFindingCategory =
+  | "prompt-injection"
+  | "supply-chain"
   | "mcp-risk"
   | "agent-reliability"
+  | "ide-extension-access"
   | "secret-hygiene"
   | "ide-bloat"
   | "token-waste"
-  | "blast-radius";
+  | "blast-radius"
+  | "deploy-surface"
+  | "suspicious-artifact";
 
 export type GuardFinding = {
   id: string;
@@ -283,6 +288,36 @@ const SECRET_PATTERNS: Array<{
     pattern: /\b(?:api[_-]?key|token|secret|password|private[_-]?key|client[_-]?secret|access[_-]?token)\b\s*[:=]\s*["']?[^"'\s#]{8,}/i,
   },
 ];
+
+const PROMPT_INJECTION_PATTERNS: Array<{ label: string; pattern: RegExp; severity: GuardSeverity; recommendation: string }> = [
+  {
+    label: "instruction override",
+    pattern: /\b(ignore|forget|bypass|override)\b.{0,80}\b(previous|prior|system|developer|safety|security)\b.{0,40}\b(instruction|rule|policy|guardrail)s?\b/i,
+    severity: "high",
+    recommendation: "Remove prompt text that tells agents to ignore higher-priority or security instructions.",
+  },
+  {
+    label: "secret exfiltration request",
+    pattern: /\b(reveal|print|dump|exfiltrate|upload|send|curl|post)\b.{0,100}\b(secret|token|api[_-]?key|private[_-]?key|\.env|credential)s?\b/i,
+    severity: "critical",
+    recommendation: "Remove instructions that request secret disclosure or file exfiltration.",
+  },
+  {
+    label: "remote prompt include",
+    pattern: /\b(fetch|load|include|download|source)\b.{0,80}\bhttps?:\/\/[^\s)]+/i,
+    severity: "medium",
+    recommendation: "Pin and review remote prompt material before allowing agents to consume it.",
+  },
+  {
+    label: "tool or shell escalation",
+    pattern: /\b(run|execute|spawn|invoke)\b.{0,80}\b(shell|terminal|powershell|bash|curl|wget|network|filesystem)\b/i,
+    severity: "medium",
+    recommendation: "Require explicit approval before prompt files grant shell, filesystem, or network access.",
+  },
+];
+
+const HIDDEN_CONTROL_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2060-\u206F]/;
+const SUSPICIOUS_ARTIFACT_PATTERN = /\.(exe|dll|scr|bat|cmd|ps1|sh|jar|wasm|zip|tar|tgz|gz|7z|rar)$/i;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -1176,6 +1211,47 @@ function buildFindings(params: {
     }));
   }
 
+  for (const file of params.agentFiles.filter((item) => item.content)) {
+    const content = file.content ?? "";
+    const lines = content.split(/\r?\n/);
+
+    lines.forEach((line, index) => {
+      if (HIDDEN_CONTROL_PATTERN.test(line)) {
+        findings.push(makeFinding({
+          id: `prompt:hidden-control:${file.logicalPath}:${index + 1}`,
+          category: "prompt-injection",
+          severity: "high",
+          title: "Hidden control characters in agent instructions",
+          evidence: `${file.logicalPath}:${index + 1} contains hidden Unicode/control characters.`,
+          recommendation: "Remove hidden characters and review the surrounding instruction text before agents use this file.",
+          safeToShare: true,
+          source: "agent",
+          path: file.logicalPath,
+          line: index + 1,
+        }));
+      }
+
+      for (const pattern of PROMPT_INJECTION_PATTERNS) {
+        if (!pattern.pattern.test(line)) {
+          continue;
+        }
+
+        findings.push(makeFinding({
+          id: `prompt:${pattern.label}:${file.logicalPath}:${index + 1}`,
+          category: "prompt-injection",
+          severity: pattern.severity,
+          title: `Prompt injection risk: ${pattern.label}`,
+          evidence: `${file.logicalPath}:${index + 1} matches ${pattern.label}.`,
+          recommendation: pattern.recommendation,
+          safeToShare: true,
+          source: "agent",
+          path: file.logicalPath,
+          line: index + 1,
+        }));
+      }
+    });
+  }
+
   const contentHashes = new Map<string, string[]>();
   for (const file of params.agentFiles.filter((item) => item.content && item.content.trim().length > 80)) {
     const normalized = file.content?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
@@ -1214,7 +1290,7 @@ function buildFindings(params: {
   if (params.packageManagers.length > 1) {
     findings.push(makeFinding({
       id: "package:manager-conflict",
-      category: "agent-reliability",
+      category: "supply-chain",
       severity: "medium",
       title: "Package manager conflict",
       evidence: `Multiple lockfile/package managers detected: ${params.packageManagers.join(", ")}.`,
@@ -1255,7 +1331,7 @@ function buildFindings(params: {
   for (const script of params.workspaceSurface.riskyPackageScripts.slice(0, 20)) {
     findings.push(makeFinding({
       id: `package-script:${script.path}:${script.name}`,
-      category: script.risk === "deployment" || script.risk === "cloud or infrastructure command" ? "mcp-risk" : "agent-reliability",
+      category: script.risk === "deployment" || script.risk === "cloud or infrastructure command" ? "deploy-surface" : "supply-chain",
       severity: script.risk === "destructive operation" || script.risk === "secret or production credential reference" ? "high" : "medium",
       title: `Risky package script: ${script.name}`,
       evidence: `${script.path} declares a ${script.risk} script named "${script.name}".`,
@@ -1269,7 +1345,7 @@ function buildFindings(params: {
   if (params.workspaceSurface.ciWorkflowFiles.length > 0) {
     findings.push(makeFinding({
       id: "workspace:ci-workflows",
-      category: "agent-reliability",
+      category: "deploy-surface",
       severity: "low",
       title: "CI/CD workflows detected",
       evidence: `${params.workspaceSurface.ciWorkflowFiles.length} CI/CD workflow file${params.workspaceSurface.ciWorkflowFiles.length === 1 ? "" : "s"} detected.`,
@@ -1283,7 +1359,7 @@ function buildFindings(params: {
   if (params.workspaceSurface.iacFiles.length > 0) {
     findings.push(makeFinding({
       id: "workspace:iac-surface",
-      category: "mcp-risk",
+      category: "deploy-surface",
       severity: "medium",
       title: "Infrastructure-as-code surface detected",
       evidence: `${params.workspaceSurface.iacFiles.length} Docker, Terraform, Kubernetes, serverless, or cloud configuration file${params.workspaceSurface.iacFiles.length === 1 ? "" : "s"} detected.`,
@@ -1297,7 +1373,7 @@ function buildFindings(params: {
   if (params.workspaceSurface.deploymentFiles.length > 0) {
     findings.push(makeFinding({
       id: "workspace:deployment-surface",
-      category: "mcp-risk",
+      category: "deploy-surface",
       severity: "high",
       title: "Deployment or migration scripts detected",
       evidence: `${params.workspaceSurface.deploymentFiles.length} deploy, release, or migration script${params.workspaceSurface.deploymentFiles.length === 1 ? "" : "s"} detected.`,
@@ -1323,6 +1399,20 @@ function buildFindings(params: {
   }
 
   for (const folder of params.workspaceSurface.generatedFolders.slice(0, 10)) {
+    if (SUSPICIOUS_ARTIFACT_PATTERN.test(folder.path)) {
+      findings.push(makeFinding({
+        id: `artifact:generated-folder:${folder.path}`,
+        category: "suspicious-artifact",
+        severity: "medium",
+        title: "Executable or archive artifact visible to agents",
+        evidence: `${folder.path} appears to be an executable, script, archive, or generated artifact path.`,
+        recommendation: "Review whether this artifact belongs in the workspace and quarantine or remove it if unexpected.",
+        safeToShare: true,
+        source: "workspace",
+        path: folder.path,
+      }));
+    }
+
     findings.push(makeFinding({
       id: `workspace:generated-folder:${folder.path}`,
       category: "token-waste",
@@ -1703,11 +1793,16 @@ export async function collectGuardUploadArtifacts(
 }
 
 function categoryLabel(category: GuardFindingCategory) {
+  if (category === "prompt-injection") return "Prompt Injection Risk";
+  if (category === "supply-chain") return "Supply-Chain Risk";
   if (category === "mcp-risk") return "MCP Risk";
   if (category === "agent-reliability") return "Agent Reliability";
+  if (category === "ide-extension-access") return "IDE Extension Access";
   if (category === "secret-hygiene") return "Secret Hygiene";
   if (category === "ide-bloat") return "IDE Bloat";
   if (category === "blast-radius") return "Blast Radius";
+  if (category === "deploy-surface") return "Deploy Surface";
+  if (category === "suspicious-artifact") return "Suspicious Artifact Review";
   return "Token Waste";
 }
 
@@ -1739,6 +1834,15 @@ function renderFindingsMarkdown(scan: GuardScanResult, limit?: number) {
     `- Recommendation: ${finding.recommendation}`,
     `- Safe to share: ${finding.safeToShare ? "yes" : "no"}`,
   ].filter(Boolean).join("\n")).join("\n\n");
+}
+
+function renderCategoryFindingsMarkdown(scan: GuardScanResult, category: GuardFindingCategory) {
+  const scoped = scan.findings.filter((finding) => finding.category === category);
+  if (scoped.length === 0) {
+    return `No ${categoryLabel(category).toLowerCase()} findings detected.`;
+  }
+
+  return renderFindingsMarkdown({ ...scan, findings: scoped });
 }
 
 export function renderSafeDeveloperSummary(scan: GuardScanResult) {
@@ -1792,6 +1896,33 @@ export function renderSafeDeveloperReport(scan: GuardScanResult) {
     "## Top Findings",
     "",
     renderFindingsMarkdown(scan, 12),
+    "",
+    "## Prompt Injection Risk",
+    "",
+    renderCategoryFindingsMarkdown(scan, "prompt-injection"),
+    "",
+    "## Supply-Chain Risk",
+    "",
+    renderCategoryFindingsMarkdown(scan, "supply-chain"),
+    "",
+    "## Secret Hygiene",
+    "",
+    renderCategoryFindingsMarkdown(scan, "secret-hygiene"),
+    "",
+    "## Token Waste / IDE Bloat",
+    "",
+    [
+      renderCategoryFindingsMarkdown(scan, "token-waste"),
+      renderCategoryFindingsMarkdown(scan, "ide-bloat"),
+    ].join("\n\n"),
+    "",
+    "## Suspicious Artifact Review",
+    "",
+    renderCategoryFindingsMarkdown(scan, "suspicious-artifact"),
+    "",
+    "## Deploy Surface",
+    "",
+    renderCategoryFindingsMarkdown(scan, "deploy-surface"),
     "",
     "## Extension Access Review",
     "",

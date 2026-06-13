@@ -51,6 +51,14 @@ fi
 
 check "extension install" "200" "$app_base_url/extensions/install"
 check "extension connect" "200" "$app_base_url/extensions/connect"
+check "agent control GIF" "200" "$app_base_url/marketplace/extension/media/agent-control.gif"
+
+if [ -f "public/marketplace/extension/media/guard-security.gif" ] || [ "${VERIFY_GUARD_SECURITY_GIF:-false}" = "true" ]; then
+  check "guard security GIF" "200" "$app_base_url/marketplace/extension/media/guard-security.gif"
+else
+  echo "SKIP guard security GIF: public/marketplace/extension/media/guard-security.gif is not present locally"
+fi
+
 check "stripe webhook empty body" "400" -X POST -d '' "$app_base_url/api/stripe/webhook"
 
 if [ -n "${ADMIN_INTERNAL_HOST:-}" ]; then

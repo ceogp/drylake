@@ -4,7 +4,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 
 import { ApiClient } from "./apiClient";
-import { normalizeEntitlements } from "./connectionState";
+import { connectionStateFromExtensionConnection } from "./connectionState";
 import { writeGeneratedFilesToWorkspace } from "./fileSync";
 import { installGeneratedFilesToRuntimeHome } from "./runtimeInstall";
 import { StateStore } from "./stateStore";
@@ -136,30 +136,34 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
     return vscode.window.registerUriHandler(this);
   }
 
-  private async applyConnectedSession(exchanged: NonNullable<BrowserConnectResult & { kind: "approved" }> ["session"]) {
+  private async applyConnectedSession(exchanged: NonNullable<BrowserConnectResult & { kind: "approved" }>["session"]) {
     this.apiClient.setAccessToken(exchanged.token.token);
     await this.stateStore.setAccessToken(exchanged.token.token);
-    await this.stateStore.setConnection({
-      organizationId: exchanged.organization.id,
-      organizationName: exchanged.organization.name,
-      organizationSlug: exchanged.organization.slug,
-      organizationTier: exchanged.organization.tier,
-      entitlements: normalizeEntitlements(exchanged.entitlements),
-      subscriptionStatus: exchanged.subscription?.status,
-      userEmail: exchanged.user.email,
-      userAvatarUrl: exchanged.user.imageUrl ?? undefined,
-      authMode: "clerk",
-    });
-    logConnectStage("exchange_succeeded", {
-      organizationId: exchanged.organization.id,
-      editor: exchanged.editor,
-    });
-    const tierLabel = exchanged.organization.tier
-      ? exchanged.organization.tier.charAt(0).toUpperCase() + exchanged.organization.tier.slice(1).toLowerCase()
-      : "Free";
-    void vscode.window.showInformationMessage(
-      `Connected to Xupra DryLake as ${exchanged.user.email} (${tierLabel} plan).`,
-    );
+
+    let organizationTier = exchanged.organization.tier;
+
+    try {
+      const result = await this.apiClient.connect(undefined, undefined, exchanged.token.token);
+      await this.stateStore.setConnection(connectionStateFromExtensionConnection(result));
+      organizationTier = result.organization?.tier ?? organizationTier;
+
+      logConnectStage("exchange_succeeded", {
+        organizationId: exchanged.organization.id,
+        editor: exchanged.editor,
+      });
+      const tierLabel = organizationTier
+        ? organizationTier.charAt(0).toUpperCase() + organizationTier.slice(1).toLowerCase()
+        : "Free";
+      void vscode.window.showInformationMessage(
+        `Connected to Xupra DryLake as ${exchanged.user.email} (${tierLabel} plan).`,
+      );
+    } catch (error) {
+      logConnectStage("exchange_connect_failed", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+
     try {
       await vscode.commands.executeCommand("xupra.refreshProjects");
     } catch (error) {
@@ -323,7 +327,13 @@ export class BrowserConnectCoordinator implements vscode.UriHandler {
       return;
     }
 
-    await this.applyConnectedSession(exchanged);
+    try {
+      await this.applyConnectedSession(exchanged);
+    } catch {
+      void vscode.window.showWarningMessage(
+        "Xupra DryLake received the browser callback, but could not finish connecting. Use the manual token fallback.",
+      );
+    }
   }
 
   private async handleInstallUri(uri: vscode.Uri) {

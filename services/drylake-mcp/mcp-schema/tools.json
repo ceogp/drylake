@@ -1,0 +1,641 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "0.1.0-phase1",
+  "title": "DryLake MCP Tool Contracts",
+  "naming": {
+    "toolNamePattern": "^drylake_[a-z0-9_]+$",
+    "propertyCase": "camelCase"
+  },
+  "tools": [
+    {
+      "name": "drylake_create_plan",
+      "title": "Create Plan",
+      "description": "Create or refresh a persisted DryLake plan from a user objective and optional read-only external context.",
+      "mutatesState": true,
+      "requiresExternalApproval": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "objective"
+        ],
+        "properties": {
+          "objective": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceText": {
+            "type": "string"
+          },
+          "requestedPhaseCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "externalContextRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/externalContextRef"
+            }
+          },
+          "agentPreferences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tokenBudget": {
+            "$ref": "#/$defs/tokenBudgetRequest"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "planId",
+          "title",
+          "status",
+          "summary",
+          "phases",
+          "resourceUris",
+          "auditEventIds",
+          "warnings"
+        ],
+        "properties": {
+          "planId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "needs_revision",
+              "ready"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "phases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/phaseSummary"
+            }
+          },
+          "resourceUris": {
+            "$ref": "#/$defs/resourceUriMap"
+          },
+          "auditEventIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "errors": [
+        "invalid_input",
+        "permission_denied",
+        "external_context_not_allowed",
+        "external_context_unavailable",
+        "token_budget_invalid",
+        "internal_error"
+      ]
+    },
+    {
+      "name": "drylake_estimate_tokens",
+      "title": "Estimate Tokens",
+      "description": "Estimate prompt, phase, or handoff token cost and recommend compression when needed.",
+      "mutatesState": true,
+      "requiresExternalApproval": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "content",
+          "contentType"
+        ],
+        "properties": {
+          "content": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "prompt",
+              "resource",
+              "handoff",
+              "phase"
+            ]
+          },
+          "planId": {
+            "type": "string"
+          },
+          "phaseId": {
+            "type": "string"
+          },
+          "targetAgent": {
+            "type": "string"
+          },
+          "targetModel": {
+            "type": "string"
+          },
+          "compressionMode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "phase_only",
+              "summarize",
+              "resource_refs"
+            ]
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "estimateId",
+          "inputTokens",
+          "outputTokens",
+          "totalTokens",
+          "confidence",
+          "recommendedCompression",
+          "estimatedSavingsTokens",
+          "assumptions",
+          "resourceUri"
+        ],
+        "properties": {
+          "estimateId": {
+            "type": "string"
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "recommendedCompression": {
+            "type": "string",
+            "enum": [
+              "none",
+              "phase_only",
+              "summarize",
+              "resource_refs"
+            ]
+          },
+          "estimatedSavingsTokens": {
+            "type": "integer"
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "resourceUri": {
+            "type": "string"
+          }
+        }
+      },
+      "errors": [
+        "invalid_input",
+        "unsupported_target",
+        "estimation_unavailable",
+        "internal_error"
+      ]
+    },
+    {
+      "name": "drylake_recommend_agent",
+      "title": "Recommend Agent",
+      "description": "Recommend the best agent target for a phase and explain the routing decision.",
+      "mutatesState": true,
+      "requiresExternalApproval": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "planId": {
+            "type": "string"
+          },
+          "phaseId": {
+            "type": "string"
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 1
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "availableAgents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "availableSkills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workspaceSignals": {
+            "$ref": "#/$defs/workspaceSignals"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "phaseId"
+            ]
+          },
+          {
+            "required": [
+              "objective"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "recommendedAgent",
+          "confidence",
+          "rationale",
+          "suggestedSkills",
+          "fallbackAgents",
+          "warnings"
+        ],
+        "properties": {
+          "recommendedAgent": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "suggestedSkills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fallbackAgents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "errors": [
+        "invalid_input",
+        "plan_not_found",
+        "phase_not_found",
+        "no_eligible_agent",
+        "internal_error"
+      ]
+    },
+    {
+      "name": "drylake_create_handoff",
+      "title": "Create Handoff",
+      "description": "Generate phase-scoped handoff artifacts and persist them as DryLake resources.",
+      "mutatesState": true,
+      "requiresExternalApproval": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "planId",
+          "phaseId",
+          "targetAgent"
+        ],
+        "properties": {
+          "planId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "phaseId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targetAgent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agentProfile": {
+            "type": "string"
+          },
+          "ticketSnippet": {
+            "type": "string"
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "compressionMode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "phase_only",
+              "summarize",
+              "resource_refs"
+            ]
+          },
+          "formats": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "markdown",
+                "shell",
+                "json"
+              ]
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "handoffId",
+          "phaseId",
+          "targetAgent",
+          "summary",
+          "artifacts",
+          "resourceUris",
+          "tokenEstimate",
+          "nextCalls",
+          "auditEventIds",
+          "warnings"
+        ],
+        "properties": {
+          "handoffId": {
+            "type": "string"
+          },
+          "phaseId": {
+            "type": "string"
+          },
+          "targetAgent": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/handoffArtifact"
+            }
+          },
+          "resourceUris": {
+            "$ref": "#/$defs/resourceUriMap"
+          },
+          "tokenEstimate": {
+            "$ref": "#/$defs/tokenEstimate"
+          },
+          "nextCalls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/nextCall"
+            }
+          },
+          "auditEventIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "errors": [
+        "invalid_input",
+        "plan_not_found",
+        "phase_not_found",
+        "unsupported_format",
+        "handoff_generation_failed",
+        "internal_error"
+      ]
+    }
+  ],
+  "$defs": {
+    "externalContextRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "resourceUri",
+            "recipeRef",
+            "url"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "tokenBudgetRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxInputTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxOutputTokens": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "phaseSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phaseId",
+        "title",
+        "status",
+        "objective"
+      ],
+      "properties": {
+        "phaseId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "objective": {
+          "type": "string"
+        }
+      }
+    },
+    "resourceUriMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "workspaceSignals": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "frameworks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repoTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "handoffArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "uri"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": [
+            "markdown",
+            "shell",
+            "json"
+          ]
+        },
+        "uri": {
+          "type": "string"
+        }
+      }
+    },
+    "tokenEstimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inputTokens",
+        "outputTokens",
+        "totalTokens"
+      ],
+      "properties": {
+        "inputTokens": {
+          "type": "integer"
+        },
+        "outputTokens": {
+          "type": "integer"
+        },
+        "totalTokens": {
+          "type": "integer"
+        }
+      }
+    },
+    "nextCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface",
+        "identifier"
+      ],
+      "properties": {
+        "surface": {
+          "type": "string",
+          "enum": [
+            "tool",
+            "resource",
+            "prompt"
+          ]
+        },
+        "identifier": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

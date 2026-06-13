@@ -19,10 +19,11 @@ import type { ApplicationBuildRunbook, XuMode, XuPhase, XuStepStatus } from "../
 import type { PendingPlanChangeSet } from "../xu/pendingPlanChanges";
 import { collectGuardUploadArtifacts, renderSafeDeveloperSummary, runSecurityScan, writeSecurityScanReports } from "../services/securityScanner";
 import type { GuardReportPaths, GuardScanResult, GuardSeverity } from "../services/securityScanner";
-import type { ApiClient, GuardFixPlan, GuardFixPlanPayload, GuardScanUploadArtifact, GuardScanUploadPayload } from "../services/apiClient";
+import type { ApiClient, CloudAnalysisPayload, GuardFixPlan, GuardFixPlanPayload, GuardScanUploadArtifact, GuardScanUploadPayload } from "../services/apiClient";
 const CONTROL_ROOM_VIEW_KEY = "drylake.controlRoomView";
 const CONTROL_ROOM_CHAT_COLLAPSED_KEY = "drylake.controlRoomChatCollapsed";
 const FREE_PLANNING_MODEL_LABEL = "Claude Haiku";
+const TEAM_BASELINE_ROLE_MESSAGE = "Only team owners and admins can create a Guard baseline for this workspace.";
 type ControlRoomView = "pipeline" | "kanban" | "security";
 type HandoffProfilesByAgent = Partial<Record<(typeof XU_PHASE_AGENTS)[number], HandoffProfileSelection[]>>;
 type GuardUploadStatus = "idle" | "recording" | "uploading" | "uploaded" | "local" | "failed";
@@ -175,6 +176,32 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, "&#39;");
 }
 
+function billingCommandArgs(args: { required?: string; source?: string; returnPath?: string } | null) {
+  if (!args) {
+    return "";
+  }
+
+  return ` data-command-args="${escapeHtml(JSON.stringify(args))}"`;
+}
+
+function parseBillingCommandArgs(element: Element | null): unknown[] {
+  if (!element) {
+    return [];
+  }
+
+  const raw = element.getAttribute("data-command-args");
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return [];
+  }
+}
+
 function controlRoomViewFrom(value: unknown): ControlRoomView {
   return value === "kanban" || value === "security" ? value : "pipeline";
 }
@@ -240,6 +267,40 @@ function guardScanUploadPayload(
       categoryScores: { ...scan.categoryScores },
       findings: scan.findings.map((finding) => ({ ...finding })),
       connectionMap: scan.connectionMap as unknown as Record<string, unknown>,
+      extensions: scan.extensions.map((extension) => ({
+        id: extension.id,
+        displayName: extension.displayName,
+        publisher: extension.publisher,
+        version: extension.version,
+        isActive: extension.isActive,
+        isBuiltin: extension.isBuiltin,
+        accessLevel: extension.accessLevel,
+        activationEvents: limited(extension.activationEvents, 40),
+        contributionPoints: limited(extension.contributionPoints, 40),
+        capabilityTags: limited(extension.capabilityTags, 40),
+        riskFlags: limited(extension.riskFlags, 40),
+      })),
+      mcpServers: scan.mcpServers.map((server) => ({
+        configPath: server.configPath,
+        name: server.name,
+        command: server.command,
+        args: limited(server.args, 40),
+        envKeys: limited(server.envKeys, 40),
+        capabilities: limited(server.capabilities, 40),
+        riskFlags: limited(server.riskFlags, 40),
+        severity: server.severity,
+        blastRadius: server.blastRadius,
+      })),
+      workspaceSurface: {
+        deploymentFiles: limited(scan.workspaceSurface.deploymentFiles, 100),
+        iacFiles: limited(scan.workspaceSurface.iacFiles, 100),
+        ciWorkflowFiles: limited(scan.workspaceSurface.ciWorkflowFiles, 100),
+        credentialLikeFiles: limited(scan.workspaceSurface.credentialLikeFiles, 100),
+        riskyPackageScripts: limited(scan.workspaceSurface.riskyPackageScripts, 100),
+        generatedFolders: limited(scan.workspaceSurface.generatedFolders, 100),
+      },
+      packageManagers: scan.packageManagers,
+      packageScripts: scan.packageScripts,
     },
     artifacts,
   };
@@ -324,8 +385,123 @@ function guardFixPlanPayload(scan: GuardScanResult): GuardFixPlanPayload {
   };
 }
 
+function cloudAnalysisPayload(scan: GuardScanResult): CloudAnalysisPayload {
+  return {
+    approvedPayload: {
+      scanManifest: {
+        scannedAt: scan.scannedAt,
+        score: scan.score,
+        rank: scan.rank,
+        summary: scan.summary,
+        categoryScores: scan.categoryScores,
+      },
+      redactedFindings: scan.findings.map((finding) => ({
+        id: finding.id,
+        category: finding.category,
+        severity: finding.severity,
+        title: finding.title,
+        evidence: finding.safeToShare ? finding.evidence : "[REDACTED]",
+        recommendation: finding.recommendation,
+        source: finding.source,
+        path: finding.safeToShare ? finding.path : undefined,
+        line: finding.safeToShare ? finding.line : undefined,
+      })),
+      dependencyMetadata: {
+        packageManagers: scan.packageManagers,
+        packageScripts: scan.packageScripts,
+        riskyPackageScripts: scan.workspaceSurface.riskyPackageScripts,
+      },
+      mcpMetadata: {
+        servers: scan.mcpServers.map((server) => ({
+          configPath: server.configPath,
+          name: server.name,
+          command: server.command,
+          envKeys: server.envKeys,
+          capabilities: server.capabilities,
+          riskFlags: server.riskFlags,
+          severity: server.severity,
+          blastRadius: server.blastRadius,
+        })),
+      },
+      extensionMetadata: {
+        extensions: scan.extensions.map((extension) => ({
+          id: extension.id,
+          displayName: extension.displayName,
+          publisher: extension.publisher,
+          isActive: extension.isActive,
+          isBuiltin: extension.isBuiltin,
+          accessLevel: extension.accessLevel,
+          capabilityTags: extension.capabilityTags,
+          riskFlags: extension.riskFlags,
+        })),
+      },
+      filePathInventory: [
+        ...scan.agentFiles.map((file) => file.logicalPath),
+        ...scan.workspaceSurface.ciWorkflowFiles.map((file) => file.path),
+        ...scan.workspaceSurface.iacFiles.map((file) => file.path),
+        ...scan.workspaceSurface.deploymentFiles.map((file) => file.path),
+        ...scan.workspaceSurface.credentialLikeFiles.map((file) => file.path),
+      ],
+      selectedPromptFiles: [],
+    },
+  };
+}
+
+async function approveDeepCloudAnalysisUpload(scan: GuardScanResult) {
+  const selected = await vscode.window.showWarningMessage(
+    "Approve Deep Cloud Analysis upload?",
+    {
+      modal: true,
+      detail: [
+        "DryLake will upload only approved, redacted Guard metadata.",
+        `Redacted findings: ${scan.findings.length}`,
+        `MCP metadata entries: ${scan.mcpServers.length}`,
+        `Extension metadata entries: ${scan.extensions.length}`,
+        `Package managers: ${scan.packageManagers.length}`,
+        `Package scripts: ${scan.packageScripts.length}`,
+        `Risky package scripts: ${scan.workspaceSurface.riskyPackageScripts.length}`,
+        `File path inventory entries: ${
+          scan.agentFiles.length +
+          scan.workspaceSurface.ciWorkflowFiles.length +
+          scan.workspaceSurface.iacFiles.length +
+          scan.workspaceSurface.deploymentFiles.length +
+          scan.workspaceSurface.credentialLikeFiles.length
+        }`,
+        "Raw secrets, .env values, private keys, full source files, and unapproved source files are not uploaded.",
+      ].join("\n"),
+    },
+    "Approve Upload",
+    "Cancel",
+  );
+
+  return selected === "Approve Upload";
+}
+
 function hasPaidGuardAccess(connection: ConnectionState) {
-  return hasFoundationPlanningAccess(connection);
+  return Boolean(connection.entitlements?.canUseFixWithAI);
+}
+
+function hasDeepCloudAnalysisAccess(connection: ConnectionState) {
+  return Boolean(connection.entitlements?.canUseApprovedUpload && connection.entitlements?.canUseDeepCloudAnalysis);
+}
+
+function canManageTeamBaseline(connection: ConnectionState) {
+  return (
+    !connection.organizationRole ||
+    connection.organizationRole === "owner" ||
+    connection.organizationRole === "admin"
+  );
+}
+
+async function resolveServerCapabilities(
+  apiClient: Partial<Pick<ApiClient, "getEntitlements">> | undefined,
+): Promise<Record<string, boolean> | null> {
+  if (!apiClient?.getEntitlements) {
+    return null;
+  }
+
+  const entitlements = await apiClient.getEntitlements();
+  return entitlements.capabilities;
 }
 
 function autopilotEnabled(runbook: ApplicationBuildRunbook | null) {
@@ -622,11 +798,19 @@ function renderGuardPaidUpsell(visible: boolean) {
       <p>Upgrade to use DryLake Guard as an active security layer for agentic IDE setups.</p>
     </div>
     <ul>${paidFeatures.map((feature) => `<li>${escapeHtml(feature)}</li>`).join("")}</ul>
-    <button type="button" data-command="xupra.openBilling">Upgrade for Guard</button>
+    <button type="button" data-command="xupra.openBilling"${billingCommandArgs({
+      required: "security_pro",
+      source: "extension",
+      returnPath: "/app",
+    })}>Upgrade for Guard</button>
   </section>`;
 }
 
-function renderGuardUploadConsent(status: GuardUploadStatus, error?: string) {
+function renderGuardUploadConsent(
+  status: GuardUploadStatus,
+  error: string | undefined,
+  canCreateTeamBaseline: boolean,
+) {
   if (status === "uploaded") {
     return `<section class="security-note good">Guard baseline uploaded. DryLake can compare future scans against this MCP, skill, and agent-rule baseline.</section>`;
   }
@@ -644,9 +828,10 @@ function renderGuardUploadConsent(status: GuardUploadStatus, error?: string) {
       <strong>After reviewing this report, create an Active Guard baseline?</strong>
       <p>Optional. Keep this scan local, or approve a redacted baseline upload so DryLake can detect MCP and skill drift over time, provide Watchdog protection, and scan consented Guard artifacts. It is not required.</p>
       ${renderGuardUploadDisclosure()}
+      ${canCreateTeamBaseline ? "" : `<p class="security-note warn">${escapeHtml(TEAM_BASELINE_ROLE_MESSAGE)}</p>`}
     </div>
     <div class="security-actions">
-      <button type="button" data-command="drylake.uploadGuardBaseline"${status === "uploading" ? " disabled" : ""}>${status === "uploading" ? "Uploading..." : "Upload Guard Baseline"}</button>
+      <button type="button" data-command="drylake.uploadGuardBaseline"${status === "uploading" || !canCreateTeamBaseline ? " disabled" : ""}>${status === "uploading" ? "Uploading..." : "Upload Guard Baseline"}</button>
       <button type="button" class="secondary" data-command="drylake.keepGuardLocal">Keep Scan Local</button>
     </div>
   </section>`;
@@ -920,6 +1105,7 @@ function renderSecurityPanel(
   options: {
     uploadStatus: GuardUploadStatus;
     uploadError?: string;
+    canCreateTeamBaseline: boolean;
     paidUpsellVisible: boolean;
     fixStatus: GuardFixStatus;
     fixPlan: GuardFixPlan | null;
@@ -951,6 +1137,7 @@ function renderSecurityPanel(
         <button type="button" class="secondary" data-command="drylake.openSecurityReport">Open Report</button>
         <button type="button" class="secondary" data-command="drylake.copySecuritySummary">Copy Summary</button>
         <button type="button" class="secondary paid" data-command="drylake.guardFixWithAi"${fixButtonDisabled}>${escapeHtml(fixButtonLabel)}</button>
+        <button type="button" class="secondary paid" data-command="drylake.deepCloudAnalysis">Deep Cloud Analysis</button>
       </div>
     </div>
     ${renderGuardPaidUpsell(options.paidUpsellVisible)}
@@ -1007,7 +1194,7 @@ function renderSecurityPanel(
       </section>
     </div>
     ${renderGuardFixPlan(options.fixStatus, options.fixPlan, options.fixError)}
-    ${renderGuardUploadConsent(options.uploadStatus, options.uploadError)}
+    ${renderGuardUploadConsent(options.uploadStatus, options.uploadError, options.canCreateTeamBaseline)}
   </section>`;
 }
 
@@ -1030,7 +1217,11 @@ function renderPlanningModelBanner(
 
   return `<section class="nano-banner" aria-label="Free planning model" data-nano-banner>
     <span class="nano-banner-text">We are using <strong>${escapeHtml(FREE_PLANNING_MODEL_LABEL)}</strong>. Xupra AI Frontier Models are available on Pro.</span>
-    <button type="button" class="nano-banner-cta" data-command="xupra.openBilling">Upgrade to Pro</button>
+    <button type="button" class="nano-banner-cta" data-command="xupra.openBilling"${billingCommandArgs({
+      required: "pro",
+      source: "extension",
+      returnPath: "/app",
+    })}>Upgrade to Pro</button>
   </section>`;
 }
 
@@ -1255,7 +1446,11 @@ function renderPlanningProviderSelect(
     }).join("")}
     </select>
     <div class="planning-provider-note" data-provider-note>${escapeHtml(note)}</div>
-    <button type="button" class="frontier-upgrade-cta" data-frontier-upgrade data-command="xupra.openBilling"${activeLocked ? "" : " hidden"}>Upgrade to Frontier Models</button>
+    <button type="button" class="frontier-upgrade-cta" data-frontier-upgrade data-command="xupra.openBilling"${billingCommandArgs({
+      required: "pro",
+      source: "extension",
+      returnPath: "/app",
+    })}${activeLocked ? "" : " hidden"}>Upgrade to Frontier Models</button>
     ${renderProviderConfigurationPanel(activeProvider, activeConfigurable && !activeLocked)}
   </div>`;
 }
@@ -1386,6 +1581,7 @@ export class ControlRoomProvider {
   private guardFixStatus: GuardFixStatus = "idle";
   private guardFixPlan: GuardFixPlan | null = null;
   private guardFixError: string | undefined;
+  private lastGuardScanId: string | undefined;
 
   constructor(
     private readonly sessionStore: XuSessionStore,
@@ -1394,7 +1590,7 @@ export class ControlRoomProvider {
     private readonly readLastModelTier: LastModelTierReader = () => null,
     private readonly readPlanningLoading: PlanningLoadingReader = () => false,
     private readonly readConnection: ConnectionReader = () => ({}),
-    private readonly apiClient?: Pick<ApiClient, "recordGuardScan" | "generateGuardFixPlan">,
+    private readonly apiClient?: Partial<Pick<ApiClient, "getEntitlements" | "openWebUrl" | "recordGuardScan" | "markGuardScanBaseline" | "generateGuardFixPlan" | "startCloudAnalysis" | "recordContinuousWatchEvent">>,
     private readonly ensureRegistered: RegistrationEnsurer = async () => true,
   ) {}
 
@@ -1475,8 +1671,26 @@ export class ControlRoomProvider {
           return;
         }
 
-        if (!this.apiClient) {
+        if (!this.apiClient?.recordGuardScan || !this.apiClient?.markGuardScanBaseline) {
           void vscode.window.showErrorMessage("DryLake Guard upload is unavailable because the backend client is not configured.");
+          return;
+        }
+
+        if (!canManageTeamBaseline(this.readConnection())) {
+          void vscode.window.showWarningMessage(TEAM_BASELINE_ROLE_MESSAGE);
+          return;
+        }
+
+        const capabilities = await resolveServerCapabilities(this.apiClient);
+
+        if (!capabilities?.canUseTeamBaseline) {
+          this.guardPaidUpsellVisible = true;
+          await this.refresh();
+          await vscode.commands.executeCommand("xupra.openBilling", {
+            required: "team_security",
+            source: "extension",
+            returnPath: "/app",
+          });
           return;
         }
 
@@ -1485,10 +1699,23 @@ export class ControlRoomProvider {
         await this.refresh();
 
         try {
-          const artifacts = await collectGuardUploadArtifacts(this.securityScan, vscode.workspace.getConfiguration("xupra"));
-          await this.apiClient.recordGuardScan(guardScanUploadPayload(this.securityScan, "baseline_upload", artifacts));
+          let artifacts: GuardScanUploadArtifact[] = [];
+
+          try {
+            artifacts = await collectGuardUploadArtifacts(this.securityScan, vscode.workspace.getConfiguration("xupra"));
+          } catch (error) {
+            void vscode.window.showWarningMessage(
+              `DryLake could not collect optional baseline artifacts, so it will save the redacted scan report only: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          }
+
+          const result = await this.apiClient.recordGuardScan(guardScanUploadPayload(this.securityScan, "baseline_upload", artifacts));
+          const baseline = await this.apiClient.markGuardScanBaseline(result.guardScan.id);
+          this.lastGuardScanId = result.guardScan.id;
           this.guardUploadStatus = "uploaded";
-          void vscode.window.showInformationMessage(`Uploaded ${artifacts.length} DryLake Guard baseline artifacts.`);
+          void vscode.window.showInformationMessage(`Uploaded ${artifacts.length} DryLake Guard baseline artifacts and marked baseline ${baseline.baseline.id}.`);
         } catch (error) {
           this.guardUploadStatus = "failed";
           this.guardUploadError = error instanceof Error ? error.message : String(error);
@@ -1517,12 +1744,18 @@ export class ControlRoomProvider {
           return;
         }
 
-        if (!hasPaidGuardAccess(this.readConnection())) {
-          this.guardPaidUpsellVisible = true;
-          await this.refresh();
-          await vscode.commands.executeCommand("xupra.openBilling");
-          return;
-        }
+      const capabilities = await resolveServerCapabilities(this.apiClient);
+
+      if (!capabilities?.canUseFixWithAI) {
+        this.guardPaidUpsellVisible = true;
+        await this.refresh();
+        await vscode.commands.executeCommand("xupra.openBilling", {
+          required: "security_pro",
+          source: "extension",
+          returnPath: "/app",
+        });
+        return;
+      }
 
         if (!this.apiClient?.generateGuardFixPlan) {
           void vscode.window.showErrorMessage("DryLake Guard Fix with AI is unavailable because the backend client is not configured.");
@@ -1543,12 +1776,80 @@ export class ControlRoomProvider {
         } catch (error) {
           this.guardFixStatus = "failed";
           this.guardFixError = error instanceof Error ? error.message : String(error);
-          if (/paid|upgrade|billing|subscription/i.test(this.guardFixError)) {
-            this.guardPaidUpsellVisible = true;
-            await vscode.commands.executeCommand("xupra.openBilling");
-          }
+        if (/paid|upgrade|billing|subscription/i.test(this.guardFixError)) {
+          this.guardPaidUpsellVisible = true;
+          await vscode.commands.executeCommand("xupra.openBilling", {
+            required: "security_pro",
+            source: "extension",
+            returnPath: "/app",
+          });
+        }
           void vscode.window.showErrorMessage(`DryLake Guard Fix with AI failed: ${this.guardFixError}`);
         }
+        await this.refresh();
+        return;
+      }
+
+      if (message.command === "drylake.deepCloudAnalysis") {
+        if (!this.securityScan) {
+          void vscode.window.showWarningMessage("Run DryLake Guard Scan before starting Deep Cloud Analysis.");
+          return;
+        }
+
+        if (!await this.ensureRegistered()) {
+          await this.refresh();
+          return;
+        }
+
+        const capabilities = await resolveServerCapabilities(this.apiClient);
+
+        if (!capabilities?.canUseApprovedUpload || !capabilities?.canUseDeepCloudAnalysis) {
+          this.guardPaidUpsellVisible = true;
+          await this.refresh();
+          await vscode.commands.executeCommand("xupra.openBilling", {
+            required: "security_pro",
+            source: "extension",
+            returnPath: "/app",
+          });
+          return;
+        }
+
+        if (!this.apiClient?.startCloudAnalysis) {
+          void vscode.window.showErrorMessage("Deep Cloud Analysis is unavailable because the backend client is not configured.");
+          return;
+        }
+
+        if (!await approveDeepCloudAnalysisUpload(this.securityScan)) {
+          void vscode.window.showInformationMessage("Deep Cloud Analysis upload canceled.");
+          return;
+        }
+
+        try {
+          const result = await this.apiClient.startCloudAnalysis({
+            ...cloudAnalysisPayload(this.securityScan),
+            ...(this.lastGuardScanId ? { guardScanId: this.lastGuardScanId } : {}),
+          });
+          const action = await vscode.window.showInformationMessage(
+            `Deep Cloud Analysis completed: ${result.job.status}.`,
+            result.job.guardScanId ? "Open Report" : "OK",
+          );
+
+          if (action === "Open Report" && result.job.guardScanId) {
+            await vscode.env.openExternal(this.apiClient.openWebUrl(`/security/reports/${result.job.guardScanId}`));
+          }
+        } catch (error) {
+          const messageText = error instanceof Error ? error.message : String(error);
+      if (/paid|upgrade|billing|subscription|security pro/i.test(messageText)) {
+            this.guardPaidUpsellVisible = true;
+            await vscode.commands.executeCommand("xupra.openBilling", {
+              required: "security_pro",
+              source: "extension",
+              returnPath: "/app",
+            });
+          }
+          void vscode.window.showErrorMessage(`Deep Cloud Analysis failed: ${messageText}`);
+        }
+
         await this.refresh();
         return;
       }
@@ -1748,12 +2049,29 @@ export class ControlRoomProvider {
   }
 
   private async recordGuardScanMetadata() {
-    if (!this.securityScan || !this.apiClient) {
+    if (!this.securityScan || !this.apiClient?.recordGuardScan) {
       return;
     }
 
     try {
-      await this.apiClient.recordGuardScan(guardScanUploadPayload(this.securityScan, "local"));
+      const result = await this.apiClient.recordGuardScan(guardScanUploadPayload(this.securityScan, "local"));
+      this.lastGuardScanId = result.guardScan.id;
+      const connection = this.readConnection();
+
+      if (connection.entitlements?.canUseContinuousWatch && this.apiClient.recordContinuousWatchEvent) {
+        await this.apiClient.recordContinuousWatchEvent({
+          guardScanId: result.guardScan.id,
+          eventType: "extension_check_in",
+          severity: "info",
+          logicalPath: "workspace",
+          metadata: {
+            score: this.securityScan.score,
+            rank: this.securityScan.rank,
+            findingCount: this.securityScan.findings.length,
+            scannedAt: this.securityScan.scannedAt,
+          },
+        });
+      }
     } catch (error) {
       void vscode.window.showWarningMessage(
         `DryLake Guard completed locally, but backend scan history was not recorded: ${
@@ -1785,6 +2103,7 @@ export class ControlRoomProvider {
       ? renderSecurityPanel(this.securityScan, this.securityScanLoading, {
         uploadStatus: this.guardUploadStatus,
         uploadError: this.guardUploadError,
+        canCreateTeamBaseline: canManageTeamBaseline(connection),
         paidUpsellVisible: this.guardPaidUpsellVisible,
         fixStatus: this.guardFixStatus,
         fixPlan: this.guardFixPlan,
@@ -2280,7 +2599,14 @@ export class ControlRoomProvider {
         return;
       }
       if (selectedProviderLocked) {
-        vscode.postMessage({ command: "xupra.openBilling", args: [] });
+        vscode.postMessage({
+          command: "xupra.openBilling",
+          args: [{
+            required: "pro",
+            source: "extension",
+            returnPath: "/app",
+          }],
+        });
         return;
       }
       const hasPlan = document.querySelector(".chat-panel")?.dataset.hasPlan === "true";
@@ -2406,7 +2732,10 @@ export class ControlRoomProvider {
 
       const commandEl = event.target.closest("[data-command]");
       if (commandEl) {
-        vscode.postMessage({ command: commandEl.dataset.command, args: [] });
+        vscode.postMessage({
+          command: commandEl.dataset.command,
+          args: parseBillingCommandArgs(commandEl as Element),
+        });
         return;
       }
 
@@ -2456,7 +2785,14 @@ export class ControlRoomProvider {
       if (providerSelect) {
         syncProviderSelection();
         if (selectedProviderLocked) {
-          vscode.postMessage({ command: "xupra.openBilling", args: [] });
+          vscode.postMessage({
+            command: "xupra.openBilling",
+            args: [{
+              required: "pro",
+              source: "extension",
+              returnPath: "/app",
+            }],
+          });
         } else if (providerNeedsLocalConfiguration(selectedProvider)) {
           if (selectedProvider === "hermes-agent") {
             document.querySelector("[data-provider-config-action='open-settings']")?.focus();

@@ -1,4 +1,4 @@
-import { fromZodError, internalError, ok, unauthorized } from "@/lib/api/http";
+import { forbidden, fromZodError, internalError, ok, unauthorized } from "@/lib/api/http";
 import {
   guardScanUploadSchema,
   recordGuardScanUpload,
@@ -8,6 +8,7 @@ import {
   INVALID_EXTENSION_TOKEN_ERROR,
   REQUEST_AUTHENTICATION_REQUIRED_ERROR,
 } from "@/lib/services/request-organization";
+import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
 
 export async function POST(request: Request) {
   try {
@@ -19,6 +20,16 @@ export async function POST(request: Request) {
     }
 
     const context = await getRequestOrganizationContext(request);
+    const { resolved } = await getEntitlementsForOrganization(context.organizationId);
+
+    if (parsed.data.consentMode === "baseline_upload" && !resolved.canUseTeamBaseline) {
+      return forbidden("Team Baseline requires Team Security.");
+    }
+
+    if (parsed.data.consentMode === "active_guard" && !resolved.canUseApprovedUpload) {
+      return forbidden("Approved upload and Deep Cloud Analysis require Security Pro.");
+    }
+
     const result = await recordGuardScanUpload({
       organizationId: context.organizationId,
       actorUserId: context.userId,

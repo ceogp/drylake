@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "0.1.0-phase1",
+  "title": "DryLake MCP Prompt Contracts",
+  "promptNamePattern": "^/drylake\\.[a-z0-9_]+$",
+  "prompts": [
+    {
+      "name": "/drylake.plan_ticket",
+      "description": "Turn a ticket or task snippet into a DryLake plan update request.",
+      "argumentsSchema": {
+        "$ref": "#/$defs/planPromptArgs"
+      },
+      "requiredVariables": [
+        "ticketSnippet"
+      ],
+      "toolFallback": "drylake_create_plan"
+    },
+    {
+      "name": "/drylake.implement_phase",
+      "description": "Render a phase-scoped implementation prompt for an execution agent.",
+      "argumentsSchema": {
+        "$ref": "#/$defs/phasePromptArgs"
+      },
+      "requiredVariables": [
+        "planId",
+        "phaseId",
+        "constraints",
+        "agentProfile"
+      ],
+      "toolFallback": "drylake_create_handoff"
+    },
+    {
+      "name": "/drylake.review_phase",
+      "description": "Render a review-focused prompt for a completed or in-flight phase.",
+      "argumentsSchema": {
+        "$ref": "#/$defs/phasePromptArgs"
+      },
+      "requiredVariables": [
+        "planId",
+        "phaseId",
+        "constraints",
+        "agentProfile"
+      ],
+      "toolFallback": "drylake_create_handoff"
+    },
+    {
+      "name": "/drylake.generate_tests",
+      "description": "Render a test-focused prompt that stays within the current phase boundary.",
+      "argumentsSchema": {
+        "$ref": "#/$defs/phasePromptArgs"
+      },
+      "requiredVariables": [
+        "planId",
+        "phaseId",
+        "constraints"
+      ],
+      "toolFallback": "drylake_create_handoff"
+    },
+    {
+      "name": "/drylake.debug_phase",
+      "description": "Render a debugging prompt using the current phase plus evidence references.",
+      "argumentsSchema": {
+        "$ref": "#/$defs/phasePromptArgs"
+      },
+      "requiredVariables": [
+        "planId",
+        "phaseId",
+        "constraints"
+      ],
+      "toolFallback": "drylake_create_handoff"
+    },
+    {
+      "name": "/drylake.refactor_phase",
+      "description": "Render a refactor-focused prompt that preserves explicit phase constraints.",
+      "argumentsSchema": {
+        "$ref": "#/$defs/phasePromptArgs"
+      },
+      "requiredVariables": [
+        "planId",
+        "phaseId",
+        "constraints"
+      ],
+      "toolFallback": "drylake_create_handoff"
+    },
+    {
+      "name": "/drylake.prepare_pr",
+      "description": "Render a pull-request preparation prompt from the current phase and handoff state.",
+      "argumentsSchema": {
+        "$ref": "#/$defs/phasePromptArgs"
+      },
+      "requiredVariables": [
+        "planId",
+        "phaseId",
+        "ticketSnippet"
+      ],
+      "toolFallback": "drylake_create_handoff"
+    },
+    {
+      "name": "/drylake.compress_handoff",
+      "description": "Render a prompt that compresses a handoff while preserving constraints and safety notes.",
+      "argumentsSchema": {
+        "$ref": "#/$defs/phasePromptArgs"
+      },
+      "requiredVariables": [
+        "planId",
+        "phaseId",
+        "constraints",
+        "agentProfile"
+      ],
+      "toolFallback": "drylake_estimate_tokens"
+    }
+  ],
+  "$defs": {
+    "planPromptArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "planId": {
+          "type": "string"
+        },
+        "ticketSnippet": {
+          "type": "string",
+          "minLength": 1
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "agentProfile": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ticketSnippet"
+      ]
+    },
+    "phasePromptArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "planId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phaseId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ticketSnippet": {
+          "type": "string"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "agentProfile": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "planId",
+        "phaseId"
+      ]
+    }
+  }
+}

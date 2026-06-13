@@ -1,0 +1,667 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "0.1.0-phase1",
+  "title": "DryLake MCP Resource Contracts",
+  "uriScheme": "drylake://",
+  "resources": [
+    {
+      "uriTemplate": "drylake://plans/current",
+      "mimeType": "application/json",
+      "cachePolicy": "no-store",
+      "readOnly": true,
+      "resultSchema": {
+        "$ref": "#/$defs/planCurrent"
+      },
+      "errors": [
+        "not_found",
+        "permission_denied",
+        "internal_error"
+      ]
+    },
+    {
+      "uriTemplate": "drylake://plans/{planId}",
+      "mimeType": "application/json",
+      "cachePolicy": "revisioned",
+      "readOnly": true,
+      "resultSchema": {
+        "$ref": "#/$defs/plan"
+      },
+      "errors": [
+        "not_found",
+        "permission_denied",
+        "internal_error"
+      ]
+    },
+    {
+      "uriTemplate": "drylake://phases/{phaseId}",
+      "mimeType": "application/json",
+      "cachePolicy": "revisioned",
+      "readOnly": true,
+      "resultSchema": {
+        "$ref": "#/$defs/phase"
+      },
+      "errors": [
+        "not_found",
+        "permission_denied",
+        "internal_error"
+      ]
+    },
+    {
+      "uriTemplate": "drylake://handoffs/{phaseId}/markdown",
+      "mimeType": "text/markdown",
+      "cachePolicy": "immutable-by-revision",
+      "readOnly": true,
+      "resultSchema": {
+        "$ref": "#/$defs/handoffText"
+      },
+      "errors": [
+        "not_found",
+        "permission_denied",
+        "unsupported_format",
+        "internal_error"
+      ]
+    },
+    {
+      "uriTemplate": "drylake://handoffs/{phaseId}/shell",
+      "mimeType": "text/x-shellscript",
+      "cachePolicy": "immutable-by-revision",
+      "readOnly": true,
+      "resultSchema": {
+        "$ref": "#/$defs/handoffText"
+      },
+      "errors": [
+        "not_found",
+        "permission_denied",
+        "unsupported_format",
+        "internal_error"
+      ]
+    },
+    {
+      "uriTemplate": "drylake://handoffs/{phaseId}/json",
+      "mimeType": "application/json",
+      "cachePolicy": "immutable-by-revision",
+      "readOnly": true,
+      "resultSchema": {
+        "$ref": "#/$defs/handoffJson"
+      },
+      "errors": [
+        "not_found",
+        "permission_denied",
+        "unsupported_format",
+        "internal_error"
+      ]
+    },
+    {
+      "uriTemplate": "drylake://token-budget/{planId}",
+      "mimeType": "application/json",
+      "cachePolicy": "short-lived",
+      "readOnly": true,
+      "resultSchema": {
+        "$ref": "#/$defs/tokenBudget"
+      },
+      "errors": [
+        "not_found",
+        "permission_denied",
+        "internal_error"
+      ]
+    },
+    {
+      "uriTemplate": "drylake://audit-log/{planId}",
+      "mimeType": "application/json",
+      "cachePolicy": "no-store",
+      "readOnly": true,
+      "queryParameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "resultSchema": {
+        "$ref": "#/$defs/auditLog"
+      },
+      "errors": [
+        "not_found",
+        "permission_denied",
+        "internal_error"
+      ]
+    }
+  ],
+  "$defs": {
+    "phaseSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phaseId",
+        "title",
+        "status",
+        "objective"
+      ],
+      "properties": {
+        "phaseId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "objective": {
+          "type": "string"
+        }
+      }
+    },
+    "planCurrent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "planId",
+        "title",
+        "status",
+        "summary",
+        "constraints",
+        "phases",
+        "currentPhaseId",
+        "resourceUris",
+        "updatedAt"
+      ],
+      "properties": {
+        "kind": {
+          "const": "plan"
+        },
+        "planId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/phaseSummary"
+          }
+        },
+        "currentPhaseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resourceUris": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "planId",
+        "revision",
+        "title",
+        "status",
+        "purpose",
+        "constraints",
+        "phases",
+        "tokenBudget",
+        "resourceUris",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "kind": {
+          "const": "plan"
+        },
+        "planId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/phaseSummary"
+          }
+        },
+        "tokenBudget": {
+          "$ref": "#/$defs/tokenBudget"
+        },
+        "resourceUris": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "phaseId",
+        "planId",
+        "revision",
+        "title",
+        "status",
+        "objective",
+        "inputs",
+        "outputs",
+        "steps",
+        "acceptance",
+        "recommendedAgent",
+        "dependencies",
+        "handoffUris",
+        "updatedAt"
+      ],
+      "properties": {
+        "kind": {
+          "const": "phase"
+        },
+        "phaseId": {
+          "type": "string"
+        },
+        "planId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "objective": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "acceptance": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommendedAgent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "handoffUris": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "handoffText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "handoffId",
+        "phaseId",
+        "revision",
+        "content"
+      ],
+      "properties": {
+        "kind": {
+          "const": "handoff_text"
+        },
+        "handoffId": {
+          "type": "string"
+        },
+        "phaseId": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "content": {
+          "type": "string"
+        }
+      }
+    },
+    "handoffJson": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "handoffId",
+        "planId",
+        "phaseId",
+        "targetAgent",
+        "summary",
+        "instructions",
+        "constraints",
+        "resourceUris",
+        "nextCalls",
+        "tokenEstimate",
+        "createdAt"
+      ],
+      "properties": {
+        "kind": {
+          "const": "handoff"
+        },
+        "handoffId": {
+          "type": "string"
+        },
+        "planId": {
+          "type": "string"
+        },
+        "phaseId": {
+          "type": "string"
+        },
+        "targetAgent": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "instructions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resourceUris": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "nextCalls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tokenEstimate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "inputTokens",
+            "outputTokens",
+            "totalTokens"
+          ],
+          "properties": {
+            "inputTokens": {
+              "type": "integer"
+            },
+            "outputTokens": {
+              "type": "integer"
+            },
+            "totalTokens": {
+              "type": "integer"
+            }
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "tokenBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "planId",
+        "budget",
+        "latestEstimate",
+        "phaseEstimates",
+        "compressionPolicy",
+        "updatedAt"
+      ],
+      "properties": {
+        "kind": {
+          "const": "token_budget"
+        },
+        "planId": {
+          "type": "string"
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxInputTokens": {
+              "type": "integer"
+            },
+            "maxOutputTokens": {
+              "type": "integer"
+            }
+          }
+        },
+        "latestEstimate": {
+          "type": "object"
+        },
+        "phaseEstimates": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "compressionPolicy": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "auditLog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "planId",
+        "entries",
+        "nextCursor",
+        "updatedAt"
+      ],
+      "properties": {
+        "kind": {
+          "const": "audit_log"
+        },
+        "planId": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/auditEntry"
+          }
+        },
+        "nextCursor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "auditEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auditId",
+        "timestamp",
+        "actorType",
+        "actorId",
+        "toolName",
+        "action",
+        "targetType",
+        "approvalState",
+        "outcome",
+        "summary"
+      ],
+      "properties": {
+        "auditId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actorType": {
+          "type": "string"
+        },
+        "actorId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "planId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phaseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "toolName": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "targetType": {
+          "type": "string"
+        },
+        "targetId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recipeId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requestedScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "approvalState": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

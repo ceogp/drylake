@@ -74,7 +74,7 @@ export async function POST(request: Request) {
         select: { id: true, name: true, slug: true, tier: true },
       });
       const organizationView = refreshedOrganization ?? membership.organization;
-      const { subscription, entitlements } = await getEntitlementsForOrganization(membership.organizationId);
+      const { subscription, entitlements, resolved } = await getEntitlementsForOrganization(membership.organizationId);
       await recordAuthEvent({
         eventName: "auth.extension.connect",
         organizationId: membership.organizationId,
@@ -113,9 +113,13 @@ export async function POST(request: Request) {
           slug: organizationView.slug,
           tier: organizationView.tier,
         },
+        organizationRole: membership.role,
         entitlements,
+        entitlementVersion: resolved.entitlementVersion,
+        plan: resolved.plan,
         subscription: {
           status: subscription?.status ?? "none",
+          currentPeriodEnd: resolved.currentPeriodEnd,
         },
       });
     }
@@ -133,7 +137,7 @@ export async function POST(request: Request) {
         where: { id: organizationId },
         select: { id: true, name: true, slug: true, tier: true },
       });
-      const { subscription, entitlements } = await getEntitlementsForOrganization(organizationId);
+      const { subscription, entitlements, resolved } = await getEntitlementsForOrganization(organizationId);
       await recordAuthEvent({
         eventName: "auth.extension.connect",
         organizationId,
@@ -166,10 +170,14 @@ export async function POST(request: Request) {
           : {
               id: auth.session.organizationId,
               tier: refreshedOrg?.tier,
-            },
+        },
+        organizationRole: appContext?.activeMembership.role,
         entitlements,
+        entitlementVersion: resolved.entitlementVersion,
+        plan: resolved.plan,
         subscription: {
           status: subscription?.status ?? "none",
+          currentPeriodEnd: resolved.currentPeriodEnd,
         },
       });
     }
@@ -197,7 +205,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { subscription, entitlements } = await getEntitlementsForOrganization(session.organization.id);
+    const { subscription, entitlements, resolved } = await getEntitlementsForOrganization(session.organization.id);
 
     return created({
       editor: parsed.data.editor,
@@ -213,9 +221,13 @@ export async function POST(request: Request) {
         slug: session.organization.slug,
         tier: session.organization.tier,
       },
+      organizationRole: undefined,
       entitlements,
+      entitlementVersion: resolved.entitlementVersion,
+      plan: resolved.plan,
       subscription: {
         status: subscription?.status ?? "none",
+        currentPeriodEnd: resolved.currentPeriodEnd,
       },
     });
   } catch (error) {

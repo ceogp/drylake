@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const { subscription, entitlements } = await getEntitlementsForOrganization(
+    const { subscription, entitlements, resolved } = await getEntitlementsForOrganization(
       pollResult.organization.id,
     );
 
@@ -65,8 +65,11 @@ export async function GET(request: Request) {
         tier: pollResult.organization.tier,
       },
       entitlements,
+      entitlementVersion: resolved.entitlementVersion,
+      plan: resolved.plan,
       subscription: {
         status: subscription?.status ?? "none",
+        currentPeriodEnd: resolved.currentPeriodEnd,
       },
       editor: pollResult.editor,
     });

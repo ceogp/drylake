@@ -8,7 +8,7 @@ import { recordAuditEvent } from "@/lib/services/audit";
 
 const ACTIVE_PAID_STATUSES = new Set(["active", "past_due", "pastDue", "upcoming", "trialing"]);
 
-type Tier = "free" | "pro" | "enterprise";
+type Tier = "free" | "pro" | "security_pro" | "team_security" | "enterprise";
 
 type ClerkBillingItem = {
   status?: string;
@@ -197,6 +197,12 @@ function tierForStripePriceId(priceId: string | null | undefined): Tier {
   if (priceId && env.STRIPE_ENTERPRISE_PRICE_ID && priceId === env.STRIPE_ENTERPRISE_PRICE_ID) {
     return "enterprise";
   }
+  if (priceId && env.STRIPE_TEAM_SECURITY_PRICE_ID && priceId === env.STRIPE_TEAM_SECURITY_PRICE_ID) {
+    return "team_security";
+  }
+  if (priceId && env.STRIPE_SECURITY_PRO_PRICE_ID && priceId === env.STRIPE_SECURITY_PRO_PRICE_ID) {
+    return "security_pro";
+  }
   if (priceId && env.STRIPE_PRO_PRICE_ID && priceId === env.STRIPE_PRO_PRICE_ID) {
     return "pro";
   }
@@ -210,7 +216,7 @@ function pickBestSubscription(subs: Stripe.Subscription[]): Stripe.Subscription 
     .map((sub) => {
       const priceId = sub.items.data[0]?.price?.id ?? null;
       const tier = tierForStripePriceId(priceId);
-      const tierWeight = tier === "enterprise" ? 3 : tier === "pro" ? 2 : 1;
+      const tierWeight = tier === "enterprise" ? 5 : tier === "team_security" ? 4 : tier === "security_pro" ? 3 : tier === "pro" ? 2 : 1;
       const statusWeight = sub.status === "active" ? 3 : sub.status === "trialing" ? 2 : 1;
       return { sub, score: tierWeight * 10 + statusWeight };
     })
@@ -294,8 +300,8 @@ export async function syncSubscriptionFromStripe(organizationId: string): Promis
 
       const currentPrice = bestSubscription?.items.data[0]?.price?.id ?? null;
       const currentTier = tierForStripePriceId(currentPrice);
-      const currentWeight = currentTier === "enterprise" ? 3 : currentTier === "pro" ? 2 : 0;
-      const candidateWeight = candidateTier === "enterprise" ? 3 : candidateTier === "pro" ? 2 : 0;
+      const currentWeight = currentTier === "enterprise" ? 5 : currentTier === "team_security" ? 4 : currentTier === "security_pro" ? 3 : currentTier === "pro" ? 2 : 0;
+      const candidateWeight = candidateTier === "enterprise" ? 5 : candidateTier === "team_security" ? 4 : candidateTier === "security_pro" ? 3 : candidateTier === "pro" ? 2 : 0;
 
       if (!bestSubscription || candidateWeight > currentWeight) {
         bestSubscription = candidate;

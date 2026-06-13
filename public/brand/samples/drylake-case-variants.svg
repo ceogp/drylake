@@ -1,0 +1,53 @@
+<svg width="1500" height="760" viewBox="0 0 1500 760" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DryLake case variant wordmark samples">
+  <style>
+    .mono {
+      font-family: "Cascadia Mono", "IBM Plex Mono", Consolas, monospace;
+      font-weight: 700;
+      fill: #f7f4ea;
+    }
+    .label {
+      font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      fill: #a1a1aa;
+    }
+    .note {
+      font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      fill: #71717a;
+    }
+    .panel {
+      fill: #111414;
+      stroke: #27272a;
+    }
+  </style>
+  <rect width="1500" height="760" rx="24" fill="#090a0a"/>
+  <text x="70" y="74" class="label">DRYLAKE CASE VARIANTS / THICK MONO</text>
+  <path d="M72 96H280" stroke="#36b979" stroke-width="6" stroke-linecap="square"/>
+
+  <g transform="translate(70 145)">
+    <rect class="panel" width="1360" height="150" rx="18"/>
+    <text x="34" y="46" class="label">A / DryLake</text>
+    <text x="390" y="102" class="mono" font-size="82" letter-spacing="2">DryLake</text>
+    <path d="M392 124H964" stroke="#ff5a1f" stroke-width="8" stroke-linecap="square"/>
+  </g>
+
+  <g transform="translate(70 330)">
+    <rect class="panel" width="1360" height="150" rx="18"/>
+    <text x="34" y="46" class="label">B / dryLake</text>
+    <text x="390" y="102" class="mono" font-size="82" letter-spacing="2">dryLake</text>
+    <path d="M392 124H964" stroke="#ff5a1f" stroke-width="8" stroke-linecap="square"/>
+  </g>
+
+  <g transform="translate(70 515)">
+    <rect class="panel" width="1360" height="150" rx="18"/>
+    <text x="34" y="46" class="label">C / drylake</text>
+    <text x="390" y="102" class="mono" font-size="82" letter-spacing="2">drylake</text>
+    <path d="M392 124H964" stroke="#ff5a1f" stroke-width="8" stroke-linecap="square"/>
+  </g>
+
+  <text x="72" y="718" class="note">A is the most readable brand spelling. B feels more developer/product-native. C is best for CLI/package naming, but weaker as a product brand.</text>
+</svg>

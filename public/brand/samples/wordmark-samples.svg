@@ -1,0 +1,112 @@
+<svg width="1600" height="1500" viewBox="0 0 1600 1500" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Xupra and DryLake wordmark sample sheet">
+  <style>
+    .label {
+      font-family: "IBM Plex Mono", "Cascadia Mono", "Consolas", monospace;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      fill: #a1a1aa;
+    }
+    .note {
+      font-family: "IBM Plex Mono", "Cascadia Mono", "Consolas", monospace;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 1.2px;
+      fill: #71717a;
+    }
+    .accent-orange {
+      stroke: #ff5a1f;
+      stroke-width: 7;
+      stroke-linecap: square;
+    }
+    .accent-green {
+      stroke: #36b979;
+      stroke-width: 5;
+      stroke-linecap: square;
+    }
+    .sample-a {
+      font-family: "Segoe UI Light", "Helvetica Neue", Helvetica, system-ui, sans-serif;
+      font-weight: 300;
+      fill: #f7f4ea;
+    }
+    .sample-b {
+      font-family: "Bahnschrift Light", "Bahnschrift", "Segoe UI", system-ui, sans-serif;
+      font-weight: 300;
+      fill: #f7f4ea;
+    }
+    .sample-c {
+      font-family: "Aptos Display", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+      font-weight: 300;
+      fill: #f7f4ea;
+    }
+    .sample-d {
+      font-family: "Century Gothic", "Segoe UI", Helvetica, system-ui, sans-serif;
+      font-weight: 400;
+      fill: #f7f4ea;
+    }
+    .sample-e {
+      font-family: "Cascadia Mono", "IBM Plex Mono", Consolas, monospace;
+      font-weight: 700;
+      fill: #f7f4ea;
+    }
+  </style>
+
+  <rect width="1600" height="1500" fill="#090a0a"/>
+  <text x="70" y="84" fill="#f7f4ea" font-family="Segoe UI Light, Helvetica Neue, Helvetica, system-ui, sans-serif" font-size="48" font-weight="300">Wordmark Direction Samples</text>
+  <text x="72" y="126" class="note">TEXT-ONLY DRAFTS / NO REUSED X MARK / NO CUSTOM-DRAWN LETTERS</text>
+
+  <g transform="translate(70 190)">
+    <rect width="1460" height="210" rx="18" fill="#111414" stroke="#27272a"/>
+    <text x="34" y="46" class="label">A / THIN HELVETICA-LIKE</text>
+    <path d="M36 64H214" class="accent-green"/>
+    <text x="34" y="138" class="sample-a" font-size="88" letter-spacing="1">Xupra</text>
+    <text x="610" y="138" class="sample-a" font-size="88" letter-spacing="-1">DryLake</text>
+    <path d="M36 166H368" class="accent-orange"/>
+    <path d="M612 166H820L852 180H1040L1072 166H1248" class="accent-orange"/>
+    <text x="34" y="194" class="note">Quiet, corporate, closest to current thin-premium request.</text>
+  </g>
+
+  <g transform="translate(70 440)">
+    <rect width="1460" height="210" rx="18" fill="#111414" stroke="#27272a"/>
+    <text x="34" y="46" class="label">B / INDUSTRIAL WIDE</text>
+    <path d="M36 64H214" class="accent-green"/>
+    <text x="34" y="138" class="sample-b" font-size="82" letter-spacing="10">XUPRA</text>
+    <text x="610" y="138" class="sample-b" font-size="82" letter-spacing="8">DRYLAKE</text>
+    <path d="M36 166H414" class="accent-orange"/>
+    <path d="M612 166H1158" class="accent-orange"/>
+    <text x="34" y="194" class="note">More semiconductor/tooling. Stronger, less friendly.</text>
+  </g>
+
+  <g transform="translate(70 690)">
+    <rect width="1460" height="210" rx="18" fill="#111414" stroke="#27272a"/>
+    <text x="34" y="46" class="label">C / MODERN DISPLAY</text>
+    <path d="M36 64H214" class="accent-green"/>
+    <text x="34" y="138" class="sample-c" font-size="92" letter-spacing="0">Xupra</text>
+    <text x="610" y="138" class="sample-c" font-size="92" letter-spacing="-2">DryLake</text>
+    <path d="M36 166H338" class="accent-orange"/>
+    <path d="M612 166H810L842 180H1038L1070 166H1220" class="accent-orange"/>
+    <text x="34" y="194" class="note">Clean product company. Less distinctive, but safer.</text>
+  </g>
+
+  <g transform="translate(70 940)">
+    <rect width="1460" height="210" rx="18" fill="#111414" stroke="#27272a"/>
+    <text x="34" y="46" class="label">D / ROUNDED TECH</text>
+    <path d="M36 64H214" class="accent-green"/>
+    <text x="34" y="138" class="sample-d" font-size="84" letter-spacing="1">Xupra</text>
+    <text x="610" y="138" class="sample-d" font-size="84" letter-spacing="-1">DryLake</text>
+    <path d="M36 166H340" class="accent-orange"/>
+    <path d="M612 166H800L832 180H1018L1050 166H1190" class="accent-orange"/>
+    <text x="34" y="194" class="note">Softer and more startup. Probably not the final, but useful contrast.</text>
+  </g>
+
+  <g transform="translate(70 1190)">
+    <rect width="1460" height="210" rx="18" fill="#111414" stroke="#27272a"/>
+    <text x="34" y="46" class="label">E / MONO TERMINAL</text>
+    <path d="M36 64H214" class="accent-green"/>
+    <text x="34" y="138" class="sample-e" font-size="72" letter-spacing="1">Xupra</text>
+    <text x="610" y="138" class="sample-e" font-size="72" letter-spacing="1">drylake</text>
+    <path d="M36 166H326" class="accent-orange"/>
+    <path d="M612 166H1066" class="accent-orange"/>
+    <text x="34" y="194" class="note">Developer-native, heavier, clearer. Xupra capitalized; drylake lowercase.</text>
+  </g>
+</svg>

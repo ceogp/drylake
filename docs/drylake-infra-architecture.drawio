@@ -1,323 +1,373 @@
-<mxfile host="app.diagrams.net" modified="2026-06-07T00:00:00.000Z" agent="Codex" version="24.7.17" type="device">
-  <diagram id="runtime-infra" name="Runtime Infra And Data">
-    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="legend" value="Legend&#xa;Blue = compute/runtime&#xa;Green = network/edge&#xa;Gold = data storage&#xa;Red = secrets/credentials&#xa;Purple = external SaaS/discovery&#xa;Orange = Docker/local" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#666666;fontFamily=Helvetica;fontSize=12;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="20" y="20" width="250" height="150" as="geometry" />
-        </mxCell>
-        <mxCell id="user" value="Developers / Coding Agents&#xa;VS Code, Cursor, Claude Code, Codex, Gemini" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="30" y="230" width="210" height="90" as="geometry" />
-        </mxCell>
-        <mxCell id="cloudflare" value="Cloudflare DNS + Proxy&#xa;xupracorp.com&#xa;drylake.xupracorp.com&#xa;TLS mode: Full strict" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="310" y="230" width="210" height="110" as="geometry" />
-        </mxCell>
-        <mxCell id="aws" value="AWS Account / Region&#xa;ap-northeast-1 target" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
-          <mxGeometry x="590" y="40" width="900" height="780" as="geometry" />
-        </mxCell>
-        <mxCell id="vpc" value="Default VPC&#xa;public/private subnets across AZs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontFamily=Helvetica;fontStyle=1;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="620" y="90" width="840" height="690" as="geometry" />
-        </mxCell>
-        <mxCell id="edge-alb" value="Public ALB - optional edge&#xa;xupra-drylake-edge&#xa;HTTP 80 redirect / HTTPS 443&#xa;ACM certificate" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="660" y="145" width="220" height="115" as="geometry" />
-        </mxCell>
-        <mxCell id="edge-sg" value="Security Group&#xa;xupra-drylake-edge-sg&#xa;Ingress 80/443 from internet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="660" y="285" width="220" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="target-group" value="Target Group&#xa;xupra-drylake-edge-https&#xa;Target: EC2 instance :443&#xa;Health: /api/v1/health" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="660" y="390" width="220" height="95" as="geometry" />
-        </mxCell>
-        <mxCell id="ec2" value="EC2 App Host&#xa;xupra-drylake-staging / production host&#xa;Ubuntu 24.04&#xa;t3.large staging shape&#xa;Elastic IP in current direct-origin path" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="960" y="140" width="260" height="120" as="geometry" />
-        </mxCell>
-        <mxCell id="ec2-sg" value="Security Group&#xa;xupra-drylake-staging-sg&#xa;Ingress 22/80/443&#xa;RDS ingress source when RDS used" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="1240" y="140" width="190" height="105" as="geometry" />
-        </mxCell>
-        <mxCell id="nginx" value="nginx on EC2&#xa;/etc/nginx/sites-available/xupra-drylake&#xa;Terminates origin cert when direct&#xa;Proxies to 127.0.0.1:3000" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="960" y="300" width="260" height="100" as="geometry" />
-        </mxCell>
-        <mxCell id="systemd" value="systemd service&#xa;xupra-drylake.service&#xa;User: xupra&#xa;WorkingDirectory: /srv/xupra-drylake/current&#xa;ExecStart: npm run start" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="960" y="430" width="260" height="115" as="geometry" />
-        </mxCell>
-        <mxCell id="nextjs" value="Next.js App Runtime&#xa;API routes + web UI&#xa;Extension connect APIs&#xa;Agent Preflight APIs&#xa;Admin/reporting APIs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="960" y="575" width="260" height="115" as="geometry" />
-        </mxCell>
-        <mxCell id="release-dirs" value="EC2 release storage&#xa;/srv/xupra-drylake/releases/*&#xa;/srv/xupra-drylake/current symlink&#xa;/srv/xupra-drylake/shared/.env&#xa;/srv/xupra-drylake/shared/storage" style="shape=folder;tabWidth=80;tabHeight=20;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="1240" y="310" width="210" height="130" as="geometry" />
-        </mxCell>
-        <mxCell id="local-pg" value="Current/simple DB option&#xa;PostgreSQL on EC2&#xa;127.0.0.1:5432&#xa;Installed by staging userdata" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1245" y="470" width="200" height="100" as="geometry" />
-        </mxCell>
-        <mxCell id="rds" value="Managed DB option&#xa;Amazon RDS PostgreSQL&#xa;xupra-drylake-staging-postgres&#xa;db.t4g.micro / gp3 / encrypted&#xa;private, backups 7d, deletion protection" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1245" y="600" width="200" height="125" as="geometry" />
-        </mxCell>
-        <mxCell id="rds-sg" value="RDS SG&#xa;xupra-drylake-staging-rds-sg&#xa;Ingress 5432 only from app SG" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="1245" y="740" width="200" height="70" as="geometry" />
-        </mxCell>
-        <mxCell id="s3" value="S3 Artifact Storage&#xa;AWS_S3_BUCKET&#xa;AWS_S3_PREFIX=xupra-drylake&#xa;handoffs, package exports, generated artifacts" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="680" y="570" width="210" height="115" as="geometry" />
-        </mxCell>
-        <mxCell id="secrets" value="AWS Secrets Manager&#xa;xupra-drylake/&lt;env&gt;/env&#xa;Optional source for deploy env bundle&#xa;KMS-backed secret storage path" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="680" y="710" width="210" height="95" as="geometry" />
-        </mxCell>
-        <mxCell id="external" value="External SaaS Providers" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#666666;fontFamily=Helvetica;fontStyle=1;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="30" y="390" width="500" height="380" as="geometry" />
-        </mxCell>
-        <mxCell id="clerk" value="Clerk&#xa;Human auth, org/user session&#xa;Billing sync source when enabled" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="60" y="440" width="190" height="85" as="geometry" />
-        </mxCell>
-        <mxCell id="stripe" value="Stripe&#xa;Checkout, subscriptions, webhooks&#xa;Local subscription mirror in DB" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="440" width="190" height="85" as="geometry" />
-        </mxCell>
-        <mxCell id="ai" value="AI Providers&#xa;OpenAI / Kimi / Anthropic&#xa;Planning and normalization calls&#xa;Keys via env or Secrets Manager" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="60" y="555" width="190" height="100" as="geometry" />
-        </mxCell>
-        <mxCell id="marketplaces" value="Marketplaces / Registries&#xa;VS Marketplace&#xa;Open VSX&#xa;npm MCP package&#xa;Cursor plugin submission&#xa;MCP Registry next" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="555" width="190" height="125" as="geometry" />
-        </mxCell>
-        <mxCell id="admin-internal" value="Optional internal admin edge&#xa;Internal ALB: xupra-admin-internal&#xa;Private Route53 zone&#xa;Allowed CIDR / VPN path only" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="660" y="500" width="220" height="95" as="geometry" />
-        </mxCell>
-        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#666666;" edge="1" parent="1" source="user" target="cloudflare">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e2" value="HTTPS public traffic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#666666;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="cloudflare" target="edge-alb">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e3" value="Direct-origin fallback&#xa;A records to EIP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;dashed=1;strokeColor=#666666;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="cloudflare" target="ec2">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;" edge="1" parent="1" source="edge-alb" target="target-group">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e5" value="Target :443" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="target-group" target="nginx">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="ec2" target="nginx">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e7" value="proxy 127.0.0.1:3000" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="nginx" target="systemd">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="systemd" target="nextjs">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e9" value="current release + .env" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="systemd" target="release-dirs">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e10" value="DATABASE_URL local" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="nextjs" target="local-pg">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e11" value="DATABASE_URL RDS option" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;dashed=1;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="nextjs" target="rds">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e12" value="S3 artifact driver" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="nextjs" target="s3">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e13" value="env bundle" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#b85450;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="secrets" target="release-dirs">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e14" value="Auth session" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="nextjs" target="clerk">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e15" value="Billing + webhooks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="nextjs" target="stripe">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e16" value="Planning calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="nextjs" target="ai">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;" edge="1" parent="1" source="edge-sg" target="edge-alb">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;" edge="1" parent="1" source="ec2-sg" target="ec2">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;" edge="1" parent="1" source="rds-sg" target="rds">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e20" value="admin / VPN-only path" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;dashed=1;strokeColor=#82b366;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="admin-internal" target="nginx">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-  <diagram id="auth-discovery" name="Auth Discovery And Data Flow">
-    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="title" value="DryLake Authentication, Discovery, And Planning Data Flow" style="text;html=1;strokeColor=none;fillColor=none;fontSize=20;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="40" y="25" width="760" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="human" value="Human developer&#xa;Signs up / signs in" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="50" y="100" width="180" height="75" as="geometry" />
-        </mxCell>
-        <mxCell id="editor" value="VS Code / Cursor Extension&#xa;DryLake Control Room&#xa;x-xupra-extension-token" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="50" y="230" width="220" height="95" as="geometry" />
-        </mxCell>
-        <mxCell id="secretstorage" value="Editor SecretStorage&#xa;extension access token&#xa;direct provider keys" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="50" y="365" width="220" height="85" as="geometry" />
-        </mxCell>
-        <mxCell id="agent" value="Coding agent / MCP client&#xa;Cursor, Claude Code, Codex, Gemini&#xa;Calls drylake_preflight" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="50" y="540" width="240" height="95" as="geometry" />
-        </mxCell>
-        <mxCell id="mcp" value="@xupracorp/drylake-mcp&#xa;npx package&#xa;DRYLAKE_AGENT_TOKEN&#xa;Authorization: Bearer dlk_*" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="350" y="540" width="230" height="105" as="geometry" />
-        </mxCell>
-        <mxCell id="api" value="DryLake API / Next.js&#xa;/api/v1/extension/connect/*&#xa;/api/v1/drylake/runbooks/*&#xa;/api/agents/register&#xa;/api/preflight&#xa;/.well-known/agent-card.json" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="650" y="250" width="260" height="150" as="geometry" />
-        </mxCell>
-        <mxCell id="clerk" value="Clerk&#xa;Human auth provider&#xa;User/org session" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="350" y="95" width="200" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="db" value="PostgreSQL Data&#xa;User / Organization / Membership&#xa;ExtensionAuthRequest&#xa;ExtensionUsageEvent&#xa;AgentToken&#xa;AgentPreflightRun&#xa;Subscriptions" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1020" y="215" width="245" height="170" as="geometry" />
-        </mxCell>
-        <mxCell id="stripe" value="Stripe&#xa;Checkout, subscription, webhook&#xa;Credit packs next" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1020" y="430" width="220" height="90" as="geometry" />
-        </mxCell>
-        <mxCell id="ai" value="Planning Model Layer&#xa;OpenAI/Kimi/Anthropic path&#xa;Structured phase plan&#xa;token budget + handoff" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1020" y="575" width="240" height="100" as="geometry" />
-        </mxCell>
-        <mxCell id="discover" value="Discovery Surfaces&#xa;VS Marketplace&#xa;Open VSX&#xa;Cursor plugin repo&#xa;npm package&#xa;MCP Registry next&#xa;A2A Agent Card" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="650" y="55" width="260" height="135" as="geometry" />
-        </mxCell>
-        <mxCell id="e1" value="browser sign-in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="human" target="clerk">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e2" value="open connect URL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="editor" target="api">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e3" value="approve request" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="clerk" target="api">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e4" value="pollToken hash / consumed request" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="db">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e5" value="encrypted extension token" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#b85450;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="secretstorage">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e6" value="usage + planning calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="editor" target="api">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="agent" target="mcp">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e8" value="POST /api/preflight" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="mcp" target="api">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e9" value="agent token hash + credits" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="db">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e10" value="planning generation" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="ai">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e11" value="checkout / webhook" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="stripe">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e12" value="find/install DryLake" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="discover" target="editor">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e13" value="discover preflight skill" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="discover" target="agent">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-  <diagram id="ci-local-docker" name="CI Release And Local Docker">
-    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="title" value="DryLake CI, Release, And Local Docker Resources" style="text;html=1;strokeColor=none;fillColor=none;fontSize=20;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="40" y="25" width="760" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="repo" value="GitLab Repository&#xa;gmkdigitalmedia1/drylake&#xa;main + feature branches + release tags" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="50" y="110" width="230" height="95" as="geometry" />
-        </mxCell>
-        <mxCell id="ci" value="GitLab CI Pipeline&#xa;validate, package, publish, deploy, verify&#xa;Runs in node:22-bookworm image" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="350" y="110" width="260" height="95" as="geometry" />
-        </mxCell>
-        <mxCell id="ci-postgres" value="CI service container&#xa;postgres:16&#xa;DB: xupra_drylake&#xa;User: xupra_app&#xa;Ephemeral test data" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#d79b00;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="350" y="250" width="220" height="105" as="geometry" />
-        </mxCell>
-        <mxCell id="artifacts" value="Release artifacts&#xa;drylake-X.Y.Z.vsix&#xa;drylake-cursor-plugin-X.Y.Z.tgz&#xa;@xupracorp/drylake-mcp tgz" style="shape=folder;tabWidth=80;tabHeight=20;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="690" y="110" width="260" height="120" as="geometry" />
-        </mxCell>
-        <mxCell id="marketplace" value="Visual Studio Marketplace&#xa;Requires VSCE_PAT or VSCE_TOKEN&#xa;Publishes same VSIX" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1040" y="80" width="230" height="90" as="geometry" />
-        </mxCell>
-        <mxCell id="openvsx" value="Open VSX&#xa;Requires OVSX_TOKEN&#xa;Publishes same VSIX" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1040" y="205" width="230" height="85" as="geometry" />
-        </mxCell>
-        <mxCell id="npm" value="npm Registry&#xa;Requires NPM_TOKEN&#xa;Publishes @xupracorp/drylake-mcp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1040" y="325" width="230" height="90" as="geometry" />
-        </mxCell>
-        <mxCell id="cursor" value="Cursor Plugin Submission&#xa;.cursor-plugin/marketplace.json&#xa;drylake-cursor-plugin/*&#xa;Manual review/submission" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1040" y="455" width="230" height="105" as="geometry" />
-        </mxCell>
-        <mxCell id="gitlab-vars" value="GitLab CI Variables&#xa;Deploy: PRODUCTION_* / STAGING_*&#xa;Publish: VSCE_PAT, OVSX_TOKEN, NPM_TOKEN&#xa;Env source: *_ENV_FILE or *_ENV_SECRET_ID" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="690" y="280" width="260" height="115" as="geometry" />
-        </mxCell>
-        <mxCell id="deploy" value="Deploy job&#xa;git archive HEAD -> release.tar&#xa;scp release.tar + deploy.env + bootstrap&#xa;ssh to EC2&#xa;remote-bootstrap installs/restarts app" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="690" y="455" width="260" height="130" as="geometry" />
-        </mxCell>
-        <mxCell id="ec2" value="AWS EC2 App Host&#xa;/srv/xupra-drylake/releases/*&#xa;/srv/xupra-drylake/current&#xa;nginx + systemd + Node 22" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="1040" y="620" width="250" height="105" as="geometry" />
-        </mxCell>
-        <mxCell id="local-dev" value="Local developer machine&#xa;Windows workspace&#xa;VS Code / Cursor&#xa;npm scripts and Prisma" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#666666;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="50" y="520" width="230" height="95" as="geometry" />
-        </mxCell>
-        <mxCell id="docker" value="Docker Compose local DB&#xa;service: postgres&#xa;image: postgres:16&#xa;container: xupra-drylake-db&#xa;port: ${POSTGRES_HOST_PORT:-5432}:5432" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#d79b00;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="350" y="500" width="260" height="125" as="geometry" />
-        </mxCell>
-        <mxCell id="volume" value="Docker named volume&#xa;xupra_pgdata&#xa;/var/lib/postgresql/data&#xa;Local dev data lives here" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="350" y="670" width="240" height="100" as="geometry" />
-        </mxCell>
-        <mxCell id="local-files" value="Local generated data&#xa;.drylake sessions/handoffs&#xa;storage/* manifests&#xa;release/* package outputs&#xa;not production data" style="shape=folder;tabWidth=80;tabHeight=20;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="50" y="665" width="230" height="115" as="geometry" />
-        </mxCell>
-        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#666666;" edge="1" parent="1" source="repo" target="ci">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e2" value="validate uses" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d79b00;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="ci" target="ci-postgres">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e3" value="package jobs create" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="ci" target="artifacts">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e4" value="same VSIX" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="artifacts" target="marketplace">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e5" value="same VSIX" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="artifacts" target="openvsx">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e6" value="MCP tgz" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="artifacts" target="npm">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e7" value="plugin tgz / repo shape" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="artifacts" target="cursor">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e8" value="protected variables" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#b85450;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="gitlab-vars" target="ci">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e9" value="deploy release" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="deploy" target="ec2">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e10" value="uses deploy vars" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#b85450;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="gitlab-vars" target="deploy">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e11" value="docker compose up -d postgres" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d79b00;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="local-dev" target="docker">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e12" value="stores DB files" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="docker" target="volume">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e13" value="local artifacts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="local-dev" target="local-files">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
+<mxfile host="65bd71144e">
+    <diagram id="runtime-infra" name="Runtime Infra And Data">
+        <mxGraphModel dx="2049" dy="1327" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="legend" value="Legend&#xa;Blue = compute/runtime&#xa;Green = network/edge&#xa;Gold = data storage&#xa;Red = secrets/credentials&#xa;Purple = external SaaS/discovery&#xa;Orange = Docker/local" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#666666;fontFamily=Helvetica;fontSize=12;align=left;verticalAlign=top;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="20" width="250" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="user" value="Developers / Coding Agents&#xa;VS Code, Cursor, Claude Code, Codex, Gemini" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="230" width="210" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="cloudflare" value="Cloudflare DNS + Proxy&#xa;xupracorp.com&#xa;drylake.xupracorp.com&#xa;TLS mode: Full strict" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="230" width="210" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="aws" value="AWS Account / Region&#xa;ap-northeast-1 target" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;verticalAlign=top;spacingTop=8;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="40" width="1100" height="950" as="geometry"/>
+                </mxCell>
+                <mxCell id="vpc" value="Default VPC&#xa;public/private subnets across AZs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontFamily=Helvetica;fontStyle=1;verticalAlign=top;spacingTop=8;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="620" y="90" width="1020" height="820" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-alb" value="Public ALB - optional edge&#xa;xupra-drylake-edge&#xa;HTTP 80 redirect / HTTPS 443&#xa;ACM certificate" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="660" y="145" width="220" height="115" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-sg" value="Security Group&#xa;xupra-drylake-edge-sg&#xa;Ingress 80/443 from internet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" parent="1" vertex="1">
+                    <mxGeometry x="660" y="285" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="target-group" value="Target Group&#xa;xupra-drylake-edge-https&#xa;Target: EC2 instance :443&#xa;Health: /api/v1/health" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" parent="1" vertex="1">
+                    <mxGeometry x="660" y="390" width="220" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec2" value="EC2 App Host&#xa;xupra-drylake-staging / production host&#xa;Ubuntu 24.04&#xa;t3.large staging shape&#xa;Elastic IP in current direct-origin path" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="960" y="140" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec2-sg" value="Security Group&#xa;xupra-drylake-staging-sg&#xa;Ingress 22/80/443&#xa;RDS ingress source when RDS used" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="140" width="190" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="nginx" value="nginx on EC2&#xa;/etc/nginx/sites-available/xupra-drylake&#xa;Terminates origin cert when direct&#xa;Proxies to 127.0.0.1:3000" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" parent="1" vertex="1">
+                    <mxGeometry x="960" y="300" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="systemd" value="systemd service&#xa;xupra-drylake.service&#xa;User: xupra&#xa;WorkingDirectory: /srv/xupra-drylake/current&#xa;ExecStart: npm run start" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" parent="1" vertex="1">
+                    <mxGeometry x="960" y="430" width="260" height="115" as="geometry"/>
+                </mxCell>
+                <mxCell id="nextjs" value="Next.js App Runtime&#xa;API routes + web UI&#xa;Extension connect APIs&#xa;Agent Preflight APIs&#xa;Admin/reporting APIs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="960" y="575" width="260" height="255" as="geometry"/>
+                </mxCell>
+                <mxCell id="release-dirs" value="EC2 release storage&#xa;/srv/xupra-drylake/releases/*&#xa;/srv/xupra-drylake/current symlink&#xa;/srv/xupra-drylake/shared/.env&#xa;/srv/xupra-drylake/shared/storage" style="shape=folder;tabWidth=80;tabHeight=20;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="310" width="210" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="local-pg" value="Current/simple DB option&#xa;PostgreSQL on EC2&#xa;127.0.0.1:5432&#xa;Installed by staging userdata" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1245" y="470" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="rds" value="Managed DB option&#xa;Amazon RDS PostgreSQL&#xa;xupra-drylake-staging-postgres&#xa;db.t4g.micro / gp3 / encrypted&#xa;private, backups 7d, deletion protection" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="600" width="200" height="125" as="geometry"/>
+                </mxCell>
+                <mxCell id="rds-sg" value="RDS SG&#xa;xupra-drylake-staging-rds-sg&#xa;Ingress 5432 only from app SG" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" parent="1" vertex="1">
+                    <mxGeometry x="1245" y="760" width="200" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3" value="S3 Artifact Storage&#xa;AWS_S3_BUCKET&#xa;AWS_S3_PREFIX=xupra-drylake&#xa;handoffs, package exports, generated artifacts" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="600" width="210" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="secrets" value="AWS Secrets Manager&#xa;xupra-drylake/&lt;env&gt;/env&#xa;Optional source for deploy env bundle&#xa;KMS-backed secret storage path" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="725" width="210" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="external" value="External SaaS Providers" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#666666;fontFamily=Helvetica;fontStyle=1;verticalAlign=top;spacingTop=8;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="390" width="500" height="380" as="geometry"/>
+                </mxCell>
+                <mxCell id="clerk" value="Clerk&#xa;Human auth, org/user session&#xa;Billing sync source when enabled" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="440" width="190" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="stripe" value="Stripe&#xa;Checkout, subscriptions, webhooks&#xa;Local subscription mirror in DB" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="440" width="190" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="ai" value="AI Providers&#xa;OpenAI / Kimi / Anthropic&#xa;Planning and normalization calls&#xa;Keys via env or Secrets Manager" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="555" width="190" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="marketplaces" value="Marketplaces / Registries&#xa;VS Marketplace&#xa;Open VSX&#xa;npm MCP package&#xa;Cursor plugin submission&#xa;MCP Registry next" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="555" width="190" height="125" as="geometry"/>
+                </mxCell>
+                <mxCell id="admin-internal" value="Optional internal admin edge&#xa;Internal ALB: xupra-admin-internal&#xa;Private Route53 zone&#xa;Allowed CIDR / VPN path only" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="660" y="500" width="220" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#666666;" parent="1" source="user" target="cloudflare" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="HTTPS public traffic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#666666;fontFamily=Helvetica;fontSize=11;" parent="1" source="cloudflare" target="edge-alb" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="Direct-origin fallback&#xa;A records to EIP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;dashed=1;strokeColor=#666666;fontFamily=Helvetica;fontSize=11;" parent="1" source="cloudflare" target="ec2" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="640" y="320"/>
+                            <mxPoint x="640" y="130"/>
+                            <mxPoint x="1090" y="130"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;" parent="1" source="edge-alb" target="target-group" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="900" y="220"/>
+                            <mxPoint x="900" y="420"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e5" value="Target :443" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;fontFamily=Helvetica;fontSize=11;" parent="1" source="target-group" target="nginx" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;" parent="1" source="ec2" target="nginx" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" value="proxy 127.0.0.1:3000" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" parent="1" source="nginx" target="systemd" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;" parent="1" source="systemd" target="nextjs" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" value="current release + .env" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" parent="1" source="systemd" target="release-dirs" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" value="DATABASE_URL local" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" parent="1" source="nextjs" target="local-pg" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1090" y="850"/>
+                            <mxPoint x="1500" y="850"/>
+                            <mxPoint x="1500" y="520"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e11" value="DATABASE_URL RDS option" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;dashed=1;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" parent="1" source="nextjs" target="rds" edge="1">
+                    <mxGeometry x="-1" y="41" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1240" y="670"/>
+                            <mxPoint x="1240" y="663"/>
+                        </Array>
+                        <mxPoint x="-10" y="1" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e12" value="S3 artifact driver" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" parent="1" source="nextjs" target="s3" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="925" y="670"/>
+                            <mxPoint x="925" y="628"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e13" value="env bundle" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#b85450;fontFamily=Helvetica;fontSize=11;" parent="1" source="secrets" target="release-dirs" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="785" y="870"/>
+                            <mxPoint x="1550" y="870"/>
+                            <mxPoint x="1550" y="375"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e14" value="Auth session" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" parent="1" source="nextjs" target="clerk" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1010" y="840"/>
+                            <mxPoint x="40" y="840"/>
+                            <mxPoint x="40" y="482"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e15" value="Billing + webhooks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" parent="1" source="nextjs" target="stripe" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="510" y="690"/>
+                            <mxPoint x="510" y="483"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e16" value="Planning calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" parent="1" source="nextjs" target="ai" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;" parent="1" source="edge-sg" target="edge-alb" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;" parent="1" source="ec2-sg" target="ec2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#82b366;" parent="1" source="rds-sg" target="rds" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e20" value="admin / VPN-only path" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;dashed=1;strokeColor=#82b366;fontFamily=Helvetica;fontSize=11;" parent="1" source="admin-internal" target="nginx" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="940" y="548"/>
+                            <mxPoint x="940" y="370"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="auth-discovery" name="Auth Discovery And Data Flow">
+        <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="DryLake Authentication, Discovery, And Planning Data Flow" style="text;html=1;strokeColor=none;fillColor=none;fontSize=20;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="25" width="760" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="human" value="Human developer&#xa;Signs up / signs in" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="100" width="180" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="editor" value="VS Code / Cursor Extension&#xa;DryLake Control Room&#xa;x-xupra-extension-token" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="230" width="220" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="secretstorage" value="Editor SecretStorage&#xa;extension access token&#xa;direct provider keys" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="365" width="220" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="agent" value="Coding agent / MCP client&#xa;Cursor, Claude Code, Codex, Gemini&#xa;Calls drylake_preflight" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="540" width="240" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="mcp" value="@xupracorp/drylake-mcp&#xa;npx package&#xa;DRYLAKE_AGENT_TOKEN&#xa;Authorization: Bearer dlk_*" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="350" y="540" width="230" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="api" value="DryLake API / Next.js&#xa;/api/v1/extension/connect/*&#xa;/api/v1/drylake/runbooks/*&#xa;/api/agents/register&#xa;/api/preflight&#xa;/.well-known/agent-card.json" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="650" y="250" width="260" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="clerk" value="Clerk&#xa;Human auth provider&#xa;User/org session" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="350" y="95" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="db" value="PostgreSQL Data&#xa;User / Organization / Membership&#xa;ExtensionAuthRequest&#xa;ExtensionUsageEvent&#xa;AgentToken&#xa;AgentPreflightRun&#xa;Subscriptions" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="1020" y="215" width="245" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="stripe" value="Stripe&#xa;Checkout, subscription, webhook&#xa;Credit packs next" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="1020" y="430" width="220" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="ai" value="Planning Model Layer&#xa;OpenAI/Kimi/Anthropic path&#xa;Structured phase plan&#xa;token budget + handoff" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="1020" y="575" width="240" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="discover" value="Discovery Surfaces&#xa;VS Marketplace&#xa;Open VSX&#xa;Cursor plugin repo&#xa;npm package&#xa;MCP Registry next&#xa;A2A Agent Card" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="650" y="55" width="260" height="135" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="browser sign-in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="human" target="clerk">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="open connect URL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="editor" target="api">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="approve request" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="clerk" target="api">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="pollToken hash / consumed request" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="db">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="encrypted extension token" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#b85450;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="secretstorage">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="usage + planning calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="editor" target="api">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;" edge="1" parent="1" source="agent" target="mcp">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" value="POST /api/preflight" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="mcp" target="api">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" value="agent token hash + credits" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="db">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" value="planning generation" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="ai">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e11" value="checkout / webhook" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="api" target="stripe">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e12" value="find/install DryLake" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="discover" target="editor">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e13" value="discover preflight skill" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="discover" target="agent">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="ci-local-docker" name="CI Release And Local Docker">
+        <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="DryLake CI, Release, And Local Docker Resources" style="text;html=1;strokeColor=none;fillColor=none;fontSize=20;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="25" width="760" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="repo" value="GitLab Repository&#xa;gmkdigitalmedia1/drylake&#xa;main + feature branches + release tags" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="110" width="230" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="ci" value="GitLab CI Pipeline&#xa;validate, package, publish, deploy, verify&#xa;Runs in node:22-bookworm image" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="350" y="110" width="260" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="ci-postgres" value="CI service container&#xa;postgres:16&#xa;DB: xupra_drylake&#xa;User: xupra_app&#xa;Ephemeral test data" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#d79b00;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="350" y="250" width="220" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="artifacts" value="Release artifacts&#xa;drylake-X.Y.Z.vsix&#xa;drylake-cursor-plugin-X.Y.Z.tgz&#xa;@xupracorp/drylake-mcp tgz" style="shape=folder;tabWidth=80;tabHeight=20;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="690" y="110" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="marketplace" value="Visual Studio Marketplace&#xa;Requires VSCE_PAT or VSCE_TOKEN&#xa;Publishes same VSIX" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="1040" y="80" width="230" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="openvsx" value="Open VSX&#xa;Requires OVSX_TOKEN&#xa;Publishes same VSIX" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="1040" y="205" width="230" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="npm" value="npm Registry&#xa;Requires NPM_TOKEN&#xa;Publishes @xupracorp/drylake-mcp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="1040" y="325" width="230" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="cursor" value="Cursor Plugin Submission&#xa;.cursor-plugin/marketplace.json&#xa;drylake-cursor-plugin/*&#xa;Manual review/submission" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="1040" y="455" width="230" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="gitlab-vars" value="GitLab CI Variables&#xa;Deploy: PRODUCTION_* / STAGING_*&#xa;Publish: VSCE_PAT, OVSX_TOKEN, NPM_TOKEN&#xa;Env source: *_ENV_FILE or *_ENV_SECRET_ID" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="690" y="280" width="260" height="115" as="geometry"/>
+                </mxCell>
+                <mxCell id="deploy" value="Deploy job&#xa;git archive HEAD -&gt; release.tar&#xa;scp release.tar + deploy.env + bootstrap&#xa;ssh to EC2&#xa;remote-bootstrap installs/restarts app" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="690" y="455" width="260" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec2" value="AWS EC2 App Host&#xa;/srv/xupra-drylake/releases/*&#xa;/srv/xupra-drylake/current&#xa;nginx + systemd + Node 22" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="1040" y="620" width="250" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="local-dev" value="Local developer machine&#xa;Windows workspace&#xa;VS Code / Cursor&#xa;npm scripts and Prisma" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#666666;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="520" width="230" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="docker" value="Docker Compose local DB&#xa;service: postgres&#xa;image: postgres:16&#xa;container: xupra-drylake-db&#xa;port: ${POSTGRES_HOST_PORT:-5432}:5432" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#d79b00;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="350" y="500" width="260" height="125" as="geometry"/>
+                </mxCell>
+                <mxCell id="volume" value="Docker named volume&#xa;xupra_pgdata&#xa;/var/lib/postgresql/data&#xa;Local dev data lives here" style="shape=cylinder3d;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="350" y="670" width="240" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="local-files" value="Local generated data&#xa;.drylake sessions/handoffs&#xa;storage/* manifests&#xa;release/* package outputs&#xa;not production data" style="shape=folder;tabWidth=80;tabHeight=20;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="665" width="230" height="115" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#666666;" edge="1" parent="1" source="repo" target="ci">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="validate uses" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d79b00;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="ci" target="ci-postgres">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="package jobs create" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="ci" target="artifacts">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="same VSIX" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="artifacts" target="marketplace">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="same VSIX" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="artifacts" target="openvsx">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="MCP tgz" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="artifacts" target="npm">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" value="plugin tgz / repo shape" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="artifacts" target="cursor">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" value="protected variables" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#b85450;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="gitlab-vars" target="ci">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" value="deploy release" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="deploy" target="ec2">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" value="uses deploy vars" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#b85450;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="gitlab-vars" target="deploy">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e11" value="docker compose up -d postgres" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d79b00;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="local-dev" target="docker">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e12" value="stores DB files" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="docker" target="volume">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e13" value="local artifacts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=11;" edge="1" parent="1" source="local-dev" target="local-files">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
 </mxfile>

@@ -9,7 +9,7 @@ export type GuardFixAccess = {
 };
 
 export async function resolveGuardFixAccess(organizationId: string): Promise<GuardFixAccess> {
-  const [{ entitlements, subscription }, organization] = await Promise.all([
+  const [{ resolved }, organization] = await Promise.all([
     getEntitlementsForOrganization(organizationId),
     prisma.organization.findUnique({
       where: { id: organizationId },
@@ -17,12 +17,10 @@ export async function resolveGuardFixAccess(organizationId: string): Promise<Gua
     }),
   ]);
 
-  const subscriptionTier = String(subscription?.tier ?? "").toLowerCase();
   const organizationTier = String(organization?.tier ?? "").toLowerCase();
-  const paid = Boolean(entitlements.xupra_pro_ai) ||
-    subscriptionTier === "pro" ||
-    subscriptionTier === "enterprise" ||
-    organizationTier === "pro" ||
+  const paid = Boolean(resolved.canUseFixWithAI) ||
+    organizationTier === "security_pro" ||
+    organizationTier === "team_security" ||
     organizationTier === "enterprise";
 
   return {

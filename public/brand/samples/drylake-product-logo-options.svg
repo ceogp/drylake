@@ -1,0 +1,68 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DryLake product logo options">
+  <rect width="1400" height="900" fill="#090a0a"/>
+  <style>
+    .label { font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace; font-size: 22px; font-weight: 700; letter-spacing: 0; fill: #f5f0e5; }
+    .note { font-family: Helvetica, "Helvetica Neue", Arial, sans-serif; font-size: 18px; font-weight: 400; letter-spacing: 0; fill: #a6aca5; }
+    .word { font-family: "Cascadia Mono", "IBM Plex Mono", Consolas, monospace; font-size: 70px; font-weight: 800; letter-spacing: 0; fill: #f5f0e5; }
+    .panel { fill: #111414; stroke: #28302b; stroke-width: 2; }
+    .cream { fill: #f5f0e5; }
+    .green { fill: #80d99a; }
+    .orange { fill: #ff5a1f; }
+    .strokeCream { fill: none; stroke: #f5f0e5; stroke-width: 18; stroke-linecap: square; stroke-linejoin: round; }
+    .strokeThin { fill: none; stroke: #f5f0e5; stroke-width: 8; stroke-linecap: square; stroke-linejoin: round; }
+    .strokeOrange { fill: none; stroke: #ff5a1f; stroke-width: 12; stroke-linecap: square; }
+  </style>
+
+  <text x="72" y="86" class="word">drylake</text>
+  <rect x="74" y="120" width="340" height="18" class="orange"/>
+  <text x="72" y="180" class="note">Product mark options. No Xupra X. Designed for Marketplace, VS Code, and website headers.</text>
+
+  <g transform="translate(70 250)">
+    <rect class="panel" x="0" y="0" width="390" height="520" rx="8"/>
+    <text class="label" x="34" y="54">A. Basin Cards</text>
+    <text class="note" x="34" y="86">Best product icon direction</text>
+    <g transform="translate(76 130)">
+      <rect x="0" y="0" width="238" height="238" fill="#151008" stroke="#ff5a1f" stroke-width="12" rx="28"/>
+      <path class="cream" d="M64 50h64c53 0 90 34 90 81s-37 81-90 81H64V50Zm48 45v72h20c22 0 38-13 38-36s-16-36-38-36h-20Z"/>
+      <rect class="green" x="56" y="58" width="38" height="38" rx="4"/>
+      <rect class="green" x="56" y="110" width="38" height="38" rx="4"/>
+      <rect class="green" x="56" y="162" width="38" height="38" rx="4"/>
+      <path class="strokeOrange" d="M112 214H222"/>
+    </g>
+    <text x="34" y="430" class="word" style="font-size:48px">drylake</text>
+    <rect x="36" y="456" width="238" height="12" class="orange"/>
+  </g>
+
+  <g transform="translate(505 250)">
+    <rect class="panel" x="0" y="0" width="390" height="520" rx="8"/>
+    <text class="label" x="34" y="54">B. Phase Delta</text>
+    <text class="note" x="34" y="86">Pipeline / handoff identity</text>
+    <g transform="translate(76 130)">
+      <rect x="0" y="0" width="238" height="238" fill="#0b0d0c" stroke="#28302b" stroke-width="10" rx="28"/>
+      <path class="strokeCream" d="M70 62h72c36 0 66 28 66 57s-30 57-66 57H70z"/>
+      <path class="strokeThin" d="M70 62v114"/>
+      <rect class="green" x="52" y="46" width="42" height="42" rx="5"/>
+      <rect class="green" x="52" y="98" width="42" height="42" rx="5"/>
+      <rect class="green" x="52" y="150" width="42" height="42" rx="5"/>
+      <path class="strokeOrange" d="M112 206h76"/>
+      <path fill="#ff5a1f" d="M190 206l-20-16v32z"/>
+    </g>
+    <text x="34" y="430" class="word" style="font-size:48px">drylake</text>
+    <rect x="36" y="456" width="238" height="12" class="orange"/>
+  </g>
+
+  <g transform="translate(940 250)">
+    <rect class="panel" x="0" y="0" width="390" height="520" rx="8"/>
+    <text class="label" x="34" y="54">C. Lake Stack</text>
+    <text class="note" x="34" y="86">Minimal technical mark</text>
+    <g transform="translate(76 130)">
+      <rect x="0" y="0" width="238" height="238" fill="#151008" stroke="#28302b" stroke-width="10" rx="28"/>
+      <path class="cream" d="M56 70h120c13 0 23 10 23 23 0 13-10 23-23 23H56V70Zm0 52h94c13 0 23 10 23 23 0 13-10 23-23 23H56v-46Z"/>
+      <rect class="green" x="56" y="70" width="38" height="98" rx="4"/>
+      <rect class="orange" x="56" y="182" width="130" height="14"/>
+      <rect class="orange" x="56" y="205" width="88" height="10"/>
+    </g>
+    <text x="34" y="430" class="word" style="font-size:48px">drylake</text>
+    <rect x="36" y="456" width="238" height="12" class="orange"/>
+  </g>
+</svg>

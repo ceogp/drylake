@@ -53,6 +53,18 @@ const basePayload = {
       edges: [],
       highRiskPaths: [],
     },
+    extensions: [],
+    mcpServers: [],
+    workspaceSurface: {
+      deploymentFiles: [],
+      iacFiles: [],
+      ciWorkflowFiles: [],
+      credentialLikeFiles: [],
+      riskyPackageScripts: [],
+      generatedFolders: [],
+    },
+    packageManagers: ["npm"],
+    packageScripts: ["build"],
   },
   artifacts: [
     {

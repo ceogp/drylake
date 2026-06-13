@@ -87,7 +87,7 @@ export async function getSetupStatus() {
           ? clerkConfigured
           : Boolean(env.STRIPE_SECRET_KEY && subscription?.stripeCustomerId),
       activeTier: subscription?.tier ?? "free",
-      webhookPath: env.BILLING_PROVIDER === "clerk" ? "/api/clerk/webhook" : "/api/stripe/webhook",
+      webhookPath: env.BILLING_PROVIDER === "clerk" ? "/api/clerk/webhook" : "/api/v1/billing/webhook",
       missing:
         env.BILLING_PROVIDER === "clerk"
           ? [
