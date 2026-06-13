@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const returnTo = sanitizeAuthReturnTo(
     request.nextUrl.searchParams.get("returnTo") ??
       request.nextUrl.searchParams.get("redirect_url") ??
-      "/upload",
+      "/billing?welcome=1",
   );
 
   const authorizeUrl = await buildCognitoAuthorizeUrl({

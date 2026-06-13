@@ -173,6 +173,7 @@ export default async function BillingPage({
   const editor = normalizeEditorTarget(resolvedSearchParams.editor);
   const editorReturnUrl = getSafeEditorReturnUrl(resolvedSearchParams.editorReturnUrl);
   const billingResult = normalizeBillingResult(resolvedSearchParams.billing);
+  const showWelcomeChoice = normalizeSearchValue(resolvedSearchParams.welcome) === "1";
   const fallbackReturnPath = source === "extension" ? "/app" : "/billing?checkout=success";
   const appReturnPath = returnPath ?? fallbackReturnPath;
   const checkoutReturnPath =
@@ -224,6 +225,64 @@ export default async function BillingPage({
           ) : null}
           <p className="max-w-3xl text-lg leading-8 text-stone-700">{BILLING_SUBTITLE}</p>
         </div>
+
+        {showWelcomeChoice ? (
+          <section className="grid gap-6 lg:grid-cols-2">
+            <article className="tape-panel bg-white p-6">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Free</p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
+                Start free.
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-stone-700">
+                Use Agent Control and run local Guard scans without uploading code or starting a subscription.
+              </p>
+              <div className="mt-5 grid gap-2 text-sm text-stone-700">
+                <span className="rounded border border-stone-200 bg-stone-50 px-4 py-3">Local Guard report</span>
+                <span className="rounded border border-stone-200 bg-stone-50 px-4 py-3">Extension connection</span>
+                <span className="rounded border border-stone-200 bg-stone-50 px-4 py-3">No card required</span>
+              </div>
+              <Link className="tape-button mt-6 inline-flex bg-white px-5 py-3 text-sm text-black" href="/workspace">
+                Continue Free
+              </Link>
+            </article>
+
+            <article className="tape-panel bg-zinc-950 p-6 text-zinc-100">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-emerald-300">Paid</p>
+              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-white">
+                Unlock the full workflow.
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-zinc-300">
+                Paid includes Agent Control plus advanced Guard features: approved upload, Fix with AI,
+                Deep Cloud Analysis, saved reports, and Local Watchdog.
+              </p>
+              <div className="mt-5 grid gap-2 text-sm text-zinc-300">
+                <span className="rounded border border-zinc-800 bg-[#111414] px-4 py-3">Fix with AI</span>
+                <span className="rounded border border-zinc-800 bg-[#111414] px-4 py-3">Deep Cloud Analysis</span>
+                <span className="rounded border border-zinc-800 bg-[#111414] px-4 py-3">Saved reports and Watchdog</span>
+              </div>
+              <div className="mt-6">
+                {isPaid ? (
+                  <Link className="tape-button inline-flex bg-emerald-400 px-5 py-3 text-sm text-zinc-950" href="/workspace">
+                    Paid Is Active
+                  </Link>
+                ) : userCanManageBilling ? (
+                  <form action={createCheckoutAction}>
+                    <input name="organizationId" type="hidden" value={organizationId} />
+                    <input name="plan" type="hidden" value="security_pro" />
+                    <input name="returnPath" type="hidden" value="/billing?welcome=1" />
+                    <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
+                      Choose Paid ($40/mo)
+                    </button>
+                  </form>
+                ) : (
+                  <p className="rounded border border-zinc-800 bg-[#111414] px-4 py-3 text-sm text-zinc-400">
+                    Ask an owner or admin to upgrade this account.
+                  </p>
+                )}
+              </div>
+            </article>
+          </section>
+        ) : null}
 
         <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
           <article className="tape-panel bg-white p-6">

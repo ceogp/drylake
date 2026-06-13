@@ -75,7 +75,7 @@ function ActionLink({
 }
 
 export default function GuardPage() {
-  const signUpHref = getConfiguredAppUrlForPath("/sign-up", "redirect_url=/workspace");
+  const signUpHref = getConfiguredAppUrlForPath("/sign-up", "redirect_url=%2Fbilling%3Fwelcome%3D1");
   const installHref = getConfiguredAppUrlForPath("/extensions/install");
   const pricingHref = getConfiguredAppUrlForPath("/pricing");
 

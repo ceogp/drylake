@@ -17,7 +17,7 @@ const plans = [
     summary: "Agent Control and Guard basics for individual developers.",
     body: "Run local Guard scans, review workspace risk, connect the extension, and use the core agent-control workflow without starting a paid subscription.",
     ctaLabel: "Register free",
-    ctaHref: getConfiguredAppUrlForPath("/sign-up", "redirect_url=/workspace"),
+    ctaHref: getConfiguredAppUrlForPath("/sign-up", "redirect_url=%2Fbilling%3Fwelcome%3D1"),
     secondaryLabel: "Install extension",
     secondaryHref: getConfiguredAppUrlForPath("/extensions/install"),
     tone: "default",

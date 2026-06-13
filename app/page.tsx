@@ -212,7 +212,9 @@ function WorkflowGifPreview() {
 function HomeExperience({ marketing }: { marketing: boolean }) {
   const appHref = (pathname: string, search = "") =>
     marketing ? getConfiguredAppUrlForPath(pathname, search) : pathname;
-  const primaryHref = marketing ? getConfiguredAppUrlForPath("/sign-up", "redirect_url=/workspace") : "/workspace";
+  const primaryHref = marketing
+    ? getConfiguredAppUrlForPath("/sign-up", "redirect_url=%2Fbilling%3Fwelcome%3D1")
+    : "/workspace";
   const pricingHref = appHref("/pricing");
   const guardHref = appHref("/guard");
   const installHref = appHref("/extensions/install");

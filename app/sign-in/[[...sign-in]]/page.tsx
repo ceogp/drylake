@@ -9,7 +9,7 @@ function safeRedirectUrl(value: string | string[] | undefined) {
   const rawValue = Array.isArray(value) ? value[0] : value;
 
   if (!rawValue?.startsWith("/") || rawValue.startsWith("//")) {
-    return "/workspace";
+    return "/billing?welcome=1";
   }
 
   return rawValue;

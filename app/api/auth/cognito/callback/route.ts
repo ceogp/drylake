@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { getConfiguredAppUrlForPath } from "@/lib/site-hosts";
 import { createAppSession, recordAuthEvent } from "@/lib/services/app-session";
 import {
   consumeCognitoAuthState,
@@ -15,8 +16,8 @@ function messageFromError(error: unknown) {
   return error instanceof Error ? error.message : "Cognito authentication failed.";
 }
 
-function redirectToPath(request: NextRequest, pathname: string) {
-  return NextResponse.redirect(new URL(pathname, request.url));
+function redirectToPath(pathname: string) {
+  return NextResponse.redirect(getConfiguredAppUrlForPath(pathname));
 }
 
 export async function GET(request: NextRequest) {
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return redirectToPath(request, returnTo);
+    return redirectToPath(returnTo);
   } catch (error) {
     await recordAuthEvent({
       eventName: "auth.cognito.failed",
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const url = new URL("/sign-in", request.url);
+    const url = new URL(getConfiguredAppUrlForPath("/sign-in"));
     url.searchParams.set("error", "cognito");
     url.searchParams.set("redirect_url", returnTo);
     return NextResponse.redirect(url);
