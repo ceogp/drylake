@@ -1,5 +1,5 @@
-# Drylake - Agent MCP Security and Agentic Control Plane for Agents and Skills - codex claude cursor
-Free local security scan for AI coding setups. https://aws.amazon.com/service-terms/#87._Amazon_GuardDuty
+# DryLake Guard: MCP & AI Agent Security
+Free local security scan for AI coding setups. [AWS GuardDuty service terms](https://aws.amazon.com/service-terms/#87._Amazon_GuardDuty)
 
 DryLake Guard ranks your AI coding setup before agents touch your repo. Scan MCP servers, agent skills, IDE extensions, secrets, prompt injection risk, supply-chain risk, token bloat, and workspace blast radius.
 
@@ -7,7 +7,7 @@ DryLake is backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://a
 
 **Free. No credit card. Connect your DryLake account and run a local Guard scan in under 30 seconds.**
 
-![DryLake Guard detailed security report](https://drylake.xupracorp.com/marketplace/extension/media/drylake-guard-workflow.gif)
+![DryLake Guard detailed security report](https://raw.githubusercontent.com/gmkdigitalmedia/drylake/feature/agent-preflight-platform/extensions/xupra-drylake-vscode/media/drylake-guard-workflow.gif)
 
 ## What DryLake Guard scans
 
@@ -33,11 +33,11 @@ Paid Guard features include:
 
 Active Guard uses AWS-backed storage and malware-scanning infrastructure for consented Guard artifacts. AWS service terms for GuardDuty Malware Protection apply: [AWS Service Terms - Amazon GuardDuty](https://aws.amazon.com/service-terms/#87._Amazon_GuardDuty).
 
-## Coding Agent Control Plane
+## Also included: Coding Agent Control Plane
 
 DryLake still includes visual planning and handoff orchestration for coding agents. Turn tickets, bugs, and product specs into phase cards, assign each phase to your preferred coding agent, attach a skill, and run focused handoffs.
 
-![DryLake agent control workflow](https://drylake.xupracorp.com/marketplace/extension/media/drylake-workflow-6phase-handoffs.gif)
+![DryLake agent control workflow](https://raw.githubusercontent.com/gmkdigitalmedia/drylake/feature/agent-preflight-platform/extensions/xupra-drylake-vscode/media/drylake-workflow-6phase-handoffs.gif)
 
 - **Free AI planning:** Start with free planning, then upgrade when you want Xupra AI Frontier Models.
 - **Save tokens and time:** Visual planning cards allow you to use smaller models with better results.
