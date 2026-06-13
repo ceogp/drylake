@@ -6,9 +6,14 @@ import { getSetupStatus } from "@/lib/services/setup";
 const recentLimit = 50;
 
 export async function getAdminOverviewData() {
+  const now = new Date();
   const [
     userCount,
     activeUserCount,
+    appSessionCount,
+    activeAppSessionCount,
+    authEventCount,
+    failedAuthEventCount,
     organizationCount,
     projectCount,
     packageCount,
@@ -26,10 +31,20 @@ export async function getAdminOverviewData() {
     recentTransformJobs,
     recentDeploymentJobs,
     recentAuditEvents,
+    recentAuthEvents,
     setup,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { status: "active" } }),
+    prisma.appSession.count(),
+    prisma.appSession.count({
+      where: {
+        revokedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
+    }),
+    prisma.authEvent.count(),
+    prisma.authEvent.count({ where: { success: false } }),
     prisma.organization.count(),
     prisma.project.count(),
     prisma.agentPackage.count(),
@@ -90,6 +105,14 @@ export async function getAdminOverviewData() {
         actorUser: true,
       },
     }),
+    prisma.authEvent.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      include: {
+        organization: true,
+        actorUser: true,
+      },
+    }),
     getSetupStatus(),
   ]);
 
@@ -97,6 +120,10 @@ export async function getAdminOverviewData() {
     metrics: {
       userCount,
       activeUserCount,
+      appSessionCount,
+      activeAppSessionCount,
+      authEventCount,
+      failedAuthEventCount,
       organizationCount,
       projectCount,
       packageCount,
@@ -115,6 +142,7 @@ export async function getAdminOverviewData() {
     recentTransformJobs,
     recentDeploymentJobs,
     recentAuditEvents,
+    recentAuthEvents,
     setup,
   };
 }
@@ -202,6 +230,20 @@ export async function getAdminUserDetailData(userId: string) {
       extensionAuthRequests: {
         orderBy: { createdAt: "desc" },
         take: 10,
+        include: {
+          organization: true,
+        },
+      },
+      appSessions: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        include: {
+          organization: true,
+        },
+      },
+      authEvents: {
+        orderBy: { createdAt: "desc" },
+        take: 20,
         include: {
           organization: true,
         },

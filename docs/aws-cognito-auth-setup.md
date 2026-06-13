@@ -1,12 +1,10 @@
 # DryLake AWS Auth Setup
 
-This is the migration path away from Clerk without breaking the current app.
-
-Do not remove Clerk first. Run AWS auth in parallel, verify it with real users, then switch `AUTH_MODE` after the extension connect flow, billing, and admin user management are proven.
+This is the AWS-owned auth path for DryLake. Clerk can remain installed until removed from code, but production auth should move to `AUTH_MODE=cognito` once the deployed env contains the Cognito variables below.
 
 ## Decision
 
-Use Amazon Cognito User Pools with Cognito managed login as the first AWS auth provider.
+Use Amazon Cognito User Pools with Cognito managed login as the AWS auth provider.
 
 DryLake should continue to own product users, organizations, roles, subscriptions, entitlements, extension tokens, and audit records in Postgres. Cognito should only replace the external browser-session provider that Clerk handles today.
 
@@ -38,33 +36,42 @@ Create one app client per web app environment:
   - `http://localhost:3000/`
   - `https://drylake.xupracorp.com/`
 
-Add a Cognito domain for managed login. Use the AWS-hosted domain first, then move to a custom domain after the basic sign-in flow is stable.
+The production AWS-hosted domain is provisioned:
+
+- Region: `ap-northeast-1`
+- User pool: `ap-northeast-1_B9vcje67d`
+- Hosted login domain: `https://drylake-auth-355825201962.auth.ap-northeast-1.amazoncognito.com`
+- Secret bundle: `xupra-drylake/production/cognito-auth`
+- Local manifest: `storage/staging/cognito-auth-manifest.json`
+
+Google social login is still pending until a Google OAuth web client ID and client secret exist. The custom domain `auth.drylake.xupracorp.com` is pending DNS validation in Cloudflare.
+
+ACM certificate requested for the custom auth domain:
+
+- Certificate region: `us-east-1`
+- Certificate ARN: `arn:aws:acm:us-east-1:355825201962:certificate/b65e3271-a8e5-47a5-817f-6b9978dab316`
+- Validation CNAME name: `_6f317525f5a48ee1c4013927dec8d467.auth.drylake.xupracorp.com.`
+- Validation CNAME value: `_cc2df0cf44a943706127badfbc346c34.jkddzztszm.acm-validations.aws.`
+- Local manifest: `storage/staging/cognito-auth-custom-domain-manifest.json`
 
 ## Environment Variables
 
-Add these later, but do not turn them on until the callback flow is implemented:
+Required production env:
 
 ```env
-AUTH_MODE=clerk
+AUTH_MODE=cognito
 
-AWS_COGNITO_REGION=us-east-1
+AWS_COGNITO_REGION=ap-northeast-1
 AWS_COGNITO_USER_POOL_ID=
 AWS_COGNITO_CLIENT_ID=
 AWS_COGNITO_CLIENT_SECRET=
 AWS_COGNITO_DOMAIN=
 AWS_COGNITO_ISSUER=
-AWS_COGNITO_SIGN_IN_URL=/sign-in
-AWS_COGNITO_SIGN_OUT_URL=/api/auth/cognito/logout
 AWS_COGNITO_CALLBACK_URL=https://drylake.xupracorp.com/api/auth/cognito/callback
+AWS_COGNITO_LOGOUT_REDIRECT_URL=https://drylake.xupracorp.com/
 ```
 
-The first code change should add a new mode, not replace Clerk:
-
-```env
-AUTH_MODE=clerk | cognito | dev
-```
-
-`clerk` must stay the production default until Cognito is verified.
+The values are stored in AWS Secrets Manager under `xupra-drylake/production/cognito-auth`.
 
 ## App Flow
 
@@ -76,38 +83,37 @@ The Cognito flow should be:
 4. DryLake exchanges the code for tokens server-side.
 5. DryLake verifies the ID token issuer, audience, expiry, nonce/state, email, and `sub`.
 6. DryLake calls `ensureAppSession({ authProvider: "cognito", authSubject: cognitoSub, email, displayName, avatarUrl })`.
-7. DryLake sets an app-owned encrypted, HTTP-only session cookie.
+7. DryLake sets an app-owned HTTP-only session cookie backed by a hashed session token in Postgres.
 8. The rest of the app continues to use `getCurrentAppContext()`.
 
 The extension connect flow should not change. It should still rely on the signed-in web app approving an `ExtensionAuthRequest`, then issuing a DryLake extension token.
 
-## Required Code Work
+## Implemented Code Work
 
-1. Add `cognito` to `AUTH_MODE` validation in `lib/env.ts`.
-2. Add Cognito env vars with validation.
-3. Add a Cognito auth service:
+1. Added `cognito` to `AUTH_MODE` validation in `lib/env.ts`.
+2. Added Cognito env vars with validation.
+3. Added a Cognito auth service:
    - build authorize URL
    - generate state, nonce, and PKCE verifier
    - exchange authorization code for tokens
    - fetch/verify JWKS
    - validate issuer, audience, expiry, nonce, and email
-4. Add encrypted app session cookies independent of Clerk.
-5. Update `lib/services/current-user.ts`:
+4. Added app-owned browser sessions independent of Clerk.
+5. Updated `lib/services/current-user.ts`:
    - try Cognito app session when `AUTH_MODE=cognito`
    - keep Clerk path when `AUTH_MODE=clerk`
    - keep extension-token auth for API requests
-6. Add `/api/auth/cognito/callback`.
-7. Add `/api/auth/cognito/logout`.
-8. Update `/sign-in` and `/sign-up` to redirect to Cognito when `AUTH_MODE=cognito`.
-9. Keep `/api/clerk/webhook` until all Clerk users are migrated or archived.
-10. Update health/setup pages to report Cognito status without hiding Clerk status.
+6. Added `/api/auth/cognito/callback`.
+7. Added `/api/auth/cognito/logout`.
+8. Updated `/sign-in` and `/sign-up` to redirect to Cognito when `AUTH_MODE=cognito`.
+9. Updated health/setup pages to report Cognito status.
+10. Added auth session/event admin visibility.
 
 ## Migration Rules
 
 - Link by verified email first, then set `authProvider="cognito"` and `authSubject=<cognito sub>`.
 - If a Clerk user and Cognito user have the same verified email, keep the existing DryLake `User.id`.
 - Do not create a second organization for migrated users.
-- Do not delete Clerk auth fields until at least one full billing cycle after cutover.
 - Do not migrate billing. Stripe remains authoritative for subscriptions and entitlements.
 - Do not change extension tokens. They are DryLake-owned and should survive auth-provider changes.
 
@@ -125,6 +131,15 @@ Before setting `AUTH_MODE=cognito` in production:
 - Guard scan and paid Guard Fix with AI work after extension connect.
 - Admin user list shows `authProvider=cognito`.
 - Health endpoint reports Cognito configured.
+
+## Remaining External Setup
+
+1. Create a Google OAuth web client for DryLake.
+2. Add the Cognito callback URL to Google:
+   `https://drylake-auth-355825201962.auth.ap-northeast-1.amazoncognito.com/oauth2/idpresponse`
+3. Add the Google client ID and secret to Cognito as an identity provider.
+4. Update the Cognito app client supported providers from `COGNITO` to `COGNITO, Google`.
+5. For `auth.drylake.xupracorp.com`, request/validate the required certificate and add the Cloudflare CNAME records Cognito returns.
 
 ## AWS References
 

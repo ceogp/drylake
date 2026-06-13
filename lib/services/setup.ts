@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getAnthropicApiKey, getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 import { getAuthSetup } from "@/lib/services/auth";
+import { getCognitoConfig } from "@/lib/services/cognito-auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 import { foundationPlanningModel } from "@/lib/services/ai-model-selection";
 
@@ -66,10 +67,18 @@ export async function getSetupStatus() {
       env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
       env.CLERK_WEBHOOK_SIGNING_SECRET,
   );
+  const cognito = getCognitoConfig();
   const billingConfigured = env.BILLING_PROVIDER === "clerk" ? clerkConfigured : stripeConfigured;
 
   return {
     auth,
+    cognito: {
+      configured: cognito.configured,
+      region: cognito.region || null,
+      userPoolId: cognito.userPoolId || null,
+      domain: cognito.domain || null,
+      missing: cognito.missing,
+    },
     billing: {
       provider: env.BILLING_PROVIDER,
       configured: billingConfigured,

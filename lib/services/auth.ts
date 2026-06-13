@@ -1,9 +1,10 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 
 import { env } from "@/lib/env";
+import { getCognitoConfig } from "@/lib/services/cognito-auth";
 import { getCurrentAppContext } from "@/lib/services/current-user";
 
-type AuthMode = "dev" | "clerk";
+type AuthMode = "dev" | "clerk" | "cognito";
 
 function missingClerkKeys() {
   const missing: string[] = [];
@@ -20,6 +21,10 @@ function missingClerkKeys() {
 }
 
 function getEffectiveAuthMode(): AuthMode {
+  if (env.AUTH_MODE === "cognito") {
+    return "cognito";
+  }
+
   if (env.AUTH_MODE === "clerk") {
     return "clerk";
   }
@@ -29,16 +34,19 @@ function getEffectiveAuthMode(): AuthMode {
 
 export function getAuthSetup() {
   const mode = getEffectiveAuthMode();
-  const provider = mode === "clerk" ? "clerk" : "development";
-  const missing = mode === "clerk" ? missingClerkKeys() : [];
+  const cognitoConfig = mode === "cognito" ? getCognitoConfig() : null;
+  const provider =
+    mode === "clerk" ? "clerk" : mode === "cognito" ? "aws-cognito" : "development";
+  const missing =
+    mode === "clerk" ? missingClerkKeys() : mode === "cognito" ? cognitoConfig?.missing ?? [] : [];
 
   return {
     mode,
     provider,
     configured: mode === "dev" ? true : missing.length === 0,
     pendingKeys: missing,
-    signInUrl: env.CLERK_SIGN_IN_URL ?? "/sign-in",
-    signUpUrl: env.CLERK_SIGN_UP_URL ?? "/sign-up",
+    signInUrl: "/sign-in",
+    signUpUrl: "/sign-up",
   };
 }
 
@@ -94,6 +102,46 @@ export async function getAuthSessionSummary() {
             env.DEFAULT_DEV_USER_NAME,
         },
         organizationId: context?.organization.id ?? null,
+      },
+    };
+  }
+
+  if (setup.mode === "cognito") {
+    if (!setup.configured) {
+      return {
+        ...setup,
+        session: {
+          status: "missing_configuration" as const,
+          user: null,
+          organizationId: null,
+        },
+      };
+    }
+
+    const context = await getCurrentAppContext();
+
+    if (!context) {
+      return {
+        ...setup,
+        session: {
+          status: "signed_out" as const,
+          user: null,
+          organizationId: null,
+        },
+      };
+    }
+
+    return {
+      ...setup,
+      session: {
+        status: "active" as const,
+        user: {
+          id: context.user.id,
+          email: context.user.email,
+          imageUrl: context.user.profile?.avatarUrl ?? null,
+          displayName: context.user.profile?.displayName ?? context.user.email,
+        },
+        organizationId: context.organization.id,
       },
     };
   }

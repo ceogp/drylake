@@ -31,6 +31,10 @@ model User {
   guardScans            GuardScan[]              @relation("GuardScanActor")
   guardArtifacts        GuardArtifact[]          @relation("GuardArtifactActor")
   guardWatchEvents      GuardWatchEvent[]        @relation("GuardWatchEventActor")
+  appSessions           AppSession[]
+  authEvents            AuthEvent[]              @relation("AuthEventActor")
+
+  @@unique([authProvider, authSubject])
 }
 
 model Profile {
@@ -69,6 +73,9 @@ model Organization {
   guardScans            GuardScan[]
   guardArtifacts        GuardArtifact[]
   guardWatchEvents      GuardWatchEvent[]
+  appSessions           AppSession[]
+  authEvents            AuthEvent[]
+  invitations           OrganizationInvitation[]
 }
 
 model OrganizationMembership {
@@ -81,6 +88,77 @@ model OrganizationMembership {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, userId])
+}
+
+model AppSession {
+  id               String       @id @default(cuid())
+  sessionTokenHash String       @unique
+  userId           String
+  organizationId   String
+  authProvider     String
+  authSubject      String?
+  ipHash           String?
+  userAgent        String?
+  country          String?
+  createdAt        DateTime     @default(now())
+  lastSeenAt       DateTime     @default(now())
+  expiresAt        DateTime?
+  revokedAt        DateTime?
+  revokedByUserId  String?
+  metadataJson     Json?
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([revokedAt])
+  @@index([expiresAt])
+}
+
+model AuthEvent {
+  id             String        @id @default(cuid())
+  organizationId String?
+  actorUserId    String?
+  eventName      String
+  authProvider   String?
+  authSubject    String?
+  email          String?
+  ipHash         String?
+  userAgent      String?
+  country        String?
+  success        Boolean       @default(true)
+  failureReason  String?
+  metadataJson   Json?
+  createdAt      DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actorUser      User?         @relation("AuthEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([eventName, createdAt])
+  @@index([email, createdAt])
+  @@index([success, createdAt])
+}
+
+model OrganizationInvitation {
+  id              String       @id @default(cuid())
+  organizationId  String
+  email           String
+  role            String       @default("member")
+  tokenHash       String       @unique
+  status          String       @default("pending")
+  invitedByUserId String?
+  acceptedByUserId String?
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([email, status])
+  @@index([expiresAt])
 }
 
 model Subscription {

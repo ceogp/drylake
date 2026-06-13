@@ -6,6 +6,7 @@ import type { Organization, Profile, User } from "@prisma/client";
 
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
+import { getAppSessionContext } from "@/lib/services/app-session";
 import { ensureAppSession } from "@/lib/services/dev-session";
 import {
   EXTENSION_TOKEN_HEADER,
@@ -32,8 +33,15 @@ export type AppContext = {
 
 function shouldUseClerk() {
   return Boolean(
-    env.AUTH_MODE === "clerk" || (env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && env.CLERK_SECRET_KEY),
+    env.AUTH_MODE === "clerk" ||
+      (env.AUTH_MODE !== "cognito" &&
+        env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+        env.CLERK_SECRET_KEY),
   );
+}
+
+function shouldUseCognito() {
+  return env.AUTH_MODE === "cognito";
 }
 
 async function loadUserByEmail(email: string) {
@@ -101,6 +109,20 @@ async function getClerkBackedUser() {
   return session.user;
 }
 
+async function getCognitoBackedUser() {
+  if (!shouldUseCognito()) {
+    return null;
+  }
+
+  const session = await getAppSessionContext();
+
+  if (!session) {
+    return null;
+  }
+
+  return session.user;
+}
+
 async function getExtensionTokenSession() {
   const headerStore = await headers();
   const token = headerStore.get(EXTENSION_TOKEN_HEADER);
@@ -148,6 +170,12 @@ async function pickActiveMembership(user: SessionUser, preferredOrganizationId?:
 export async function getCurrentUser(options?: {
   allowDevFallback?: boolean;
 }) {
+  const cognitoUser = await getCognitoBackedUser();
+
+  if (cognitoUser) {
+    return cognitoUser;
+  }
+
   const clerkUser = await getClerkBackedUser();
 
   if (clerkUser) {
@@ -160,7 +188,7 @@ export async function getCurrentUser(options?: {
     return extensionUser;
   }
 
-  if (options?.allowDevFallback ?? !shouldUseClerk()) {
+  if (options?.allowDevFallback ?? (!shouldUseClerk() && !shouldUseCognito())) {
     return getDevFallbackUser();
   }
 
@@ -189,7 +217,11 @@ export async function getCurrentAppContext(options?: {
   }
 
   const extensionSession = await getExtensionTokenSession();
-  const activeMembership = await pickActiveMembership(user, extensionSession?.organizationId);
+  const appSession = shouldUseCognito() ? await getAppSessionContext() : null;
+  const activeMembership = await pickActiveMembership(
+    user,
+    extensionSession?.organizationId ?? appSession?.organizationId,
+  );
 
   return {
     user,
@@ -215,7 +247,7 @@ export async function requireCurrentAppContextForPage() {
   const context = await getCurrentAppContext();
 
   if (!context) {
-    redirect(env.CLERK_SIGN_IN_URL ?? "/");
+    redirect("/sign-in");
   }
 
   return context;

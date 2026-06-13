@@ -3,7 +3,9 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 import { clerkTapeAppearance, DryLakeAuthShell } from "@/components/drylake-auth-shell";
+import { buildCognitoAuthorizeUrl } from "@/lib/services/cognito-auth";
 import { getAuthSetup } from "@/lib/services/auth";
+import { getCurrentAppContext } from "@/lib/services/current-user";
 
 function safeRedirectUrl(value: string | string[] | undefined) {
   const rawValue = Array.isArray(value) ? value[0] : value;
@@ -31,6 +33,19 @@ export default async function SignUpPage({
   const authSetup = getAuthSetup();
   const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
   const redirectUrl = safeRedirectUrl(resolvedSearchParams.redirect_url);
+
+  if (authSetup.mode === "cognito") {
+    if (!authSetup.configured) {
+      redirect("/");
+    }
+
+    const context = await getCurrentAppContext();
+    if (context) {
+      redirect(redirectUrl);
+    }
+
+    redirect(await buildCognitoAuthorizeUrl({ mode: "sign-up", returnTo: redirectUrl }));
+  }
 
   if (authSetup.mode !== "clerk" || !authSetup.configured) {
     redirect("/");

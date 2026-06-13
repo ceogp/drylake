@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { created, fromZodError, internalError, unauthorized } from "@/lib/api/http";
+import { recordAuthEvent } from "@/lib/services/app-session";
 import { getEntitlementsForOrganization } from "@/lib/services/entitlements";
 import { exchangeExtensionAuthRequest } from "@/lib/services/extension-auth-requests";
 
@@ -24,6 +25,17 @@ export async function POST(request: Request) {
     }
 
     const { subscription, entitlements } = await getEntitlementsForOrganization(session.organization.id);
+    await recordAuthEvent({
+      eventName: "auth.extension.browser_code_exchanged",
+      organizationId: session.organization.id,
+      actorUserId: session.user.id,
+      authProvider: session.user.authProvider,
+      authSubject: session.user.authSubject,
+      email: session.user.email,
+      metadataJson: {
+        editor: session.editor,
+      },
+    });
 
     return created({
       token: session.token,

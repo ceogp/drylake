@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { created, forbidden, fromZodError, internalError, unauthorized } from "@/lib/api/http";
+import { recordAuthEvent } from "@/lib/services/app-session";
 import { getAuthSessionSummary, getAuthSetup } from "@/lib/services/auth";
 import { syncSubscriptionFromClerk, syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
 import { getCurrentAppContext } from "@/lib/services/current-user";
@@ -74,6 +75,18 @@ export async function POST(request: Request) {
       });
       const organizationView = refreshedOrganization ?? membership.organization;
       const { subscription, entitlements } = await getEntitlementsForOrganization(membership.organizationId);
+      await recordAuthEvent({
+        eventName: "auth.extension.connect",
+        organizationId: membership.organizationId,
+        actorUserId: user.id,
+        authProvider: user.authProvider,
+        authSubject: user.authSubject,
+        email: user.email,
+        metadataJson: {
+          editor: parsed.data.editor,
+          method: "extension_access_token",
+        },
+      });
 
       return created({
         editor: parsed.data.editor,
@@ -121,6 +134,17 @@ export async function POST(request: Request) {
         select: { id: true, name: true, slug: true, tier: true },
       });
       const { subscription, entitlements } = await getEntitlementsForOrganization(organizationId);
+      await recordAuthEvent({
+        eventName: "auth.extension.connect",
+        organizationId,
+        actorUserId: appContext?.user.id ?? auth.session.user?.id ?? null,
+        authProvider: auth.provider,
+        email: appContext?.user.email ?? auth.session.user?.email ?? null,
+        metadataJson: {
+          editor: parsed.data.editor,
+          method: "browser_session",
+        },
+      });
 
       return created({
         editor: parsed.data.editor,

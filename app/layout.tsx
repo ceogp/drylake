@@ -174,6 +174,42 @@ export default async function RootLayout({
             ) : null}
             {useClerkUi ? (
               <HeaderAuthControls />
+            ) : authSetup.mode === "cognito" ? (
+              appContext ? (
+                <div className="flex items-center gap-2">
+                  <Link
+                    className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-orange-400 hover:text-orange-200"
+                    href="/account"
+                  >
+                    {appContext.user.profile?.displayName ?? appContext.user.email}
+                  </Link>
+                  <a
+                    className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-orange-400 hover:text-orange-200"
+                    href="/api/auth/cognito/logout?returnTo=/"
+                  >
+                    Sign Out
+                  </a>
+                </div>
+              ) : authSetup.configured ? (
+                <div className="flex items-center gap-2">
+                  <Link
+                    className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-orange-400 hover:text-orange-200"
+                    href="/sign-in?redirect_url=/workspace"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    className="rounded border border-emerald-400 bg-emerald-400 px-3 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
+                    href="/sign-up?redirect_url=/workspace"
+                  >
+                    Register
+                  </Link>
+                </div>
+              ) : (
+                <div className="rounded border border-red-400/40 bg-red-400/10 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-red-200">
+                  Auth Missing
+                </div>
+              )
             ) : (
               <div className="rounded border border-orange-400/40 bg-orange-400/10 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-200">
                 Dev Auth

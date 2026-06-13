@@ -3,11 +3,13 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getOpenAiApiKey } from "@/lib/security/runtime-secrets";
 import { getAuthSetup } from "@/lib/services/auth";
+import { getCognitoConfig } from "@/lib/services/cognito-auth";
 
 export async function GET() {
   const db = await prisma.$queryRawUnsafe("SELECT 1 as ok").then(() => "ok").catch(() => "error");
   const openAiConfigured = await getOpenAiApiKey().then(Boolean).catch(() => false);
   const auth = getAuthSetup();
+  const cognito = getCognitoConfig();
   const clerkConfigured = Boolean(
     env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
       env.CLERK_SECRET_KEY &&
@@ -36,6 +38,7 @@ export async function GET() {
       database: db,
       authMode: auth.mode,
       authConfigured: auth.configured,
+      cognitoConfigured: cognito.configured,
       artifactStorage: env.ARTIFACT_STORAGE_DRIVER,
       billingProvider,
       billingConfigured,

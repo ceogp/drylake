@@ -23,6 +23,7 @@ export default async function AdminPage() {
     recentTransformJobs,
     recentDeploymentJobs,
     recentAuditEvents,
+    recentAuthEvents,
     setup,
   } = await getAdminOverviewData();
 
@@ -53,6 +54,11 @@ export default async function AdminPage() {
           value={String(metrics.userCount)}
         />
         <MetricCard
+          detail={`${metrics.activeAppSessionCount} active browser sessions`}
+          label="Auth Sessions"
+          value={String(metrics.appSessionCount)}
+        />
+        <MetricCard
           detail={`${metrics.subscriptionCount} subscriptions tracked`}
           label="Organizations"
           value={String(metrics.organizationCount)}
@@ -66,6 +72,11 @@ export default async function AdminPage() {
           detail={`${metrics.runningTransformCount + metrics.runningDeploymentCount} running, ${metrics.failedTransformCount + metrics.failedDeploymentCount} failed`}
           label="Jobs"
           value={`${metrics.queuedTransformCount + metrics.queuedDeploymentCount} queued`}
+        />
+        <MetricCard
+          detail={`${metrics.failedAuthEventCount} failed auth events recorded`}
+          label="Auth Events"
+          value={String(metrics.authEventCount)}
         />
       </section>
 
@@ -142,6 +153,35 @@ export default async function AdminPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-3">
+        <Panel eyebrow="Auth" title="Recent Signups And Logins">
+          {recentAuthEvents.length === 0 ? (
+            <EmptyState>No auth events recorded yet.</EmptyState>
+          ) : (
+            <div className="space-y-3">
+              {recentAuthEvents.map((event) => (
+                <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm leading-7" key={event.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium text-stone-950">{event.eventName}</div>
+                      <p className="text-stone-600">
+                        {event.email ?? event.actorUser?.email ?? "unknown user"}
+                      </p>
+                    </div>
+                    <StatusBadge value={event.success ? "success" : "failed"} />
+                  </div>
+                  <p className="text-stone-600">
+                    {event.authProvider ?? "unknown"} - {event.organization?.name ?? "no org"}
+                  </p>
+                  {event.failureReason ? (
+                    <p className="text-red-700">{event.failureReason}</p>
+                  ) : null}
+                  <p className="text-xs text-stone-500">{formatDate(event.createdAt)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+
         <Panel eyebrow="Organizations" title="Latest Orgs">
           <div className="space-y-3">
             {recentOrganizations.map((organization) => (

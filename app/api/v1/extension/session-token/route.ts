@@ -1,4 +1,5 @@
 import { created, internalError, unauthorized } from "@/lib/api/http";
+import { recordAuthEvent } from "@/lib/services/app-session";
 import { requireCurrentAppContext } from "@/lib/services/current-user";
 import { createExtensionAccessToken } from "@/lib/services/extension-tokens";
 
@@ -9,6 +10,14 @@ export async function POST() {
       userId: context.user.id,
       email: context.user.email,
       organizationId: context.organization.id,
+    });
+    await recordAuthEvent({
+      eventName: "auth.extension.session_token_created",
+      organizationId: context.organization.id,
+      actorUserId: context.user.id,
+      authProvider: context.user.authProvider,
+      authSubject: context.user.authSubject,
+      email: context.user.email,
     });
 
     return created({

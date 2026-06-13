@@ -107,6 +107,61 @@ export default async function AdminUserPage({
         </Panel>
       </section>
 
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Panel eyebrow="Auth" title="Recent App Sessions">
+          {user.appSessions.length === 0 ? (
+            <EmptyState>No browser app sessions for this user.</EmptyState>
+          ) : (
+            <div className="space-y-3">
+              {user.appSessions.map((session) => (
+                <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm leading-7" key={session.id}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-medium text-stone-950">{session.organization.name}</div>
+                    <StatusBadge value={session.revokedAt ? "revoked" : "active"} />
+                  </div>
+                  <p className="text-stone-600">
+                    Provider: {session.authProvider} {session.authSubject ? `- ${session.authSubject}` : ""}
+                  </p>
+                  <p className="text-stone-600">
+                    Country: {session.country ?? "n/a"} - User agent: {session.userAgent ?? "n/a"}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    Created {formatDate(session.createdAt)} - Last seen {formatDate(session.lastSeenAt)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        <Panel eyebrow="Auth" title="Recent Auth Events">
+          {user.authEvents.length === 0 ? (
+            <EmptyState>No auth events recorded for this user.</EmptyState>
+          ) : (
+            <div className="space-y-3">
+              {user.authEvents.map((event) => (
+                <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm leading-7" key={event.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium text-stone-950">{event.eventName}</div>
+                      <p className="text-stone-600">{event.organization?.name ?? "No organization"}</p>
+                    </div>
+                    <StatusBadge value={event.success ? "success" : "failed"} />
+                  </div>
+                  {event.failureReason ? (
+                    <p className="text-red-700">{event.failureReason}</p>
+                  ) : null}
+                  <p className="text-xs text-stone-500">{formatDate(event.createdAt)}</p>
+                  <div className="mt-3">
+                    <JsonBlock value={event.metadataJson} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </section>
+
       <Panel eyebrow="Extension" title="Recent Connection Requests">
         {user.extensionAuthRequests.length === 0 ? (
           <EmptyState>No extension browser connection requests for this user.</EmptyState>
