@@ -7,7 +7,7 @@ DryLake is backed by [99VC](https://ninetynine.vc/) and [AWS Startups](https://a
 
 **Free. No credit card. Connect your DryLake account and run a local Guard scan in under 30 seconds.**
 
-![DryLake Guard detailed security report](https://raw.githubusercontent.com/gmkdigitalmedia/drylake/feature/agent-preflight-platform/extensions/xupra-drylake-vscode/media/drylake-guard-workflow.gif)
+![DryLake Guard detailed security report](https://drylake.xupracorp.com/marketplace/extension/media/drylake-guard-workflow.gif)
 
 ## What DryLake Guard scans
 
@@ -37,7 +37,7 @@ Active Guard uses AWS-backed storage and malware-scanning infrastructure for con
 
 DryLake still includes visual planning and handoff orchestration for coding agents. Turn tickets, bugs, and product specs into phase cards, assign each phase to your preferred coding agent, attach a skill, and run focused handoffs.
 
-![DryLake agent control workflow](https://raw.githubusercontent.com/gmkdigitalmedia/drylake/feature/agent-preflight-platform/extensions/xupra-drylake-vscode/media/drylake-workflow-6phase-handoffs.gif)
+![DryLake agent control workflow](https://drylake.xupracorp.com/marketplace/extension/media/drylake-workflow-6phase-handoffs.gif)
 
 - **Free AI planning:** Start with free planning, then upgrade when you want Xupra AI Frontier Models.
 - **Save tokens and time:** Visual planning cards allow you to use smaller models with better results.

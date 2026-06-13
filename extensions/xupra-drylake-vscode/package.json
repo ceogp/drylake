@@ -2,7 +2,7 @@
   "name": "drylake",
   "displayName": "DryLake Guard: MCP & AI Agent Security",
   "description": "Scan MCP servers, agent rules, IDE extensions, secrets, prompt injection risk, and workspace blast radius before Claude, Cursor, Codex, or Copilot agents run.",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "private": false,
   "publisher": "xupracorp",
   "license": "SEE LICENSE IN LICENSE.txt",
