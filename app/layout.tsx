@@ -73,28 +73,31 @@ export default async function RootLayout({
             <DryLakeLogo className="h-11 w-auto" priority />
             <div className="min-w-0">
               <div className="hidden text-xs text-zinc-500 sm:block">
-                Save tokens and time using AI Agents.
+                Agent Control and Guard in one workflow.
               </div>
             </div>
           </a>
           <nav className="hidden items-center gap-3 text-sm font-semibold text-zinc-300 md:flex">
+            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={dryLakeOrigin}>
+              Product
+            </a>
+            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/guard`}>
+              Guard
+            </a>
+            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/pricing`}>
+              Pricing
+            </a>
+            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/extensions/install`}>
+              Install
+            </a>
             <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/about">
               About
             </Link>
             <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={discordHref} rel="noreferrer" target="_blank">
               Discord
             </a>
-            <a className="rounded border border-emerald-400 bg-emerald-400 px-3 py-2 text-zinc-950 transition hover:bg-emerald-300" href={dryLakeOrigin}>
-              DryLake
-            </a>
-            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/extensions/install`}>
-              Install
-            </a>
-            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/pricing`}>
-              Pricing
-            </a>
-            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/account`}>
-              Account
+            <a className="rounded border border-emerald-400 bg-emerald-400 px-3 py-2 text-zinc-950 transition hover:bg-emerald-300" href={`${dryLakeOrigin}/sign-in`}>
+              Sign in
             </a>
           </nav>
         </div>
@@ -135,22 +138,22 @@ export default async function RootLayout({
               <DryLakeLogo className="h-11 w-auto" priority />
               <div className="min-w-0">
                 <div className="hidden text-xs text-zinc-500 lg:block">
-                  Save tokens and time using AI Agents.
+                  Agent Control and Guard in one workflow.
                 </div>
               </div>
             </a>
             <nav className="hidden items-center gap-3 text-sm font-semibold text-zinc-300 md:flex">
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/upload">
-                Import
+              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/workspace">
+                Agent Control
+              </Link>
+              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/guard">
+                Guard
               </Link>
               <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/extensions/install">
                 Install
               </Link>
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/account">
-                Account
-              </Link>
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/settings">
-                Settings
+              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/pricing">
+                Pricing
               </Link>
               <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/billing">
                 Billing

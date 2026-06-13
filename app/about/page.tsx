@@ -28,7 +28,7 @@ const trustPoints = [
   "Local scan before paid upload",
   "Approved redacted metadata for Deep Cloud Analysis",
   "Saved reports for personal and shared team history",
-  "AWS-backed runtime with GitLab delivery",
+  "AWS-backed runtime with CodeCommit delivery",
   "Operator review before remediation and policy changes",
 ];
 

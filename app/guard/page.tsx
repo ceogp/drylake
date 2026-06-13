@@ -6,7 +6,7 @@ import { getConfiguredAppUrlForPath } from "@/lib/site-hosts";
 export const metadata: Metadata = {
   title: "Guard Security",
   description:
-    "Understand DryLake Guard: local scan coverage, approved upload, Security Pro remediation, and Team Security baselines.",
+    "Understand DryLake Guard: local scan coverage, approved upload, paid remediation, and Guard for Teams baselines.",
 };
 
 const localCoverage = [
@@ -22,7 +22,7 @@ const trustRules = [
   "Approved upload uses redacted findings and structured metadata only.",
   "Raw secrets, .env values, private keys, and full source files are not uploaded by default.",
   "Saved reports separate personal history from team-shared security state.",
-  "Team Security adds policy, baselines, and recurring watch checks rather than replacing local review.",
+  "Guard for Teams adds policy, baselines, and recurring watch checks rather than replacing local review.",
 ];
 
 const productLayers = [
@@ -33,13 +33,13 @@ const productLayers = [
     includes: ["Local scan", "Local report review", "Extension connection", "No paid upload required"],
   },
   {
-    title: "Security Pro",
+    title: "Paid DryLake",
     detail:
       "Approve redacted upload when you want Fix with AI, Deep Cloud Analysis, saved reports, and personal paid remediation workflows.",
     includes: ["Approved upload", "Fix with AI", "Deep Cloud Analysis", "Saved personal reports", "Local Watchdog"],
   },
   {
-    title: "Team Security",
+    title: "Guard for Teams",
     detail:
       "Share the security workflow across the organization with baselines, policy, recurring drift checks, and shared report history.",
     includes: ["Shared reports", "Team Baseline", "Team policy", "Continuous Watch", "Recurring drift history"],
@@ -86,12 +86,12 @@ export default function GuardPage() {
           <div className="space-y-6">
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Guard Security</p>
             <h1 className="max-w-4xl text-4xl font-semibold leading-tight text-zinc-50 sm:text-5xl lg:text-6xl">
-              Guard gives DryLake a local-first security layer before agents execute.
+              Guard is the security pillar inside DryLake.
             </h1>
             <p className="max-w-3xl text-lg leading-8 text-zinc-300">
-              Start with a local scan for MCP servers, extensions, prompt-injection risk, secrets,
-              and blast radius. Approve redacted upload only when you want deeper remediation, saved
-              reports, or shared team security workflows.
+              DryLake combines Agent Control and Guard in one workflow. Start with a local scan for MCP servers,
+              extensions, prompt-injection risk, secrets, and blast radius. Upgrade to Paid when you want approved
+              upload, Fix with AI, Deep Cloud Analysis, saved reports, or Local Watchdog.
             </p>
             <div className="flex flex-wrap gap-3">
               <ActionLink href={installHref} label="Install extension" />
@@ -172,7 +172,7 @@ export default function GuardPage() {
           </article>
 
           <article className="rounded-lg border border-zinc-800 bg-zinc-950 p-6">
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">What Team Security adds</p>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">What Guard for Teams adds</p>
             <h2 className="mt-4 text-3xl font-semibold text-zinc-50">Shared drift and policy review for the team.</h2>
             <div className="mt-5 grid gap-3">
               {teamSecurityOutcomes.map((item) => (
@@ -182,12 +182,12 @@ export default function GuardPage() {
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <ActionLink href={pricingHref} label="Compare security tiers" />
+              <ActionLink href={pricingHref} label="Compare Free and Paid" />
               <a
                 className="inline-flex rounded border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-orange-400 hover:text-orange-200"
-                href="mailto:support@xupracorp.com?subject=DryLake%20Team%20Security"
+                href="mailto:support@xupracorp.com?subject=DryLake%20Guard%20for%20Teams"
               >
-                Talk about Team Security
+                Talk about Guard for Teams
               </a>
             </div>
           </article>

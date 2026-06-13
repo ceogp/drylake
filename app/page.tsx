@@ -19,10 +19,6 @@ const pillarCards = [
     "Guard",
     "Run a local-first scan for MCP servers, extensions, secrets, prompt-injection risk, and blast radius before agents touch the repo.",
   ],
-  [
-    "Team Security",
-    "Share saved reports, compare against a Team Baseline, manage policy, and review Continuous Watch drift history across the organization.",
-  ],
 ];
 
 const guardJourney = [
@@ -31,12 +27,12 @@ const guardJourney = [
     "Install the extension, connect your workspace, and review local Guard results without requiring a paid security plan.",
   ],
   [
-    "Security Pro",
+    "Paid DryLake",
     "Approve redacted upload when you want Fix with AI, Deep Cloud Analysis, saved report history, and paid remediation workflows.",
   ],
   [
-    "Team Security",
-    "Move from individual reports to shared baselines, team policy, recurring watch checks, and organization-wide drift visibility.",
+    "Guard for Teams",
+    "Move from personal reports to shared baselines, team policy, recurring watch checks, and organization-wide drift visibility when your team is ready.",
   ],
 ];
 
@@ -45,7 +41,7 @@ const securityPoints = [
   ["Approved upload", "Deep Cloud Analysis only runs from approved redacted metadata. Raw secrets, private keys, and full source files are not uploaded by default."],
   ["Encrypted credentials", "Credentials and extension tokens are encrypted with AES-256-GCM before storage."],
   ["AWS controls", "Runtime secrets can use AWS Secrets Manager, and S3 artifacts support AWS KMS encryption."],
-  ["GitLab delivery", "Production deploys run through GitLab validation, HTTPS checks, audit logs, and environment isolation guards."],
+  ["AWS CodeCommit delivery", "Production deploys run through AWS CodeCommit, CodePipeline validation, HTTPS checks, audit logs, and environment isolation guards."],
   ["Operator review", "Guard reports are meant to be reviewed by engineers before they approve remediation or team policy changes."],
 ];
 
@@ -72,7 +68,7 @@ const trustLinks = [
   { label: "99VC", href: "https://ninetynine.vc/" },
   { label: "AWS Startups", href: "https://aws.amazon.com/startups/" },
   { label: "AWS Cloud", href: "https://aws.amazon.com/" },
-  { label: "GitLab", href: "https://gitlab.com/" },
+  { label: "AWS CodeCommit", href: "https://aws.amazon.com/codecommit/" },
 ];
 
 const backingPartners = [
@@ -169,7 +165,7 @@ function WorkflowGifPreview() {
           </p>
         </div>
         <span className="rounded border border-orange-400/40 bg-orange-400/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-200">
-          Guard + control
+          Agent Control + Guard
         </span>
       </div>
       <div className="grid gap-px bg-zinc-800 lg:grid-cols-2 xl:grid-cols-3">
@@ -206,8 +202,8 @@ function WorkflowGifPreview() {
       </div>
       <div className="grid gap-2 border-t border-zinc-800 bg-zinc-950/80 p-4 text-sm text-zinc-300 sm:grid-cols-3">
         <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Free local Guard scan</span>
-        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Security Pro remediation and cloud analysis</span>
-        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Team Security baselines and watch history</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Paid remediation and cloud analysis</span>
+        <span className="rounded border border-zinc-800 bg-[#101514] px-3 py-2">Guard for Teams baselines and watch history</span>
       </div>
     </section>
   );
@@ -243,15 +239,15 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
             <div className="mb-6 flex flex-wrap gap-2">
               <StatusPill>Free local Guard scan</StatusPill>
               <StatusPill>Agent control</StatusPill>
-              <StatusPill>Team Security</StatusPill>
+              <StatusPill>Guard for Teams</StatusPill>
             </div>
             <h1 className="max-w-4xl text-5xl font-semibold leading-[1.02] text-zinc-50 sm:text-6xl lg:text-7xl">
-              DryLake helps teams control AI coding work and secure agent behavior before execution.
+              DryLake gives teams Agent Control and Guard in one product.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-              Start with a free local Guard scan for MCP servers, extensions, secrets, prompt-injection risk,
-              and blast radius. Then plan coding work, assign agents, approve deeper analysis when needed,
-              and move into shared team baselines and Continuous Watch as the workflow matures.
+              Plan the work, review the risk, and execute with the agents your team already uses. Free starts
+              with local Agent Control and Guard. Paid adds approved upload, Fix with AI, Deep Cloud Analysis,
+              saved reports, and Local Watchdog.
             </p>
             <BackingLogos />
             <div className="mt-8 flex flex-wrap gap-3">
@@ -284,7 +280,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
               teams decide what agents should do, what they can touch, and what risk is acceptable before execution starts.
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             {pillarCards.map(([title, body]) => (
               <article key={title} className="rounded-lg border border-zinc-800 bg-[#111414] p-5">
                 <h3 className="text-base font-semibold text-zinc-100">{title}</h3>
@@ -303,8 +299,8 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
               Move from local visibility to paid remediation only when you need it.
             </h2>
             <p className="text-base leading-7 text-zinc-400">
-              Free is intentionally useful on its own. Paid security starts when you want approved upload,
-              saved reports, cloud-backed analysis, or shared team enforcement beyond the local scan.
+              Free is intentionally useful on its own. Paid starts when you want approved upload,
+              saved reports, cloud-backed analysis, or Local Watchdog beyond the local scan.
             </p>
             <div className="flex flex-wrap gap-3">
               <ActionLink href={guardHref}>Explore Guard</ActionLink>
@@ -362,7 +358,7 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">Trust and infrastructure</p>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              Local-first Guard on top of AWS infrastructure and GitLab delivery.
+              Local-first Guard on top of AWS infrastructure and CodeCommit delivery.
             </h2>
             <p className="mt-5 text-base leading-7 text-zinc-400">
               DryLake is backed by 99VC and AWS Startups. The website, account flow, and team-security path need to feel operational,

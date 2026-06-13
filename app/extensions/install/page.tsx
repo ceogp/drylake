@@ -4,7 +4,7 @@ const trustLinks = [
   { label: "99VC", href: "https://ninetynine.vc/" },
   { label: "AWS Startups", href: "https://aws.amazon.com/startups/" },
   { label: "AWS Cloud", href: "https://aws.amazon.com/" },
-  { label: "GitLab", href: "https://gitlab.com/" },
+  { label: "AWS CodeCommit", href: "https://aws.amazon.com/codecommit/" },
 ];
 
 const installSteps = [
@@ -12,7 +12,7 @@ const installSteps = [
   "Run DryLake: Connect so the browser can attach the editor to your account and workspace.",
   "Start with a free local Guard scan inside the editor and review the report locally.",
   "Save a report or approve redacted upload only when you want paid remediation and deeper analysis.",
-  "Move into Team Security later for shared reports, baselines, policy, and Continuous Watch.",
+  "Move into Guard for Teams later for shared reports, baselines, policy, and Continuous Watch.",
 ];
 
 const flowCards = [
@@ -131,7 +131,7 @@ export default function ExtensionInstallPage() {
           <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-400">
             DryLake is backed by 99VC and AWS Startups. Credentials and extension tokens are encrypted
             before storage, runtime secrets can use AWS Secrets Manager, and production deploys run
-            through GitLab CI/CD validation and environment isolation checks.
+            through AWS CodeCommit and CodePipeline validation with environment isolation checks.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             {trustLinks.map((item) => (

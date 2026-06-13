@@ -7,7 +7,7 @@ import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/servi
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 
 const BILLING_SUBTITLE =
-  "Billing is where you upgrade, open the customer portal, and confirm what your current plan unlocks. Use Pricing for the full public comparison.";
+  "Billing is intentionally simple: Free or Paid. Paid includes Agent Control and advanced Guard features in one subscription.";
 
 const PLAN_TIERS = ["free", "pro", "security_pro", "team_security", "enterprise"] as const;
 const ALLOWED_EDITOR_RETURN_PROTOCOLS = new Set(["vscode:", "vscode-insiders:", "cursor:"]);
@@ -54,14 +54,11 @@ function shouldShowUpgradeOption(requiredPlan: string | null, plan: BillingPlan)
 }
 
 const ENTITLEMENT_ITEMS: Array<{ key: EntitlementKey; label: string }> = [
-  { key: "canUseHostedPlanning", label: "Hosted planning" },
+  { key: "canUseHostedPlanning", label: "Hosted Agent Control" },
   { key: "canUseFixWithAI", label: "Fix with AI" },
   { key: "canUseApprovedUpload", label: "Approved upload" },
   { key: "canUseDeepCloudAnalysis", label: "Deep Cloud Analysis" },
   { key: "canUseLocalWatchdog", label: "Local Watchdog" },
-  { key: "canUseTeamBaseline", label: "Team Baseline" },
-  { key: "canUseContinuousWatch", label: "Continuous Watch" },
-  { key: "canManageTeamPolicy", label: "Team policy" },
 ];
 
 async function syncSafely(organizationId: string) {
@@ -118,19 +115,7 @@ function getSafeEditorReturnUrl(value: string | string[] | undefined) {
 function getPublicTierLabel(tier: string | null | undefined) {
   const normalized = (tier ?? "free").toLowerCase();
 
-  if (normalized === "enterprise") {
-    return "Enterprise";
-  }
-
-  if (normalized === "security_pro") {
-    return "Security Pro";
-  }
-
-  if (normalized === "team_security") {
-    return "Team Security";
-  }
-
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  return normalized === "free" ? "Free" : "Paid";
 }
 
 function buildBillingContinuationPath(args: {
@@ -216,6 +201,7 @@ export default async function BillingPage({
   const hasSubscription = Boolean(subscription?.stripeCustomerId);
   const userCanManageBilling = context.activeMembership.role === "owner" || context.activeMembership.role === "admin";
   const requiredSatisfied = planRank(organizationTier) >= planRank(requiredPlan);
+  const isPaid = planRank(organizationTier) >= planRank("security_pro");
   const showEditorReturn =
     source === "extension" && Boolean(editorReturnUrl) && (requiredSatisfied || billingResult === "success");
   const statusCopy = billingResultCopy(billingResult);
@@ -226,7 +212,7 @@ export default async function BillingPage({
         <div className="space-y-4">
           <p className="tape-eyebrow">Billing</p>
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950">
-            Manage billing and Guard access.
+            Manage your DryLake plan.
           </h1>
           {requiredPlan && source === "extension" ? (
             <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
@@ -249,11 +235,13 @@ export default async function BillingPage({
                 </h2>
               </div>
               <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/pricing">
-                Compare Plans
+                Compare Free and Paid
               </Link>
             </div>
-            <p className="mt-2 text-sm leading-7 text-stone-700">Status: {subscription?.status ?? "trial"}</p>
-            <p className="text-sm leading-7 text-stone-700">Provider: {subscription?.provider ?? "local"}</p>
+            <p className="mt-2 text-sm leading-7 text-stone-700">Status: {subscription?.status ?? "free"}</p>
+            <p className="text-sm leading-7 text-stone-700">
+              Free includes local Guard and Agent Control. Paid adds hosted workflow, approved upload, Fix with AI, Deep Cloud Analysis, saved reports, and Local Watchdog.
+            </p>
             {statusCopy ? (
               <div className="mt-5 rounded border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm leading-7 text-stone-800">
                 {statusCopy}
@@ -265,33 +253,13 @@ export default async function BillingPage({
                   Ask an organization owner or admin to manage billing.
                 </p>
               ) : null}
-              {userCanManageBilling && shouldShowUpgradeOption(requiredPlan, "pro") ? (
-                <form action={createCheckoutAction}>
-                  <input name="organizationId" type="hidden" value={organizationId} />
-                  <input name="plan" type="hidden" value="pro" />
-                  <input name="returnPath" type="hidden" value={checkoutReturnPath} />
-                  <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
-                    Upgrade To Pro ($10/mo)
-                  </button>
-                </form>
-              ) : null}
-              {userCanManageBilling && shouldShowUpgradeOption(requiredPlan, "security_pro") ? (
+              {userCanManageBilling && !isPaid && shouldShowUpgradeOption(requiredPlan, "security_pro") ? (
                 <form action={createCheckoutAction}>
                   <input name="organizationId" type="hidden" value={organizationId} />
                   <input name="plan" type="hidden" value="security_pro" />
                   <input name="returnPath" type="hidden" value={checkoutReturnPath} />
                   <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
-                    Upgrade To Security Pro ($40/mo)
-                  </button>
-                </form>
-              ) : null}
-              {userCanManageBilling && shouldShowUpgradeOption(requiredPlan, "team_security") ? (
-                <form action={createCheckoutAction}>
-                  <input name="organizationId" type="hidden" value={organizationId} />
-                  <input name="plan" type="hidden" value="team_security" />
-                  <input name="returnPath" type="hidden" value={checkoutReturnPath} />
-                  <button className="tape-button bg-white px-5 py-3 text-sm text-black" type="submit">
-                    Upgrade Team Security
+                    Upgrade To Paid ($40/mo)
                   </button>
                 </form>
               ) : null}
@@ -320,7 +288,7 @@ export default async function BillingPage({
                 {showEditorReturn
                   ? `After checkout, use ${editorReturnLabel(editor)} to refresh plan access in the editor immediately. You can still open the web app separately if needed.`
                   : requiredPlan
-                    ? `After upgrading to ${getPublicTierLabel(requiredPlan)}, return to VS Code or Cursor to continue. If the direct editor return is unavailable, open the DryLake web app and then reopen the editor.`
+                    ? `After upgrading to Paid, return to VS Code or Cursor to continue. If the direct editor return is unavailable, open the DryLake web app and then reopen the editor.`
                     : "After upgrading, return to VS Code or Cursor to continue. If the direct editor return is unavailable, open the DryLake web app and then reopen the editor."}
               </p>
             ) : null}
@@ -351,7 +319,7 @@ export default async function BillingPage({
               })}
             </div>
             <p className="mt-5 text-sm leading-7 text-stone-700">
-              Team Security and Enterprise details live on Pricing. Billing is intentionally the transactional page.
+              Team features are part of Guard for Teams and are intentionally not shown as a public self-serve plan yet.
             </p>
           </article>
         </section>
