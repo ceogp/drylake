@@ -7,7 +7,7 @@ import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/servi
 import { requireCompletedOnboardingAppContextForPage } from "@/lib/services/current-user";
 
 const BILLING_SUBTITLE =
-  "Billing is intentionally simple: Free or Paid. Paid includes Agent Control and advanced Guard features in one subscription.";
+  "Billing is intentionally simple: Free or Paid. After your choice, DryLake returns you to Skills or back to the extension flow.";
 
 const PLAN_TIERS = ["free", "pro", "security_pro", "team_security", "enterprise"] as const;
 const ALLOWED_EDITOR_RETURN_PROTOCOLS = new Set(["vscode:", "vscode-insiders:", "cursor:"]);
@@ -162,7 +162,7 @@ function editorReturnLabel(editor: EditorTarget | null) {
 
 function billingResultCopy(result: BillingResult) {
   if (result === "success") {
-    return "Checkout completed. Return to the editor to refresh plan access immediately.";
+    return "Checkout completed. Open Skills or return to the editor to refresh plan access immediately.";
   }
 
   if (result === "canceled") {
@@ -200,7 +200,7 @@ export default async function BillingPage({
           editorReturnUrl,
         })
       : appReturnPath;
-  const welcomeReturnPath = returnPath ?? "/workspace";
+  const welcomeReturnPath = returnPath ?? "/skills";
   const context = await requireCompletedOnboardingAppContextForPage(
     buildCurrentBillingPath(resolvedSearchParams),
   );
@@ -280,7 +280,7 @@ export default async function BillingPage({
               </div>
               <div className="mt-6">
                 {isPaid ? (
-                  <Link className="tape-button inline-flex bg-emerald-400 px-5 py-3 text-sm text-zinc-950" href="/workspace">
+                  <Link className="tape-button inline-flex bg-emerald-400 px-5 py-3 text-sm text-zinc-950" href={welcomeReturnPath}>
                     Paid Is Active
                   </Link>
                 ) : userCanManageBilling ? (
@@ -373,8 +373,10 @@ export default async function BillingPage({
               <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/account">
                 Account
               </Link>
-              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/workspace">
-                Continue to Workspace
+              <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href={welcomeReturnPath}>
+                {source === "extension" && welcomeReturnPath.startsWith("/extensions/connect")
+                  ? "Return to Connection"
+                  : "Open Skills"}
               </Link>
             </div>
           </article>

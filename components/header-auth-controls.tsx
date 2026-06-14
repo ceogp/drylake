@@ -50,19 +50,19 @@ export function HeaderAuthControls(props: HeaderAuthControlsProps) {
   const hasExtensionCallback = Boolean(searchParams.get("callback"));
   const redirectPath = isExtensionConnectPage
     ? buildExtensionConnectPath(searchParams)
-    : "/workspace";
+    : "/skills";
 
   if (props.signedIn) {
     return (
       <div className="flex items-center gap-2">
         <Link
-          className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-orange-400 hover:text-orange-200"
+          className="text-sm font-medium text-zinc-300 transition hover:text-zinc-100"
           href="/account"
         >
           {props.accountLabel ?? "Account"}
         </Link>
         <a
-          className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-orange-400 hover:text-orange-200"
+          className="text-sm font-medium text-zinc-300 transition hover:text-zinc-100"
           href={props.logoutHref}
         >
           Sign Out
@@ -84,15 +84,15 @@ export function HeaderAuthControls(props: HeaderAuthControlsProps) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-4">
       <Link
-        className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-orange-400 hover:text-orange-200"
+        className="text-sm font-medium text-zinc-300 transition hover:text-zinc-100"
         href={authPath("/sign-in", redirectPath)}
       >
         Sign In
       </Link>
       <Link
-        className="rounded border border-emerald-400 bg-emerald-400 px-3 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
+        className="rounded-md bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
         href={authPath("/sign-up", redirectPath)}
       >
         Register

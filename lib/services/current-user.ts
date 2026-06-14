@@ -37,7 +37,7 @@ export function hasCompletedRequiredOnboarding(user: SessionUser) {
 function onboardingPath(returnTo: string) {
   const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//")
     ? returnTo
-    : "/workspace";
+    : "/skills";
   const params = new URLSearchParams({ returnTo: safeReturnTo });
 
   return `/onboarding/profile?${params.toString()}`;
@@ -46,7 +46,7 @@ function onboardingPath(returnTo: string) {
 function signInPath(returnTo: string) {
   const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//")
     ? returnTo
-    : "/workspace";
+    : "/skills";
   const params = new URLSearchParams({ redirect_url: safeReturnTo });
 
   return `/sign-in?${params.toString()}`;
@@ -211,7 +211,7 @@ export async function requireCurrentAppContext(options?: {
   return context;
 }
 
-export async function requireCurrentAppContextForPage(returnTo = "/workspace") {
+export async function requireCurrentAppContextForPage(returnTo = "/skills") {
   const context = await getCurrentAppContext();
 
   if (!context) {
@@ -221,7 +221,7 @@ export async function requireCurrentAppContextForPage(returnTo = "/workspace") {
   return context;
 }
 
-export async function requireCompletedOnboardingAppContextForPage(returnTo = "/workspace") {
+export async function requireCompletedOnboardingAppContextForPage(returnTo = "/skills") {
   const context = await requireCurrentAppContextForPage(returnTo);
 
   if (!hasCompletedRequiredOnboarding(context.user)) {

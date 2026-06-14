@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { completeOnboardingProfileAction } from "@/app/actions";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 
@@ -11,14 +9,14 @@ function safeReturnPath(value: string | string[] | undefined) {
   const rawValue = normalizeSearchValue(value).trim();
 
   if (!rawValue || !rawValue.startsWith("/") || rawValue.startsWith("//")) {
-    return "/workspace";
+    return "/skills";
   }
 
   try {
     const parsed = new URL(rawValue, "http://xupra.local");
     return `${parsed.pathname}${parsed.search}`;
   } catch {
-    return "/workspace";
+    return "/skills";
   }
 }
 
@@ -77,7 +75,7 @@ export default async function OnboardingProfilePage({
           </h1>
           <p className="mt-4 text-sm leading-7 text-zinc-400">
             This is separate from Cognito authentication. DryLake stores these details in the app database so admins can see
-            real user records, country, contact details, and Free/Paid intent.
+            real user records, country, contact details, and Free/Paid intent before opening Skills or reconnecting the editor.
           </p>
           <div className="mt-6 grid gap-3 text-sm text-zinc-300">
             <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Name and contact details</span>
@@ -97,7 +95,8 @@ export default async function OnboardingProfilePage({
             </h2>
             <p className="mt-3 text-sm leading-7 text-zinc-400">
               Start Free if you only want local Agent Control and Guard. Choose Paid if you want Fix with AI,
-              Deep Cloud Analysis, saved reports, and Local Watchdog.
+              Deep Cloud Analysis, saved reports, and Local Watchdog. After your choice, DryLake opens your Skills
+              library or returns you to the extension approval flow.
             </p>
           </div>
 
@@ -205,9 +204,9 @@ export default async function OnboardingProfilePage({
               <button className="rounded border border-emerald-400 bg-emerald-400 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300" type="submit">
                 Continue
               </button>
-              <Link className="rounded border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-orange-400 hover:text-orange-200" href="/account">
-                Manage later in Account
-              </Link>
+              <p className="text-sm leading-7 text-zinc-400">
+                Profile setup is required before DryLake opens Skills, billing, or extension approval.
+              </p>
             </div>
           </form>
         </section>

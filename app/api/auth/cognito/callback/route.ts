@@ -47,7 +47,7 @@ function needsOnboarding(profile: {
 export async function GET(request: NextRequest) {
   let email: string | null = null;
   let authSubject: string | null = null;
-  let returnTo = "/workspace";
+  let returnTo = "/skills";
   let mode: "sign-in" | "sign-up" = "sign-in";
 
   try {

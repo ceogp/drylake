@@ -543,7 +543,7 @@ export async function completeOnboardingProfileAction(formData: FormData) {
   const country = requireProfileText(formData, "country", 96);
   const planIntent = String(formData.get("planIntent") ?? "free").trim() === "paid" ? "paid" : "free";
   const organizationName = cleanProfileText(formData, "organizationName", 160);
-  const returnPath = getSafeReturnPath(formData.get("returnTo")) ?? "/workspace";
+  const returnPath = getSafeReturnPath(formData.get("returnTo")) ?? "/skills";
   const completedAt = new Date();
 
   await prisma.$transaction([

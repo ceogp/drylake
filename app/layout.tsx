@@ -146,32 +146,36 @@ export default async function RootLayout({
                   DryLake
                 </div>
                 <div className="hidden text-xs text-zinc-500 lg:block">
-                  Product site: Agent Control + Guard.
+                  Agent Control + Guard
                 </div>
               </div>
             </a>
-            <nav className="hidden items-center gap-3 text-sm font-semibold text-zinc-300 md:flex">
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/">
-                Product home
+            <nav className="hidden items-center gap-6 text-sm font-medium text-zinc-400 md:flex">
+              <Link className="transition hover:text-zinc-100" href="/">
+                Overview
               </Link>
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/workspace">
-                Agent Control
+              <Link className="transition hover:text-zinc-100" href="/guard">
+                Guard
               </Link>
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/skills">
-                Skills
-              </Link>
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/guard">
-                Learn about Guard
-              </Link>
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/extensions/install">
+              <Link className="transition hover:text-zinc-100" href="/extensions/install">
                 Install
               </Link>
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/pricing">
+              <Link className="transition hover:text-zinc-100" href="/pricing">
                 Pricing
               </Link>
-              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/billing">
-                Billing
-              </Link>
+              {appContext ? (
+                <>
+                  <Link className="transition hover:text-zinc-100" href="/workspace">
+                    Agent Control
+                  </Link>
+                  <Link className="transition hover:text-zinc-100" href="/skills">
+                    Skills
+                  </Link>
+                  <Link className="transition hover:text-zinc-100" href="/billing">
+                    Billing
+                  </Link>
+                </>
+              ) : null}
             </nav>
           </div>
           <div className="flex items-center gap-3">
@@ -183,7 +187,7 @@ export default async function RootLayout({
                   id: membership.organizationId,
                   name: membership.organization.name,
                 }))}
-                redirectTo="/upload"
+                redirectTo="/skills"
               />
             ) : null}
             {authSetup.mode === "cognito" ? (
