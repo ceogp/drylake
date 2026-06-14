@@ -79,32 +79,12 @@ export default async function RootLayout({
               </div>
             </div>
           </a>
-          <nav className="hidden items-center gap-3 text-sm font-semibold text-zinc-300 md:flex">
-            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-              Products
-            </span>
-            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={dryLakeOrigin}>
-              DryLake product
-            </a>
-            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/guard`}>
-              Guard
-            </a>
-            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/pricing`}>
-              Pricing
-            </a>
-            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={`${dryLakeOrigin}/extensions/install`}>
-              Install
-            </a>
-            <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/about">
-              About
-            </Link>
-            <a className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href={discordHref} rel="noreferrer" target="_blank">
-              Discord
-            </a>
-            <a className="rounded border border-emerald-400 bg-emerald-400 px-3 py-2 text-zinc-950 transition hover:bg-emerald-300" href={`${dryLakeOrigin}/sign-in`}>
-              Sign in
-            </a>
-          </nav>
+          <a
+            className="rounded-md bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
+            href={dryLakeOrigin}
+          >
+            Open DryLake
+          </a>
         </div>
       </div>
       {children}
