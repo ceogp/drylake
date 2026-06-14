@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { openBillingPortalAction, updateProfileAction } from "@/app/actions";
 import { prisma } from "@/lib/prisma";
-import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
+import { requireCompletedOnboardingAppContextForPage } from "@/lib/services/current-user";
 import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/services/entitlements";
 
 const ENTITLEMENT_ITEMS: Array<{ key: EntitlementKey; label: string; description: string }> = [
@@ -50,6 +50,7 @@ const ENTITLEMENT_ITEMS: Array<{ key: EntitlementKey; label: string; description
 
 const ACCOUNT_LINKS = [
   { label: "Open workspace", href: "/workspace", detail: "Go back to your active project and day-to-day workflow." },
+  { label: "Skills library", href: "/skills", detail: "Review imported skills, subagents, and package surfaces." },
   { label: "Security reports", href: "/security/reports", detail: "Review personal or shared Guard report history." },
   { label: "Team security", href: "/team/security", detail: "Open baselines, policy, and Continuous Watch state." },
   { label: "Connect extension", href: "/extensions/connect", detail: "Approve VS Code or Cursor connection for this account." },
@@ -165,7 +166,7 @@ function EntitlementCard({
 }
 
 export default async function AccountPage() {
-  const context = await requireCurrentAppContextForPage();
+  const context = await requireCompletedOnboardingAppContextForPage("/account");
   const [{ entitlements }, subscription] = await Promise.all([
     getEntitlementsForOrganization(context.organization.id),
     prisma.subscription.findUnique({

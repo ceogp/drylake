@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ExtensionConnectApprovalCard } from "@/components/extension-connect-approval-card";
 import { ExtensionConnectAuthButtons } from "@/components/extension-connect-auth-buttons";
@@ -9,7 +10,7 @@ import {
   createExtensionAuthRequest,
   getExtensionAuthRequestStatus,
 } from "@/lib/services/extension-auth-requests";
-import { getCurrentAppContext } from "@/lib/services/current-user";
+import { getCurrentAppContext, hasCompletedRequiredOnboarding } from "@/lib/services/current-user";
 import { getPrimaryWorkspacePath } from "@/lib/services/workspace";
 
 export const dynamic = "force-dynamic";
@@ -121,6 +122,12 @@ export default async function ExtensionConnectPage({
   const reconnectPath = buildReconnectPath(callback, editor, requestId, callbackState);
   const manualFallbackPath = buildManualFallbackPath(callback, editor);
   const context = await getCurrentAppContext();
+
+  if (context && !hasCompletedRequiredOnboarding(context.user)) {
+    const params = new URLSearchParams({ returnTo: reconnectPath });
+    redirect(`/onboarding/profile?${params.toString()}`);
+  }
+
   const workspaceHref = context ? (await getPrimaryWorkspacePath()) ?? "/app" : "/app";
   const signedInLabel = context?.user.profile?.displayName ?? context?.user.email ?? "";
   const connectRequest = requestId ? await getExtensionAuthRequestStatus(requestId) : null;

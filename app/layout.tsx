@@ -157,6 +157,9 @@ export default async function RootLayout({
               <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/workspace">
                 Agent Control
               </Link>
+              <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/skills">
+                Skills
+              </Link>
               <Link className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 transition hover:border-orange-400 hover:text-orange-200" href="/guard">
                 Learn about Guard
               </Link>

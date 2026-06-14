@@ -246,6 +246,9 @@ async function main() {
       "tar",
       [
         "--exclude=.git",
+        "--exclude=.env",
+        "--exclude=.env.*",
+        "--exclude=*.apps.googleusercontent.com.json",
         "--exclude=.next",
         "--exclude=node_modules",
         "--exclude=storage/cicd",

@@ -3,7 +3,12 @@ import { NextResponse } from "next/server";
 
 import { getConfiguredAppUrlForPath } from "@/lib/site-hosts";
 import { prisma } from "@/lib/prisma";
-import { createAppSession, recordAuthEvent } from "@/lib/services/app-session";
+import {
+  APP_SESSION_COOKIE,
+  createAppSession,
+  getAppSessionCookieOptions,
+  recordAuthEvent,
+} from "@/lib/services/app-session";
 import {
   consumeCognitoAuthState,
   exchangeCognitoCode,
@@ -17,8 +22,14 @@ function messageFromError(error: unknown) {
   return error instanceof Error ? error.message : "Cognito authentication failed.";
 }
 
-function redirectToPath(pathname: string) {
-  return NextResponse.redirect(getConfiguredAppUrlForPath(pathname));
+function redirectToPath(pathname: string, sessionToken?: string) {
+  const response = NextResponse.redirect(getConfiguredAppUrlForPath(pathname));
+
+  if (sessionToken) {
+    response.cookies.set(APP_SESSION_COOKIE, sessionToken, getAppSessionCookieOptions());
+  }
+
+  return response;
 }
 
 function onboardingPath(returnTo: string) {
@@ -118,10 +129,10 @@ export async function GET(request: NextRequest) {
     });
 
     if (mode === "sign-up" || needsOnboarding(sessionUser.user.profile)) {
-      return redirectToPath(onboardingPath(returnTo));
+      return redirectToPath(onboardingPath(returnTo), appSession.token);
     }
 
-    return redirectToPath(returnTo);
+    return redirectToPath(returnTo, appSession.token);
   } catch (error) {
     await recordAuthEvent({
       eventName: "auth.cognito.failed",

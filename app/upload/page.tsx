@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 
 import { UploadWorkflowPage } from "@/components/upload-workflow-page";
+import { requireCompletedOnboardingAppContextForPage } from "@/lib/services/current-user";
 import { getPrimaryWorkspaceVersionId } from "@/lib/services/workspace";
 
 export default async function UploadPage() {
+  await requireCompletedOnboardingAppContextForPage("/upload");
   const versionId = await getPrimaryWorkspaceVersionId();
 
   if (!versionId) {

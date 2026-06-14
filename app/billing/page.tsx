@@ -4,7 +4,7 @@ import { createCheckoutAction, openBillingPortalAction } from "@/app/actions";
 import { prisma } from "@/lib/prisma";
 import { syncSubscriptionFromStripe } from "@/lib/services/billing-sync";
 import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/services/entitlements";
-import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
+import { requireCompletedOnboardingAppContextForPage } from "@/lib/services/current-user";
 
 const BILLING_SUBTITLE =
   "Billing is intentionally simple: Free or Paid. Paid includes Agent Control and advanced Guard features in one subscription.";
@@ -90,6 +90,21 @@ function getSafeReturnPath(value: string | string[] | undefined) {
   } catch {
     return null;
   }
+}
+
+function buildCurrentBillingPath(searchParams: Record<string, string | string[] | undefined>) {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(searchParams)) {
+    const normalized = normalizeSearchValue(value);
+
+    if (normalized) {
+      params.set(key, normalized);
+    }
+  }
+
+  const query = params.toString();
+  return query ? `/billing?${query}` : "/billing";
 }
 
 function getSafeEditorReturnUrl(value: string | string[] | undefined) {
@@ -185,7 +200,10 @@ export default async function BillingPage({
           editorReturnUrl,
         })
       : appReturnPath;
-  const context = await requireCurrentAppContextForPage();
+  const welcomeReturnPath = returnPath ?? "/workspace";
+  const context = await requireCompletedOnboardingAppContextForPage(
+    buildCurrentBillingPath(resolvedSearchParams),
+  );
   const organizationId = context.organization.id;
 
   if (!organizationId) {
@@ -241,7 +259,7 @@ export default async function BillingPage({
                 <span className="rounded border border-stone-200 bg-stone-50 px-4 py-3">Extension connection</span>
                 <span className="rounded border border-stone-200 bg-stone-50 px-4 py-3">No card required</span>
               </div>
-              <Link className="tape-button mt-6 inline-flex bg-white px-5 py-3 text-sm text-black" href="/workspace">
+              <Link className="tape-button mt-6 inline-flex bg-white px-5 py-3 text-sm text-black" href={welcomeReturnPath}>
                 Continue Free
               </Link>
             </article>
@@ -269,7 +287,7 @@ export default async function BillingPage({
                   <form action={createCheckoutAction}>
                     <input name="organizationId" type="hidden" value={organizationId} />
                     <input name="plan" type="hidden" value="security_pro" />
-                    <input name="returnPath" type="hidden" value="/billing?welcome=1" />
+                    <input name="returnPath" type="hidden" value={checkoutReturnPath} />
                     <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
                       Choose Paid ($40/mo)
                     </button>

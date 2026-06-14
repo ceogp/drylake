@@ -2,11 +2,11 @@ import Link from "next/link";
 
 import { createProjectAction } from "@/app/actions";
 import { DryLakeLogo } from "@/components/drylake-logo";
-import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
+import { requireCompletedOnboardingAppContextForPage } from "@/lib/services/current-user";
 import { getActiveWorkspace, getImportWorkspacePath } from "@/lib/services/workspace";
 
 export async function AppHome() {
-  await requireCurrentAppContextForPage();
+  await requireCompletedOnboardingAppContextForPage("/app");
   const workspace = await getActiveWorkspace();
   const importWorkspacePath = (await getImportWorkspacePath()) ?? "/workspace";
 

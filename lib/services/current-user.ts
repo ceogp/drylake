@@ -30,6 +30,28 @@ export type AppContext = {
   organization: Organization;
 };
 
+export function hasCompletedRequiredOnboarding(user: SessionUser) {
+  return Boolean(user.profile?.onboardingCompletedAt && user.profile.country);
+}
+
+function onboardingPath(returnTo: string) {
+  const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//")
+    ? returnTo
+    : "/workspace";
+  const params = new URLSearchParams({ returnTo: safeReturnTo });
+
+  return `/onboarding/profile?${params.toString()}`;
+}
+
+function signInPath(returnTo: string) {
+  const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//")
+    ? returnTo
+    : "/workspace";
+  const params = new URLSearchParams({ redirect_url: safeReturnTo });
+
+  return `/sign-in?${params.toString()}`;
+}
+
 async function loadUserByEmail(email: string) {
   return prisma.user.findUnique({
     where: { email },
@@ -189,11 +211,21 @@ export async function requireCurrentAppContext(options?: {
   return context;
 }
 
-export async function requireCurrentAppContextForPage() {
+export async function requireCurrentAppContextForPage(returnTo = "/workspace") {
   const context = await getCurrentAppContext();
 
   if (!context) {
-    redirect("/sign-in");
+    redirect(signInPath(returnTo));
+  }
+
+  return context;
+}
+
+export async function requireCompletedOnboardingAppContextForPage(returnTo = "/workspace") {
+  const context = await requireCurrentAppContextForPage(returnTo);
+
+  if (!hasCompletedRequiredOnboarding(context.user)) {
+    redirect(onboardingPath(returnTo));
   }
 
   return context;

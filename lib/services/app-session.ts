@@ -113,13 +113,17 @@ export async function recordAuthEvent(input: {
 
 export async function setAppSessionCookie(token: string) {
   const cookieStore = await cookies();
-  cookieStore.set(APP_SESSION_COOKIE, token, {
+  cookieStore.set(APP_SESSION_COOKIE, token, getAppSessionCookieOptions());
+}
+
+export function getAppSessionCookieOptions() {
+  return {
     httpOnly: true,
     maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
     path: "/",
     sameSite: "lax",
     secure: env.NODE_ENV === "production",
-  });
+  } as const;
 }
 
 export async function clearAppSessionCookie() {

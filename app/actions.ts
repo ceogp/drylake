@@ -617,7 +617,16 @@ export async function completeOnboardingProfileAction(formData: FormData) {
   revalidatePath("/admin/users");
 
   if (planIntent === "paid") {
-    redirect("/billing?welcome=1");
+    const params = new URLSearchParams({
+      welcome: "1",
+      returnPath,
+    });
+
+    if (returnPath.startsWith("/extensions/connect")) {
+      params.set("source", "extension");
+    }
+
+    redirect(`/billing?${params.toString()}`);
   }
 
   redirect(returnPath);
