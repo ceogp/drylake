@@ -35,6 +35,7 @@ model User {
   cloudAnalysisJobs     CloudAnalysisJob[]       @relation("CloudAnalysisJobActor")
   appSessions           AppSession[]
   authEvents            AuthEvent[]              @relation("AuthEventActor")
+  productAccounts       ProductAccount[]
 
   @@unique([authProvider, authSubject])
 }
@@ -90,6 +91,30 @@ model Organization {
   appSessions           AppSession[]
   authEvents            AuthEvent[]
   invitations           OrganizationInvitation[]
+  productAccounts       ProductAccount[]
+}
+
+model ProductAccount {
+  id                    String        @id @default(cuid())
+  userId                String
+  organizationId        String?
+  productKey            String        @default("drylake")
+  status                String        @default("active")
+  planIntent            String?
+  onboardingCompletedAt DateTime?
+  metadataJson          Json?
+  firstSeenAt           DateTime      @default(now())
+  lastSeenAt            DateTime      @default(now())
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization          Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, productKey])
+  @@index([productKey, createdAt])
+  @@index([organizationId, productKey])
+  @@index([planIntent])
+  @@index([status])
 }
 
 model OrganizationMembership {

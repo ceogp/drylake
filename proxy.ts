@@ -8,13 +8,16 @@ import {
 } from "./lib/admin-auth";
 import {
   getConfiguredAppUrlForPath,
-  isConfiguredAppHost,
   isConfiguredAdminInternalHost,
   isConfiguredMarketingHost,
 } from "./lib/site-hosts";
 
 function isAdminAllowedHost(host: string | null) {
-  return isConfiguredAdminInternalHost(host) || isConfiguredAppHost(host);
+  return isConfiguredAdminInternalHost(host);
+}
+
+function notFound() {
+  return new NextResponse("Not found", { status: 404 });
 }
 
 function handleProxyRequest(request: NextRequest) {
@@ -43,7 +46,7 @@ function handleProxyRequest(request: NextRequest) {
   }
 
   if (isAdminPagePath(pathname) || isAdminApiPath(pathname)) {
-    return NextResponse.redirect(getConfiguredAppUrlForPath("/", ""));
+    return notFound();
   }
 
   if (!isConfiguredMarketingHost(host)) {

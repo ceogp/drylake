@@ -77,13 +77,13 @@ export default async function OnboardingProfilePage({
           </h1>
           <p className="mt-4 text-sm leading-7 text-zinc-400">
             This is separate from Cognito authentication. DryLake stores these details in the app database so admins can see
-            real user records, contact details, and Free/Paid intent.
+            real user records, country, contact details, and Free/Paid intent.
           </p>
           <div className="mt-6 grid gap-3 text-sm text-zinc-300">
             <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Name and contact details</span>
             <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Company or team name</span>
             <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Free or Paid intent</span>
-            <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Visible in internal admin users</span>
+            <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Ready for AWS QuickSight reporting</span>
           </div>
         </aside>
 
@@ -125,7 +125,6 @@ export default async function OnboardingProfilePage({
                 label="Phone number"
                 name="phoneNumber"
                 placeholder="+1 555 0100"
-                required
                 value={profile?.phoneNumber}
               />
               <ProfileInput
@@ -141,7 +140,6 @@ export default async function OnboardingProfilePage({
                 label="Address line 1"
                 name="addressLine1"
                 placeholder="123 Market Street"
-                required
                 value={profile?.addressLine1}
               />
               <ProfileInput

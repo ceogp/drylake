@@ -484,6 +484,16 @@ function cleanProfileText(formData: FormData, key: string, maxLength: number) {
   return value ? value.slice(0, maxLength) : null;
 }
 
+function requireProfileText(formData: FormData, key: string, maxLength: number) {
+  const value = cleanProfileText(formData, key, maxLength);
+
+  if (!value) {
+    throw new Error(`${key} is required.`);
+  }
+
+  return value;
+}
+
 export async function updateProfileAction(formData: FormData) {
   const context = await requireCurrentAppContextForPage();
   const displayName =
@@ -529,10 +539,8 @@ export async function updateProfileAction(formData: FormData) {
 export async function completeOnboardingProfileAction(formData: FormData) {
   const context = await requireCurrentAppContextForPage();
   const displayName =
-    cleanProfileText(formData, "displayName", 160) ??
-    context.user.profile?.displayName ??
-    context.user.email.split("@")[0] ??
-    context.user.email;
+    requireProfileText(formData, "displayName", 160);
+  const country = requireProfileText(formData, "country", 96);
   const planIntent = String(formData.get("planIntent") ?? "free").trim() === "paid" ? "paid" : "free";
   const organizationName = cleanProfileText(formData, "organizationName", 160);
   const returnPath = getSafeReturnPath(formData.get("returnTo")) ?? "/workspace";
@@ -544,7 +552,7 @@ export async function completeOnboardingProfileAction(formData: FormData) {
       update: {
         displayName,
         phoneNumber: cleanProfileText(formData, "phoneNumber", 64),
-        country: cleanProfileText(formData, "country", 96),
+        country,
         addressLine1: cleanProfileText(formData, "addressLine1", 180),
         addressLine2: cleanProfileText(formData, "addressLine2", 180),
         city: cleanProfileText(formData, "city", 96),
@@ -559,7 +567,7 @@ export async function completeOnboardingProfileAction(formData: FormData) {
         userId: context.user.id,
         displayName,
         phoneNumber: cleanProfileText(formData, "phoneNumber", 64),
-        country: cleanProfileText(formData, "country", 96),
+        country,
         addressLine1: cleanProfileText(formData, "addressLine1", 180),
         addressLine2: cleanProfileText(formData, "addressLine2", 180),
         city: cleanProfileText(formData, "city", 96),
@@ -569,6 +577,30 @@ export async function completeOnboardingProfileAction(formData: FormData) {
         locale: cleanProfileText(formData, "locale", 32) ?? "en-US",
         signupPlanIntent: planIntent,
         onboardingCompletedAt: completedAt,
+      },
+    }),
+    prisma.productAccount.upsert({
+      where: {
+        userId_productKey: {
+          userId: context.user.id,
+          productKey: "drylake",
+        },
+      },
+      update: {
+        organizationId: context.organization.id,
+        status: "active",
+        planIntent,
+        onboardingCompletedAt: completedAt,
+        lastSeenAt: completedAt,
+      },
+      create: {
+        userId: context.user.id,
+        organizationId: context.organization.id,
+        productKey: "drylake",
+        status: "active",
+        planIntent,
+        onboardingCompletedAt: completedAt,
+        lastSeenAt: completedAt,
       },
     }),
     ...(organizationName

@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 
-import { isConfiguredAdminInternalHost, isConfiguredAppHost } from "@/lib/site-hosts";
+import { isConfiguredAdminInternalHost } from "@/lib/site-hosts";
 
 export const ADMIN_PATH_PREFIX = "/admin";
 export const ADMIN_API_PATH_PREFIX = "/api/v1/admin";
@@ -77,7 +77,7 @@ export function hasValidBasicAuthHeader(
 export function getAdminRequestAuthResult(headers: Headers): AdminAuthResult {
   const host = headers.get("x-forwarded-host") ?? headers.get("host");
 
-  if (!isConfiguredAdminInternalHost(host) && !isConfiguredAppHost(host)) {
+  if (!isConfiguredAdminInternalHost(host)) {
     return {
       ok: false,
       status: 404,
@@ -117,6 +117,12 @@ export function getAdminRequestAuthResult(headers: Headers): AdminAuthResult {
 
 export async function requireAdminActionAccess() {
   const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+
+  if (!isConfiguredAdminInternalHost(host)) {
+    throw new Error("Unauthorized: admin actions require the internal admin host.");
+  }
+
   const credentials = getInternalAdminCredentials();
 
   if (!credentials.configured) {

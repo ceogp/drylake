@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { getConfiguredAppUrlForPath } from "@/lib/site-hosts";
+import { prisma } from "@/lib/prisma";
 import { createAppSession, recordAuthEvent } from "@/lib/services/app-session";
 import {
   consumeCognitoAuthState,
@@ -26,12 +27,10 @@ function onboardingPath(returnTo: string) {
 }
 
 function needsOnboarding(profile: {
-  phoneNumber?: string | null;
   country?: string | null;
-  addressLine1?: string | null;
   onboardingCompletedAt?: Date | null;
 } | null) {
-  return !profile?.onboardingCompletedAt || !profile.phoneNumber || !profile.country || !profile.addressLine1;
+  return !profile?.onboardingCompletedAt || !profile.country;
 }
 
 export async function GET(request: NextRequest) {
@@ -79,6 +78,29 @@ export async function GET(request: NextRequest) {
         mode,
         tokenType: tokenResponse.token_type ?? null,
         expiresIn: tokenResponse.expires_in ?? null,
+      },
+    });
+
+    await prisma.productAccount.upsert({
+      where: {
+        userId_productKey: {
+          userId: sessionUser.user.id,
+          productKey: "drylake",
+        },
+      },
+      update: {
+        organizationId: sessionUser.organization.id,
+        status: "active",
+        lastSeenAt: new Date(),
+      },
+      create: {
+        userId: sessionUser.user.id,
+        organizationId: sessionUser.organization.id,
+        productKey: "drylake",
+        status: "active",
+        planIntent: sessionUser.user.profile?.signupPlanIntent ?? null,
+        onboardingCompletedAt: sessionUser.user.profile?.onboardingCompletedAt ?? null,
+        lastSeenAt: new Date(),
       },
     });
 
