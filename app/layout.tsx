@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     default: "DryLake",
     template: "%s | DryLake",
   },
-  description: "DryLake is a visual kanban and pipeline planner for assigning coding phases to AI coding agents.",
+  description: "DryLake has Agent Control and Security in one product.",
   icons: {
     icon: [
       { url: `/favicon.ico?v=${iconVersion}`, sizes: "any" },
@@ -151,31 +151,26 @@ export default async function RootLayout({
               </div>
             </a>
             <nav className="hidden items-center gap-6 text-sm font-medium text-zinc-400 md:flex">
-              <Link className="transition hover:text-zinc-100" href="/">
-                Overview
-              </Link>
               <Link className="transition hover:text-zinc-100" href="/guard">
                 Guard
               </Link>
               <Link className="transition hover:text-zinc-100" href="/extensions/install">
                 Install
               </Link>
-              <Link className="transition hover:text-zinc-100" href="/pricing">
-                Pricing
-              </Link>
               {appContext ? (
                 <>
                   <Link className="transition hover:text-zinc-100" href="/workspace">
                     Agent Control
                   </Link>
-                  <Link className="transition hover:text-zinc-100" href="/skills">
-                    Skills
-                  </Link>
                   <Link className="transition hover:text-zinc-100" href="/billing">
                     Billing
                   </Link>
                 </>
-              ) : null}
+              ) : (
+                <Link className="transition hover:text-zinc-100" href="/pricing">
+                  Pricing
+                </Link>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3">
