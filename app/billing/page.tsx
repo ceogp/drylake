@@ -7,7 +7,7 @@ import { getEntitlementsForOrganization, type EntitlementKey } from "@/lib/servi
 import { requireCompletedOnboardingAppContextForPage } from "@/lib/services/current-user";
 
 const BILLING_SUBTITLE =
-  "Billing is intentionally simple: Free or Paid. After your choice, DryLake returns you to Skills or back to the extension flow.";
+  "See your current plan, payment status, and Paid Guard access in one place.";
 
 const PLAN_TIERS = ["free", "pro", "security_pro", "team_security", "enterprise"] as const;
 const ALLOWED_EDITOR_RETURN_PROTOCOLS = new Set(["vscode:", "vscode-insiders:", "cursor:"]);
@@ -130,7 +130,19 @@ function getSafeEditorReturnUrl(value: string | string[] | undefined) {
 function getPublicTierLabel(tier: string | null | undefined) {
   const normalized = (tier ?? "free").toLowerCase();
 
-  return normalized === "free" ? "Free" : "Paid";
+  if (normalized === "security_pro") {
+    return "Paid";
+  }
+
+  if (normalized === "pro") {
+    return "Legacy Pro";
+  }
+
+  if (normalized === "team_security" || normalized === "enterprise") {
+    return "Guard for Teams";
+  }
+
+  return "Free";
 }
 
 function buildBillingContinuationPath(args: {
@@ -176,6 +188,18 @@ function billingResultCopy(result: BillingResult) {
   return null;
 }
 
+function billingStatusLabel(status: string | null | undefined) {
+  const normalized = String(status ?? "free").toLowerCase();
+
+  if (normalized === "active") return "Active";
+  if (normalized === "trialing" || normalized === "trial") return "Trial";
+  if (normalized === "past_due") return "Payment issue";
+  if (normalized === "incomplete" || normalized === "incomplete_expired") return "Payment failed";
+  if (normalized === "canceled") return "Canceled";
+  if (normalized === "unpaid") return "Unpaid";
+  return "Free";
+}
+
 export default async function BillingPage({
   searchParams,
 }: {
@@ -188,7 +212,6 @@ export default async function BillingPage({
   const editor = normalizeEditorTarget(resolvedSearchParams.editor);
   const editorReturnUrl = getSafeEditorReturnUrl(resolvedSearchParams.editorReturnUrl);
   const billingResult = normalizeBillingResult(resolvedSearchParams.billing);
-  const showWelcomeChoice = normalizeSearchValue(resolvedSearchParams.welcome) === "1";
   const fallbackReturnPath = source === "extension" ? "/app" : "/billing?checkout=success";
   const appReturnPath = returnPath ?? fallbackReturnPath;
   const checkoutReturnPath =
@@ -220,7 +243,13 @@ export default async function BillingPage({
   const hasSubscription = Boolean(subscription?.stripeCustomerId);
   const userCanManageBilling = context.activeMembership.role === "owner" || context.activeMembership.role === "admin";
   const requiredSatisfied = planRank(organizationTier) >= planRank(requiredPlan);
-  const isPaid = planRank(organizationTier) >= planRank("security_pro");
+  const isLegacyPro = String(organizationTier).toLowerCase() === "pro";
+  const isPaid =
+    Boolean(entitlements.canUseFixWithAI) ||
+    Boolean(entitlements.canUseApprovedUpload) ||
+    Boolean(entitlements.canUseDeepCloudAnalysis) ||
+    Boolean(entitlements.canUseLocalWatchdog) ||
+    planRank(organizationTier) >= planRank("team_security");
   const showEditorReturn =
     source === "extension" && Boolean(editorReturnUrl) && (requiredSatisfied || billingResult === "success");
   const statusCopy = billingResultCopy(billingResult);
@@ -231,7 +260,7 @@ export default async function BillingPage({
         <div className="space-y-4">
           <p className="tape-eyebrow">Billing</p>
           <h1 className="font-[family-name:var(--font-heading)] text-5xl font-black uppercase text-stone-950">
-            Manage your DryLake plan.
+            Plan and billing
           </h1>
           {requiredPlan && source === "extension" ? (
             <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-700">
@@ -244,80 +273,26 @@ export default async function BillingPage({
           <p className="max-w-3xl text-lg leading-8 text-stone-700">{BILLING_SUBTITLE}</p>
         </div>
 
-        {showWelcomeChoice ? (
-          <section className="grid gap-6 lg:grid-cols-2">
-            <article className="tape-panel bg-white p-6">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Free</p>
-              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
-                Start free.
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-stone-700">
-                Use Agent Control and run local Guard scans without uploading code or starting a subscription.
-              </p>
-              <div className="mt-5 grid gap-2 text-sm text-stone-700">
-                <span className="rounded border border-stone-200 bg-stone-50 px-4 py-3">Local Guard report</span>
-                <span className="rounded border border-stone-200 bg-stone-50 px-4 py-3">Extension connection</span>
-                <span className="rounded border border-stone-200 bg-stone-50 px-4 py-3">No card required</span>
-              </div>
-              <Link className="tape-button mt-6 inline-flex bg-white px-5 py-3 text-sm text-black" href={welcomeReturnPath}>
-                Continue Free
-              </Link>
-            </article>
-
-            <article className="tape-panel bg-zinc-950 p-6 text-zinc-100">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-emerald-300">Paid</p>
-              <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-white">
-                Unlock the full workflow.
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-zinc-300">
-                Paid includes Agent Control plus advanced Guard features: approved upload, Fix with AI,
-                Deep Cloud Analysis, saved reports, and Local Watchdog.
-              </p>
-              <div className="mt-5 grid gap-2 text-sm text-zinc-300">
-                <span className="rounded border border-zinc-800 bg-[#111414] px-4 py-3">Fix with AI</span>
-                <span className="rounded border border-zinc-800 bg-[#111414] px-4 py-3">Deep Cloud Analysis</span>
-                <span className="rounded border border-zinc-800 bg-[#111414] px-4 py-3">Saved reports and Watchdog</span>
-              </div>
-              <div className="mt-6">
-                {isPaid ? (
-                  <Link className="tape-button inline-flex bg-emerald-400 px-5 py-3 text-sm text-zinc-950" href={welcomeReturnPath}>
-                    Paid Is Active
-                  </Link>
-                ) : userCanManageBilling ? (
-                  <form action={createCheckoutAction}>
-                    <input name="organizationId" type="hidden" value={organizationId} />
-                    <input name="plan" type="hidden" value="security_pro" />
-                    <input name="returnPath" type="hidden" value={checkoutReturnPath} />
-                    <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
-                      Choose Paid ($40/mo)
-                    </button>
-                  </form>
-                ) : (
-                  <p className="rounded border border-zinc-800 bg-[#111414] px-4 py-3 text-sm text-zinc-400">
-                    Ask an owner or admin to upgrade this account.
-                  </p>
-                )}
-              </div>
-            </article>
-          </section>
-        ) : null}
-
         <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
           <article className="tape-panel bg-white p-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current plan</p>
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Current access</p>
                 <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-stone-950">
                   {getPublicTierLabel(organizationTier)}
                 </h2>
               </div>
               <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/pricing">
-                Compare Free and Paid
+                View pricing
               </Link>
             </div>
-            <p className="mt-2 text-sm leading-7 text-stone-700">Status: {subscription?.status ?? "free"}</p>
+            <p className="mt-2 text-sm leading-7 text-stone-700">Status: {billingStatusLabel(subscription?.status)}</p>
             <p className="text-sm leading-7 text-stone-700">
-              Free includes local Guard and Agent Control. Paid adds hosted workflow, approved upload, Fix with AI, Deep Cloud Analysis, saved reports, and Local Watchdog.
+              {isPaid
+                ? "Paid includes hosted workflow, approved upload, Fix with AI, Deep Cloud Analysis, saved reports, and Local Watchdog."
+                : isLegacyPro
+                  ? "Legacy Pro includes hosted planning, but not the paid Guard cloud workflow."
+                  : "Free includes local Agent Control, local Guard scan, and local report review. No card is required."}
             </p>
             {statusCopy ? (
               <div className="mt-5 rounded border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm leading-7 text-stone-800">
@@ -336,7 +311,7 @@ export default async function BillingPage({
                   <input name="plan" type="hidden" value="security_pro" />
                   <input name="returnPath" type="hidden" value={checkoutReturnPath} />
                   <button className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300" type="submit">
-                    Upgrade To Paid ($40/mo)
+                    {isLegacyPro ? "Upgrade to Paid Guard ($40/mo)" : "Upgrade to Paid ($40/mo)"}
                   </button>
                 </form>
               ) : null}
@@ -382,7 +357,7 @@ export default async function BillingPage({
           </article>
 
           <article className="tape-panel bg-white p-6">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">Entitlements</p>
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-stone-500">What is enabled</p>
             <div className="mt-5 grid gap-3">
               {ENTITLEMENT_ITEMS.map(({ key, label }) => {
                 const value = Boolean(entitlements[key]);

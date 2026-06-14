@@ -541,7 +541,6 @@ export async function completeOnboardingProfileAction(formData: FormData) {
   const displayName =
     requireProfileText(formData, "displayName", 160);
   const country = requireProfileText(formData, "country", 96);
-  const planIntent = String(formData.get("planIntent") ?? "free").trim() === "paid" ? "paid" : "free";
   const organizationName = cleanProfileText(formData, "organizationName", 160);
   const returnPath = getSafeReturnPath(formData.get("returnTo")) ?? "/skills";
   const completedAt = new Date();
@@ -560,7 +559,7 @@ export async function completeOnboardingProfileAction(formData: FormData) {
         postalCode: cleanProfileText(formData, "postalCode", 32),
         timezone: cleanProfileText(formData, "timezone", 64) ?? context.user.profile?.timezone ?? "UTC",
         locale: cleanProfileText(formData, "locale", 32) ?? context.user.profile?.locale ?? "en-US",
-        signupPlanIntent: planIntent,
+        signupPlanIntent: null,
         onboardingCompletedAt: completedAt,
       },
       create: {
@@ -575,7 +574,7 @@ export async function completeOnboardingProfileAction(formData: FormData) {
         postalCode: cleanProfileText(formData, "postalCode", 32),
         timezone: cleanProfileText(formData, "timezone", 64) ?? "UTC",
         locale: cleanProfileText(formData, "locale", 32) ?? "en-US",
-        signupPlanIntent: planIntent,
+        signupPlanIntent: null,
         onboardingCompletedAt: completedAt,
       },
     }),
@@ -589,7 +588,7 @@ export async function completeOnboardingProfileAction(formData: FormData) {
       update: {
         organizationId: context.organization.id,
         status: "active",
-        planIntent,
+        planIntent: null,
         onboardingCompletedAt: completedAt,
         lastSeenAt: completedAt,
       },
@@ -598,7 +597,7 @@ export async function completeOnboardingProfileAction(formData: FormData) {
         organizationId: context.organization.id,
         productKey: "drylake",
         status: "active",
-        planIntent,
+        planIntent: null,
         onboardingCompletedAt: completedAt,
         lastSeenAt: completedAt,
       },
@@ -615,21 +614,7 @@ export async function completeOnboardingProfileAction(formData: FormData) {
 
   revalidatePath("/account");
   revalidatePath("/admin/users");
-
-  if (planIntent === "paid") {
-    const params = new URLSearchParams({
-      welcome: "1",
-      returnPath,
-    });
-
-    if (returnPath.startsWith("/extensions/connect")) {
-      params.set("source", "extension");
-    }
-
-    redirect(`/billing?${params.toString()}`);
-  }
-
-  redirect(returnPath);
+  redirect(`/onboarding/plan?returnTo=${encodeURIComponent(returnPath)}`);
 }
 
 function formList(value: FormDataEntryValue | null) {

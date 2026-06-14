@@ -142,9 +142,6 @@ export default async function RootLayout({
                   <Link className="transition hover:text-zinc-100" href="/workspace">
                     Agent Control
                   </Link>
-                  <Link className="transition hover:text-zinc-100" href="/billing">
-                    Billing
-                  </Link>
                 </>
               ) : (
                 <Link className="transition hover:text-zinc-100" href="/pricing">

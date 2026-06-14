@@ -71,17 +71,16 @@ export default async function OnboardingProfilePage({
             DryLake account setup
           </p>
           <h1 className="mt-4 font-[family-name:var(--font-heading)] text-4xl font-semibold leading-tight text-zinc-50">
-            Tell us who is joining.
+            Complete your DryLake profile.
           </h1>
           <p className="mt-4 text-sm leading-7 text-zinc-400">
-            This is separate from Cognito authentication. DryLake stores these details in the app database so admins can see
-            real user records, country, contact details, and Free/Paid intent before opening Skills or reconnecting the editor.
+            First create the account, then choose whether to continue free or upgrade to paid. This step just collects
+            the profile details DryLake needs before opening the app or checkout.
           </p>
           <div className="mt-6 grid gap-3 text-sm text-zinc-300">
-            <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Name and contact details</span>
-            <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Company or team name</span>
-            <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Free or Paid intent</span>
-            <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Ready for AWS QuickSight reporting</span>
+            <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Full name and country</span>
+            <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Optional company and contact details</span>
+            <span className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3">Next: choose Free or Paid</span>
           </div>
         </aside>
 
@@ -94,9 +93,8 @@ export default async function OnboardingProfilePage({
               Complete your DryLake profile.
             </h2>
             <p className="mt-3 text-sm leading-7 text-zinc-400">
-              Start Free if you only want local Agent Control and Guard. Choose Paid if you want Fix with AI,
-              Deep Cloud Analysis, saved reports, and Local Watchdog. After your choice, DryLake opens your Skills
-              library or returns you to the extension approval flow.
+              DryLake collects the same profile basics first. After this step, you will choose whether to continue free
+              or go to paid checkout.
             </p>
           </div>
 
@@ -178,34 +176,12 @@ export default async function OnboardingProfilePage({
               />
             </div>
 
-            <fieldset className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-              <legend className="px-2 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Plan intent
-              </legend>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <label className="cursor-pointer rounded border border-zinc-800 bg-[#111414] p-4 transition hover:border-emerald-400">
-                  <input className="mr-3" defaultChecked={profile?.signupPlanIntent !== "paid"} name="planIntent" type="radio" value="free" />
-                  <span className="font-semibold text-zinc-100">Start Free</span>
-                  <span className="mt-2 block text-sm leading-6 text-zinc-400">
-                    Use Agent Control and local Guard without a subscription.
-                  </span>
-                </label>
-                <label className="cursor-pointer rounded border border-emerald-400/60 bg-emerald-400/10 p-4 transition hover:border-emerald-300">
-                  <input className="mr-3" defaultChecked={profile?.signupPlanIntent === "paid"} name="planIntent" type="radio" value="paid" />
-                  <span className="font-semibold text-zinc-100">I want Paid</span>
-                  <span className="mt-2 block text-sm leading-6 text-zinc-400">
-                    Continue to billing for Fix with AI, cloud analysis, saved reports, and Watchdog.
-                  </span>
-                </label>
-              </div>
-            </fieldset>
-
             <div className="flex flex-wrap items-center gap-3">
               <button className="rounded border border-emerald-400 bg-emerald-400 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300" type="submit">
                 Continue
               </button>
               <p className="text-sm leading-7 text-zinc-400">
-                Profile setup is required before DryLake opens Skills, billing, or extension approval.
+                Profile setup is required before DryLake opens the next step.
               </p>
             </div>
           </form>

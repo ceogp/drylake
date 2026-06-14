@@ -2120,20 +2120,29 @@ export class ControlRoomProvider {
     const runNextButton = runbook?.phases.length ? '<button class="secondary" data-command="drylake.runNextPhase">Run Next Phase</button>' : "";
     const headerTitle = isSecurityView ? "Security" : "Agent Control";
     const headerSubtitle = "DryLake Control Plane";
-    const controlRoomActions = isSecurityView
-      ? `<div class="toggle-group compact" role="group" aria-label="Security view">
-          <button class="toggle-btn active" type="button" aria-current="page">Guard Scan</button>
-          <button class="secondary" data-command="drylake.guardFixWithAi">Active Guard</button>
-          <button class="secondary" data-command="drylake.openSecurityReport">Reports</button>
+    const controlRoomTabs = isSecurityView
+      ? `<div class="toggle-group compact" role="tablist" aria-label="Security section">
+          <button class="toggle-btn active" type="button" aria-current="page">DryLake Security Scan</button>
         </div>`
-      : `<div class="toggle-group compact" role="group" aria-label="Agent Control view">
+      : `<div class="toggle-group compact" role="tablist" aria-label="Agent Control section">
           <button class="toggle-btn${view === "pipeline" ? " active" : ""}" data-view="pipeline">Pipeline</button>
           <button class="toggle-btn${view === "kanban" ? " active" : ""}" data-view="kanban">Kanban</button>
-        </div>
+        </div>`;
+    const controlRoomActions = isSecurityView
+      ? ""
+      : `
         <button class="secondary" data-command="drylake.openSessions">Sessions</button>
-        <button class="secondary" data-command="drylake.newSession">New Plan</button>
-        ${executionToggle}
-        ${runNextButton}`;
+        <button class="secondary" data-command="drylake.newSession">New Plan</button>`;
+    const securityActions = isSecurityView && this.securityScan
+      ? `<button class="secondary" data-command="drylake.openSecurityReport">Open Report</button>
+        <button class="secondary" data-command="drylake.copySecuritySummary">Copy Summary</button>`
+      : "";
+    const executionToolbar = !isSecurityView && (executionToggle || runNextButton)
+      ? `<div class="secondary-tabs">
+          ${executionToggle}
+          ${runNextButton}
+        </div>`
+      : "";
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -2430,8 +2439,11 @@ export class ControlRoomProvider {
         </button>
       </div>
       <div class="secondary-tabs">
+        ${controlRoomTabs}
         ${controlRoomActions}
+        ${securityActions}
       </div>
+      ${executionToolbar}
     </header>
     ${banner}
     ${chatPanel}

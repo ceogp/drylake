@@ -49,13 +49,10 @@ const ENTITLEMENT_ITEMS: Array<{ key: EntitlementKey; label: string; description
 ];
 
 const ACCOUNT_LINKS = [
-  { label: "Open workspace", href: "/workspace", detail: "Go back to your active project and day-to-day workflow." },
-  { label: "Skills library", href: "/skills", detail: "Review imported skills, subagents, and package surfaces." },
-  { label: "Security reports", href: "/security/reports", detail: "Review personal or shared Guard report history." },
-  { label: "Team security", href: "/team/security", detail: "Open baselines, policy, and Continuous Watch state." },
-  { label: "Connect extension", href: "/extensions/connect", detail: "Approve VS Code or Cursor connection for this account." },
-  { label: "Billing", href: "/billing", detail: "Upgrade, confirm plan access, and open the billing portal." },
-  { label: "Settings", href: "/settings", detail: "Review profile, organization, roles, and workspace links." },
+  { label: "Workspace", href: "/workspace", detail: "Open Agent Control." },
+  { label: "Skills", href: "/skills", detail: "Open the skills library." },
+  { label: "Security reports", href: "/security/reports", detail: "Open saved Guard reports." },
+  { label: "Billing", href: "/billing", detail: "Manage plan and payment details." },
 ];
 
 function publicTierLabel(value: string | null | undefined) {
@@ -186,22 +183,18 @@ export default async function AccountPage() {
           <div className="space-y-4">
             <p className="tape-eyebrow">Account</p>
             <h1 className="font-[family-name:var(--font-heading)] text-5xl font-semibold text-zinc-50">
-              Manage DryLake access for {context.organization.name}.
+              Your account
             </h1>
             <p className="max-w-3xl text-lg leading-8 text-zinc-300">
-              Check your current plan, review Guard access, manage billing, and jump into the extension,
-              saved reports, or team security surfaces from one place.
+              Profile, organization, and plan details for {context.organization.name}.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/workspace">
               Workspace
             </Link>
-            <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/pricing">
-              Pricing
-            </Link>
-            <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/security/reports">
-              Security Reports
+            <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/billing">
+              Billing
             </Link>
           </div>
         </div>
@@ -308,7 +301,7 @@ export default async function AccountPage() {
           <article className="tape-panel p-6">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">Account paths</p>
             <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold text-zinc-50">
-              Where to manage each part.
+              Quick links.
             </h2>
             <div className="mt-6 grid gap-3 md:grid-cols-2">
               {ACCOUNT_LINKS.map((item) => (

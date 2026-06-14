@@ -366,11 +366,11 @@ describe("Control Room webview", () => {
 
     expect(html).toContain("Agentic Security Posture");
     expect(html).toContain("Run Guard Scan");
-    expect(html).toContain('aria-label="Security view"');
-    expect(html).toContain('aria-current="page">Guard Scan</button>');
+    expect(html).toContain('aria-label="Security section"');
+    expect(html).toContain('aria-current="page">DryLake Security Scan</button>');
     expect(html).not.toContain('class="toggle-btn active" data-command="drylake.runSecurityScan"');
-    expect(html).toContain(">Active Guard</button>");
-    expect(html).toContain(">Reports</button>");
+    expect(html).not.toContain(">Active Guard</button>");
+    expect(html).not.toContain(">Reports</button>");
     expect(html).toContain("installed extensions, agent files, skills, MCP servers");
     expect(html).toContain("connected-tool blast radius");
     expect(html).toContain("Register, then scan local IDE and workspace metadata");
@@ -739,6 +739,7 @@ describe("Control Room webview", () => {
     const html = panel?.webview.html ?? "";
     expect(storedView).toBe("security");
     expect(html).toContain("<strong>Security</strong>");
+    expect(html).toContain("DryLake Security Scan");
     expect(html).toContain("Agentic Security Posture");
     expect(html).not.toContain("Build Plan Chat");
   });

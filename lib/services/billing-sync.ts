@@ -86,6 +86,10 @@ function pickBestSubscription(subs: Stripe.Subscription[]): Stripe.Subscription 
   return ranked[0]?.sub ?? null;
 }
 
+function pickLatestSubscription(subs: Stripe.Subscription[]): Stripe.Subscription | null {
+  return [...subs].sort((a, b) => (b.created ?? 0) - (a.created ?? 0))[0] ?? null;
+}
+
 export type StripeSyncResult = {
   ok: true;
   tier: Tier;
@@ -145,6 +149,8 @@ export async function syncSubscriptionFromStripe(organizationId: string): Promis
 
   let bestSubscription: Stripe.Subscription | null = null;
   let sourceCustomerId: string | null = null;
+  let latestSubscription: Stripe.Subscription | null = null;
+  let latestCustomerId: string | null = null;
   let source: StripeSyncResult["source"] = "none";
 
   for (const customerId of customerIds) {
@@ -154,6 +160,11 @@ export async function syncSubscriptionFromStripe(organizationId: string): Promis
         status: "all",
         limit: 10,
       });
+      const latest = pickLatestSubscription(subsResponse.data);
+      if (latest && (!latestSubscription || (latest.created ?? 0) > (latestSubscription.created ?? 0))) {
+        latestSubscription = latest;
+        latestCustomerId = customerId;
+      }
       const candidate = pickBestSubscription(subsResponse.data);
       if (!candidate) continue;
 
@@ -175,11 +186,14 @@ export async function syncSubscriptionFromStripe(organizationId: string): Promis
     }
   }
 
-  const priceId = bestSubscription?.items.data[0]?.price?.id ?? null;
-  const tier = tierForStripePriceId(priceId);
-  const status = bestSubscription?.status ?? (existingSub?.status ?? (tier === "free" ? "free" : "active"));
-  const stripeSubscriptionId = bestSubscription?.id ?? null;
-  const periodEndUnix = bestSubscription?.items.data[0]?.current_period_end ?? null;
+  const effectiveSubscription = bestSubscription;
+  const priceId = effectiveSubscription?.items.data[0]?.price?.id ?? null;
+  const tier = effectiveSubscription ? tierForStripePriceId(priceId) : "free";
+  const status = effectiveSubscription?.status ?? latestSubscription?.status ?? "free";
+  const stripeSubscriptionId = effectiveSubscription?.id ?? latestSubscription?.id ?? null;
+  const periodEndUnix = effectiveSubscription?.items.data[0]?.current_period_end ?? null;
+  const resolvedCustomerId = sourceCustomerId ?? latestCustomerId ?? existingSub?.stripeCustomerId ?? null;
+  const cancelAtPeriodEnd = Boolean(effectiveSubscription?.cancel_at_period_end ?? latestSubscription?.cancel_at_period_end);
 
   await prisma.subscription.upsert({
     where: { organizationId },
@@ -187,11 +201,11 @@ export async function syncSubscriptionFromStripe(organizationId: string): Promis
       provider: "stripe",
       tier,
       status,
-      stripeCustomerId: sourceCustomerId ?? undefined,
+      stripeCustomerId: resolvedCustomerId ?? undefined,
       stripeSubscriptionId: stripeSubscriptionId ?? undefined,
       stripePriceId: priceId ?? undefined,
       currentPeriodEndsAt: periodEndUnix ? new Date(periodEndUnix * 1000) : undefined,
-      cancelAtPeriodEnd: Boolean(bestSubscription?.cancel_at_period_end),
+      cancelAtPeriodEnd,
       entitlementsJson: entitlementsForTier(tier),
     },
     create: {
@@ -199,11 +213,11 @@ export async function syncSubscriptionFromStripe(organizationId: string): Promis
       provider: "stripe",
       tier,
       status,
-      stripeCustomerId: sourceCustomerId,
+      stripeCustomerId: resolvedCustomerId,
       stripeSubscriptionId,
       stripePriceId: priceId,
       currentPeriodEndsAt: periodEndUnix ? new Date(periodEndUnix * 1000) : null,
-      cancelAtPeriodEnd: Boolean(bestSubscription?.cancel_at_period_end),
+      cancelAtPeriodEnd,
       entitlementsJson: entitlementsForTier(tier),
       limitsJson: {},
     },
@@ -224,7 +238,7 @@ export async function syncSubscriptionFromStripe(organizationId: string): Promis
       tier,
       status,
       source,
-      stripeCustomerId: sourceCustomerId,
+      stripeCustomerId: resolvedCustomerId,
       stripeSubscriptionId,
     },
   });
@@ -234,7 +248,7 @@ export async function syncSubscriptionFromStripe(organizationId: string): Promis
     tier,
     status,
     source,
-    stripeCustomerId: sourceCustomerId,
+    stripeCustomerId: resolvedCustomerId,
     stripeSubscriptionId,
   };
 }
