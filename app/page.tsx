@@ -226,7 +226,6 @@ function HomeExperience({ marketing }: { marketing: boolean }) {
 
 function XupraCorporateHome() {
   const dryLakeHref = getConfiguredAppUrlForPath("/");
-  const dryLakePricingHref = getConfiguredAppUrlForPath("/pricing");
 
   return (
     <main className="min-h-screen bg-[#080909] text-zinc-100">
@@ -245,9 +244,6 @@ function XupraCorporateHome() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ActionLink href={dryLakeHref}>Open DryLake</ActionLink>
-              <ActionLink href={dryLakePricingHref} variant="secondary">
-                View DryLake pricing
-              </ActionLink>
             </div>
           </section>
 
