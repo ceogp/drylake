@@ -92,7 +92,7 @@ Release automation is documented in [docs/distribution-release.md](docs/distribu
 
 Public mirror:
 
-<https://github.com/gmkdigitalmedia/drylake>
+<https://github.com/ceogp/drylake>
 
 Primary development currently pushes to GitLab.
 

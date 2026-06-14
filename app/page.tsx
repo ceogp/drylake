@@ -64,7 +64,7 @@ const supportedAgents = [
 ];
 
 const trustLinks = [
-  { label: "Open source GitHub", href: "https://github.com/gmkdigitalmedia/drylake" },
+  { label: "Open source GitHub", href: "https://github.com/ceogp/drylake" },
   { label: "99VC", href: "https://ninetynine.vc/" },
   { label: "AWS Startups", href: "https://aws.amazon.com/startups/" },
   { label: "AWS Cloud", href: "https://aws.amazon.com/" },

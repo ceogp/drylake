@@ -78,12 +78,12 @@ DryLake still includes visual planning and handoff orchestration for coding agen
 
 DryLake has a public open-source mirror on GitHub:
 
-[github.com/gmkdigitalmedia/drylake](https://github.com/gmkdigitalmedia/drylake)
+[github.com/ceogp/drylake](https://github.com/ceogp/drylake)
 
 ## Support
 
 - Homepage: <https://drylake.xupracorp.com/>
-- Open source: <https://github.com/gmkdigitalmedia/drylake>
+- Open source: <https://github.com/ceogp/drylake>
 - Discord: <https://discord.gg/WQdapuVn>
 - Support: support@xupracorp.com
 
