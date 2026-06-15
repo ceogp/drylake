@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     absolute: "KYA Registry | Xupra",
   },
   description:
-    "KYA Registry is the Xupra product for hosted Know Your Agent certificates, public registry listings, and agent-to-agent verification.",
+    "KYA Registry is the Xupra product for AWS-signed Know Your Agent certificates, blockchain hash anchoring, public listings, and agent-to-agent verification.",
 };
 
 export default function ProductsKyaRegistryPage() {

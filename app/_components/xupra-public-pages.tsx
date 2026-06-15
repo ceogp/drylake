@@ -97,7 +97,7 @@ const kyaWorkflow = [
   {
     step: "04",
     title: "Issue and publish",
-    body: "Approved companies receive a hosted certificate and a public registry listing for the reviewed company, agent, or MCP asset.",
+    body: "Approved companies receive a hosted certificate, blockchain hash anchor, and public registry listing for the reviewed company, agent, or MCP asset.",
   },
 ] as const;
 
@@ -108,7 +108,7 @@ const kyaHandshake = [
   },
   {
     title: "Fetch issuer and certificate",
-    body: "The counterpart agent retrieves the Xupra issuer metadata and the AWS-backed hosted certificate JSON before a transaction starts.",
+    body: "The counterpart agent retrieves the Xupra issuer metadata, AWS-backed hosted certificate JSON, and blockchain proof state before a transaction starts.",
   },
   {
     title: "Verify policy and status",
@@ -586,7 +586,7 @@ export function KyaRegistryProductPage() {
               KYA Registry
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-700">
-              KYA Registry is the Xupra product for AWS-backed Know Your Agent certificates, public registry listings, and online verification before agent-to-agent transactions.
+              KYA Registry is the Xupra product for AWS-backed Know Your Agent certificates, blockchain hash anchoring, public registry listings, and online verification before agent-to-agent transactions.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ActionLink href="/kya-registry">Open product site</ActionLink>
@@ -602,7 +602,7 @@ export function KyaRegistryProductPage() {
                 Verification handshake
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-zinc-950">
-                Hosted certificate first. Live challenge second.
+                Hosted certificate, blockchain anchor, live challenge.
               </h2>
             </div>
             <div className="grid gap-px bg-zinc-200">

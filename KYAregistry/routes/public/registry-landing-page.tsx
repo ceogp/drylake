@@ -10,6 +10,9 @@ const certificateFields = [
   "Reviewed agent or MCP asset",
   "KYA level",
   "Risk class",
+  "AWS KMS signature",
+  "Encrypted AWS archive",
+  "Blockchain anchor hash",
   "Evidence hash",
   "Issue and expiry dates",
   "Revocation-aware status",
@@ -18,7 +21,7 @@ const certificateFields = [
 const standards = [
   ["KYA-L1", "Stable agent identity, accountable company identity, and baseline transaction records."],
   ["KYA-L2", "Stronger delegation controls, revocation paths, and operational auditability."],
-  ["KYA-L3", "Cryptographic identity, tamper-evident logs, and third-party verification endpoints."],
+  ["KYA-L3", "Cryptographic identity, blockchain-anchored hash proofs, tamper-evident logs, and third-party verification endpoints."],
 ] as const;
 
 const verificationFlow = [
@@ -27,16 +30,35 @@ const verificationFlow = [
     body: "Xupra signs the hosted certificate with AWS KMS and publishes issuer metadata so verifiers can validate the issuer public key.",
   },
   {
-    label: "2. Embed the certificate reference",
+    label: "2. Anchor the hash",
+    body: "Xupra records a SHA-256 proof of the certificate on a public blockchain through AWS infrastructure. Private evidence and customer data stay off-chain.",
+  },
+  {
+    label: "3. Embed the certificate reference",
     body: "The company places the hosted certificate URL or ID inside an agent file, agent card, or MCP-facing manifest so peers know what trust record to fetch.",
   },
   {
-    label: "3. Verify offline first",
-    body: "A peer agent fetches the hosted certificate JSON, checks active status, expiry, KYA level, MCP risk class, subject binding, and published policy.",
+    label: "4. Verify offline first",
+    body: "A peer agent fetches the hosted certificate JSON, checks active status, expiry, KYA level, MCP risk class, subject binding, signature, and blockchain anchor status.",
   },
   {
-    label: "4. Use MCP for live proof",
+    label: "5. Use MCP for live proof",
     body: "If the transaction needs stronger assurance, the peer calls the hosted MCP tools to prepare a challenge and verify that the remote agent still controls the certified key.",
+  },
+] as const;
+
+const trustStack = [
+  {
+    title: "AWS KMS certificate signature",
+    body: "The canonical KYA certificate payload is signed with an AWS KMS-backed issuer key so agents can verify the issuer and detect tampering.",
+  },
+  {
+    title: "Encrypted AWS publication",
+    body: "Signed certificate artifacts and manifests publish through the AWS-backed trust archive. Private review evidence remains protected outside the public certificate.",
+  },
+  {
+    title: "Blockchain hash anchor",
+    body: "A public chain stores only a certificate hash and timestamp proof. The chain proves the certificate existed without exposing customer evidence or agent internals.",
   },
 ] as const;
 
@@ -62,6 +84,7 @@ function CertificatePreview() {
           ["Standard", "KYA Agent Transaction v0.1"],
           ["KYA level", "KYA-L2"],
           ["Risk class", "MCP-R1"],
+          ["Anchor", "SHA-256 proof on-chain"],
         ].map(([label, value]) => (
           <div className="bg-[#101414] px-5 py-4" key={label}>
             <dt className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">{label}</dt>
@@ -71,7 +94,7 @@ function CertificatePreview() {
       </dl>
       <div className="border-t border-zinc-800 px-5 py-4">
         <p className="font-mono text-xs leading-6 text-zinc-400">
-          Agents verify status, subject, reviewed asset, expiry, evidence hash, and signature before approving an agent-to-agent transaction.
+          Agents verify status, subject, reviewed asset, expiry, evidence hash, KMS signature, and blockchain anchor proof before approving an agent-to-agent transaction.
         </p>
       </div>
     </section>
@@ -91,7 +114,7 @@ export default function KyaRegistryLandingPage() {
               KYA Registry
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-              AWS-backed hosted Know Your Agent certificates for companies whose MCP servers and agents need online verification before agent-to-agent transactions.
+              AWS-backed hosted Know Your Agent certificates with KMS signatures, encrypted certificate publication, blockchain hash anchoring, and online verification before agent-to-agent transactions.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link className="rounded-md bg-emerald-400 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300" href="/kya-registry/sample-certificate">
@@ -103,10 +126,10 @@ export default function KyaRegistryLandingPage() {
             </div>
             <div className="mt-10 grid gap-3 border-l border-zinc-800 pl-5 text-sm leading-7 text-zinc-400">
               <p>
-                KYA Registry is the hosted trust layer for MCP servers and agents that need a public certificate and a live verification endpoint before they transact with other agents.
+                KYA Registry is the hosted trust layer for MCP servers and agents that need a public certificate, a blockchain-anchored proof, and a live verification endpoint before they transact with other agents.
               </p>
               <p>
-                The certificate is the signed public record. The hosted MCP verification server is the live challenge-response path when a transaction needs stronger proof than lookup alone.
+                The certificate is the signed public record. The blockchain anchor is the public tamper-evidence layer. The hosted MCP verification server is the live challenge-response path when a transaction needs stronger proof than lookup alone.
               </p>
             </div>
           </div>
@@ -125,7 +148,7 @@ export default function KyaRegistryLandingPage() {
               A certificate endpoint that agents can verify online.
             </h2>
             <p className="mt-5 text-base leading-8 text-zinc-300">
-              A KYA certificate is a signed, AWS-backed attestation for one company and one reviewed agent or MCP asset. Agents can fetch the endpoint and enforce active status before exchanging data, calling tools, or initiating payment-related work.
+              A KYA certificate is a signed, AWS-backed attestation for one company and one reviewed agent or MCP asset. Agents can fetch the endpoint, verify the issuer signature, check the blockchain hash anchor when present, and enforce active status before exchanging data, calling tools, or initiating payment-related work.
             </p>
           </div>
           <div className="grid gap-px bg-zinc-800 sm:grid-cols-2">
@@ -133,6 +156,30 @@ export default function KyaRegistryLandingPage() {
               <div className="bg-[#111414] px-4 py-3 text-sm text-zinc-300" key={field}>
                 {field}
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-zinc-800 bg-[#0b0d0d]">
+        <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:px-10">
+          <div className="max-w-3xl">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">
+              Certificate trust stack
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold text-zinc-50 sm:text-4xl">
+              Signed by AWS. Anchored on-chain. Verified online.
+            </h2>
+            <p className="mt-5 text-base leading-8 text-zinc-300">
+              KYA uses AWS for the private trust boundary and blockchain for public tamper evidence. The chain receives hashes only, so customer evidence, survey answers, remediation notes, and private operational details remain off-chain.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            {trustStack.map((item) => (
+              <article className="border border-zinc-800 bg-[#111414] p-5" key={item.title}>
+                <h3 className="text-lg font-semibold text-zinc-50">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-zinc-400">{item.body}</p>
+              </article>
             ))}
           </div>
         </div>
@@ -148,7 +195,7 @@ export default function KyaRegistryLandingPage() {
               Trust signing and MCP do different jobs.
             </h2>
             <p className="mt-5 text-base leading-8 text-zinc-300">
-              The certificate is the signed trust record. MCP is the live verification channel. KYA uses both: AWS KMS signs the hosted certificate, and the hosted MCP server adds challenge-response when a transaction needs proof that the remote agent still controls the certified operational key.
+              The certificate is the signed trust record. Blockchain is the public hash timestamp. MCP is the live verification channel. KYA uses all three: AWS KMS signs the hosted certificate, the chain anchors the certificate hash, and the hosted MCP server adds challenge-response when a transaction needs proof that the remote agent still controls the certified operational key.
             </p>
           </div>
           <div className="mt-8 grid gap-4 lg:grid-cols-4">

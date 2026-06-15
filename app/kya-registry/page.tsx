@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     absolute: "KYA Registry | Xupra",
   },
   description:
-    "Xupra KYA Registry provides hosted Know Your Agent certificates for MCP servers and agents used in agent-to-agent transactions.",
+    "Xupra KYA Registry provides AWS-signed Know Your Agent certificates, blockchain hash anchoring, and online verification for MCP servers and agents.",
 };
 
 export default KyaRegistryLandingPage;
