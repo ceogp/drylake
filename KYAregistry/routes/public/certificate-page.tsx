@@ -121,9 +121,6 @@ export default async function KyaCertificatePage(props: PageProps<"/kya-registry
               </p>
               <h2 className="mt-3 text-2xl font-semibold text-zinc-50">Canonical public record</h2>
             </div>
-            <Link className="text-sm font-medium text-emerald-300 underline" href="/kya-registry/registry">
-              Back to registry
-            </Link>
           </div>
           <pre className="mt-5 max-h-[34rem] overflow-auto border border-zinc-800 bg-zinc-950 p-4 text-xs leading-6 text-zinc-200">
             {JSON.stringify(certificate.signedCertificate, null, 2)}

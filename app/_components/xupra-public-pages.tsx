@@ -590,9 +590,6 @@ export function KyaRegistryProductPage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ActionLink href="/kya-registry">Open product site</ActionLink>
-              <ActionLink href="/kya-registry/registry" variant="secondary">
-                View public registry
-              </ActionLink>
               <ActionLink href="mailto:registry@xupracorp.com" variant="secondary">
                 Contact registry
               </ActionLink>

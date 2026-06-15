@@ -100,9 +100,6 @@ export default function KyaRegistryLandingPage() {
               <Link className="rounded-md border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500 hover:text-white" href="/kya-registry/standards">
                 Read the standard
               </Link>
-              <Link className="rounded-md border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500 hover:text-white" href="/kya-registry/registry">
-                View public registry
-              </Link>
             </div>
             <div className="mt-10 grid gap-3 border-l border-zinc-800 pl-5 text-sm leading-7 text-zinc-400">
               <p>

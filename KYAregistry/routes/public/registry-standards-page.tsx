@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import {
   TRUST_REGISTRY_STANDARD_LABEL,
   TRUST_REGISTRY_STANDARD_VERSION,
@@ -100,9 +98,6 @@ export default function KyaRegistryStandardsPage() {
               Public trust rules for hosted Know Your Agent certificates used in agent-to-agent verification.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link className="rounded-md bg-emerald-400 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300" href="/kya-registry/registry">
-                View public registry
-              </Link>
               <a className="rounded-md border border-zinc-700 bg-zinc-950 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500 hover:text-white" href="/.well-known/kya-registry.json">
                 Issuer metadata
               </a>

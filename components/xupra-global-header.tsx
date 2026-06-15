@@ -230,11 +230,6 @@ function buildProducts(appOrigin: string, marketingOrigin: string): ProductMenu[
           description: "What KYA Registry offers.",
         },
         {
-          label: "Public Registry",
-          href: hrefFor(marketingOrigin, "/kya-registry/registry"),
-          description: "Approved companies, agents, and MCP assets.",
-        },
-        {
           label: "Standards",
           href: hrefFor(marketingOrigin, "/kya-registry/standards"),
           description: "Review criteria and certificate rules.",
