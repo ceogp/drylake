@@ -44,7 +44,7 @@ The production AWS-hosted domain is provisioned:
 - Secret bundle: `xupra-drylake/production/cognito-auth`
 - Local manifest: `storage/staging/cognito-auth-manifest.json`
 
-Google social login is still pending until a Google OAuth web client ID and client secret exist. The custom domain `auth.drylake.xupracorp.com` is pending DNS validation in Cloudflare.
+Google social login is still pending until a Google OAuth web client ID and client secret exist. The custom domain `auth.drylake.xupracorp.com` is active and should be used for the Google redirect URI.
 
 ACM certificate requested for the custom auth domain:
 
@@ -135,11 +135,12 @@ Before setting `AUTH_MODE=cognito` in production:
 ## Remaining External Setup
 
 1. Create a Google OAuth web client for DryLake.
-2. Add the Cognito callback URL to Google:
-   `https://drylake-auth-355825201962.auth.ap-northeast-1.amazoncognito.com/oauth2/idpresponse`
-3. Add the Google client ID and secret to Cognito as an identity provider.
-4. Update the Cognito app client supported providers from `COGNITO` to `COGNITO, Google`.
-5. For `auth.drylake.xupracorp.com`, request/validate the required certificate and add the Cloudflare CNAME records Cognito returns.
+2. Add this authorized redirect URI to Google:
+   `https://auth.drylake.xupracorp.com/oauth2/idpresponse`
+3. Run:
+   `GOOGLE_OAUTH_CLIENT_ID=<client-id> GOOGLE_OAUTH_CLIENT_SECRET=<client-secret> node scripts/aws/configure-cognito-google.mjs`
+4. Confirm the Cognito app client supported providers are `COGNITO, Google`.
+5. Open `https://drylake.xupracorp.com/sign-in` and confirm Cognito managed login shows the Google option.
 
 ## AWS References
 

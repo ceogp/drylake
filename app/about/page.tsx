@@ -56,7 +56,7 @@ export default function AboutPage() {
         <section className="grid gap-8 rounded-lg border border-zinc-800 bg-[#111414] p-6 md:p-8 lg:grid-cols-[1fr_0.78fr] lg:p-10">
           <div className="space-y-8">
             <div className="flex flex-wrap items-center gap-5">
-              <DryLakeLogo className="h-16 w-auto" priority />
+              <DryLakeLogo className="h-16 w-auto" priority tone="dark" />
               <div>
                 <p className="mt-1 text-sm text-zinc-500">Agent control and Guard security in one product surface.</p>
               </div>

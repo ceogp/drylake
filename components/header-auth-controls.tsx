@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams, type ReadonlyURLSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 type HeaderAuthControlsProps = {
   configured: boolean;
   signedIn: boolean;
   accountLabel?: string;
   logoutHref: string;
+  organizationSwitcher?: ReactNode;
 };
 
 function getManualMode(value: string | null) {
@@ -44,6 +45,21 @@ function authPath(pathname: string, redirectUrl: string) {
   return `${pathname}?${params.toString()}`;
 }
 
+function ChevronIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      height="14"
+      viewBox="0 0 14 14"
+      width="14"
+    >
+      <path d="M3.5 5.25 7 8.75l3.5-3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
 export function HeaderAuthControls(props: HeaderAuthControlsProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -70,23 +86,28 @@ export function HeaderAuthControls(props: HeaderAuthControlsProps) {
     return (
       <div className="relative" ref={menuRef}>
         <button
-          className="inline-flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:text-white"
+          className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-[#1a2020] px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-[#232a2a] hover:text-white"
           onClick={() => setMenuOpen((value) => !value)}
           type="button"
         >
           <span className="max-w-[180px] truncate">{props.accountLabel ?? "Account"}</span>
-          <span aria-hidden="true" className="text-zinc-500">▾</span>
+          <ChevronIcon className={["text-zinc-500 transition", menuOpen ? "rotate-180 text-zinc-100" : ""].join(" ")} />
         </button>
         {menuOpen ? (
           <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-zinc-800 bg-[#111414] p-2 shadow-2xl shadow-black/40">
+            {props.organizationSwitcher ? (
+              <div className="mb-2 border-b border-zinc-800 px-1 pb-2">
+                {props.organizationSwitcher}
+              </div>
+            ) : null}
             <Link className="block rounded-lg px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-900 hover:text-white" href="/workspace" onClick={() => setMenuOpen(false)}>
-              Agent Control
+              Workspace
             </Link>
             <Link className="block rounded-lg px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-900 hover:text-white" href="/account" onClick={() => setMenuOpen(false)}>
-              Account
+              Profile
             </Link>
             <Link className="block rounded-lg px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-900 hover:text-white" href="/billing" onClick={() => setMenuOpen(false)}>
-              Billing
+              DryLake Billing
             </Link>
             <Link className="block rounded-lg px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-900 hover:text-white" href="/security/reports" onClick={() => setMenuOpen(false)}>
               Security Reports
@@ -116,16 +137,16 @@ export function HeaderAuthControls(props: HeaderAuthControlsProps) {
   }
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex shrink-0 items-center gap-2 sm:gap-4">
       <Link
-        className="text-sm font-medium text-zinc-300 transition hover:text-zinc-100"
+        className="text-xs font-medium text-zinc-300 transition hover:text-zinc-100 sm:text-sm"
         href={authPath("/sign-in", redirectPath)}
       >
         Sign In
       </Link>
       <Link
-        className="rounded-md bg-emerald-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
-        href="/pricing"
+        className="text-xs font-medium text-zinc-300 transition hover:text-zinc-100 sm:text-sm"
+        href={authPath("/sign-up", redirectPath)}
       >
         Register
       </Link>

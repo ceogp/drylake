@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 
+import { syncTrustInvoiceFromStripeInvoice } from "@/KYAregistry/services/billing";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { recordAuditEvent } from "@/lib/services/audit";
@@ -400,9 +401,20 @@ export async function handleStripeWebhook(rawBody: string, signature: string) {
       }
       break;
     }
+    case "invoice.finalized":
+    case "invoice.sent":
+    case "invoice.updated":
+    case "invoice.paid":
+    case "invoice.voided":
+    case "invoice.marked_uncollectible":
     case "invoice.payment_succeeded":
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;
+      await syncTrustInvoiceFromStripeInvoice({
+        stripeInvoice: invoice,
+        sourceEventType: event.type,
+      });
+
       const invoiceLike = invoice as Stripe.Invoice & {
         subscription?: string | Stripe.Subscription | null;
         parent?: { subscription_details?: { subscription?: string | Stripe.Subscription | null } | null } | null;

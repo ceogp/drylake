@@ -138,9 +138,11 @@ if [ "${NODE_ENV:-}" = "production" ]; then
     [ -z "${APP_ENCRYPTION_KEY:-}" ] && missing_vars+=("APP_ENCRYPTION_KEY")
   fi
 
-  # Admin
-  [ -z "${ADMIN_INTERNAL_BASIC_AUTH_USERNAME:-}" ] && missing_vars+=("ADMIN_INTERNAL_BASIC_AUTH_USERNAME")
-  [ -z "${ADMIN_INTERNAL_BASIC_AUTH_PASSWORD:-}" ] && missing_vars+=("ADMIN_INTERNAL_BASIC_AUTH_PASSWORD")
+  # Operator portal
+  operator_portal_username="${OPERATOR_PORTAL_BASIC_AUTH_USERNAME:-${ADMIN_INTERNAL_BASIC_AUTH_USERNAME:-}}"
+  operator_portal_password="${OPERATOR_PORTAL_BASIC_AUTH_PASSWORD:-${ADMIN_INTERNAL_BASIC_AUTH_PASSWORD:-}}"
+  [ -z "$operator_portal_username" ] && missing_vars+=("OPERATOR_PORTAL_BASIC_AUTH_USERNAME")
+  [ -z "$operator_portal_password" ] && missing_vars+=("OPERATOR_PORTAL_BASIC_AUTH_PASSWORD")
 
   # AI provider
   if [ "$secrets_provider" != "aws_secrets_manager" ]; then
@@ -227,16 +229,28 @@ chown -R "$APP_USER:$APP_GROUP" "$release_dir" "$APP_DIR/shared/.env"
 app_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); process.stdout.write(url.host);")"
 marketing_host="$(node -e "const url = new URL(process.env.APP_BASE_URL || 'http://localhost:3000'); const host = url.host; process.stdout.write(host.startsWith('drylake.') ? host.slice('drylake.'.length) : '');")"
 server_names="$app_host"
+public_server_names="$app_host"
 certificate_name="$app_host"
 admin_internal_host="${ADMIN_INTERNAL_HOST:-}"
+operator_portal_internal_host="${OPERATOR_PORTAL_INTERNAL_HOST:-$admin_internal_host}"
+internal_server_names=""
+
+if [ -n "$operator_portal_internal_host" ]; then
+  internal_server_names="$operator_portal_internal_host"
+fi
+
+if [ -n "$admin_internal_host" ] && [ "$admin_internal_host" != "$operator_portal_internal_host" ]; then
+  internal_server_names="$internal_server_names $admin_internal_host"
+fi
 
 if [ -n "$marketing_host" ]; then
-  server_names="$server_names $marketing_host www.$marketing_host"
+  public_server_names="$public_server_names $marketing_host www.$marketing_host"
+  server_names="$public_server_names"
   certificate_name="$marketing_host"
 fi
 
-if [ -n "$admin_internal_host" ] && [ "$admin_internal_host" != "$app_host" ]; then
-  server_names="$server_names $admin_internal_host"
+if [ -n "$internal_server_names" ]; then
+  server_names="$server_names $internal_server_names"
 fi
 
 certificate_dir="/etc/letsencrypt/live/$certificate_name"
@@ -275,16 +289,39 @@ SERVICE
 
 if [ -f "$certificate_fullchain" ] && [ -f "$certificate_privkey" ]; then
 cat >/etc/nginx/sites-available/xupra-drylake <<NGINX
+NGINX
+
+if [ -n "$internal_server_names" ]; then
+cat >>/etc/nginx/sites-available/xupra-drylake <<NGINX
+server {
+  listen 80;
+  server_name $internal_server_names;
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto http;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}
+NGINX
+fi
+
+cat >>/etc/nginx/sites-available/xupra-drylake <<NGINX
 server {
   listen 80 default_server;
-  server_name $server_names;
+  server_name $public_server_names;
 
   return 301 https://\$host\$request_uri;
 }
 
 server {
   listen 443 ssl http2;
-  server_name $server_names;
+  server_name $public_server_names;
 
   ssl_certificate $certificate_fullchain;
   ssl_certificate_key $certificate_privkey;

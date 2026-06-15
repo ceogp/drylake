@@ -98,7 +98,7 @@ export function BillingActionsPanel({ subscriptions }: { subscriptions: BillingS
 
     try {
       const response = await fetch(
-        `/api/v1/admin/billing/charge-preview?stripeCustomerId=${encodeURIComponent(subscription.stripeCustomerId)}`,
+        `/api/v1/portal/billing/charge-preview?stripeCustomerId=${encodeURIComponent(subscription.stripeCustomerId)}`,
       );
 
       if (response.status === 404) {

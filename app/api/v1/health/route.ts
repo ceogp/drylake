@@ -16,6 +16,10 @@ export async function GET() {
       env.STRIPE_PRO_PRICE_ID,
   );
   const billingConfigured = stripeConfigured;
+  const trustPublicationConfigured =
+    env.XUPRA_TRUST_PUBLICATION_DRIVER === "s3"
+      ? Boolean(env.AWS_REGION && (env.XUPRA_TRUST_PUBLICATION_BUCKET ?? env.AWS_S3_BUCKET))
+      : true;
 
   return ok({
     service: "xupra-drylake",
@@ -34,6 +38,9 @@ export async function GET() {
       authConfigured: auth.configured,
       cognitoConfigured: cognito.configured,
       artifactStorage: env.ARTIFACT_STORAGE_DRIVER,
+      trustSigningConfigured: Boolean(env.AWS_REGION && env.XUPRA_TRUST_KMS_KEY_ID),
+      trustPublication: env.XUPRA_TRUST_PUBLICATION_DRIVER,
+      trustPublicationConfigured,
       billingProvider: "stripe",
       billingConfigured,
       stripeConfigured,

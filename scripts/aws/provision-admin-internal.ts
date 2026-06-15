@@ -70,14 +70,16 @@ function hasAwsErrorCode(error: unknown, code: string) {
   );
 }
 
-function requireEnv(name: string) {
-  const value = process.env[name]?.trim();
+function requireEnvAny(...names: string[]) {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
 
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
+    if (value) {
+      return value;
+    }
   }
 
-  return value;
+  throw new Error(`Missing required environment variable. Checked: ${names.join(", ")}`);
 }
 
 function normalizeZoneName(value: string) {
@@ -461,13 +463,20 @@ async function upsertAdminAliasRecord(
 }
 
 async function main() {
-  const adminHost = normalizeHostname(requireEnv("ADMIN_INTERNAL_HOST"));
-  const zoneName = normalizeZoneName(requireEnv("ADMIN_INTERNAL_ZONE_NAME"));
-  const allowedCidr = process.env.ADMIN_INTERNAL_ALLOWED_CIDR?.trim() || "10.90.0.0/22";
+  const adminHost = normalizeHostname(
+    requireEnvAny("OPERATOR_PORTAL_INTERNAL_HOST", "ADMIN_INTERNAL_HOST"),
+  );
+  const zoneName = normalizeZoneName(
+    requireEnvAny("OPERATOR_PORTAL_INTERNAL_ZONE_NAME", "ADMIN_INTERNAL_ZONE_NAME"),
+  );
+  const allowedCidr =
+    process.env.OPERATOR_PORTAL_ALLOWED_CIDR?.trim() ||
+    process.env.ADMIN_INTERNAL_ALLOWED_CIDR?.trim() ||
+    "10.90.0.0/22";
 
   if (!adminHost.endsWith(`.${zoneName}`) && adminHost !== zoneName) {
     throw new Error(
-      `ADMIN_INTERNAL_HOST (${adminHost}) must be within ADMIN_INTERNAL_ZONE_NAME (${zoneName}).`,
+      `OPERATOR_PORTAL_INTERNAL_HOST (${adminHost}) must be within OPERATOR_PORTAL_INTERNAL_ZONE_NAME (${zoneName}).`,
     );
   }
 
@@ -515,6 +524,7 @@ async function main() {
 
   const manifest = {
     region,
+    portalHost: adminHost,
     adminHost,
     zoneName,
     allowedCidr,
@@ -535,14 +545,16 @@ async function main() {
       healthCheckPath: targetGroup.HealthCheckPath,
     },
     appIntegration: {
+      operatorPortalOrigin: `http://${adminHost}`,
+      portalRoute: "/portal",
       adminInternalOrigin: `http://${adminHost}`,
       adminRoute: "/admin",
-      note: "Set ADMIN_INTERNAL_HOST and ADMIN_INTERNAL_ORIGIN in your staging environment and redeploy the app.",
+      note: "Set OPERATOR_PORTAL_INTERNAL_HOST and OPERATOR_PORTAL_INTERNAL_ORIGIN in your environment and redeploy the app. Legacy ADMIN_INTERNAL_* names still work during cutover.",
     },
     nextSteps: [
       "Configure AWS Client VPN or AWS SSO network access to this VPC.",
       "Route your workstation DNS for the private hosted zone while connected to VPN.",
-      "Set ADMIN_INTERNAL_BASIC_AUTH_USERNAME and ADMIN_INTERNAL_BASIC_AUTH_PASSWORD in the app env.",
+      "Set OPERATOR_PORTAL_BASIC_AUTH_USERNAME and OPERATOR_PORTAL_BASIC_AUTH_PASSWORD in the app env, or keep using the legacy ADMIN_INTERNAL_* names until cutover is complete.",
     ],
   };
 

@@ -19,7 +19,7 @@ export function DryLakeAuthShell({
       <div className="mx-auto grid min-h-[calc(100vh-6rem)] w-full max-w-6xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
         <section className="space-y-8">
           <Link className="inline-flex items-center" href="/">
-            <DryLakeLogo className="h-14 w-auto" priority />
+            <DryLakeLogo className="h-14 w-auto" priority tone="dark" />
           </Link>
           <div className="space-y-5">
             <p className="tape-eyebrow">{eyebrow}</p>
@@ -30,11 +30,11 @@ export function DryLakeAuthShell({
           </div>
           <div className="grid max-w-xl gap-3 sm:grid-cols-3">
             {[
-              ["Kanban", "#34d399"],
-              ["Pipeline", "#fb923c"],
-              ["Agents", "#18181b"],
+              ["Kanban", "#d1fae5"],
+              ["Pipeline", "#ffedd5"],
+              ["Agents", "#e0f2fe"],
             ].map(([label, color]) => (
-              <div key={label} className="rounded border border-zinc-800 px-4 py-3 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-zinc-100" style={{ backgroundColor: color }}>
+              <div key={label} className="rounded border border-zinc-300 px-4 py-3 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-zinc-950" style={{ backgroundColor: color }}>
                 {label}
               </div>
             ))}

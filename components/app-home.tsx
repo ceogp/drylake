@@ -31,7 +31,7 @@ export async function AppHome() {
         <div className="flex flex-col gap-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="tape-card flex items-center gap-5 bg-white px-4 py-3">
-              <DryLakeLogo className="h-12 w-auto" priority />
+              <DryLakeLogo className="h-12 w-auto" priority tone="dark" />
               <div>
                 <p className="font-[family-name:var(--font-heading)] text-lg font-semibold text-stone-950">
                   Dashboard

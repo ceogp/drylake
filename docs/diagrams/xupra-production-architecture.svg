@@ -1,0 +1,259 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="1180" viewBox="0 0 1760 1180" role="img" aria-labelledby="title desc">
+  <title id="title">Xupra Production Architecture</title>
+  <desc id="desc">Architecture diagram for Xupra public hosts, DryLake app, KYA Registry, operator portal, AWS services, and deployment path.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f6f7fb; }
+      .zone { fill: #ffffff; stroke: #cfd6e4; stroke-width: 2; rx: 8; ry: 8; }
+      .zone-aws { fill: #f9fbff; stroke: #8aa2d3; stroke-width: 2; rx: 8; ry: 8; }
+      .zone-private { fill: #fbfcfe; stroke: #7aa68a; stroke-width: 2; rx: 8; ry: 8; }
+      .zone-external { fill: #fffaf3; stroke: #c29a57; stroke-width: 2; rx: 8; ry: 8; }
+      .box { fill: #ffffff; stroke: #344054; stroke-width: 1.5; rx: 8; ry: 8; }
+      .box-blue { fill: #eef4ff; stroke: #3b6ed4; stroke-width: 1.5; rx: 8; ry: 8; }
+      .box-green { fill: #eefaf1; stroke: #2f8f57; stroke-width: 1.5; rx: 8; ry: 8; }
+      .box-orange { fill: #fff4e5; stroke: #b86a00; stroke-width: 1.5; rx: 8; ry: 8; }
+      .box-slate { fill: #f7f8fa; stroke: #667085; stroke-width: 1.5; rx: 8; ry: 8; }
+      .title { font: 700 28px Arial, sans-serif; fill: #101828; }
+      .subtitle { font: 400 13px Arial, sans-serif; fill: #475467; }
+      .zone-title { font: 700 18px Arial, sans-serif; fill: #101828; }
+      .label { font: 700 14px Arial, sans-serif; fill: #101828; }
+      .meta { font: 700 11px Arial, sans-serif; fill: #475467; letter-spacing: 0.08em; text-transform: uppercase; }
+      .body { font: 400 13px Arial, sans-serif; fill: #344054; }
+      .small { font: 400 12px Arial, sans-serif; fill: #475467; }
+      .legend { font: 400 12px Arial, sans-serif; fill: #344054; }
+      .arrow { stroke: #475467; stroke-width: 2.4; fill: none; marker-end: url(#arrow); }
+      .arrow-soft { stroke: #7b8794; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+      .arrow-dash { stroke: #667085; stroke-width: 2; fill: none; stroke-dasharray: 7 6; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475467"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1760" height="1180"/>
+
+  <text class="title" x="40" y="48">Xupra Production Architecture</text>
+  <text class="subtitle" x="40" y="74">Current live shape as of 2026-06-15. Public traffic is Cloudflare to EC2; the operator portal is private Route53 to internal ALB inside AWS.</text>
+
+  <rect class="zone" x="36" y="108" width="230" height="590"/>
+  <text class="zone-title" x="56" y="140">Actors</text>
+
+  <rect class="box" x="56" y="164" width="190" height="94"/>
+  <text class="meta" x="72" y="188">Public</text>
+  <text class="label" x="72" y="212">Visitors and companies</text>
+  <text class="body" x="72" y="236">
+    <tspan x="72" dy="0">Browse xupracorp.com, KYA</tspan>
+    <tspan x="72" dy="18">product pages, registry, and</tspan>
+    <tspan x="72" dy="18">hosted certificate pages.</tspan>
+  </text>
+
+  <rect class="box" x="56" y="276" width="190" height="94"/>
+  <text class="meta" x="72" y="300">Product</text>
+  <text class="label" x="72" y="324">DryLake users</text>
+  <text class="body" x="72" y="348">
+    <tspan x="72" dy="0">Use drylake.xupracorp.com</tspan>
+    <tspan x="72" dy="18">for product UI, billing,</tspan>
+    <tspan x="72" dy="18">workspace, and extension flows.</tspan>
+  </text>
+
+  <rect class="box" x="56" y="388" width="190" height="110"/>
+  <text class="meta" x="72" y="412">Verification</text>
+  <text class="label" x="72" y="436">Peer agents and MCP clients</text>
+  <text class="body" x="72" y="460">
+    <tspan x="72" dy="0">Fetch issuer metadata, hosted</tspan>
+    <tspan x="72" dy="18">certificate JSON, and use the</tspan>
+    <tspan x="72" dy="18">hosted MCP verification tools.</tspan>
+  </text>
+
+  <rect class="box-green" x="56" y="518" width="190" height="144"/>
+  <text class="meta" x="72" y="542">Private</text>
+  <text class="label" x="72" y="566">Xupra operators</text>
+  <text class="body" x="72" y="590">
+    <tspan x="72" dy="0">Access the internal portal</tspan>
+    <tspan x="72" dy="18">through Client VPN or another</tspan>
+    <tspan x="72" dy="18">private network path before</tspan>
+    <tspan x="72" dy="18">Basic Auth and portal UI access.</tspan>
+  </text>
+
+  <rect class="zone" x="300" y="108" width="246" height="590"/>
+  <text class="zone-title" x="320" y="140">Entry and routing</text>
+
+  <rect class="box-blue" x="322" y="164" width="202" height="132"/>
+  <text class="meta" x="338" y="188">Public edge</text>
+  <text class="label" x="338" y="212">Cloudflare DNS and TLS</text>
+  <text class="body" x="338" y="236">
+    <tspan x="338" dy="0">Hosts:</tspan>
+    <tspan x="338" dy="18">xupracorp.com</tspan>
+    <tspan x="338" dy="18">drylake.xupracorp.com</tspan>
+    <tspan x="338" dy="18">Proxied A records to the current</tspan>
+    <tspan x="338" dy="18">AWS EC2 production host.</tspan>
+  </text>
+
+  <rect class="box-green" x="322" y="320" width="202" height="160"/>
+  <text class="meta" x="338" y="344">Private ingress</text>
+  <text class="label" x="338" y="368">Client VPN or office route</text>
+  <text class="body" x="338" y="392">
+    <tspan x="338" dy="0">Resolves the private zone:</tspan>
+    <tspan x="338" dy="18">portal.ops.xupracorp.internal</tspan>
+    <tspan x="338" dy="18">Traffic is restricted to the</tspan>
+    <tspan x="338" dy="18">allowed operator CIDR before</tspan>
+    <tspan x="338" dy="18">it reaches the internal ALB.</tspan>
+  </text>
+
+  <rect class="zone-aws" x="580" y="108" width="1140" height="760"/>
+  <text class="zone-title" x="604" y="140">AWS production account</text>
+
+  <rect class="box-blue" x="608" y="172" width="640" height="334"/>
+  <text class="meta" x="628" y="198">Compute</text>
+  <text class="label" x="628" y="222">EC2 production host running nginx and Next.js 16</text>
+  <text class="body" x="628" y="248">
+    <tspan x="628" dy="0">Shared application runtime:</tspan>
+    <tspan x="628" dy="18">- Xupra company pages and /products</tspan>
+    <tspan x="628" dy="18">- KYA Registry product pages, explorer, badges, issuer metadata, certificate pages</tspan>
+    <tspan x="628" dy="18">- Hosted KYA APIs: /api/kya-registry/v1/registry, /certificates/:id, /mcp</tspan>
+    <tspan x="628" dy="18">- DryLake product/app host: drylake.xupracorp.com</tspan>
+    <tspan x="628" dy="18">- Auth callbacks, billing UI, extension endpoints, health routes</tspan>
+    <tspan x="628" dy="18">- Prisma data access and KYA operator services</tspan>
+  </text>
+
+  <rect class="box" x="628" y="350" width="282" height="128"/>
+  <text class="meta" x="646" y="374">Public routes on this host</text>
+  <text class="body" x="646" y="398">
+    <tspan x="646" dy="0">xupracorp.com</tspan>
+    <tspan x="646" dy="18">/kya-registry</tspan>
+    <tspan x="646" dy="18">/kya-registry/registry</tspan>
+    <tspan x="646" dy="18">/.well-known/kya-registry.json</tspan>
+  </text>
+
+  <rect class="box" x="930" y="350" width="294" height="128"/>
+  <text class="meta" x="948" y="374">Product routes on this host</text>
+  <text class="body" x="948" y="398">
+    <tspan x="948" dy="0">drylake.xupracorp.com</tspan>
+    <tspan x="948" dy="18">/app, /billing, /settings</tspan>
+    <tspan x="948" dy="18">/api/v1/*</tspan>
+    <tspan x="948" dy="18">/extensions/connect</tspan>
+  </text>
+
+  <rect class="box-green" x="608" y="532" width="640" height="132"/>
+  <text class="meta" x="628" y="558">Private network path</text>
+  <text class="label" x="628" y="582">Route53 private zone and internal ALB for the operator portal</text>
+  <text class="body" x="628" y="608">
+    <tspan x="628" dy="0">portal.ops.xupracorp.internal -&gt; internal ALB -&gt; /portal on the app runtime</tspan>
+    <tspan x="628" dy="18">Used for KYA company onboarding, certificate lifecycle, billing supervision, and internal controls.</tspan>
+  </text>
+
+  <rect class="box-slate" x="608" y="692" width="256" height="140"/>
+  <text class="meta" x="626" y="718">Data</text>
+  <text class="label" x="626" y="742">Amazon RDS PostgreSQL</text>
+  <text class="body" x="626" y="766">
+    <tspan x="626" dy="0">Stores DryLake product data,</tspan>
+    <tspan x="626" dy="18">KYA companies, registry cases,</tspan>
+    <tspan x="626" dy="18">assets, test runs, certificates,</tspan>
+    <tspan x="626" dy="18">and current certificate status.</tspan>
+  </text>
+
+  <rect class="box-slate" x="888" y="692" width="256" height="140"/>
+  <text class="meta" x="906" y="718">Secrets</text>
+  <text class="label" x="906" y="742">AWS Secrets Manager</text>
+  <text class="body" x="906" y="766">
+    <tspan x="906" dy="0">Production env bundle, deploy</tspan>
+    <tspan x="906" dy="18">SSH key, Cognito config, Stripe</tspan>
+    <tspan x="906" dy="18">keys, and other runtime secrets.</tspan>
+  </text>
+
+  <rect class="box-slate" x="1168" y="692" width="256" height="140"/>
+  <text class="meta" x="1186" y="718">Trust publication</text>
+  <text class="label" x="1186" y="742">Amazon S3</text>
+  <text class="body" x="1186" y="766">
+    <tspan x="1186" dy="0">Stores KYA publication bundles:</tspan>
+    <tspan x="1186" dy="18">signed-certificate.json,</tspan>
+    <tspan x="1186" dy="18">canonical-certificate.json,</tspan>
+    <tspan x="1186" dy="18">publication-manifest.json.</tspan>
+  </text>
+
+  <rect class="box-slate" x="1448" y="172" width="244" height="134"/>
+  <text class="meta" x="1466" y="198">Trust signing</text>
+  <text class="label" x="1466" y="222">AWS KMS key</text>
+  <text class="body" x="1466" y="246">
+    <tspan x="1466" dy="0">Signs KYA hosted certificates.</tspan>
+    <tspan x="1466" dy="18">The public key is exposed through</tspan>
+    <tspan x="1466" dy="18">issuer metadata for verification.</tspan>
+  </text>
+
+  <rect class="box-slate" x="1448" y="328" width="244" height="134"/>
+  <text class="meta" x="1466" y="354">Authentication</text>
+  <text class="label" x="1466" y="378">Amazon Cognito</text>
+  <text class="body" x="1466" y="402">
+    <tspan x="1466" dy="0">Owns external browser auth for</tspan>
+    <tspan x="1466" dy="18">the DryLake product surface.</tspan>
+    <tspan x="1466" dy="18">App sessions remain app-owned.</tspan>
+  </text>
+
+  <rect class="box-slate" x="1448" y="484" width="244" height="134"/>
+  <text class="meta" x="1466" y="510">Release path</text>
+  <text class="label" x="1466" y="534">CodePipeline and CodeBuild</text>
+  <text class="body" x="1466" y="558">
+    <tspan x="1466" dy="0">Consumes versioned source zips</tspan>
+    <tspan x="1466" dy="18">from S3 and deploys to the EC2</tspan>
+    <tspan x="1466" dy="18">host using the SSH bootstrap path.</tspan>
+  </text>
+
+  <rect class="zone-external" x="580" y="892" width="1140" height="236"/>
+  <text class="zone-title" x="604" y="924">External integrations and deployment</text>
+
+  <rect class="box-orange" x="608" y="952" width="280" height="132"/>
+  <text class="meta" x="626" y="978">Billing</text>
+  <text class="label" x="626" y="1002">Stripe</text>
+  <text class="body" x="626" y="1026">
+    <tspan x="626" dy="0">DryLake billing and KYA invoice</tspan>
+    <tspan x="626" dy="18">state synchronization come from</tspan>
+    <tspan x="626" dy="18">Stripe APIs and webhooks.</tspan>
+  </text>
+
+  <rect class="box-orange" x="920" y="952" width="358" height="132"/>
+  <text class="meta" x="938" y="978">Company and partner systems</text>
+  <text class="label" x="938" y="1002">Remote company agents and MCP servers</text>
+  <text class="body" x="938" y="1026">
+    <tspan x="938" dy="0">External agents embed hosted certificate URLs or IDs</tspan>
+    <tspan x="938" dy="18">and call the hosted MCP verification server during</tspan>
+    <tspan x="938" dy="18">agent-to-agent verification and trust evaluation.</tspan>
+  </text>
+
+  <rect class="box-orange" x="1310" y="952" width="382" height="132"/>
+  <text class="meta" x="1328" y="978">Delivery source</text>
+  <text class="label" x="1328" y="1002">S3 source artifact plus SSH deploy</text>
+  <text class="body" x="1328" y="1026">
+    <tspan x="1328" dy="0">Current preferred release mode:</tspan>
+    <tspan x="1328" dy="18">source zip to S3 -&gt; CodePipeline/CodeBuild -&gt;</tspan>
+    <tspan x="1328" dy="18">remote-bootstrap.sh on the EC2 production host.</tspan>
+  </text>
+
+  <path class="arrow" d="M 246 212 C 280 212, 292 220, 322 220"/>
+  <path class="arrow" d="M 246 324 C 280 324, 292 230, 608 230"/>
+  <path class="arrow" d="M 246 442 C 280 442, 292 248, 608 248"/>
+  <path class="arrow" d="M 246 590 C 290 590, 302 400, 322 400"/>
+  <path class="arrow" d="M 524 230 C 560 230, 572 230, 608 230"/>
+  <path class="arrow" d="M 524 400 C 560 400, 572 596, 608 596"/>
+
+  <path class="arrow-soft" d="M 928 832 C 928 860, 928 880, 748 952"/>
+  <path class="arrow-soft" d="M 1040 832 C 1040 874, 1040 890, 748 952"/>
+  <path class="arrow-soft" d="M 1310 618 C 1310 652, 1296 670, 1296 692"/>
+  <path class="arrow-soft" d="M 1568 306 C 1568 320, 1568 324, 1568 328"/>
+  <path class="arrow-soft" d="M 1568 462 C 1568 474, 1568 478, 1568 484"/>
+  <path class="arrow-soft" d="M 1280 1018 C 1300 1018, 1310 1018, 1310 1018"/>
+  <path class="arrow-soft" d="M 1144 764 C 1160 764, 1168 764, 1168 764"/>
+  <path class="arrow-soft" d="M 864 764 C 876 764, 888 764, 888 764"/>
+  <path class="arrow-soft" d="M 1248 256 C 1360 256, 1376 256, 1448 256"/>
+  <path class="arrow-soft" d="M 1248 286 C 1360 286, 1376 394, 1448 394"/>
+  <path class="arrow-soft" d="M 1248 316 C 1360 316, 1376 550, 1448 550"/>
+  <path class="arrow-soft" d="M 888 1018 C 900 1018, 920 1018, 920 1018"/>
+
+  <rect class="box-slate" x="36" y="724" width="510" height="144"/>
+  <text class="meta" x="56" y="748">Reading guide</text>
+  <text class="body" x="56" y="772">
+    <tspan x="56" dy="0">Blue boxes = public ingress or public product surfaces.</tspan>
+    <tspan x="56" dy="18">Green boxes = private operator path inside the AWS network boundary.</tspan>
+    <tspan x="56" dy="18">Gray boxes = managed AWS stateful or supporting services.</tspan>
+    <tspan x="56" dy="18">Orange boxes = third-party systems or delivery dependencies outside the app runtime.</tspan>
+  </text>
+</svg>

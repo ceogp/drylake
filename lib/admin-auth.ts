@@ -1,9 +1,11 @@
 import { headers } from "next/headers";
 
-import { isConfiguredAdminInternalHost } from "@/lib/site-hosts";
+import { isConfiguredOperatorPortalHost } from "@/lib/site-hosts";
 
 export const ADMIN_PATH_PREFIX = "/admin";
 export const ADMIN_API_PATH_PREFIX = "/api/v1/admin";
+export const OPERATOR_PORTAL_PATH_PREFIX = "/portal";
+export const OPERATOR_PORTAL_API_PATH_PREFIX = "/api/v1/portal";
 
 function matchesPathPrefix(pathname: string, prefix: string) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -15,6 +17,42 @@ export function isAdminPagePath(pathname: string) {
 
 export function isAdminApiPath(pathname: string) {
   return matchesPathPrefix(pathname, ADMIN_API_PATH_PREFIX);
+}
+
+export function isOperatorPortalPagePath(pathname: string) {
+  return matchesPathPrefix(pathname, OPERATOR_PORTAL_PATH_PREFIX);
+}
+
+export function isOperatorPortalApiPath(pathname: string) {
+  return matchesPathPrefix(pathname, OPERATOR_PORTAL_API_PATH_PREFIX);
+}
+
+function replacePathPrefix(pathname: string, fromPrefix: string, toPrefix: string) {
+  if (pathname === fromPrefix) {
+    return toPrefix;
+  }
+
+  if (!pathname.startsWith(`${fromPrefix}/`)) {
+    return pathname;
+  }
+
+  return `${toPrefix}${pathname.slice(fromPrefix.length)}`;
+}
+
+export function toOperatorPortalPagePath(pathname: string) {
+  if (isOperatorPortalPagePath(pathname)) {
+    return pathname;
+  }
+
+  return replacePathPrefix(pathname, ADMIN_PATH_PREFIX, OPERATOR_PORTAL_PATH_PREFIX);
+}
+
+export function toOperatorPortalApiPath(pathname: string) {
+  if (isOperatorPortalApiPath(pathname)) {
+    return pathname;
+  }
+
+  return replacePathPrefix(pathname, ADMIN_API_PATH_PREFIX, OPERATOR_PORTAL_API_PATH_PREFIX);
 }
 
 type AdminAuthResult =
@@ -29,8 +67,14 @@ type AdminAuthResult =
     };
 
 export function getInternalAdminCredentials() {
-  const username = process.env.ADMIN_INTERNAL_BASIC_AUTH_USERNAME?.trim() ?? "";
-  const password = process.env.ADMIN_INTERNAL_BASIC_AUTH_PASSWORD?.trim() ?? "";
+  const username =
+    process.env.OPERATOR_PORTAL_BASIC_AUTH_USERNAME?.trim() ??
+    process.env.ADMIN_INTERNAL_BASIC_AUTH_USERNAME?.trim() ??
+    "";
+  const password =
+    process.env.OPERATOR_PORTAL_BASIC_AUTH_PASSWORD?.trim() ??
+    process.env.ADMIN_INTERNAL_BASIC_AUTH_PASSWORD?.trim() ??
+    "";
 
   return {
     username,
@@ -77,7 +121,7 @@ export function hasValidBasicAuthHeader(
 export function getAdminRequestAuthResult(headers: Headers): AdminAuthResult {
   const host = headers.get("x-forwarded-host") ?? headers.get("host");
 
-  if (!isConfiguredAdminInternalHost(host)) {
+  if (!isConfiguredOperatorPortalHost(host)) {
     return {
       ok: false,
       status: 404,
@@ -107,7 +151,7 @@ export function getAdminRequestAuthResult(headers: Headers): AdminAuthResult {
       status: 401,
       message: "Authentication required.",
       headers: {
-        "WWW-Authenticate": 'Basic realm="Xupra Internal Admin"',
+        "WWW-Authenticate": 'Basic realm="Xupra Operator Portal"',
       },
     };
   }
@@ -119,8 +163,8 @@ export async function requireAdminActionAccess() {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
 
-  if (!isConfiguredAdminInternalHost(host)) {
-    throw new Error("Unauthorized: admin actions require the internal admin host.");
+  if (!isConfiguredOperatorPortalHost(host)) {
+    throw new Error("Unauthorized: operator actions require the internal portal host.");
   }
 
   const credentials = getInternalAdminCredentials();

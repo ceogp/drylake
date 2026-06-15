@@ -614,6 +614,7 @@ export async function completeOnboardingProfileAction(formData: FormData) {
 
   revalidatePath("/account");
   revalidatePath("/admin/users");
+  revalidatePath("/portal/users");
   redirect(`/onboarding/plan?returnTo=${encodeURIComponent(returnPath)}`);
 }
 

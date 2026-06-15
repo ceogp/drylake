@@ -99,7 +99,7 @@ export default async function AdminPage() {
                   {recentUsers.map((user) => (
                     <tr className="border-b border-stone-100 align-top" key={user.id}>
                       <td className="px-3 py-4">
-                        <Link className="font-medium text-stone-950 hover:underline" href={`/admin/users/${user.id}`}>
+                        <Link className="font-medium text-stone-950 hover:underline" href={`/portal/users/${user.id}`}>
                           {user.profile?.displayName ?? user.email}
                         </Link>
                         <div className="text-xs text-stone-500">{user.email}</div>

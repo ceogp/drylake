@@ -7,7 +7,8 @@
 # STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
 # KIMI_API_KEY or OPENAI_API_KEY
 # APP_ENCRYPTION_KEY
-# ADMIN_INTERNAL_HOST, ADMIN_INTERNAL_BASIC_AUTH_USERNAME, ADMIN_INTERNAL_BASIC_AUTH_PASSWORD
+# OPERATOR_PORTAL_INTERNAL_HOST, OPERATOR_PORTAL_BASIC_AUTH_USERNAME, OPERATOR_PORTAL_BASIC_AUTH_PASSWORD
+# Legacy ADMIN_INTERNAL_* names are still accepted.
 # BILLING_ENFORCEMENT_MODE=strict
 # DATABASE_URL (postgresql://...)
 # DATABASE_PROVIDER=postgresql
@@ -63,10 +64,12 @@ fi
 
 check "stripe webhook empty body" "400" -X POST -d '' "$app_base_url/api/stripe/webhook"
 
-if [ -n "${ADMIN_INTERNAL_HOST:-}" ]; then
-  check "admin internal auth challenge" "401" "https://$ADMIN_INTERNAL_HOST/admin"
+operator_portal_host="${OPERATOR_PORTAL_INTERNAL_HOST:-${ADMIN_INTERNAL_HOST:-}}"
+
+if [ -n "$operator_portal_host" ]; then
+  check "operator portal auth challenge" "401" "http://$operator_portal_host/portal"
 else
-  echo "SKIP admin internal auth challenge: ADMIN_INTERNAL_HOST is not set"
+  echo "SKIP operator portal auth challenge: OPERATOR_PORTAL_INTERNAL_HOST is not set"
 fi
 
 if [ "$failures" -gt 0 ]; then

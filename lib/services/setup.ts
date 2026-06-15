@@ -62,6 +62,10 @@ export async function getSetupStatus() {
   );
   const cognito = getCognitoConfig();
   const billingConfigured = stripeConfigured;
+  const trustPublicationConfigured =
+    env.XUPRA_TRUST_PUBLICATION_DRIVER === "s3"
+      ? Boolean(env.AWS_REGION && (env.XUPRA_TRUST_PUBLICATION_BUCKET ?? env.AWS_S3_BUCKET))
+      : true;
 
   return {
     auth,
@@ -103,6 +107,26 @@ export async function getSetupStatus() {
           ? [
               !env.AWS_REGION ? "AWS_REGION" : null,
               !env.AWS_S3_BUCKET ? "AWS_S3_BUCKET" : null,
+            ].filter(Boolean)
+          : [],
+    },
+    trustRegistry: {
+      signingConfigured: Boolean(env.AWS_REGION && env.XUPRA_TRUST_KMS_KEY_ID),
+      publicationDriver: env.XUPRA_TRUST_PUBLICATION_DRIVER,
+      publicationConfigured: trustPublicationConfigured,
+      publicationBucket:
+        env.XUPRA_TRUST_PUBLICATION_DRIVER === "s3"
+          ? (env.XUPRA_TRUST_PUBLICATION_BUCKET ?? env.AWS_S3_BUCKET ?? null)
+          : null,
+      publicationPrefix: env.XUPRA_TRUST_PUBLICATION_PREFIX,
+      missing:
+        env.XUPRA_TRUST_PUBLICATION_DRIVER === "s3"
+          ? [
+              !env.AWS_REGION ? "AWS_REGION" : null,
+              !(env.XUPRA_TRUST_PUBLICATION_BUCKET ?? env.AWS_S3_BUCKET)
+                ? "XUPRA_TRUST_PUBLICATION_BUCKET or AWS_S3_BUCKET"
+                : null,
+              !env.XUPRA_TRUST_KMS_KEY_ID ? "XUPRA_TRUST_KMS_KEY_ID" : null,
             ].filter(Boolean)
           : [],
     },

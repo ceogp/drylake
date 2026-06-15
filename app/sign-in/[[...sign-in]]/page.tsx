@@ -39,28 +39,28 @@ export default async function SignInPage({
   const signUpHref = `/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`;
 
   return (
-    <main className="min-h-screen bg-[#090a0a] px-5 py-16 text-zinc-100 md:px-8">
+    <main className="min-h-screen bg-[#f6f7f3] px-5 py-16 text-zinc-950 md:px-8">
       <section className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md items-center">
-        <div className="w-full rounded-2xl border border-zinc-800 bg-[#111414] p-8 shadow-2xl shadow-black/40">
-          <DryLakeLogo className="h-14 w-auto" priority />
+        <div className="w-full rounded-2xl border border-zinc-300 bg-white p-8 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+          <DryLakeLogo className="h-14 w-auto" priority tone="dark" />
           <p className="mt-8 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
             Sign in
           </p>
-          <h1 className="mt-3 font-[family-name:var(--font-heading)] text-4xl font-semibold leading-tight text-zinc-50">
+          <h1 className="mt-3 font-[family-name:var(--font-heading)] text-4xl font-semibold leading-tight text-zinc-950">
             Sign in to DryLake
           </h1>
-          <p className="mt-3 text-sm leading-7 text-zinc-400">
+          <p className="mt-3 text-sm leading-7 text-zinc-600">
             Use your account to open Agent Control, Guard, and your Skills library.
           </p>
           <a
-            className="mt-8 inline-flex w-full items-center justify-center rounded-md bg-emerald-400 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
+            className="xupra-button-primary mt-8 inline-flex w-full items-center justify-center rounded-md px-5 py-3 text-sm transition"
             href={cognitoHref}
           >
             Sign in
           </a>
           <p className="mt-4 text-sm text-zinc-500">
             New to DryLake?{" "}
-            <Link className="font-medium text-zinc-200 transition hover:text-white" href={signUpHref}>
+            <Link className="font-medium text-emerald-700 transition hover:text-emerald-900" href={signUpHref}>
               Register
             </Link>
           </p>

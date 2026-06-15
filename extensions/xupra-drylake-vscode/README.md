@@ -1,4 +1,4 @@
-# DryLake - Agent MCP Security and Agentic Orchestration Control
+# Drylake- Agent Control - Free LLM - Free Security Scans - Opensource LLM
 Free local security scan for AI coding setups. [AWS GuardDuty service terms](https://aws.amazon.com/service-terms/#87._Amazon_GuardDuty)
 
 DryLake Guard ranks your AI coding setup before agents touch your repo. Scan MCP servers, agent skills, IDE extensions, secrets, prompt injection risk, supply-chain risk, token bloat, and workspace blast radius.

@@ -184,24 +184,6 @@ function billingCommandArgs(args: { required?: string; source?: string; returnPa
   return ` data-command-args="${escapeHtml(JSON.stringify(args))}"`;
 }
 
-function parseBillingCommandArgs(element: Element | null): unknown[] {
-  if (!element) {
-    return [];
-  }
-
-  const raw = element.getAttribute("data-command-args");
-  if (!raw) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    return [];
-  }
-}
-
 function controlRoomViewFrom(value: unknown): ControlRoomView {
   return value === "kanban" || value === "security" ? value : "pipeline";
 }
@@ -1834,12 +1816,12 @@ export class ControlRoomProvider {
             result.job.guardScanId ? "Open Report" : "OK",
           );
 
-          if (action === "Open Report" && result.job.guardScanId) {
+          if (action === "Open Report" && result.job.guardScanId && this.apiClient.openWebUrl) {
             await vscode.env.openExternal(this.apiClient.openWebUrl(`/security/reports/${result.job.guardScanId}`));
           }
         } catch (error) {
           const messageText = error instanceof Error ? error.message : String(error);
-      if (/paid|upgrade|billing|subscription|security pro/i.test(messageText)) {
+          if (/paid|upgrade|billing|subscription|security pro/i.test(messageText)) {
             this.guardPaidUpsellVisible = true;
             await vscode.commands.executeCommand("xupra.openBilling", {
               required: "security_pro",
@@ -2479,6 +2461,24 @@ export class ControlRoomProvider {
       }, 1200);
     }
 
+    function parseCommandArgs(element) {
+      if (!element) {
+        return [];
+      }
+
+      const raw = element.getAttribute("data-command-args");
+      if (!raw) {
+        return [];
+      }
+
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        return [];
+      }
+    }
+
     function selectedPlanningOption() {
       return planningProviderSelect?.selectedOptions?.[0] || null;
     }
@@ -2746,7 +2746,7 @@ export class ControlRoomProvider {
       if (commandEl) {
         vscode.postMessage({
           command: commandEl.dataset.command,
-          args: parseBillingCommandArgs(commandEl as Element),
+          args: parseCommandArgs(commandEl),
         });
         return;
       }

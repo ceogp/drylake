@@ -1,4 +1,5 @@
 const fallbackAppBaseUrl = "http://localhost:3000";
+const localMarketingHost = "xupra.lvh.me";
 const localhostHosts = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function parseHostValue(value: string | null | undefined) {
@@ -41,7 +42,7 @@ export function getConfiguredMarketingHost() {
   const appHost = getConfiguredAppHost();
 
   if (!appHost || localhostHosts.has(appHost)) {
-    return "";
+    return localMarketingHost;
   }
 
   if (appHost.startsWith("drylake.")) {
@@ -58,7 +59,10 @@ export function getConfiguredMarketingOrigin() {
     return getConfiguredAppOrigin();
   }
 
-  return `${getConfiguredAppUrl().protocol}//${marketingHost}`;
+  const appUrl = getConfiguredAppUrl();
+  const port = appUrl.port ? `:${appUrl.port}` : "";
+
+  return `${appUrl.protocol}//${marketingHost}${port}`;
 }
 
 export function getConfiguredAdminInternalHost() {
@@ -77,6 +81,41 @@ export function getConfiguredAdminInternalOrigin() {
   }
 
   const host = getConfiguredAdminInternalHost();
+
+  if (!host) {
+    return "";
+  }
+
+  return `http://${host}`;
+}
+
+export function getConfiguredOperatorPortalHost() {
+  return parseHostValue(
+    process.env.OPERATOR_PORTAL_INTERNAL_HOST,
+  );
+}
+
+export function getConfiguredOperatorPortalOrigin() {
+  const explicitOperatorPortalOrigin = process.env.OPERATOR_PORTAL_INTERNAL_ORIGIN?.trim();
+  const explicitAdminOrigin = process.env.ADMIN_INTERNAL_ORIGIN?.trim();
+
+  if (explicitOperatorPortalOrigin) {
+    try {
+      return new URL(explicitOperatorPortalOrigin).origin;
+    } catch {
+      // fall through to host-derived origin
+    }
+  }
+
+  if (explicitAdminOrigin) {
+    try {
+      return new URL(explicitAdminOrigin).origin;
+    } catch {
+      // fall through to host-derived origin
+    }
+  }
+
+  const host = getConfiguredOperatorPortalHost();
 
   if (!host) {
     return "";
@@ -109,6 +148,17 @@ export function isConfiguredAdminInternalHost(value: string | null | undefined) 
   }
 
   return normalized === configuredAdminHost;
+}
+
+export function isConfiguredOperatorPortalHost(value: string | null | undefined) {
+  const normalized = normalizeHost(value);
+  const configuredOperatorPortalHost = getConfiguredOperatorPortalHost();
+
+  if (configuredOperatorPortalHost && normalized === configuredOperatorPortalHost) {
+    return true;
+  }
+
+  return isConfiguredAdminInternalHost(normalized);
 }
 
 export function getConfiguredAppUrlForPath(pathname = "/", search = "") {

@@ -92,6 +92,11 @@ model Organization {
   authEvents            AuthEvent[]
   invitations           OrganizationInvitation[]
   productAccounts       ProductAccount[]
+  trustCompanies        TrustCompany[]
+  trustRegistryCases    TrustRegistryCase[]
+  trustBillingInvoices  TrustBillingInvoice[]
+  trustBillingSubscriptions TrustBillingSubscription[]
+  trustSurveyInvites    TrustSurveyInvite[]
 }
 
 model ProductAccount {
@@ -115,6 +120,554 @@ model ProductAccount {
   @@index([organizationId, productKey])
   @@index([planIntent])
   @@index([status])
+}
+
+model TrustCompany {
+  id                      String                    @id @default(cuid())
+  organizationId          String?
+  legalName               String
+  displayName             String
+  slug                    String                    @unique
+  country                 String
+  sizeClass               String                    @default("small")
+  websiteUrl              String
+  primaryProductUrl       String?
+  businessContactEmail    String?
+  securityContactEmail    String?
+  privacyContactEmail     String?
+  githubOrganizationUrl   String?
+  packageRegistryLinksJson Json?
+  description             String?
+  categoriesJson          Json?
+  japanMarketInterestJson Json?
+  verifiedDomain          String?
+  status                  String                    @default("draft")
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  organization            Organization?             @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  domains                 TrustCompanyDomain[]
+  contacts                TrustCompanyContact[]
+  products                TrustProduct[]
+  registryCases           TrustRegistryCase[]
+  registryAssets          TrustRegistryAsset[]
+  scanOrders              TrustScanOrder[]
+  scanRuns                TrustScanRun[]
+  certificates            TrustCertificate[]
+  billingInvoices         TrustBillingInvoice[]
+  billingSubscriptions    TrustBillingSubscription[]
+  surveyInvites           TrustSurveyInvite[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([country])
+  @@index([verifiedDomain])
+}
+
+model TrustCompanyDomain {
+  id                String       @id @default(cuid())
+  companyId         String
+  domain            String
+  verificationToken String
+  txtRecordName     String
+  txtRecordValue    String
+  status            String       @default("pending")
+  verifiedAt        DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  company           TrustCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, domain])
+  @@index([domain])
+  @@index([status])
+}
+
+model TrustCompanyContact {
+  id        String       @id @default(cuid())
+  companyId String
+  kind      String
+  email     String
+  name      String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  company   TrustCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, kind, email])
+  @@index([email])
+}
+
+model TrustRegistryStandard {
+  id                   String              @id @default(cuid())
+  slug                 String
+  version              String
+  title                String
+  status               String              @default("draft")
+  summary              String?
+  ecosystem            String              @default("agent_to_agent")
+  controlsJson         Json
+  credentialSchemaJson Json?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  registryCases        TrustRegistryCase[]
+
+  @@unique([slug, version])
+  @@index([status])
+  @@index([ecosystem])
+}
+
+model TrustRegistryCase {
+  id                    String                @id @default(cuid())
+  caseNumber            String                @unique
+  companyId             String?
+  organizationId        String?
+  standardId            String?
+  status                String                @default("discovered")
+  outreachStatus        String                @default("not_contacted")
+  interestStatus        String                @default("unknown")
+  paymentStatus         String                @default("not_invoiced")
+  reviewStatus          String                @default("not_started")
+  companyName           String
+  websiteUrl            String?
+  primaryContactEmail   String?
+  discoveredSource      String?
+  discoveredUrl         String?
+  rippleEcosystemScope  String?
+  notes                 String?
+  publicListingEnabled  Boolean               @default(false)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  company               TrustCompany?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  organization          Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  standard              TrustRegistryStandard? @relation(fields: [standardId], references: [id], onDelete: SetNull)
+  assets                TrustRegistryAsset[]
+  events                TrustRegistryEvent[]
+  testRuns              TrustRegistryTestRun[]
+  scanOrders            TrustScanOrder[]
+  certificates          TrustCertificate[]
+  billingInvoices       TrustBillingInvoice[]
+  surveyInvites         TrustSurveyInvite[]
+
+  @@index([companyId])
+  @@index([organizationId])
+  @@index([standardId])
+  @@index([status, updatedAt])
+  @@index([outreachStatus])
+  @@index([paymentStatus])
+  @@index([reviewStatus])
+  @@index([publicListingEnabled])
+}
+
+model TrustRegistryAsset {
+  id               String                 @id @default(cuid())
+  registryCaseId   String
+  companyId        String?
+  productId        String?
+  assetType        String
+  name             String
+  status           String                 @default("discovered")
+  sourceUrl        String?
+  packageName      String?
+  repositoryUrl    String?
+  endpointUrl      String?
+  agentCardUrl     String?
+  did              String?
+  protocol         String?
+  description      String?
+  metadataJson     Json?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  registryCase     TrustRegistryCase      @relation(fields: [registryCaseId], references: [id], onDelete: Cascade)
+  company          TrustCompany?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  product          TrustProduct?          @relation(fields: [productId], references: [id], onDelete: SetNull)
+  testRuns         TrustRegistryTestRun[]
+  certificates     TrustCertificate[]
+
+  @@index([registryCaseId])
+  @@index([companyId])
+  @@index([productId])
+  @@index([assetType])
+  @@index([status])
+  @@index([did])
+}
+
+model TrustRegistryTestRun {
+  id               String              @id @default(cuid())
+  registryCaseId   String
+  registryAssetId  String?
+  provider         String
+  testType         String
+  status           String              @default("queued")
+  externalJobId    String?
+  recommendation   String?
+  riskClass        String?
+  kyaLevel         String?
+  criticalFindings Int                 @default(0)
+  highFindings     Int                 @default(0)
+  mediumFindings   Int                 @default(0)
+  lowFindings      Int                 @default(0)
+  summaryJson      Json?
+  evidenceJson     Json?
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  registryCase     TrustRegistryCase   @relation(fields: [registryCaseId], references: [id], onDelete: Cascade)
+  registryAsset    TrustRegistryAsset? @relation(fields: [registryAssetId], references: [id], onDelete: SetNull)
+
+  @@index([registryCaseId])
+  @@index([registryAssetId])
+  @@index([provider])
+  @@index([testType])
+  @@index([status])
+  @@index([riskClass])
+  @@index([kyaLevel])
+}
+
+model TrustRegistryEvent {
+  id             String            @id @default(cuid())
+  registryCaseId String
+  eventType      String
+  title          String
+  detail         String?
+  actor          String?
+  metadataJson   Json?
+  createdAt      DateTime          @default(now())
+  registryCase   TrustRegistryCase @relation(fields: [registryCaseId], references: [id], onDelete: Cascade)
+
+  @@index([registryCaseId, createdAt])
+  @@index([eventType])
+}
+
+model TrustProduct {
+  id             String                  @id @default(cuid())
+  companyId      String
+  name           String
+  slug           String
+  description    String?
+  categoriesJson Json?
+  productUrl     String?
+  repositoryUrl  String?
+  packageName    String?
+  status         String                  @default("draft")
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  company        TrustCompany            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  mcpServer      TrustMcpServer?
+  kyaQuestionnaires TrustKyaQuestionnaire[]
+  scanOrders     TrustScanOrder[]
+  scanRuns       TrustScanRun[]
+  certificates   TrustCertificate[]
+  billingSubscriptions TrustBillingSubscription[]
+  surveyInvites  TrustSurveyInvite[]
+  registryAssets TrustRegistryAsset[]
+
+  @@unique([companyId, slug])
+  @@index([companyId])
+  @@index([status])
+}
+
+model TrustMcpServer {
+  id                      String       @id @default(cuid())
+  productId               String       @unique
+  companyId               String
+  transport               String
+  packageType             String?
+  packageIdentifier       String?
+  repositoryUrl           String?
+  officialRegistryUrl     String?
+  remoteEndpoint          String?
+  authMethod              String?
+  requiredEnvVarsJson     Json?
+  requiresSecrets         Boolean      @default(false)
+  filesystemAccess        String       @default("none")
+  shellExecution          Boolean      @default(false)
+  networkAccess           Boolean      @default(false)
+  databaseWriteAccess     Boolean      @default(false)
+  emailMessageAccess      Boolean      @default(false)
+  walletPaymentAccess     Boolean      @default(false)
+  productionWriteAccess   Boolean      @default(false)
+  declaredToolsJson       Json?
+  discoveredToolsJson     Json?
+  declaredResourcesJson   Json?
+  discoveredResourcesJson Json?
+  declaredPromptsJson     Json?
+  discoveredPromptsJson   Json?
+  declaredPermissionsJson Json?
+  observedPermissionsJson Json?
+  riskClass               String       @default("MCP-R0")
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+  product                 TrustProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([riskClass])
+  @@index([transport])
+}
+
+model TrustKyaQuestionnaire {
+  id          String        @id @default(cuid())
+  companyId   String
+  productId   String?
+  answersJson Json
+  evidenceJson Json?
+  score       Int           @default(0)
+  kyaLevel    String        @default("KYA-L0")
+  submittedAt DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  product     TrustProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([productId])
+  @@index([kyaLevel])
+}
+
+model TrustScanOrder {
+  id               String         @id @default(cuid())
+  companyId        String
+  productId        String?
+  registryCaseId   String?
+  billingInvoiceId String?
+  state            String         @default("draft")
+  scanType         String         @default("basic_safety_scan")
+  requestedByEmail String?
+  submittedByUserId String?
+  paidAt           DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  company          TrustCompany   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product          TrustProduct?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  registryCase     TrustRegistryCase? @relation(fields: [registryCaseId], references: [id], onDelete: SetNull)
+  scanRuns         TrustScanRun[]
+  reviewDecisions  TrustReviewDecision[]
+
+  @@index([companyId, state])
+  @@index([productId])
+  @@index([registryCaseId])
+  @@index([billingInvoiceId])
+}
+
+model TrustScanRun {
+  id               String             @id @default(cuid())
+  scanOrderId      String
+  companyId        String
+  productId        String?
+  status           String             @default("queued")
+  recommendation   String?
+  riskClass        String?
+  kyaLevel         String?
+  criticalFindings Int                @default(0)
+  highFindings     Int                @default(0)
+  mediumFindings   Int                @default(0)
+  lowFindings      Int                @default(0)
+  summaryJson      Json?
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  scanOrder        TrustScanOrder     @relation(fields: [scanOrderId], references: [id], onDelete: Cascade)
+  company          TrustCompany       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product          TrustProduct?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  findings         TrustScanFinding[]
+  reviewDecisions  TrustReviewDecision[]
+  certificates     TrustCertificate[]
+
+  @@index([scanOrderId])
+  @@index([companyId, createdAt])
+  @@index([productId])
+  @@index([status])
+  @@index([riskClass])
+  @@index([kyaLevel])
+}
+
+model TrustScanFinding {
+  id               String       @id @default(cuid())
+  scanRunId        String
+  severity         String
+  module           String
+  code             String
+  title            String
+  detail           String
+  recommendation   String?
+  publicDisclosure Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  scanRun          TrustScanRun @relation(fields: [scanRunId], references: [id], onDelete: Cascade)
+
+  @@index([scanRunId])
+  @@index([severity])
+  @@index([module])
+}
+
+model TrustReviewDecision {
+  id             String          @id @default(cuid())
+  scanOrderId    String
+  scanRunId      String?
+  reviewerUserId String?
+  decision       String
+  reason         String?
+  stateAfter     String
+  createdAt      DateTime        @default(now())
+  scanOrder      TrustScanOrder  @relation(fields: [scanOrderId], references: [id], onDelete: Cascade)
+  scanRun        TrustScanRun?   @relation(fields: [scanRunId], references: [id], onDelete: SetNull)
+
+  @@index([scanOrderId, createdAt])
+  @@index([scanRunId])
+  @@index([decision])
+}
+
+model TrustCertificate {
+  id                    String                         @id @default(cuid())
+  certificateId         String                         @unique
+  companyId             String
+  productId             String?
+  registryCaseId        String?
+  registryAssetId       String?
+  scanRunId             String?
+  status                String                         @default("active")
+  scopeJson             Json
+  standardVersion       String                         @default("mcp-kya-basic-v0.1")
+  riskClass             String?
+  kyaLevel              String?
+  issuedAt              DateTime
+  expiresAt             DateTime
+  lastCheckedAt         DateTime?
+  evidenceHash          String
+  canonicalJson         Json
+  signedCertificateJson Json
+  signature             String
+  signatureAlgorithm    String
+  publicUrl             String?
+  badgeUrl              String?
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  company               TrustCompany                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product               TrustProduct?                  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  registryCase          TrustRegistryCase?             @relation(fields: [registryCaseId], references: [id], onDelete: SetNull)
+  registryAsset         TrustRegistryAsset?            @relation(fields: [registryAssetId], references: [id], onDelete: SetNull)
+  scanRun               TrustScanRun?                  @relation(fields: [scanRunId], references: [id], onDelete: SetNull)
+  statusEvents          TrustCertificateStatusEvent[]
+  badge                 TrustBadge?
+
+  @@index([companyId])
+  @@index([productId])
+  @@index([registryCaseId])
+  @@index([registryAssetId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([riskClass])
+  @@index([kyaLevel])
+}
+
+model TrustCertificateStatusEvent {
+  id              String           @id @default(cuid())
+  certificateDbId String
+  status          String
+  reason          String?
+  createdAt       DateTime         @default(now())
+  certificate     TrustCertificate @relation(fields: [certificateDbId], references: [id], onDelete: Cascade)
+
+  @@index([certificateDbId, createdAt])
+  @@index([status])
+}
+
+model TrustBadge {
+  id              String           @id @default(cuid())
+  certificateDbId String           @unique
+  certificateId   String           @unique
+  status          String           @default("active")
+  svgHash         String?
+  lastRenderedAt  DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  certificate     TrustCertificate @relation(fields: [certificateDbId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model TrustBillingInvoice {
+  id                 String        @id @default(cuid())
+  organizationId     String?
+  companyId          String?
+  registryCaseId     String?
+  provider           String        @default("stripe")
+  purpose            String
+  status             String        @default("draft")
+  amountUsdCents     Int
+  currency           String        @default("usd")
+  lineItemsJson      Json
+  customerEmail      String
+  stripeCustomerId   String?
+  stripeInvoiceId    String?       @unique
+  hostedInvoiceUrl   String?
+  invoicePdfUrl      String?
+  dueAt              DateTime?
+  paidAt             DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  organization       Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  company            TrustCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  registryCase       TrustRegistryCase? @relation(fields: [registryCaseId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([companyId])
+  @@index([registryCaseId])
+  @@index([purpose])
+  @@index([status])
+  @@index([customerEmail])
+}
+
+model TrustBillingSubscription {
+  id                   String        @id @default(cuid())
+  organizationId       String?
+  companyId            String?
+  productId            String?
+  provider             String        @default("stripe")
+  status               String        @default("pending")
+  quantity             Int           @default(1)
+  amountUsdCents       Int           @default(1000)
+  currency             String        @default("usd")
+  customerEmail        String
+  stripeCustomerId     String?
+  stripeSubscriptionId String?       @unique
+  currentPeriodEndsAt  DateTime?
+  cancelAtPeriodEnd    Boolean       @default(false)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  organization         Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  company              TrustCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  product              TrustProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([companyId])
+  @@index([productId])
+  @@index([status])
+  @@index([customerEmail])
+}
+
+model TrustSurveyInvite {
+  id             String        @id @default(cuid())
+  organizationId String?
+  companyId      String?
+  productId      String?
+  registryCaseId String?
+  email          String
+  tokenHash      String        @unique
+  surveyType     String        @default("kya_controls")
+  status         String        @default("pending")
+  expiresAt      DateTime
+  submittedAt    DateTime?
+  metadataJson   Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  company        TrustCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  product        TrustProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  registryCase   TrustRegistryCase? @relation(fields: [registryCaseId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([companyId])
+  @@index([productId])
+  @@index([registryCaseId])
+  @@index([email])
+  @@index([status, expiresAt])
 }
 
 model OrganizationMembership {

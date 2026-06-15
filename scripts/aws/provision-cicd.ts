@@ -45,10 +45,34 @@ const validateProjectName = "xupra-drylake-validate";
 const codebuildRoleName = "xupra-drylake-codebuild-role";
 const codepipelineRoleName = "xupra-drylake-codepipeline-role";
 const defaultRepositoryId = "gmkdigitalmedia1/drylake";
+const sourceProvider = process.env.AWS_CICD_SOURCE_PROVIDER === "gitlab" ? "gitlab" : "s3";
+
+type SourceConfig =
+  | {
+      provider: "gitlab";
+      connectionArn: string;
+      repositoryId: string;
+      branch: string;
+    }
+  | {
+      provider: "s3";
+      bucket: string;
+      objectKey: string;
+      pollForSourceChanges: boolean;
+    };
+
+type SourceActionShape = {
+  actionTypeId: {
+    category: "Source";
+    owner: "AWS";
+    provider: "CodeStarSourceConnection" | "S3";
+    version: "1";
+  };
+  configuration: Record<string, string>;
+};
 
 type PipelineTarget = {
   environment: "staging" | "production";
-  branch: string;
   deployHost: string;
   deploySshUser: string;
   deploySshKeySecretId: string;
@@ -57,14 +81,16 @@ type PipelineTarget = {
   pipelineName: string;
   deployProjectName: string;
   verifyProjectName: string;
+  source: SourceConfig;
 };
 
 type Manifest = {
   region: string;
   accountId: string;
   artifactBucket: string;
-  connectionArn: string;
-  repositoryId: string;
+  sourceProvider: "gitlab" | "s3";
+  connectionArn?: string;
+  repositoryId?: string;
   codebuildRoleArn: string;
   codepipelineRoleArn: string;
   validateProjectName: string;
@@ -78,6 +104,7 @@ type Manifest = {
     deploySshKeySecretId: string;
     appBaseUrl: string;
     deployEnvSecretId: string;
+    source: SourceConfig;
   }>;
 };
 
@@ -89,7 +116,27 @@ function requireEnv(name: string) {
   return value;
 }
 
-function optionalTarget(environment: "staging" | "production", branch: string): PipelineTarget | null {
+function sourceFor(environment: "staging" | "production", artifactBucket: string): SourceConfig {
+  const upper = environment.toUpperCase();
+
+  if (sourceProvider === "gitlab") {
+    return {
+      provider: "gitlab",
+      connectionArn: requireEnv("AWS_CODECONNECTIONS_ARN"),
+      repositoryId: process.env.AWS_CODECONNECTIONS_FULL_REPOSITORY_ID || defaultRepositoryId,
+      branch: environment === "production" ? "main" : "staging",
+    };
+  }
+
+  return {
+    provider: "s3",
+    bucket: process.env[`${upper}_SOURCE_BUCKET`] || process.env.AWS_CICD_SOURCE_BUCKET || artifactBucket,
+    objectKey: process.env[`${upper}_SOURCE_OBJECT_KEY`] || `sources/${environment}/source.zip`,
+    pollForSourceChanges: false,
+  };
+}
+
+function optionalTarget(environment: "staging" | "production", artifactBucket: string): PipelineTarget | null {
   const upper = environment.toUpperCase();
   const deployHost = process.env[`${upper}_HOST`] || "";
   const deploySshUser = process.env[`${upper}_SSH_USER`] || "";
@@ -103,7 +150,6 @@ function optionalTarget(environment: "staging" | "production", branch: string): 
 
   return {
     environment,
-    branch,
     deployHost,
     deploySshUser,
     deploySshKeySecretId,
@@ -112,6 +158,7 @@ function optionalTarget(environment: "staging" | "production", branch: string): 
     pipelineName: `xupra-drylake-${environment}`,
     deployProjectName: `xupra-drylake-deploy-${environment}`,
     verifyProjectName: `xupra-drylake-verify-${environment}`,
+    source: sourceFor(environment, artifactBucket),
   };
 }
 
@@ -141,22 +188,14 @@ async function ensureBucket(bucketName: string) {
   await s3.send(
     new PutBucketVersioningCommand({
       Bucket: bucketName,
-      VersioningConfiguration: {
-        Status: "Enabled",
-      },
+      VersioningConfiguration: { Status: "Enabled" },
     }),
   );
   await s3.send(
     new PutBucketEncryptionCommand({
       Bucket: bucketName,
       ServerSideEncryptionConfiguration: {
-        Rules: [
-          {
-            ApplyServerSideEncryptionByDefault: {
-              SSEAlgorithm: "AES256",
-            },
-          },
-        ],
+        Rules: [{ ApplyServerSideEncryptionByDefault: { SSEAlgorithm: "AES256" } }],
       },
     }),
   );
@@ -251,11 +290,7 @@ async function upsertCodeBuildProject(params: {
     queuedTimeoutInMinutes: 120,
   };
 
-  const existing = await codebuild.send(
-    new BatchGetProjectsCommand({
-      names: [params.name],
-    }),
-  );
+  const existing = await codebuild.send(new BatchGetProjectsCommand({ names: [params.name] }));
 
   if (existing.projects?.length) {
     await codebuild.send(new UpdateProjectCommand(project));
@@ -265,11 +300,42 @@ async function upsertCodeBuildProject(params: {
   await codebuild.send(new CreateProjectCommand(project));
 }
 
+function sourceActionConfig(source: SourceConfig): SourceActionShape {
+  if (source.provider === "gitlab") {
+    return {
+      actionTypeId: {
+        category: "Source" as const,
+        owner: "AWS" as const,
+        provider: "CodeStarSourceConnection" as const,
+        version: "1" as const,
+      },
+      configuration: {
+        ConnectionArn: source.connectionArn,
+        FullRepositoryId: source.repositoryId,
+        BranchName: source.branch,
+        OutputArtifactFormat: "CODE_ZIP",
+      },
+    };
+  }
+
+  return {
+    actionTypeId: {
+      category: "Source" as const,
+      owner: "AWS" as const,
+        provider: "S3" as const,
+        version: "1" as const,
+      },
+      configuration: {
+        S3Bucket: source.bucket,
+        S3ObjectKey: source.objectKey,
+        PollForSourceChanges: source.pollForSourceChanges ? "true" : "false",
+      },
+  };
+}
+
 async function upsertPipeline(params: {
   name: string;
-  branch: string;
-  repositoryId: string;
-  connectionArn: string;
+  source: SourceConfig;
   artifactBucket: string;
   roleArn: string;
   validateProjectName: string;
@@ -277,6 +343,7 @@ async function upsertPipeline(params: {
   verifyProjectName: string;
 }) {
   const current = await codepipeline.send(new GetPipelineCommand({ name: params.name })).catch(() => null);
+  const sourceAction = sourceActionConfig(params.source);
 
   const declaration = {
     name: params.name,
@@ -291,18 +358,8 @@ async function upsertPipeline(params: {
         actions: [
           {
             name: "ApplicationSource",
-            actionTypeId: {
-              category: "Source" as const,
-              owner: "AWS" as const,
-              provider: "CodeStarSourceConnection" as const,
-              version: "1",
-            },
-            configuration: {
-              ConnectionArn: params.connectionArn,
-              FullRepositoryId: params.repositoryId,
-              BranchName: params.branch,
-              OutputArtifactFormat: "CODE_ZIP",
-            },
+            actionTypeId: sourceAction.actionTypeId,
+            configuration: sourceAction.configuration,
             outputArtifacts: [{ name: "SourceArtifact" }],
             inputArtifacts: [],
             runOrder: 1,
@@ -320,9 +377,7 @@ async function upsertPipeline(params: {
               provider: "CodeBuild" as const,
               version: "1",
             },
-            configuration: {
-              ProjectName: params.validateProjectName,
-            },
+            configuration: { ProjectName: params.validateProjectName },
             inputArtifacts: [{ name: "SourceArtifact" }],
             outputArtifacts: [],
             runOrder: 1,
@@ -340,9 +395,7 @@ async function upsertPipeline(params: {
               provider: "CodeBuild" as const,
               version: "1",
             },
-            configuration: {
-              ProjectName: params.deployProjectName,
-            },
+            configuration: { ProjectName: params.deployProjectName },
             inputArtifacts: [{ name: "SourceArtifact" }],
             outputArtifacts: [],
             runOrder: 1,
@@ -360,9 +413,7 @@ async function upsertPipeline(params: {
               provider: "CodeBuild" as const,
               version: "1",
             },
-            configuration: {
-              ProjectName: params.verifyProjectName,
-            },
+            configuration: { ProjectName: params.verifyProjectName },
             inputArtifacts: [{ name: "SourceArtifact" }],
             outputArtifacts: [],
             runOrder: 1,
@@ -382,8 +433,6 @@ async function upsertPipeline(params: {
 }
 
 async function main() {
-  const connectionArn = requireEnv("AWS_CODECONNECTIONS_ARN");
-  const repositoryId = process.env.AWS_CODECONNECTIONS_FULL_REPOSITORY_ID || defaultRepositoryId;
   const callerIdentity = await sts.send(new GetCallerIdentityCommand({}));
   const accountId = callerIdentity.Account;
 
@@ -392,7 +441,7 @@ async function main() {
   }
 
   const artifactBucket = process.env.AWS_CICD_ARTIFACT_BUCKET || `xupra-drylake-cicd-${accountId}-${region}`;
-  const targets = [optionalTarget("staging", "staging"), optionalTarget("production", "main")].filter(
+  const targets = [optionalTarget("staging", artifactBucket), optionalTarget("production", artifactBucket)].filter(
     (item): item is PipelineTarget => Boolean(item),
   );
   const secretResources = Array.from(
@@ -403,20 +452,20 @@ async function main() {
       ]),
     ),
   );
+  const sourceBuckets = Array.from(new Set(targets.flatMap((target) => (
+    target.source.provider === "s3" ? [target.source.bucket] : []
+  ))));
 
   await ensureBucket(artifactBucket);
+  for (const bucket of sourceBuckets) {
+    await ensureBucket(bucket);
+  }
 
   const codebuildRoleArn = await ensureRole({
     roleName: codebuildRoleName,
     assumeRolePolicyDocument: {
       Version: "2012-10-17",
-      Statement: [
-        {
-          Effect: "Allow",
-          Principal: { Service: "codebuild.amazonaws.com" },
-          Action: "sts:AssumeRole",
-        },
-      ],
+      Statement: [{ Effect: "Allow", Principal: { Service: "codebuild.amazonaws.com" }, Action: "sts:AssumeRole" }],
     },
     inlinePolicies: [
       {
@@ -445,40 +494,55 @@ async function main() {
     ],
   });
 
+  const pipelineStatements: Array<Record<string, unknown>> = [
+    {
+      Effect: "Allow",
+      Action: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+      Resource: [`arn:aws:s3:::${artifactBucket}`, `arn:aws:s3:::${artifactBucket}/*`],
+    },
+    {
+      Effect: "Allow",
+      Action: ["codebuild:StartBuild", "codebuild:BatchGetBuilds"],
+      Resource: "*",
+    },
+  ];
+
+  if (sourceProvider === "gitlab") {
+    pipelineStatements.push({
+      Effect: "Allow",
+      Action: ["codeconnections:UseConnection"],
+      Resource: requireEnv("AWS_CODECONNECTIONS_ARN"),
+    });
+  }
+
+  for (const bucket of sourceBuckets) {
+    pipelineStatements.push({
+      Effect: "Allow",
+      Action: [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:GetBucketVersioning",
+        "s3:GetBucketAcl",
+        "s3:GetBucketLocation",
+        "s3:GetObjectTagging",
+        "s3:GetObjectVersionTagging",
+      ],
+      Resource: [`arn:aws:s3:::${bucket}`, `arn:aws:s3:::${bucket}/*`],
+    });
+  }
+
   const codepipelineRoleArn = await ensureRole({
     roleName: codepipelineRoleName,
     assumeRolePolicyDocument: {
       Version: "2012-10-17",
-      Statement: [
-        {
-          Effect: "Allow",
-          Principal: { Service: "codepipeline.amazonaws.com" },
-          Action: "sts:AssumeRole",
-        },
-      ],
+      Statement: [{ Effect: "Allow", Principal: { Service: "codepipeline.amazonaws.com" }, Action: "sts:AssumeRole" }],
     },
     inlinePolicies: [
       {
         name: "xupra-drylake-codepipeline-inline",
         document: {
           Version: "2012-10-17",
-          Statement: [
-            {
-              Effect: "Allow",
-              Action: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
-              Resource: [`arn:aws:s3:::${artifactBucket}`, `arn:aws:s3:::${artifactBucket}/*`],
-            },
-            {
-              Effect: "Allow",
-              Action: ["codebuild:StartBuild", "codebuild:BatchGetBuilds"],
-              Resource: "*",
-            },
-            {
-              Effect: "Allow",
-              Action: ["codeconnections:UseConnection"],
-              Resource: connectionArn,
-            },
-          ],
+          Statement: pipelineStatements,
         },
       },
     ],
@@ -538,9 +602,7 @@ async function main() {
 
     await upsertPipeline({
       name: target.pipelineName,
-      branch: target.branch,
-      repositoryId,
-      connectionArn,
+      source: target.source,
       artifactBucket,
       roleArn: codepipelineRoleArn,
       validateProjectName,
@@ -553,8 +615,9 @@ async function main() {
     region,
     accountId,
     artifactBucket,
-    connectionArn,
-    repositoryId,
+    sourceProvider,
+    connectionArn: sourceProvider === "gitlab" ? requireEnv("AWS_CODECONNECTIONS_ARN") : undefined,
+    repositoryId: sourceProvider === "gitlab" ? process.env.AWS_CODECONNECTIONS_FULL_REPOSITORY_ID || defaultRepositoryId : undefined,
     codebuildRoleArn,
     codepipelineRoleArn,
     validateProjectName,
@@ -568,6 +631,7 @@ async function main() {
       deploySshKeySecretId: target.deploySshKeySecretId,
       appBaseUrl: target.appBaseUrl,
       deployEnvSecretId: target.deployEnvSecretId,
+      source: target.source,
     })),
   };
 

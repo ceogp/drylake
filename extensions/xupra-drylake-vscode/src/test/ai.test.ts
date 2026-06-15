@@ -9,6 +9,7 @@ import { resolveDryLakeAiProvider } from "../ai/providerResolver";
 import { parseAiRunbookResponse } from "../ai/parseAiRunbookResponse";
 import { buildDraftRunbookPrompt } from "../ai/prompts/buildDraftRunbookPrompt";
 import { generatePhasePlanPrompt } from "../ai/prompts/generatePhasePlanPrompt";
+import { normalizeEntitlements } from "../services/connectionState";
 
 let models: unknown[] = [];
 
@@ -40,11 +41,11 @@ function configuration(values: Record<string, unknown>) {
 function proConnection() {
   return {
     userEmail: "owner@example.com",
-    entitlements: {
+    entitlements: normalizeEntitlements({
       xupra_pro_ai: true,
       session_cloud_sync: false,
       pr_summary_generation: false,
-    },
+    }),
   };
 }
 
@@ -123,11 +124,11 @@ describe("AI providers", () => {
       () => ({
         userEmail: "owner@example.com",
         organizationTier: "free",
-        entitlements: {
+        entitlements: normalizeEntitlements({
           xupra_pro_ai: true,
           session_cloud_sync: false,
           pr_summary_generation: false,
-        },
+        }),
       }),
       async () => "token",
     );

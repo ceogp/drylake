@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createStarterXu } from "../xu/createStarterXu";
 import { ControlRoomProvider } from "../webview/controlRoomProvider";
 import { XU_PHASE_AGENTS } from "../xu/types";
+import { normalizeEntitlements } from "../services/connectionState";
 import type { GuardScanResult } from "../services/securityScanner";
 import type { GuardFixPlanPayload } from "../services/apiClient";
 import type { ApplicationBuildRunbook } from "../xu/types";
@@ -477,12 +478,12 @@ describe("Control Room webview", () => {
       () => false,
       () => ({
         organizationTier: "pro",
-        entitlements: {
+        entitlements: normalizeEntitlements({
           xupra_pro_ai: true,
           session_cloud_sync: true,
           pr_summary_generation: true,
           canUseFixWithAI: true,
-        },
+        }),
       }),
       apiClient,
     );
@@ -533,11 +534,11 @@ describe("Control Room webview", () => {
       () => false,
       () => ({
         organizationTier: "security_pro",
-        entitlements: {
+        entitlements: normalizeEntitlements({
           canUseApprovedUpload: true,
           canUseDeepCloudAnalysis: true,
           canUseFixWithAI: true,
-        },
+        }),
       }),
       {
         recordGuardScan,
@@ -613,9 +614,9 @@ describe("Control Room webview", () => {
       () => ({
         organizationTier: "team_security",
         organizationRole: "admin",
-        entitlements: {
+        entitlements: normalizeEntitlements({
           canUseTeamBaseline: true,
-        },
+        }),
       }),
       {
         recordGuardScan,
@@ -660,9 +661,9 @@ describe("Control Room webview", () => {
       () => ({
         organizationTier: "team_security",
         organizationRole: "member",
-        entitlements: {
+        entitlements: normalizeEntitlements({
           canUseTeamBaseline: true,
-        },
+        }),
       }),
       {
         recordGuardScan,
@@ -706,11 +707,11 @@ describe("Control Room webview", () => {
       () => false,
       () => ({
         organizationTier: "free",
-        entitlements: {
+        entitlements: normalizeEntitlements({
           xupra_pro_ai: false,
           session_cloud_sync: false,
           pr_summary_generation: false,
-        },
+        }),
       }),
       apiClient,
     );
@@ -1106,11 +1107,11 @@ describe("Control Room webview", () => {
       () => false,
       () => ({
         organizationTier: "pro",
-        entitlements: {
+        entitlements: normalizeEntitlements({
           xupra_pro_ai: true,
           session_cloud_sync: false,
           pr_summary_generation: false,
-        },
+        }),
       }),
     );
     await provider.createOrShow(context() as never);

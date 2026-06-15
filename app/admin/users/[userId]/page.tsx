@@ -38,12 +38,12 @@ export default async function AdminUserPage({
       subtitle="User profile, memberships, extension connection activity, created content, jobs, and audit events."
     >
       <div className="flex flex-wrap items-center gap-3">
-        <Link className="text-sm font-medium text-stone-700 hover:text-stone-950" href="/admin">
+        <Link className="text-sm font-medium text-stone-700 hover:text-stone-950" href="/portal">
           Back to overview
         </Link>
         <a
           className="rounded-md border border-stone-300 bg-stone-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
-          href={`/api/v1/admin/skills/export?userId=${encodeURIComponent(user.id)}`}
+          href={`/api/v1/portal/skills/export?userId=${encodeURIComponent(user.id)}`}
         >
           Export This User&apos;s AI Data CSV
         </a>

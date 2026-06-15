@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getConfiguredAdminInternalOrigin } from "@/lib/site-hosts";
+import { getConfiguredOperatorPortalOrigin } from "@/lib/site-hosts";
 import { getIsPlatformAdmin } from "@/lib/services/access";
 import { requireCurrentAppContextForPage } from "@/lib/services/current-user";
 
@@ -22,7 +22,7 @@ function DetailCard({
 export default async function SettingsPage() {
   const appContext = await requireCurrentAppContextForPage();
   const isPlatformAdmin = await getIsPlatformAdmin();
-  const adminInternalOrigin = getConfiguredAdminInternalOrigin();
+  const operatorPortalOrigin = getConfiguredOperatorPortalOrigin();
   const profile = appContext.user.profile;
 
   return (
@@ -45,12 +45,12 @@ export default async function SettingsPage() {
             <Link className="tape-button bg-white px-5 py-3 text-sm text-black" href="/billing">
               Billing
             </Link>
-            {isPlatformAdmin && adminInternalOrigin ? (
+            {isPlatformAdmin && operatorPortalOrigin ? (
               <a
                 className="tape-button bg-emerald-400 px-5 py-3 text-sm text-zinc-950 hover:bg-emerald-300"
-                href={`${adminInternalOrigin}/admin`}
+                href={`${operatorPortalOrigin}/portal`}
               >
-                Open Internal Admin
+                Open Operator Portal
               </a>
             ) : null}
           </div>

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.7.8
+
+### Marketplace keywords
+
+- Restored the broader 108-keyword Marketplace tag set from the better-performing late-May install run.
+
+## 0.7.7
+
+### Marketplace naming
+
+- Updated the visible extension name to `Drylake- Agent Control - Free LLM - Free Security Scans - Opensource LLM`.
+
+## 0.7.6
+
+### Packaging and webview reliability
+
+- Rebuilt the DryLake extension package for the current Xupra/DryLake site rollout.
+- Fixed Control Room webview command-argument parsing so billing and report actions can pass structured arguments reliably.
+
 ## 0.6.52
 
 ### DryLake Guard

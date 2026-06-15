@@ -48,6 +48,7 @@ export async function suspendUserAction(formData: FormData) {
   });
 
   revalidatePath(`/admin/users/${userId}`, "page");
+  revalidatePath(`/portal/users/${userId}`, "page");
 }
 
 export async function reactivateUserAction(formData: FormData) {
@@ -79,6 +80,7 @@ export async function reactivateUserAction(formData: FormData) {
   });
 
   revalidatePath(`/admin/users/${userId}`, "page");
+  revalidatePath(`/portal/users/${userId}`, "page");
 }
 
 export async function overrideTierAction(formData: FormData): Promise<{ error: string } | undefined> {
@@ -159,6 +161,7 @@ export async function overrideTierAction(formData: FormData): Promise<{ error: s
   });
 
   revalidatePath(`/admin/users/${userId}`, "page");
+  revalidatePath(`/portal/users/${userId}`, "page");
 }
 
 export async function refundAction(formData: FormData): Promise<{ error: string } | undefined> {
@@ -199,6 +202,7 @@ export async function refundAction(formData: FormData): Promise<{ error: string 
   });
 
   revalidatePath("/admin/billing", "page");
+  revalidatePath("/portal/billing", "page");
 
   return undefined;
 }
